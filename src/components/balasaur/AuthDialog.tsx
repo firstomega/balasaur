@@ -47,10 +47,14 @@ export function AuthDialog({
 
   async function google() {
     setError(null);
-    const res = await lovable.auth.signInWithOAuth("google", {
+    const res = (await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
-    });
-    if (res.error) setError(res.error.message ?? String(res.error));
+    })) as { error?: unknown; redirected?: boolean };
+    if (res.error) {
+      setError(
+        res.error instanceof Error ? res.error.message : String(res.error),
+      );
+    }
   }
 
   return (
