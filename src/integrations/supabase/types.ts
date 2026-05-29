@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      media: {
+        Row: {
+          fetched_at: string
+          genres: string[]
+          length_label: string | null
+          media_id: string
+          media_type: string
+          overview: string | null
+          people: Json
+          popularity: number | null
+          poster_url: string | null
+          rating_imdb: number | null
+          rating_metacritic: number | null
+          rating_rotten_tomatoes: number | null
+          rating_tmdb: number | null
+          raw_omdb: Json | null
+          raw_tmdb: Json | null
+          release_date: string | null
+          seasons: Json | null
+          streaming: string[]
+          title: string
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          fetched_at?: string
+          genres?: string[]
+          length_label?: string | null
+          media_id: string
+          media_type: string
+          overview?: string | null
+          people?: Json
+          popularity?: number | null
+          poster_url?: string | null
+          rating_imdb?: number | null
+          rating_metacritic?: number | null
+          rating_rotten_tomatoes?: number | null
+          rating_tmdb?: number | null
+          raw_omdb?: Json | null
+          raw_tmdb?: Json | null
+          release_date?: string | null
+          seasons?: Json | null
+          streaming?: string[]
+          title: string
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          fetched_at?: string
+          genres?: string[]
+          length_label?: string | null
+          media_id?: string
+          media_type?: string
+          overview?: string | null
+          people?: Json
+          popularity?: number | null
+          poster_url?: string | null
+          rating_imdb?: number | null
+          rating_metacritic?: number | null
+          rating_rotten_tomatoes?: number | null
+          rating_tmdb?: number | null
+          raw_omdb?: Json | null
+          raw_tmdb?: Json | null
+          release_date?: string | null
+          seasons?: Json | null
+          streaming?: string[]
+          title?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
       user_media_status: {
         Row: {
           id: string

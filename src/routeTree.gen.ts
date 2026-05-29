@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TriageRouteImport } from './routes/triage'
 import { Route as ListsRouteImport } from './routes/lists'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
 
 const TriageRoute = TriageRouteImport.update({
   id: '/triage',
@@ -28,35 +29,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksSyncMediaRoute = ApiPublicHooksSyncMediaRouteImport.update({
+  id: '/api/public/hooks/sync-media',
+  path: '/api/public/hooks/sync-media',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
   '/triage': typeof TriageRoute
+  '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
   '/triage': typeof TriageRoute
+  '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
   '/triage': typeof TriageRoute
+  '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/lists' | '/triage'
+  fullPaths: '/' | '/lists' | '/triage' | '/api/public/hooks/sync-media'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/lists' | '/triage'
-  id: '__root__' | '/' | '/lists' | '/triage'
+  to: '/' | '/lists' | '/triage' | '/api/public/hooks/sync-media'
+  id: '__root__' | '/' | '/lists' | '/triage' | '/api/public/hooks/sync-media'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ListsRoute: typeof ListsRoute
   TriageRoute: typeof TriageRoute
+  ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-media': {
+      id: '/api/public/hooks/sync-media'
+      path: '/api/public/hooks/sync-media'
+      fullPath: '/api/public/hooks/sync-media'
+      preLoaderRoute: typeof ApiPublicHooksSyncMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ListsRoute: ListsRoute,
   TriageRoute: TriageRoute,
+  ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

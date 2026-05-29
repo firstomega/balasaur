@@ -1,10 +1,18 @@
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 import { unifyGenres } from "./genres";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { TablesInsert } from "@/integrations/supabase/types";
+
+type MediaRow = TablesInsert<"media">;
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
 const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
+const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const DISCOVER_PAGES = 10; // ~200 of each type
+const TMDB_APPEND =
+  "external_ids,credits,watch/providers,keywords,release_dates,content_ratings,images,videos,recommendations,similar";
 
 let genreCache: { movie: Map<number, string>; tv: Map<number, string> } | null = null;
 
@@ -107,17 +115,6 @@ interface TmdbDetails {
   }[];
 }
 
-async function fetchDetails(item: MediaItem, key: string): Promise<TmdbDetails | null> {
-  const [type, rawId] = item.id.split("-");
-  try {
-    return await tmdb<TmdbDetails>(`/${type}/${rawId}`, key, {
-      append_to_response: "external_ids,credits,watch/providers",
-    });
-  } catch {
-    return null;
-  }
-}
-
 function enrichFromDetails(item: MediaItem, d: TmdbDetails): string | undefined {
   // People: director(s) + top cast
   const people: MediaPerson[] = [];
@@ -188,27 +185,6 @@ function parsePct(v: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-async function enrichWithOmdb(item: MediaItem, imdbId: string, key: string): Promise<void> {
-  try {
-    const url = `${OMDB_BASE}/?i=${imdbId}&apikey=${key}`;
-    const res = await fetch(url);
-    if (!res.ok) return;
-    const data = (await res.json()) as OmdbResponse;
-    if (data.Response !== "True") return;
-    if (data.imdbRating && data.imdbRating !== "N/A") {
-      const n = parseFloat(data.imdbRating);
-      if (Number.isFinite(n)) item.ratings.imdb = n;
-    }
-    if (data.Metascore && data.Metascore !== "N/A") {
-      const n = parseInt(data.Metascore, 10);
-      if (Number.isFinite(n)) item.ratings.metacritic = n;
-    }
-    const rt = data.Ratings?.find((r) => r.Source === "Rotten Tomatoes");
-    if (rt) item.ratings.rottenTomatoes = parsePct(rt.Value);
-  } catch {
-    // leave undefined
-  }
-}
 
 async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = new Array(items.length);
@@ -224,29 +200,234 @@ async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T) => Pr
   return results;
 }
 
-export async function fetchTrendingMedia(): Promise<MediaItem[]> {
+/**
+ * Read the catalog out of our database. NO upstream API calls.
+ * This is what visitor page loads hit.
+ */
+export async function loadCatalogFromDb(limit = 400): Promise<MediaItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select(
+      "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,streaming,length_label,people,seasons",
+    )
+    .order("popularity", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[catalog] load failed:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((r): MediaItem => ({
+    id: r.media_id,
+    mediaType: r.media_type as MediaItem["mediaType"],
+    title: r.title,
+    year: r.year ?? "",
+    overview: r.overview ?? "",
+    posterUrl: r.poster_url ?? "",
+    ratings: {
+      imdb: r.rating_imdb ?? undefined,
+      rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
+      metacritic: r.rating_metacritic ?? undefined,
+      tmdb: r.rating_tmdb ?? undefined,
+    },
+    genres: r.genres ?? [],
+    streaming: r.streaming ?? [],
+    lengthLabel: r.length_label ?? "",
+    people: (r.people as unknown as MediaPerson[]) ?? [],
+    popularity: r.popularity ?? undefined,
+    seasons: (r.seasons as unknown as MediaSeason[] | null) ?? undefined,
+    releaseDate: r.release_date ?? undefined,
+  }));
+}
+
+interface DiscoverResult {
+  id: number;
+  popularity?: number;
+  genre_ids?: number[];
+  release_date?: string;
+  first_air_date?: string;
+  vote_average?: number;
+  poster_path?: string | null;
+  title?: string;
+  name?: string;
+  overview?: string;
+}
+
+async function discoverIds(
+  type: "movie" | "tv",
+  key: string,
+  pages: number,
+): Promise<DiscoverResult[]> {
+  const all: DiscoverResult[] = [];
+  for (let page = 1; page <= pages; page++) {
+    try {
+      const r = await tmdb<{ results: DiscoverResult[] }>(`/discover/${type}`, key, {
+        sort_by: "popularity.desc",
+        include_adult: "false",
+        page: String(page),
+        language: "en-US",
+      });
+      all.push(...r.results);
+    } catch (e) {
+      console.error(`[sync] discover ${type} page ${page} failed:`, e);
+    }
+  }
+  return all;
+}
+
+function rowFromEnrichedItem(
+  item: MediaItem,
+  rawTmdb: unknown,
+  rawOmdb: unknown,
+): MediaRow {
+  return {
+    media_id: item.id,
+    media_type: item.mediaType,
+    title: item.title,
+    year: item.year || null,
+    poster_url: item.posterUrl || null,
+    overview: item.overview || null,
+    popularity: item.popularity ?? null,
+    release_date: item.releaseDate ?? null,
+    rating_imdb: item.ratings.imdb ?? null,
+    rating_rotten_tomatoes: item.ratings.rottenTomatoes ?? null,
+    rating_metacritic: item.ratings.metacritic ?? null,
+    rating_tmdb: item.ratings.tmdb ?? null,
+    genres: item.genres,
+    streaming: item.streaming,
+    length_label: item.lengthLabel || null,
+    people: item.people as unknown as MediaRow["people"],
+    seasons: (item.seasons ?? null) as MediaRow["seasons"],
+    raw_tmdb: (rawTmdb ?? null) as MediaRow["raw_tmdb"],
+    raw_omdb: (rawOmdb ?? null) as MediaRow["raw_omdb"],
+    fetched_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export interface SyncResult {
+  discovered: number;
+  refreshed: number;
+  skippedFresh: number;
+  failed: number;
+  durationMs: number;
+}
+
+/**
+ * Pull discover/movie + discover/tv, enrich each with TMDB details +
+ * OMDB ratings, then upsert into `public.media`. Skips items already
+ * fresher than STALE_MS to avoid burning API calls.
+ */
+export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResult> {
+  const start = Date.now();
   const tmdbKey = process.env.TMDB_API_KEY;
   const omdbKey = process.env.OMDB_API_KEY;
   if (!tmdbKey) throw new Error("TMDB_API_KEY is not configured");
 
   const genres = await loadGenres(tmdbKey);
+
+  // 1. Discover popular movies + TV.
   const [movies, tv] = await Promise.all([
-    tmdb<{ results: TmdbTrendingItem[] }>("/trending/movie/week", tmdbKey),
-    tmdb<{ results: TmdbTrendingItem[] }>("/trending/tv/week", tmdbKey),
+    discoverIds("movie", tmdbKey, DISCOVER_PAGES),
+    discoverIds("tv", tmdbKey, DISCOVER_PAGES),
   ]);
 
-  const items: MediaItem[] = [
-    ...movies.results.map((r) => mapItem(r, "movie", genres.movie)),
-    ...tv.results.map((r) => mapItem(r, "tv", genres.tv)),
-  ].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+  const seedItems: MediaItem[] = [
+    ...movies.map((r) =>
+      mapItem(r as TmdbTrendingItem, "movie", genres.movie),
+    ),
+    ...tv.map((r) => mapItem(r as TmdbTrendingItem, "tv", genres.tv)),
+  ];
 
-  // Enrich all items with TMDB details (credits, providers, seasons).
-  await mapWithLimit(items, 8, async (item) => {
-    const details = await fetchDetails(item, tmdbKey);
-    if (!details) return;
-    const imdbId = enrichFromDetails(item, details);
-    if (omdbKey && imdbId) await enrichWithOmdb(item, imdbId, omdbKey);
+  // 2. Decide which ones need re-fetch (missing OR stale).
+  const ids = seedItems.map((i) => i.id);
+  const { data: existing } = await supabaseAdmin
+    .from("media")
+    .select("media_id, fetched_at")
+    .in("media_id", ids);
+  const fetchedAt = new Map<string, number>();
+  for (const row of existing ?? []) {
+    fetchedAt.set(row.media_id, new Date(row.fetched_at).getTime());
+  }
+
+  const now = Date.now();
+  const toRefresh = opts?.force
+    ? seedItems
+    : seedItems.filter((i) => {
+        const last = fetchedAt.get(i.id);
+        return !last || now - last > STALE_MS;
+      });
+
+  let refreshed = 0;
+  let failed = 0;
+  const rows: MediaRow[] = [];
+
+  await mapWithLimit(toRefresh, 6, async (item) => {
+    try {
+      const [type, rawId] = item.id.split("-");
+      const rawTmdb = await tmdb<TmdbDetails & Record<string, unknown>>(
+        `/${type}/${rawId}`,
+        tmdbKey,
+        { append_to_response: TMDB_APPEND, language: "en-US" },
+      );
+      const imdbId = enrichFromDetails(item, rawTmdb);
+
+      let rawOmdb: unknown = null;
+      if (omdbKey && imdbId) {
+        rawOmdb = await fetchOmdbRaw(imdbId, omdbKey);
+        if (rawOmdb) applyOmdbRatings(item, rawOmdb as OmdbResponse);
+      }
+      rows.push(rowFromEnrichedItem(item, rawTmdb, rawOmdb));
+      refreshed++;
+    } catch (e) {
+      failed++;
+      console.error(`[sync] enrich failed for ${item.id}:`, e);
+    }
   });
 
-  return items;
+  // 3. Upsert in chunks (rows can be large).
+  const CHUNK = 25;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const { error } = await supabaseAdmin
+      .from("media")
+      .upsert(chunk, { onConflict: "media_id" });
+    if (error) {
+      console.error(`[sync] upsert chunk failed:`, error.message);
+    }
+  }
+
+  return {
+    discovered: seedItems.length,
+    refreshed,
+    skippedFresh: seedItems.length - toRefresh.length,
+    failed,
+    durationMs: Date.now() - start,
+  };
+}
+
+async function fetchOmdbRaw(imdbId: string, key: string): Promise<unknown | null> {
+  try {
+    const res = await fetch(`${OMDB_BASE}/?i=${imdbId}&apikey=${key}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.Response !== "True") return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function applyOmdbRatings(item: MediaItem, data: OmdbResponse) {
+  if (data.imdbRating && data.imdbRating !== "N/A") {
+    const n = parseFloat(data.imdbRating);
+    if (Number.isFinite(n)) item.ratings.imdb = n;
+  }
+  if (data.Metascore && data.Metascore !== "N/A") {
+    const n = parseInt(data.Metascore, 10);
+    if (Number.isFinite(n)) item.ratings.metacritic = n;
+  }
+  const rt = data.Ratings?.find((r) => r.Source === "Rotten Tomatoes");
+  if (rt) item.ratings.rottenTomatoes = parsePct(rt.Value);
 }
