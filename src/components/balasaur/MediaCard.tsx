@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 
 const TYPE_LABEL: Record<MediaType, string> = {
@@ -30,6 +32,8 @@ function primaryRating(item: MediaItem): { value: string; raw: number } | null {
 
 export function MediaCard({ item }: { item: MediaItem }) {
   const rating = primaryRating(item);
+  const [expanded, setExpanded] = useState(false);
+  const hasSeasons = item.mediaType === "tv" && (item.seasons?.length ?? 0) > 0;
 
   return (
     <article className="group flex flex-col">
@@ -78,7 +82,39 @@ export function MediaCard({ item }: { item: MediaItem }) {
         </h3>
         <p className="mt-1 font-mono text-[10.5px] text-text-muted">
           {item.year || "—"} · {TYPE_CAPTION[item.mediaType]}
+          {item.mediaType === "tv" && item.seasons && item.seasons.length > 0
+            ? ` · ${item.seasons.length}S`
+            : ""}
         </p>
+        {hasSeasons && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-1.5 flex w-full cursor-pointer items-center justify-between rounded-[4px] border border-border bg-panel px-1.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+            aria-expanded={expanded}
+          >
+            <span>{expanded ? "Hide seasons" : "Seasons"}</span>
+            <ChevronDown
+              className={"h-3 w-3 transition-transform " + (expanded ? "rotate-180" : "")}
+            />
+          </button>
+        )}
+        {hasSeasons && expanded && (
+          <ul className="mt-1.5 space-y-1 rounded-[4px] border border-border bg-panel px-1.5 py-1.5">
+            {item.seasons!.map((s) => (
+              <li
+                key={s.seasonNumber}
+                className="flex items-baseline justify-between gap-2 font-mono text-[10.5px]"
+              >
+                <span className="truncate text-text-bright">{s.name}</span>
+                <span className="shrink-0 text-text-dim">
+                  {s.episodeCount > 0 ? `${s.episodeCount}ep` : ""}
+                  {s.airDate ? ` · ${s.airDate.slice(0, 4)}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </article>
   );

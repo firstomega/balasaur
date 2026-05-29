@@ -12,6 +12,15 @@ export interface MediaPerson {
   role: string;
 }
 
+export interface MediaSeason {
+  seasonNumber: number;
+  name: string;
+  episodeCount: number;
+  airDate: string;
+  posterUrl?: string;
+  overview?: string;
+}
+
 export interface MediaItem {
   id: string;
   mediaType: MediaType;
@@ -28,4 +37,6 @@ export interface MediaItem {
   awardWinner?: boolean;
   awardNominee?: boolean;
   popularity?: number;
+  seasons?: MediaSeason[];
+  releaseDate?: string;
 }

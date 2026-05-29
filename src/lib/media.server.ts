@@ -1,9 +1,10 @@
-import type { MediaItem } from "@/types/media";
+import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 import { unifyGenres } from "./genres";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
+const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 
 let genreCache: { movie: Map<number, string>; tv: Map<number, string> } | null = null;
 
@@ -68,17 +69,111 @@ function mapItem(
     lengthLabel: "",
     people: [],
     popularity: raw.popularity,
+    releaseDate: date,
   };
 }
 
-async function getExternalImdbId(item: MediaItem, key: string): Promise<string | undefined> {
+const PROVIDER_NAME_MAP: Record<string, string> = {
+  Netflix: "Netflix",
+  Max: "Max",
+  "HBO Max": "Max",
+  "Amazon Prime Video": "Prime",
+  "Amazon Prime Video with Ads": "Prime",
+  "Apple TV+": "Apple TV+",
+  "Apple TV Plus": "Apple TV+",
+  Hulu: "Hulu",
+};
+
+interface TmdbDetails {
+  imdb_id?: string | null;
+  external_ids?: { imdb_id?: string | null };
+  runtime?: number;
+  episode_run_time?: number[];
+  number_of_seasons?: number;
+  credits?: {
+    cast?: { name: string; character?: string }[];
+    crew?: { name: string; job?: string; department?: string }[];
+  };
+  "watch/providers"?: {
+    results?: Record<string, { flatrate?: { provider_name: string }[] }>;
+  };
+  seasons?: {
+    season_number: number;
+    name: string;
+    episode_count: number;
+    air_date: string | null;
+    poster_path: string | null;
+    overview: string | null;
+  }[];
+}
+
+async function fetchDetails(item: MediaItem, key: string): Promise<TmdbDetails | null> {
   const [type, rawId] = item.id.split("-");
   try {
-    const r = await tmdb<{ imdb_id?: string | null }>(`/${type}/${rawId}/external_ids`, key);
-    return r.imdb_id ?? undefined;
+    return await tmdb<TmdbDetails>(`/${type}/${rawId}`, key, {
+      append_to_response: "external_ids,credits,watch/providers",
+    });
   } catch {
-    return undefined;
+    return null;
   }
+}
+
+function enrichFromDetails(item: MediaItem, d: TmdbDetails): string | undefined {
+  // People: director(s) + top cast
+  const people: MediaPerson[] = [];
+  const crew = d.credits?.crew ?? [];
+  for (const c of crew) {
+    if (c.job === "Director" || c.job === "Creator") {
+      people.push({ name: c.name, role: c.job });
+    }
+  }
+  // Show creators for TV from created_by-style crew already; cap directors at 2
+  const cast = d.credits?.cast ?? [];
+  for (const c of cast.slice(0, 6)) {
+    people.push({ name: c.name, role: c.character || "Cast" });
+  }
+  // Dedupe by name
+  const seen = new Set<string>();
+  item.people = people.filter((p) => {
+    if (seen.has(p.name)) return false;
+    seen.add(p.name);
+    return true;
+  });
+
+  // Streaming providers (US)
+  const us = d["watch/providers"]?.results?.US;
+  if (us?.flatrate) {
+    const mapped = new Set<string>();
+    for (const p of us.flatrate) {
+      const name = PROVIDER_NAME_MAP[p.provider_name];
+      if (name) mapped.add(name);
+    }
+    item.streaming = Array.from(mapped);
+  }
+
+  // Length
+  if (item.mediaType === "movie" && d.runtime) {
+    item.lengthLabel = `${d.runtime}m`;
+  } else if (item.mediaType === "tv") {
+    if (d.number_of_seasons) {
+      item.lengthLabel = `${d.number_of_seasons} season${d.number_of_seasons === 1 ? "" : "s"}`;
+    }
+    if (d.seasons) {
+      const seasons: MediaSeason[] = d.seasons
+        .filter((s) => s.season_number > 0)
+        .map((s) => ({
+          seasonNumber: s.season_number,
+          name: s.name,
+          episodeCount: s.episode_count,
+          airDate: s.air_date ?? "",
+          posterUrl: s.poster_path ? `${SEASON_POSTER_BASE}${s.poster_path}` : undefined,
+          overview: s.overview ?? undefined,
+        }));
+      item.seasons = seasons;
+    }
+  }
+
+  return d.imdb_id ?? d.external_ids?.imdb_id ?? undefined;
 }
 
 interface OmdbResponse {
@@ -145,14 +240,13 @@ export async function fetchTrendingMedia(): Promise<MediaItem[]> {
     ...tv.results.map((r) => mapItem(r, "tv", genres.tv)),
   ].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
 
-  // OMDb enrichment for top N to keep latency bounded.
-  if (omdbKey) {
-    const top = items.slice(0, 40);
-    await mapWithLimit(top, 6, async (item) => {
-      const imdbId = await getExternalImdbId(item, tmdbKey);
-      if (imdbId) await enrichWithOmdb(item, imdbId, omdbKey);
-    });
-  }
+  // Enrich all items with TMDB details (credits, providers, seasons).
+  await mapWithLimit(items, 8, async (item) => {
+    const details = await fetchDetails(item, tmdbKey);
+    if (!details) return;
+    const imdbId = enrichFromDetails(item, details);
+    if (omdbKey && imdbId) await enrichWithOmdb(item, imdbId, omdbKey);
+  });
 
   return items;
 }
