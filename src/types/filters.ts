@@ -15,6 +15,9 @@ export interface FilterState {
   imdbRange: [number, number];
   rtRange: [number, number];
   metaRange: [number, number];
+  includeUnratedImdb: boolean;
+  includeUnratedRt: boolean;
+  includeUnratedMeta: boolean;
   people: string[];
   awardWinners: boolean;
   nominated: boolean;
@@ -38,6 +41,9 @@ export function defaultFilterState(): FilterState {
     imdbRange: [...IMDB_BOUNDS],
     rtRange: [...RT_BOUNDS],
     metaRange: [...META_BOUNDS],
+    includeUnratedImdb: true,
+    includeUnratedRt: true,
+    includeUnratedMeta: true,
     people: [],
     awardWinners: false,
     nominated: false,
