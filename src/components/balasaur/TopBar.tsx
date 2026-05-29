@@ -1,8 +1,22 @@
-import { Search, Zap } from "lucide-react";
+import { useState } from "react";
+import { Search, Zap, LogOut } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { DinoMark } from "./DinoMark";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthDialog } from "./AuthDialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export function TopBar() {
+  const { user, signOut } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
@@ -38,20 +52,54 @@ export function TopBar() {
             <Zap className="h-3.5 w-3.5" />
             Triage
           </Link>
-          <a
-            href="#"
+          <Link
+            to="/lists"
             className="hidden rounded-[5px] px-2.5 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:inline-block"
           >
             Lists
-          </a>
-          <button
-            type="button"
-            className="rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[12px] font-medium uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Sign in
-          </button>
+          </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex max-w-[180px] items-center gap-1.5 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[12px] text-text-bright hover:border-border-strong"
+                >
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] uppercase text-primary-foreground">
+                    {user.email?.[0] ?? "?"}
+                  </span>
+                  <span className="hidden truncate sm:inline">{user.email}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-border bg-panel font-mono text-[12px] text-text-bright"
+              >
+                <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-text-dim">
+                  Signed in
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border" />
+                <DropdownMenuItem
+                  onClick={() => signOut()}
+                  className="cursor-pointer focus:bg-background"
+                >
+                  <LogOut className="mr-2 h-3.5 w-3.5" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAuthOpen(true)}
+              className="rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[12px] font-medium uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Sign in
+            </button>
+          )}
         </nav>
       </div>
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </header>
   );
 }
