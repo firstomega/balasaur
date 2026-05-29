@@ -178,11 +178,40 @@ interface OmdbResponse {
   imdbRating?: string;
   Metascore?: string;
   Ratings?: { Source: string; Value: string }[];
+  Awards?: string;
 }
 
 function parsePct(v: string): number | undefined {
   const n = parseInt(v.replace("%", ""), 10);
   return Number.isFinite(n) ? n : undefined;
+}
+
+export interface AwardInfo {
+  winner: boolean;
+  nominee: boolean;
+  wins?: number;
+  nominations?: number;
+}
+
+/**
+ * Parse OMDB "Awards" free-text into structured flags/counts.
+ * Examples: "Won 7 Oscars. 145 wins & 220 nominations total."
+ *           "Nominated for 3 BAFTA. 12 wins & 30 nominations total."
+ */
+export function parseAwards(text: string | undefined | null): AwardInfo {
+  const info: AwardInfo = { winner: false, nominee: false };
+  if (!text || text === "N/A") return info;
+  const lower = text.toLowerCase();
+
+  const winsMatch = lower.match(/(\d+)\s+wins?/);
+  const nomsMatch = lower.match(/(\d+)\s+nominations?/);
+  if (winsMatch) info.wins = parseInt(winsMatch[1], 10);
+  if (nomsMatch) info.nominations = parseInt(nomsMatch[1], 10);
+
+  if (/\bwon\b/.test(lower) || (info.wins ?? 0) > 0) info.winner = true;
+  if (/\bnominated\b/.test(lower) || (info.nominations ?? 0) > 0) info.nominee = true;
+
+  return info;
 }
 
 
@@ -208,7 +237,7 @@ export async function loadCatalogFromDb(limit = 400): Promise<MediaItem[]> {
   const { data, error } = await supabaseAdmin
     .from("media")
     .select(
-      "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,streaming,length_label,people,seasons",
+      "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,streaming,length_label,people,seasons,award_winner,award_nominee",
     )
     .order("popularity", { ascending: false, nullsFirst: false })
     .limit(limit);
@@ -238,6 +267,8 @@ export async function loadCatalogFromDb(limit = 400): Promise<MediaItem[]> {
     popularity: r.popularity ?? undefined,
     seasons: (r.seasons as unknown as MediaSeason[] | null) ?? undefined,
     releaseDate: r.release_date ?? undefined,
+    awardWinner: r.award_winner ?? false,
+    awardNominee: r.award_nominee ?? false,
   }));
 }
 
@@ -281,6 +312,7 @@ function rowFromEnrichedItem(
   rawTmdb: unknown,
   rawOmdb: unknown,
 ): MediaRow {
+  const awards = parseAwards((rawOmdb as OmdbResponse | null)?.Awards);
   return {
     media_id: item.id,
     media_type: item.mediaType,
@@ -303,7 +335,101 @@ function rowFromEnrichedItem(
     raw_omdb: (rawOmdb ?? null) as MediaRow["raw_omdb"],
     fetched_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    award_winner: awards.winner,
+    award_nominee: awards.nominee,
+    award_wins: awards.wins ?? null,
+    award_nominations: awards.nominations ?? null,
   };
+}
+
+// ---------- One-time backfill from already-stored raw payloads ----------
+
+export interface BackfillResult {
+  scanned: number;
+  updatedGenres: number;
+  updatedAwards: number;
+  failed: number;
+  durationMs: number;
+}
+
+interface TmdbGenreObj {
+  id: number;
+  name: string;
+}
+
+/**
+ * Rewrite `genres`, `award_winner`, `award_nominee`, `award_wins`,
+ * `award_nominations` columns on every existing media row, sourced from
+ * raw_tmdb / raw_omdb already stored. Makes NO external API calls.
+ */
+export async function backfillFromRaw(): Promise<BackfillResult> {
+  const start = Date.now();
+  const result: BackfillResult = {
+    scanned: 0,
+    updatedGenres: 0,
+    updatedAwards: 0,
+    failed: 0,
+    durationMs: 0,
+  };
+
+  const PAGE = 200;
+  let offset = 0;
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from("media")
+      .select("media_id, genres, raw_tmdb, raw_omdb")
+      .range(offset, offset + PAGE - 1);
+    if (error) {
+      console.error("[backfill] select failed:", error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+
+    for (const row of data) {
+      result.scanned++;
+      try {
+        const raw = row.raw_tmdb as { genres?: TmdbGenreObj[] } | null;
+        const tmdbGenreNames = (raw?.genres ?? [])
+          .map((g) => g?.name)
+          .filter((n): n is string => !!n);
+        const newGenres = tmdbGenreNames.length > 0 ? unifyGenres(tmdbGenreNames) : (row.genres ?? []);
+
+        const awardsText = (row.raw_omdb as { Awards?: string } | null)?.Awards;
+        const awards = parseAwards(awardsText);
+
+        const genresChanged =
+          JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
+
+        const { error: updErr } = await supabaseAdmin
+          .from("media")
+          .update({
+            genres: newGenres,
+            award_winner: awards.winner,
+            award_nominee: awards.nominee,
+            award_wins: awards.wins ?? null,
+            award_nominations: awards.nominations ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("media_id", row.media_id);
+        if (updErr) {
+          result.failed++;
+          console.error(`[backfill] update ${row.media_id} failed:`, updErr.message);
+          continue;
+        }
+        if (genresChanged) result.updatedGenres++;
+        if (awards.winner || awards.nominee) result.updatedAwards++;
+      } catch (e) {
+        result.failed++;
+        console.error("[backfill] row failed:", e);
+      }
+    }
+
+    if (data.length < PAGE) break;
+    offset += PAGE;
+  }
+
+  result.durationMs = Date.now() - start;
+  return result;
 }
 
 export interface SyncResult {
