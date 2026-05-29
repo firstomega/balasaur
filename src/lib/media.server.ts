@@ -10,7 +10,11 @@ const OMDB_BASE = "https://www.omdbapi.com";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
 const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const DISCOVER_PAGES = 10; // ~200 of each type
+const DISCOVER_PAGES = 38; // ~760 of each type (TMDB returns 20 per page)
+const TOP_RATED_PAGES = 10; // ~200 of each type — classics
+const TRENDING_PAGES = 2; // ~40 of each type — currently hot
+const OMDB_BUDGET_PER_RUN = 900; // free tier is ~1000/day, leave headroom
+const MAX_ENRICH_PER_RUN = 350; // keep one run under serverless time limits
 const TMDB_APPEND =
   "external_ids,credits,watch/providers,keywords,release_dates,content_ratings,images,videos,recommendations,similar";
 
@@ -233,7 +237,7 @@ async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T) => Pr
  * Read the catalog out of our database. NO upstream API calls.
  * This is what visitor page loads hit.
  */
-export async function loadCatalogFromDb(limit = 400): Promise<MediaItem[]> {
+export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
   const { data, error } = await supabaseAdmin
     .from("media")
     .select(
@@ -305,6 +309,37 @@ async function discoverIds(
     }
   }
   return all;
+}
+
+async function listFromPath(
+  path: string,
+  key: string,
+  pages: number,
+): Promise<DiscoverResult[]> {
+  const all: DiscoverResult[] = [];
+  for (let page = 1; page <= pages; page++) {
+    try {
+      const r = await tmdb<{ results: DiscoverResult[] }>(path, key, {
+        page: String(page),
+        language: "en-US",
+      });
+      all.push(...r.results);
+    } catch (e) {
+      console.error(`[sync] ${path} page ${page} failed:`, e);
+    }
+  }
+  return all;
+}
+
+function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
+  const seen = new Set<number>();
+  const out: DiscoverResult[] = [];
+  for (const it of items) {
+    if (!it?.id || seen.has(it.id)) continue;
+    seen.add(it.id);
+    out.push(it);
+  }
+  return out;
 }
 
 function rowFromEnrichedItem(
@@ -453,16 +488,28 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
 
   const genres = await loadGenres(tmdbKey);
 
-  // 1. Discover popular movies + TV.
-  const [movies, tv] = await Promise.all([
+  // 1. Seed from multiple TMDB sources, then merge + dedupe.
+  const [
+    discoverMovies,
+    discoverTv,
+    topMovies,
+    topTv,
+    trendingMovies,
+    trendingTv,
+  ] = await Promise.all([
     discoverIds("movie", tmdbKey, DISCOVER_PAGES),
     discoverIds("tv", tmdbKey, DISCOVER_PAGES),
+    listFromPath("/movie/top_rated", tmdbKey, TOP_RATED_PAGES),
+    listFromPath("/tv/top_rated", tmdbKey, TOP_RATED_PAGES),
+    listFromPath("/trending/movie/week", tmdbKey, TRENDING_PAGES),
+    listFromPath("/trending/tv/week", tmdbKey, TRENDING_PAGES),
   ]);
 
+  const movies = dedupeById([...discoverMovies, ...topMovies, ...trendingMovies]);
+  const tv = dedupeById([...discoverTv, ...topTv, ...trendingTv]);
+
   const seedItems: MediaItem[] = [
-    ...movies.map((r) =>
-      mapItem(r as TmdbTrendingItem, "movie", genres.movie),
-    ),
+    ...movies.map((r) => mapItem(r as TmdbTrendingItem, "movie", genres.movie)),
     ...tv.map((r) => mapItem(r as TmdbTrendingItem, "tv", genres.tv)),
   ];
 
@@ -478,15 +525,26 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
   }
 
   const now = Date.now();
-  const toRefresh = opts?.force
-    ? seedItems
+  const candidates = opts?.force
+    ? seedItems.slice()
     : seedItems.filter((i) => {
         const last = fetchedAt.get(i.id);
         return !last || now - last > STALE_MS;
       });
 
+  // Process never-fetched items first, then stalest-first, so subsequent
+  // scheduled runs naturally continue where this one stopped.
+  candidates.sort((a, b) => {
+    const la = fetchedAt.get(a.id) ?? 0;
+    const lb = fetchedAt.get(b.id) ?? 0;
+    return la - lb;
+  });
+
+  const toRefresh = candidates.slice(0, MAX_ENRICH_PER_RUN);
+
   let refreshed = 0;
   let failed = 0;
+  let omdbCalls = 0;
   const rows: MediaRow[] = [];
 
   await mapWithLimit(toRefresh, 6, async (item) => {
@@ -499,8 +557,12 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
       );
       const imdbId = enrichFromDetails(item, rawTmdb);
 
+      // OMDB quota guard: still store the TMDB row when over budget; the
+      // card falls back to the TMDB score and the next run can fill in
+      // IMDb/RT/Metacritic.
       let rawOmdb: unknown = null;
-      if (omdbKey && imdbId) {
+      if (omdbKey && imdbId && omdbCalls < OMDB_BUDGET_PER_RUN) {
+        omdbCalls++;
         rawOmdb = await fetchOmdbRaw(imdbId, omdbKey);
         if (rawOmdb) applyOmdbRatings(item, rawOmdb as OmdbResponse);
       }
@@ -527,7 +589,7 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
   return {
     discovered: seedItems.length,
     refreshed,
-    skippedFresh: seedItems.length - toRefresh.length,
+    skippedFresh: seedItems.length - candidates.length,
     failed,
     durationMs: Date.now() - start,
   };
