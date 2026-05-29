@@ -1,11 +1,6 @@
 import type { MediaItem } from "@/types/media";
 import type { FilterState } from "@/types/filters";
-import {
-  IMDB_BOUNDS,
-  META_BOUNDS,
-  RT_BOUNDS,
-  YEAR_BOUNDS,
-} from "@/types/filters";
+import { YEAR_BOUNDS } from "@/types/filters";
 
 function inRange(
   value: number | undefined,
