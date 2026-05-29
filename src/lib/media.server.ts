@@ -1,6 +1,9 @@
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { TablesInsert } from "@/integrations/supabase/types";
+
+type MediaRow = TablesInsert<"media">;
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
@@ -231,9 +234,9 @@ export async function loadCatalogFromDb(limit = 400): Promise<MediaItem[]> {
     genres: r.genres ?? [],
     streaming: r.streaming ?? [],
     lengthLabel: r.length_label ?? "",
-    people: (r.people as MediaPerson[]) ?? [],
+    people: (r.people as unknown as MediaPerson[]) ?? [],
     popularity: r.popularity ?? undefined,
-    seasons: (r.seasons as MediaSeason[] | null) ?? undefined,
+    seasons: (r.seasons as unknown as MediaSeason[] | null) ?? undefined,
     releaseDate: r.release_date ?? undefined,
   }));
 }
@@ -277,7 +280,7 @@ function rowFromEnrichedItem(
   item: MediaItem,
   rawTmdb: unknown,
   rawOmdb: unknown,
-): Record<string, unknown> {
+): MediaRow {
   return {
     media_id: item.id,
     media_type: item.mediaType,
@@ -294,10 +297,10 @@ function rowFromEnrichedItem(
     genres: item.genres,
     streaming: item.streaming,
     length_label: item.lengthLabel || null,
-    people: item.people,
-    seasons: item.seasons ?? null,
-    raw_tmdb: rawTmdb ?? null,
-    raw_omdb: rawOmdb ?? null,
+    people: item.people as unknown as MediaRow["people"],
+    seasons: (item.seasons ?? null) as MediaRow["seasons"],
+    raw_tmdb: (rawTmdb ?? null) as MediaRow["raw_tmdb"],
+    raw_omdb: (rawOmdb ?? null) as MediaRow["raw_omdb"],
     fetched_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -358,7 +361,7 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
 
   let refreshed = 0;
   let failed = 0;
-  const rows: Record<string, unknown>[] = [];
+  const rows: MediaRow[] = [];
 
   await mapWithLimit(toRefresh, 6, async (item) => {
     try {
