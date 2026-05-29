@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_media_status: {
+        Row: {
+          id: string
+          intent: string | null
+          media_id: string
+          media_type: string
+          poster_url: string | null
+          rewatch_ok: boolean | null
+          sentiment: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          year: string | null
+        }
+        Insert: {
+          id?: string
+          intent?: string | null
+          media_id: string
+          media_type: string
+          poster_url?: string | null
+          rewatch_ok?: boolean | null
+          sentiment?: string | null
+          status: string
+          title: string
+          updated_at?: string
+          user_id: string
+          year?: string | null
+        }
+        Update: {
+          id?: string
+          intent?: string | null
+          media_id?: string
+          media_type?: string
+          poster_url?: string | null
+          rewatch_ok?: boolean | null
+          sentiment?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
