@@ -1,0 +1,47 @@
+import type { MediaType } from "./media";
+
+export type SortKey = "popular" | "trending" | "newest" | "topRated";
+
+export interface RangeFilter {
+  min: number;
+  max: number;
+}
+
+export interface FilterState {
+  mediaTypes: Set<MediaType>;
+  genres: Set<string>;
+  streaming: Set<string>;
+  yearRange: [number, number];
+  imdbRange: [number, number];
+  rtRange: [number, number];
+  metaRange: [number, number];
+  people: string[];
+  awardWinners: boolean;
+  nominated: boolean;
+  hideSeen: boolean;
+  sort: SortKey;
+}
+
+export const STREAMING_OPTIONS = ["Netflix", "Max", "Prime", "Apple TV+", "Hulu"] as const;
+
+export const YEAR_BOUNDS: [number, number] = [1950, new Date().getFullYear()];
+export const IMDB_BOUNDS: [number, number] = [0, 10];
+export const RT_BOUNDS: [number, number] = [0, 100];
+export const META_BOUNDS: [number, number] = [0, 100];
+
+export function defaultFilterState(): FilterState {
+  return {
+    mediaTypes: new Set<MediaType>(["movie", "tv"]),
+    genres: new Set(),
+    streaming: new Set(),
+    yearRange: [...YEAR_BOUNDS],
+    imdbRange: [...IMDB_BOUNDS],
+    rtRange: [...RT_BOUNDS],
+    metaRange: [...META_BOUNDS],
+    people: [],
+    awardWinners: false,
+    nominated: false,
+    hideSeen: false,
+    sort: "popular",
+  };
+}
