@@ -515,13 +515,24 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
 
   // 2. Decide which ones need re-fetch (missing OR stale).
   const ids = seedItems.map((i) => i.id);
-  const { data: existing } = await supabaseAdmin
-    .from("media")
-    .select("media_id, fetched_at")
-    .in("media_id", ids);
+  // Supabase caps single queries at 1000 rows by default, so chunk the
+  // lookup — otherwise once the catalog passes 1000 the staleness map is
+  // incomplete and we re-enrich already-fresh rows on every run.
   const fetchedAt = new Map<string, number>();
-  for (const row of existing ?? []) {
-    fetchedAt.set(row.media_id, new Date(row.fetched_at).getTime());
+  const ID_CHUNK = 500;
+  for (let i = 0; i < ids.length; i += ID_CHUNK) {
+    const slice = ids.slice(i, i + ID_CHUNK);
+    const { data: existing, error: exErr } = await supabaseAdmin
+      .from("media")
+      .select("media_id, fetched_at")
+      .in("media_id", slice);
+    if (exErr) {
+      console.error("[sync] staleness lookup failed:", exErr.message);
+      continue;
+    }
+    for (const row of existing ?? []) {
+      fetchedAt.set(row.media_id, new Date(row.fetched_at).getTime());
+    }
   }
 
   const now = Date.now();
