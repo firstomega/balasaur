@@ -156,7 +156,7 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
         <AccordionItem value="rating" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>Rating</AccordionTrigger>
           <AccordionContent className="pb-4 pt-2">
-            <RatingSliders filters={filters} setFilters={setFilters} />
+            <RatingSliders filters={filters} setFilters={setFilters} allItems={allItems} />
           </AccordionContent>
         </AccordionItem>
 
@@ -202,26 +202,36 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 function RatingSliders({
   filters,
   setFilters,
+  allItems,
 }: {
   filters: FilterState;
   setFilters: Props["setFilters"];
+  allItems: MediaItem[];
 }) {
   const rows: {
     label: string;
     key: "imdbRange" | "rtRange" | "metaRange";
+    includeKey: "includeUnratedImdb" | "includeUnratedRt" | "includeUnratedMeta";
+    ratingKey: "imdb" | "rottenTomatoes" | "metacritic";
     bounds: [number, number];
     step: number;
     suffix?: string;
   }[] = [
-    { label: "IMDb", key: "imdbRange", bounds: IMDB_BOUNDS, step: 0.1 },
-    { label: "Rotten Tomatoes", key: "rtRange", bounds: RT_BOUNDS, step: 1, suffix: "%" },
-    { label: "Metacritic", key: "metaRange", bounds: META_BOUNDS, step: 1 },
+    { label: "IMDb", key: "imdbRange", includeKey: "includeUnratedImdb", ratingKey: "imdb", bounds: IMDB_BOUNDS, step: 0.1 },
+    { label: "Rotten Tomatoes", key: "rtRange", includeKey: "includeUnratedRt", ratingKey: "rottenTomatoes", bounds: RT_BOUNDS, step: 1, suffix: "%" },
+    { label: "Metacritic", key: "metaRange", includeKey: "includeUnratedMeta", ratingKey: "metacritic", bounds: META_BOUNDS, step: 1 },
   ];
+
+  const total = allItems.length;
 
   return (
     <div className="space-y-4 px-1">
       {rows.map((row) => {
         const value = filters[row.key];
+        const covered = allItems.reduce(
+          (n, it) => (it.ratings[row.ratingKey] !== undefined ? n + 1 : n),
+          0,
+        );
         return (
           <div key={row.key}>
             <div className="mb-1.5 flex items-center justify-between">
@@ -243,6 +253,22 @@ function RatingSliders({
                 setFilters((prev) => ({ ...prev, [row.key]: [v[0], v[1]] as [number, number] }))
               }
             />
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              <label className="flex cursor-pointer items-center gap-1.5">
+                <Checkbox
+                  checked={filters[row.includeKey]}
+                  onCheckedChange={(v) =>
+                    setFilters((prev) => ({ ...prev, [row.includeKey]: !!v }))
+                  }
+                />
+                <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                  Include unrated
+                </span>
+              </label>
+              <span className="font-mono text-[10px] text-text-dim">
+                {covered} of {total} scored
+              </span>
+            </div>
           </div>
         );
       })}
