@@ -52,7 +52,7 @@ function HomePage() {
       <TopBar />
       <div className="mx-auto flex max-w-[1600px] gap-5 px-4 py-5">
         {/* Desktop rail */}
-        <aside className="sticky top-[60px] hidden h-[calc(100vh-72px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 md:block">
+        <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 md:block">
           <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
             <RailWithData filters={filters} setFilters={setFilters} />
           </Suspense>
