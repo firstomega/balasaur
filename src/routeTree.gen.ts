@@ -13,6 +13,7 @@ import { Route as TriageRouteImport } from './routes/triage'
 import { Route as ListsRouteImport } from './routes/lists'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
+import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
 
 const TriageRoute = TriageRouteImport.update({
   id: '/triage',
@@ -34,17 +35,25 @@ const ApiPublicHooksSyncMediaRoute = ApiPublicHooksSyncMediaRouteImport.update({
   path: '/api/public/hooks/sync-media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksBackfillMediaRoute =
+  ApiPublicHooksBackfillMediaRouteImport.update({
+    id: '/api/public/hooks/backfill-media',
+    path: '/api/public/hooks/backfill-media',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
   '/triage': typeof TriageRoute
+  '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
   '/triage': typeof TriageRoute
+  '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRoutesById {
@@ -52,20 +61,38 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
   '/triage': typeof TriageRoute
+  '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/lists' | '/triage' | '/api/public/hooks/sync-media'
+  fullPaths:
+    | '/'
+    | '/lists'
+    | '/triage'
+    | '/api/public/hooks/backfill-media'
+    | '/api/public/hooks/sync-media'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/lists' | '/triage' | '/api/public/hooks/sync-media'
-  id: '__root__' | '/' | '/lists' | '/triage' | '/api/public/hooks/sync-media'
+  to:
+    | '/'
+    | '/lists'
+    | '/triage'
+    | '/api/public/hooks/backfill-media'
+    | '/api/public/hooks/sync-media'
+  id:
+    | '__root__'
+    | '/'
+    | '/lists'
+    | '/triage'
+    | '/api/public/hooks/backfill-media'
+    | '/api/public/hooks/sync-media'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ListsRoute: typeof ListsRoute
   TriageRoute: typeof TriageRoute
+  ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
 }
 
@@ -99,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/backfill-media': {
+      id: '/api/public/hooks/backfill-media'
+      path: '/api/public/hooks/backfill-media'
+      fullPath: '/api/public/hooks/backfill-media'
+      preLoaderRoute: typeof ApiPublicHooksBackfillMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,6 +140,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ListsRoute: ListsRoute,
   TriageRoute: TriageRoute,
+  ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
 }
 export const routeTree = rootRouteImport

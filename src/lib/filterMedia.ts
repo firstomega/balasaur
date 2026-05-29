@@ -1,20 +1,14 @@
 import type { MediaItem } from "@/types/media";
 import type { FilterState } from "@/types/filters";
-import {
-  IMDB_BOUNDS,
-  META_BOUNDS,
-  RT_BOUNDS,
-  YEAR_BOUNDS,
-} from "@/types/filters";
+import { YEAR_BOUNDS } from "@/types/filters";
 
 function inRange(
   value: number | undefined,
   range: [number, number],
-  bounds: [number, number],
+  includeUnrated: boolean,
 ): boolean {
-  // Unknown passes through unless range is moved off full extent.
-  const isFull = range[0] === bounds[0] && range[1] === bounds[1];
-  if (value === undefined) return isFull;
+  // Unknown scores pass through unless "Include unrated" is off (strict mode).
+  if (value === undefined) return includeUnrated;
   return value >= range[0] && value <= range[1];
 }
 
@@ -45,9 +39,9 @@ export function applyFilters(
       if (year < filters.yearRange[0] || year > filters.yearRange[1]) return false;
     }
 
-    if (!inRange(item.ratings.imdb, filters.imdbRange, IMDB_BOUNDS)) return false;
-    if (!inRange(item.ratings.rottenTomatoes, filters.rtRange, RT_BOUNDS)) return false;
-    if (!inRange(item.ratings.metacritic, filters.metaRange, META_BOUNDS)) return false;
+    if (!inRange(item.ratings.imdb, filters.imdbRange, filters.includeUnratedImdb)) return false;
+    if (!inRange(item.ratings.rottenTomatoes, filters.rtRange, filters.includeUnratedRt)) return false;
+    if (!inRange(item.ratings.metacritic, filters.metaRange, filters.includeUnratedMeta)) return false;
 
     if (peopleLower.length > 0) {
       const names = item.people.map((p) => p.name.toLowerCase());

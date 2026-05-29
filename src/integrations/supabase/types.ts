@@ -16,6 +16,10 @@ export type Database = {
     Tables: {
       media: {
         Row: {
+          award_nominations: number | null
+          award_nominee: boolean
+          award_winner: boolean
+          award_wins: number | null
           fetched_at: string
           genres: string[]
           length_label: string | null
@@ -39,6 +43,10 @@ export type Database = {
           year: string | null
         }
         Insert: {
+          award_nominations?: number | null
+          award_nominee?: boolean
+          award_winner?: boolean
+          award_wins?: number | null
           fetched_at?: string
           genres?: string[]
           length_label?: string | null
@@ -62,6 +70,10 @@ export type Database = {
           year?: string | null
         }
         Update: {
+          award_nominations?: number | null
+          award_nominee?: boolean
+          award_winner?: boolean
+          award_wins?: number | null
           fetched_at?: string
           genres?: string[]
           length_label?: string | null
