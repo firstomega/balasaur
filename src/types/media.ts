@@ -10,6 +10,7 @@ export interface MediaRatings {
 export interface MediaPerson {
   name: string;
   role: string;
+  personId?: number;
 }
 
 export interface MediaSeason {
@@ -69,4 +70,22 @@ export interface MediaDetail extends MediaItem {
   trailer?: { key: string; name: string; site: "YouTube" };
   related?: MediaItem[];
   keywords?: string[];
+}
+
+export interface PersonCreditGroup {
+  department: string;
+  items: MediaItem[];
+}
+
+export interface PersonDetail {
+  id: string;
+  name: string;
+  biography?: string;
+  birthday?: string;
+  deathday?: string;
+  placeOfBirth?: string;
+  knownForDepartment?: string;
+  profileUrl?: string;
+  imdbId?: string;
+  groups: PersonCreditGroup[];
 }
