@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { fetchMediaDetail, loadCatalogFromDb, syncCatalog } from "./media.server";
+import { fetchMediaDetail, fetchTrendingMedia, syncCatalog } from "./media.server";
 
 export const getTrendingMedia = createServerFn({ method: "GET" }).handler(async () => {
-  return loadCatalogFromDb();
+  return fetchTrendingMedia();
 });
 
 /**

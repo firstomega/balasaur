@@ -98,6 +98,66 @@ export type Database = {
         }
         Relationships: []
       }
+      media_cache: {
+        Row: {
+          detail_fetched_at: string | null
+          detail_payload: Json | null
+          id: string
+          media_type: string
+          popularity: number | null
+          summary_fetched_at: string | null
+          summary_payload: Json | null
+          title: string | null
+          tmdb_id: number
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          detail_fetched_at?: string | null
+          detail_payload?: Json | null
+          id: string
+          media_type: string
+          popularity?: number | null
+          summary_fetched_at?: string | null
+          summary_payload?: Json | null
+          title?: string | null
+          tmdb_id: number
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          detail_fetched_at?: string | null
+          detail_payload?: Json | null
+          id?: string
+          media_type?: string
+          popularity?: number | null
+          summary_fetched_at?: string | null
+          summary_payload?: Json | null
+          title?: string | null
+          tmdb_id?: number
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
+      trending_cache: {
+        Row: {
+          fetched_at: string
+          ids: string[]
+          key: string
+        }
+        Insert: {
+          fetched_at?: string
+          ids: string[]
+          key: string
+        }
+        Update: {
+          fetched_at?: string
+          ids?: string[]
+          key?: string
+        }
+        Relationships: []
+      }
       user_media_status: {
         Row: {
           id: string
