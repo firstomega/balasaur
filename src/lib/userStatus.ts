@@ -1,41 +1,47 @@
 import type { UserStatusRecord } from "@/hooks/useUserStatus";
 
-export type StatusKey = "loved" | "notLoved" | "want" | "notForMe";
+// Filable library statuses — shown as detail-page buttons AND as list buckets.
+// "Skip" is intentionally NOT here: it's a deck-only soft signal (see recordForSkip).
+export type StatusKey = "like" | "watched" | "didntWatch";
 
 export const STATUS_LABEL: Record<StatusKey, string> = {
-  loved: "Seen & loved",
-  notLoved: "Seen, didn't love",
-  want: "Want it",
-  notForMe: "Not for me",
+  like: "Like",
+  watched: "Watched",
+  didntWatch: "Didn't watch yet",
 };
 
 export const STATUS_HEX: Record<StatusKey, string> = {
-  loved: "#9fe6a0",
-  notLoved: "#9aa2b1",
-  want: "#3b82f6",
-  notForMe: "#ef4444",
+  like: "#9fe6a0", // green — favorites
+  watched: "#3b82f6", // blue — history
+  didntWatch: "#e8b84b", // amber — watchlist
 };
 
-export const STATUS_ORDER: StatusKey[] = ["want", "loved", "notLoved", "notForMe"];
+// Detail-page button order.
+export const STATUS_ORDER: StatusKey[] = ["like", "watched", "didntWatch"];
 
 export function recordForStatus(key: StatusKey): UserStatusRecord {
   const ts = Date.now();
   switch (key) {
-    case "loved":
-      return { status: "seen", sentiment: "liked", rewatchOk: true, ts };
-    case "notLoved":
-      return { status: "seen", sentiment: "disliked", rewatchOk: false, ts };
-    case "want":
+    case "like":
+      // Watched AND loved → lands in Favorites + History.
+      return { status: "seen", sentiment: "liked", ts };
+    case "watched":
+      // Watched, no strong feeling → History only.
+      return { status: "seen", ts };
+    case "didntWatch":
+      // Haven't seen it but want to → Watchlist.
       return { status: "unseen", intent: "want", ts };
-    case "notForMe":
-      return { status: "unseen", intent: "not_interested", ts };
   }
+}
+
+/** Skip: a soft "not now" that resurfaces later, deprioritized. Files into no list. */
+export function recordForSkip(): UserStatusRecord {
+  return { status: "skipped", ts: Date.now() };
 }
 
 export function statusKeyOf(rec: UserStatusRecord | undefined): StatusKey | null {
   if (!rec) return null;
-  if (rec.status === "seen") {
-    return rec.sentiment === "liked" ? "loved" : "notLoved";
-  }
-  return rec.intent === "want" ? "want" : "notForMe";
+  if (rec.status === "seen") return rec.sentiment === "liked" ? "like" : "watched";
+  if (rec.status === "unseen") return rec.intent === "want" ? "didntWatch" : null;
+  return null; // "skipped" → not a filed status
 }

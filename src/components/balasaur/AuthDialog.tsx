@@ -51,9 +51,7 @@ export function AuthDialog({
       redirect_uri: window.location.origin,
     })) as { error?: unknown; redirected?: boolean };
     if (res.error) {
-      setError(
-        res.error instanceof Error ? res.error.message : String(res.error),
-      );
+      setError(res.error instanceof Error ? res.error.message : String(res.error));
     }
   }
 
@@ -65,7 +63,7 @@ export function AuthDialog({
             {mode === "signin" ? "Sign in" : "Create account"}
           </DialogTitle>
           <DialogDescription className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
-            Save your triage choices across devices
+            Save your library across devices
           </DialogDescription>
         </DialogHeader>
 
@@ -101,9 +99,7 @@ export function AuthDialog({
             onChange={(e) => setPassword(e.target.value)}
             className="h-9 w-full rounded-[5px] border border-border bg-background px-2.5 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
           />
-          {error && (
-            <p className="font-mono text-[10.5px] text-red-400">{error}</p>
-          )}
+          {error && <p className="font-mono text-[10.5px] text-red-400">{error}</p>}
           <button
             type="submit"
             disabled={busy}
@@ -118,9 +114,7 @@ export function AuthDialog({
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
           className="cursor-pointer font-mono text-[10.5px] uppercase tracking-wider text-text-muted hover:text-text-bright"
         >
-          {mode === "signin"
-            ? "No account? Create one"
-            : "Have an account? Sign in"}
+          {mode === "signin" ? "No account? Create one" : "Have an account? Sign in"}
         </button>
       </DialogContent>
     </Dialog>

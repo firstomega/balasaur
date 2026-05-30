@@ -17,7 +17,7 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const staticPaths = ["/", "/triage", "/lists", "/privacy", "/terms"];
+        const staticPaths = ["/", "/watched", "/lists", "/privacy", "/terms"];
         const urls: { loc: string; lastmod?: string }[] = staticPaths.map((p) => ({
           loc: `${SITE_ORIGIN}${p}`,
         }));

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WatchedRouteImport } from './routes/watched'
 import { Route as TriageRouteImport } from './routes/triage'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -23,6 +24,11 @@ import { Route as MovieIdRouteImport } from './routes/movie.$id'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
 import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
 
+const WatchedRoute = WatchedRouteImport.update({
+  id: '/watched',
+  path: '/watched',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TriageRoute = TriageRouteImport.update({
   id: '/triage',
   path: '/triage',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
+  '/watched': typeof WatchedRoute
   '/movie/$id': typeof MovieIdRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
+  '/watched': typeof WatchedRoute
   '/movie/$id': typeof MovieIdRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
+  '/watched': typeof WatchedRoute
   '/movie/$id': typeof MovieIdRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
+    | '/watched'
     | '/movie/$id'
     | '/person/$id'
     | '/tv/$id'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
+    | '/watched'
     | '/movie/$id'
     | '/person/$id'
     | '/tv/$id'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
+    | '/watched'
     | '/movie/$id'
     | '/person/$id'
     | '/tv/$id'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
+  WatchedRoute: typeof WatchedRoute
   MovieIdRoute: typeof MovieIdRoute
   PersonIdRoute: typeof PersonIdRoute
   TvIdRoute: typeof TvIdRoute
@@ -202,6 +215,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/watched': {
+      id: '/watched'
+      path: '/watched'
+      fullPath: '/watched'
+      preLoaderRoute: typeof WatchedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/triage': {
       id: '/triage'
       path: '/triage'
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,
+  WatchedRoute: WatchedRoute,
   MovieIdRoute: MovieIdRoute,
   PersonIdRoute: PersonIdRoute,
   TvIdRoute: TvIdRoute,

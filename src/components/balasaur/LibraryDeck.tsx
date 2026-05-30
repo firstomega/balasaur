@@ -3,55 +3,66 @@ import { Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, SkipForward, X } from "lucide-react";
 import type { MediaItem } from "@/types/media";
 import { useUserStatus } from "@/hooks/useUserStatus";
-import { recordForStatus, STATUS_HEX, STATUS_LABEL, type StatusKey } from "@/lib/userStatus";
+import { recordForStatus, recordForSkip, type StatusKey } from "@/lib/userStatus";
 
 type Dir = "up" | "down" | "left" | "right";
 
-const DIR_TO_KEY: Record<Dir, StatusKey> = {
-  up: "loved",
-  down: "notLoved",
-  right: "want",
-  left: "notForMe",
+// Direction → meaning. "down" is Skip (soft, resurfaces); the rest file & leave.
+const DIR_TO_KEY: Record<Exclude<Dir, "down">, StatusKey> = {
+  up: "like",
+  right: "watched",
+  left: "didntWatch",
 };
+
 const ACTION_LABEL: Record<Dir, string> = {
-  up: STATUS_LABEL.loved,
-  down: STATUS_LABEL.notLoved,
-  right: STATUS_LABEL.want,
-  left: STATUS_LABEL.notForMe,
+  up: "Like",
+  right: "Watched",
+  left: "Didn't watch yet",
+  down: "Skip",
 };
+
 const ACTION_HEX: Record<Dir, string> = {
-  up: STATUS_HEX.loved,
-  down: STATUS_HEX.notLoved,
-  right: STATUS_HEX.want,
-  left: STATUS_HEX.notForMe,
+  up: "#9fe6a0", // favorites
+  right: "#3b82f6", // history
+  left: "#e8b84b", // watchlist
+  down: "#9aa2b1", // skip (neutral grey)
+};
+
+const ACTION_SUBLABEL: Record<Dir, string> = {
+  up: "Favorites + History",
+  right: "History",
+  left: "Watchlist",
+  down: "Resurfaces later",
 };
 
 interface Summary {
   total: number;
-  loved: number;
-  notLoved: number;
-  want: number;
-  notForMe: number;
+  like: number;
+  watched: number;
+  didntWatch: number;
+  skip: number;
 }
 
-export function TriageDeck({ items }: { items: MediaItem[] }) {
+export function LibraryDeck({ items }: { items: MediaItem[] }) {
   const { statuses, recordStatus } = useUserStatus();
 
-  // Build the deck once on mount: items the user hasn't acted on yet, then the rest.
+  // Build the deck once on mount. Untouched first; previously-skipped items
+  // resurface at the back (deprioritized, never hidden). Filed items (like/
+  // watched/didn't-watch) are excluded — they've left the deck.
   const deck = useMemo(() => {
     const untouched = items.filter((i) => !statuses[i.id]);
-    const touched = items.filter((i) => statuses[i.id]);
-    return [...untouched, ...touched];
+    const skipped = items.filter((i) => statuses[i.id]?.status === "skipped");
+    return [...untouched, ...skipped];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
   const [index, setIndex] = useState(0);
   const [summary, setSummary] = useState<Summary>({
     total: 0,
-    loved: 0,
-    notLoved: 0,
-    want: 0,
-    notForMe: 0,
+    like: 0,
+    watched: 0,
+    didntWatch: 0,
+    skip: 0,
   });
   const [exit, setExit] = useState<Dir | null>(null);
   const [done, setDone] = useState(false);
@@ -60,16 +71,20 @@ export function TriageDeck({ items }: { items: MediaItem[] }) {
   const next = deck[index + 1];
 
   const advance = useCallback(
-    (dir: Dir | null) => {
+    (dir: Dir) => {
       if (!current) return;
-      if (dir) {
-        recordStatus(current.id, recordForStatus(DIR_TO_KEY[dir]), current);
+      if (dir === "down") {
+        recordStatus(current.id, recordForSkip(), current);
+        setSummary((s) => ({ ...s, total: s.total + 1, skip: s.skip + 1 }));
+      } else {
+        const key = DIR_TO_KEY[dir];
+        recordStatus(current.id, recordForStatus(key), current);
         setSummary((s) => ({
+          ...s,
           total: s.total + 1,
-          loved: s.loved + (dir === "up" ? 1 : 0),
-          notLoved: s.notLoved + (dir === "down" ? 1 : 0),
-          want: s.want + (dir === "right" ? 1 : 0),
-          notForMe: s.notForMe + (dir === "left" ? 1 : 0),
+          like: s.like + (key === "like" ? 1 : 0),
+          watched: s.watched + (key === "watched" ? 1 : 0),
+          didntWatch: s.didntWatch + (key === "didntWatch" ? 1 : 0),
         }));
       }
       setExit(dir);
@@ -103,7 +118,7 @@ export function TriageDeck({ items }: { items: MediaItem[] }) {
         advance("right");
       } else if (e.key === " " || e.key.toLowerCase() === "s") {
         e.preventDefault();
-        advance(null);
+        advance("down");
       }
     };
     window.addEventListener("keydown", onKey);
@@ -111,13 +126,13 @@ export function TriageDeck({ items }: { items: MediaItem[] }) {
   }, [advance, done]);
 
   if (done || !current) {
-    return <TriageSummary summary={summary} />;
+    return <LibrarySummary summary={summary} />;
   }
 
   return (
     <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-between gap-4 px-4 py-4">
       <div className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
-        {index + 1} / {deck.length} · triaged {summary.total}
+        {index + 1} / {deck.length} · sorted {summary.total}
       </div>
 
       <div className="relative h-[560px] w-full max-w-[360px]">
@@ -141,7 +156,7 @@ export function TriageDeck({ items }: { items: MediaItem[] }) {
       <div className="flex w-full items-center justify-center gap-2">
         <button
           type="button"
-          onClick={() => advance(null)}
+          onClick={() => advance("down")}
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-border-strong"
         >
           <SkipForward className="h-3.5 w-3.5" />
@@ -321,14 +336,13 @@ function Legend() {
   const rows: { dir: Dir; icon: React.ReactNode }[] = [
     { dir: "up", icon: <ArrowUp className="h-3 w-3" /> },
     { dir: "right", icon: <ArrowRight className="h-3 w-3" /> },
-    { dir: "down", icon: <ArrowDown className="h-3 w-3" /> },
     { dir: "left", icon: <ArrowLeft className="h-3 w-3" /> },
+    { dir: "down", icon: <ArrowDown className="h-3 w-3" /> },
   ];
   return (
     <div className="w-full max-w-[360px] space-y-1.5 rounded-[5px] border border-border bg-panel/60 p-2">
-      <div className="flex items-center justify-between font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
-        <span>Vertical = I've seen this</span>
-        <span>Horizontal = I haven't</span>
+      <div className="text-center font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+        Swipe to sort · only Skip comes back
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {rows.map((r) => (
@@ -337,13 +351,18 @@ function Legend() {
             className="flex items-center gap-1.5 rounded-[4px] border border-border px-1.5 py-1"
           >
             <span
-              className="inline-flex h-4 w-4 items-center justify-center rounded-[3px]"
+              className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px]"
               style={{ backgroundColor: ACTION_HEX[r.dir], color: "#0b0d10" }}
             >
               {r.icon}
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-text-bright">
-              {ACTION_LABEL[r.dir]}
+            <span className="min-w-0">
+              <span className="block truncate font-mono text-[10px] uppercase tracking-wider text-text-bright">
+                {ACTION_LABEL[r.dir]}
+              </span>
+              <span className="block truncate font-mono text-[8.5px] uppercase tracking-wider text-text-dim">
+                {ACTION_SUBLABEL[r.dir]}
+              </span>
             </span>
           </div>
         ))}
@@ -352,12 +371,12 @@ function Legend() {
   );
 }
 
-function TriageSummary({ summary }: { summary: Summary }) {
+function LibrarySummary({ summary }: { summary: Summary }) {
   const lines: { label: string; value: number; color: string }[] = [
-    { label: "Want it", value: summary.want, color: ACTION_HEX.right },
-    { label: "Seen & loved", value: summary.loved, color: ACTION_HEX.up },
-    { label: "Not for me", value: summary.notForMe, color: ACTION_HEX.left },
-    { label: "Seen, didn't love", value: summary.notLoved, color: ACTION_HEX.down },
+    { label: "Liked", value: summary.like, color: ACTION_HEX.up },
+    { label: "Watched", value: summary.watched, color: ACTION_HEX.right },
+    { label: "Didn't watch yet", value: summary.didntWatch, color: ACTION_HEX.left },
+    { label: "Skipped", value: summary.skip, color: ACTION_HEX.down },
   ];
 
   return (
@@ -367,7 +386,7 @@ function TriageSummary({ summary }: { summary: Summary }) {
           Session complete
         </div>
         <div className="mt-2 text-[40px] font-semibold text-text-bright">
-          You triaged {summary.total}
+          You sorted {summary.total}
         </div>
       </div>
 
@@ -389,21 +408,29 @@ function TriageSummary({ summary }: { summary: Summary }) {
         ))}
       </ul>
 
-      <Link
-        to="/"
-        className="rounded-[5px] bg-primary px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
-      >
-        Back to the grid
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Link
+          to="/lists"
+          className="rounded-[5px] border border-border-strong bg-background px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-text-bright hover:border-primary hover:text-primary"
+        >
+          View my library
+        </Link>
+        <Link
+          to="/"
+          className="rounded-[5px] bg-primary px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+        >
+          Back to the grid
+        </Link>
+      </div>
     </div>
   );
 }
 
-export function TriageHeader() {
+export function LibraryHeader() {
   return (
     <header className="flex h-12 items-center justify-between border-b border-border px-4">
       <div className="font-mono text-[12px] uppercase tracking-[0.18em] text-text-bright">
-        Triage
+        Build Your Library
       </div>
       <Link
         to="/"

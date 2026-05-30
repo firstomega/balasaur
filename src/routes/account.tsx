@@ -521,7 +521,7 @@ function DangerZone({
           </DialogHeader>
           <ul className="list-disc space-y-1 pl-5 font-mono text-[11px] text-text-muted marker:text-text-dim">
             <li>Your account ({email})</li>
-            <li>Your watch / triage history</li>
+            <li>Your library (favorites, watchlist & watch history)</li>
             <li>Any lists tied to your account</li>
           </ul>
           <Field
