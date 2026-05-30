@@ -64,4 +64,7 @@ export interface MediaDetail extends MediaItem {
     homepage?: string;
     wikidataId?: string;
   };
+  images?: string[];
+  imagesOriginal?: string[];
+  trailer?: { key: string; name: string; site: "YouTube" };
 }

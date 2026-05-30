@@ -669,6 +669,20 @@ interface TmdbDetailRaw {
   content_ratings?: {
     results?: { iso_3166_1: string; rating: string }[];
   };
+  images?: {
+    backdrops?: { file_path: string; iso_639_1?: string | null; vote_average?: number }[];
+    stills?: { file_path: string; iso_639_1?: string | null; vote_average?: number }[];
+  };
+  videos?: {
+    results?: {
+      key: string;
+      name: string;
+      site: string;
+      type: string;
+      official?: boolean;
+      published_at?: string;
+    }[];
+  };
   seasons?: {
     season_number: number;
     name: string;
@@ -699,12 +713,13 @@ export async function fetchMediaDetail(
 
   const append =
     type === "movie"
-      ? "external_ids,credits,release_dates"
-      : "external_ids,credits,content_ratings";
+      ? "external_ids,credits,release_dates,images,videos"
+      : "external_ids,credits,content_ratings,images,videos";
 
   const raw = await tmdb<TmdbDetailRaw>(`/${type}/${id}`, tmdbKey, {
     append_to_response: append,
     language: "en-US",
+    include_image_language: "en,null",
   });
 
   const title = (type === "movie" ? raw.title : raw.name) ?? "Untitled";
@@ -793,6 +808,38 @@ export async function fetchMediaDetail(
       wikidataId: raw.external_ids?.wikidata_id || undefined,
     },
   };
+
+  // Stills / backdrops gallery
+  const IMG_ROW = "https://image.tmdb.org/t/p/w780";
+  const IMG_FULL = "https://image.tmdb.org/t/p/original";
+  const imgSources = [
+    ...(raw.images?.backdrops ?? []),
+    ...(raw.images?.stills ?? []),
+  ];
+  const seenPaths = new Set<string>();
+  const picked = imgSources
+    .filter((i) => {
+      if (!i?.file_path || seenPaths.has(i.file_path)) return false;
+      seenPaths.add(i.file_path);
+      return true;
+    })
+    .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0))
+    .slice(0, 12);
+  if (picked.length > 0) {
+    detail.images = picked.map((i) => `${IMG_ROW}${i.file_path}`);
+    detail.imagesOriginal = picked.map((i) => `${IMG_FULL}${i.file_path}`);
+  }
+
+  // Trailer pick
+  const vids = raw.videos?.results ?? [];
+  const yt = vids.filter((v) => v.site === "YouTube");
+  const trailer =
+    yt.find((v) => v.type === "Trailer" && v.official) ||
+    yt.find((v) => v.type === "Trailer") ||
+    yt.find((v) => v.type === "Teaser");
+  if (trailer) {
+    detail.trailer = { key: trailer.key, name: trailer.name, site: "YouTube" };
+  }
 
   // OMDb enrichment for cross-source ratings.
   const imdbId = detail.external.imdbId;
