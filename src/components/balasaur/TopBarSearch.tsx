@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useMediaItems } from "@/hooks/useMediaItems";
+import { useQuery } from "@tanstack/react-query";
+import { mediaItemsQueryOptions } from "@/hooks/useMediaItems";
 import type { MediaItem } from "@/types/media";
 
 interface ResultRow {
@@ -65,7 +66,8 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 export function TopBarSearch() {
-  const { data: items } = useMediaItems();
+  // Non-suspense — TopBar sits above route Suspense boundaries.
+  const { data: items = [] } = useQuery(mediaItemsQueryOptions);
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
