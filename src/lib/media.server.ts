@@ -764,8 +764,8 @@ async function fetchMediaDetailLive(type: "movie" | "tv", id: string): Promise<M
 
   const append =
     type === "movie"
-      ? "external_ids,credits,release_dates,images,videos,recommendations,similar,keywords"
-      : "external_ids,credits,content_ratings,images,videos,recommendations,similar,keywords";
+      ? "external_ids,credits,release_dates,images,videos,recommendations,similar,keywords,watch/providers"
+      : "external_ids,credits,content_ratings,images,videos,recommendations,similar,keywords,watch/providers";
 
   const raw = await tmdb<TmdbDetailRaw>(`/${type}/${id}`, tmdbKey, {
     append_to_response: append,
