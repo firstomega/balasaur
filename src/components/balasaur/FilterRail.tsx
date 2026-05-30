@@ -58,6 +58,26 @@ function Pill({
   );
 }
 
+function TriggerLabel({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {children}
+      {active && (
+        <span
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+          aria-label="active filters"
+        />
+      )}
+    </span>
+  );
+}
+
 export function FilterRail({ filters, setFilters, allItems }: Props) {
   const toggleSet = <T,>(key: keyof FilterState, value: T) => {
     setFilters((prev) => {
@@ -68,12 +88,38 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
     });
   };
 
+  const activeGroups = useMemo(() => {
+    const s = new Set<string>();
+    if (filters.mediaTypes.size !== 2) s.add("media-type");
+    if (filters.genres.size > 0) s.add("genre");
+    if (filters.streaming.size > 0) s.add("streaming");
+    if (
+      filters.yearRange[0] !== YEAR_BOUNDS[0] ||
+      filters.yearRange[1] !== YEAR_BOUNDS[1]
+    )
+      s.add("released");
+    if (
+      filters.imdbRange[0] !== IMDB_BOUNDS[0] ||
+      filters.imdbRange[1] !== IMDB_BOUNDS[1] ||
+      filters.rtRange[0] !== RT_BOUNDS[0] ||
+      filters.rtRange[1] !== RT_BOUNDS[1] ||
+      filters.metaRange[0] !== META_BOUNDS[0] ||
+      filters.metaRange[1] !== META_BOUNDS[1]
+    )
+      s.add("rating");
+    if (filters.people.length > 0) s.add("people");
+    if (filters.awardWinners || filters.nominated) s.add("accolades");
+    return s;
+  }, [filters]);
+
   return (
     <div className="space-y-1">
       <Accordion type="multiple" defaultValue={["media-type", "genre"]} className="w-full">
         {/* Media Type */}
         <AccordionItem value="media-type" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>Media Type</AccordionTrigger>
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("media-type")}>Media Type</TriggerLabel>
+          </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <div className="space-y-2">
               {(
@@ -96,7 +142,9 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 
         {/* Genre */}
         <AccordionItem value="genre" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>Genre</AccordionTrigger>
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("genre")}>Genre</TriggerLabel>
+          </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <div className="flex flex-wrap gap-1.5">
               {UNIFIED_GENRES.map((g) => (
@@ -114,7 +162,9 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 
         {/* Streaming */}
         <AccordionItem value="streaming" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>Streaming Service</AccordionTrigger>
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("streaming")}>Streaming Service</TriggerLabel>
+          </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <div className="flex flex-wrap gap-1.5">
               {STREAMING_OPTIONS.map((s) => (
@@ -132,7 +182,9 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 
         {/* Released */}
         <AccordionItem value="released" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>Released</AccordionTrigger>
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("released")}>Released</TriggerLabel>
+          </AccordionTrigger>
           <AccordionContent className="pb-4 pt-2">
             <div className="px-1">
               <div className="mb-2 flex justify-between font-mono text-[10.5px] text-text-muted">
@@ -154,7 +206,9 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 
         {/* Rating */}
         <AccordionItem value="rating" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>Rating</AccordionTrigger>
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("rating")}>Rating</TriggerLabel>
+          </AccordionTrigger>
           <AccordionContent className="pb-4 pt-2">
             <RatingSliders filters={filters} setFilters={setFilters} allItems={allItems} />
           </AccordionContent>
@@ -162,7 +216,9 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 
         {/* By Person */}
         <AccordionItem value="people" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>By Person</AccordionTrigger>
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("people")}>By Person</TriggerLabel>
+          </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <PeoplePicker filters={filters} setFilters={setFilters} allItems={allItems} />
           </AccordionContent>
@@ -170,7 +226,9 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 
         {/* Accolades */}
         <AccordionItem value="accolades" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>Accolades</AccordionTrigger>
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("accolades")}>Accolades</TriggerLabel>
+          </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <div className="space-y-2">
               <label className="flex cursor-pointer items-center gap-2">
