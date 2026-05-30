@@ -19,6 +19,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { searchPeople } from "@/lib/filterMedia";
+import { ProviderIcon, type ProviderName } from "./ProviderIcon";
 
 interface Props {
   filters: FilterState;
@@ -166,15 +167,15 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("streaming")}>Streaming Service</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {STREAMING_OPTIONS.map((s) => (
-                <Pill
+                <ProviderIcon
                   key={s}
-                  active={filters.streaming.has(s)}
+                  provider={s as ProviderName}
+                  selected={filters.streaming.has(s)}
                   onClick={() => toggleSet<string>("streaming", s)}
-                >
-                  {s}
-                </Pill>
+                  size={38}
+                />
               ))}
             </div>
           </AccordionContent>
