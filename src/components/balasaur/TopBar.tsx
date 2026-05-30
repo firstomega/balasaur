@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Zap, LogOut } from "lucide-react";
+import { Search, Zap, LogOut, User } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { DinoMark } from "./DinoMark";
 import { useAuth } from "@/hooks/useAuth";
@@ -79,6 +79,12 @@ export function TopBar() {
                   Signed in
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
+                <DropdownMenuItem asChild className="cursor-pointer focus:bg-background">
+                  <Link to="/account">
+                    <User className="mr-2 h-3.5 w-3.5" />
+                    Account
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => signOut()}
                   className="cursor-pointer focus:bg-background"
