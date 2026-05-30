@@ -705,7 +705,7 @@ function pickCertification(type: "movie" | "tv", raw: TmdbDetailRaw): string | u
   return us?.rating || undefined;
 }
 
-export async function fetchMediaDetail(
+async function fetchMediaDetailLive(
   type: "movie" | "tv",
   id: string,
 ): Promise<MediaDetail> {
