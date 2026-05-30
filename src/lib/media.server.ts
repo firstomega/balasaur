@@ -669,6 +669,20 @@ interface TmdbDetailRaw {
   content_ratings?: {
     results?: { iso_3166_1: string; rating: string }[];
   };
+  images?: {
+    backdrops?: { file_path: string; iso_639_1?: string | null; vote_average?: number }[];
+    stills?: { file_path: string; iso_639_1?: string | null; vote_average?: number }[];
+  };
+  videos?: {
+    results?: {
+      key: string;
+      name: string;
+      site: string;
+      type: string;
+      official?: boolean;
+      published_at?: string;
+    }[];
+  };
   seasons?: {
     season_number: number;
     name: string;
