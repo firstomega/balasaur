@@ -63,7 +63,7 @@ export function TriageDeck({ items }: { items: MediaItem[] }) {
     (dir: Dir | null) => {
       if (!current) return;
       if (dir) {
-        recordStatus(current.id, recordFor(dir), current);
+        recordStatus(current.id, recordForStatus(DIR_TO_KEY[dir]), current);
         setSummary((s) => ({
           total: s.total + 1,
           loved: s.loved + (dir === "up" ? 1 : 0),
