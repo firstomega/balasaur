@@ -67,4 +67,6 @@ export interface MediaDetail extends MediaItem {
   images?: string[];
   imagesOriginal?: string[];
   trailer?: { key: string; name: string; site: "YouTube" };
+  related?: MediaItem[];
+  keywords?: string[];
 }

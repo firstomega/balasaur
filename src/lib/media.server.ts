@@ -636,6 +636,19 @@ function applyOmdbRatings(item: MediaItem, data: OmdbResponse) {
 
 // ---------- Live detail fetch (no DB) ----------
 
+interface TmdbCardRaw {
+  id: number;
+  media_type?: string;
+  title?: string;
+  name?: string;
+  poster_path?: string | null;
+  vote_average?: number;
+  popularity?: number;
+  release_date?: string;
+  first_air_date?: string;
+  overview?: string;
+}
+
 interface TmdbDetailRaw {
   id: number;
   title?: string;
@@ -685,6 +698,12 @@ interface TmdbDetailRaw {
       published_at?: string;
     }[];
   };
+  keywords?: {
+    keywords?: { id: number; name: string }[];
+    results?: { id: number; name: string }[];
+  };
+  recommendations?: { results?: TmdbCardRaw[] };
+  similar?: { results?: TmdbCardRaw[] };
   seasons?: {
     season_number: number;
     name: string;
@@ -693,6 +712,26 @@ interface TmdbDetailRaw {
     poster_path: string | null;
     overview: string | null;
   }[];
+}
+
+function mapCardRaw(c: TmdbCardRaw, type: "movie" | "tv"): MediaItem {
+  const title = (type === "movie" ? c.title : c.name) ?? "Untitled";
+  const date = type === "movie" ? c.release_date : c.first_air_date;
+  return {
+    id: `${type}-${c.id}`,
+    mediaType: type,
+    title,
+    year: yearOf(date),
+    overview: c.overview ?? "",
+    posterUrl: c.poster_path ? `${POSTER_BASE}${c.poster_path}` : "",
+    ratings: { tmdb: c.vote_average ? Number(c.vote_average.toFixed(1)) : undefined },
+    genres: [],
+    streaming: [],
+    lengthLabel: "",
+    people: [],
+    popularity: c.popularity,
+    releaseDate: date,
+  };
 }
 
 function pickCertification(type: "movie" | "tv", raw: TmdbDetailRaw): string | undefined {
@@ -719,8 +758,8 @@ async function fetchMediaDetailLive(
 
   const append =
     type === "movie"
-      ? "external_ids,credits,release_dates,images,videos"
-      : "external_ids,credits,content_ratings,images,videos";
+      ? "external_ids,credits,release_dates,images,videos,recommendations,similar,keywords"
+      : "external_ids,credits,content_ratings,images,videos,recommendations,similar,keywords";
 
   const raw = await tmdb<TmdbDetailRaw>(`/${type}/${id}`, tmdbKey, {
     append_to_response: append,
@@ -864,6 +903,32 @@ function buildDetailFromRaw(
   if (trailer) {
     detail.trailer = { key: trailer.key, name: trailer.name, site: "YouTube" };
   }
+
+  // Related titles ("More like this") from recommendations + similar.
+  const relatedRaw = [
+    ...(raw.recommendations?.results ?? []),
+    ...(raw.similar?.results ?? []),
+  ];
+  const relSeen = new Set<string>([detail.id]);
+  const related: MediaItem[] = [];
+  for (const c of relatedRaw) {
+    if (!c?.id || !c.poster_path) continue; // skip art-less cards (look broken in a row)
+    const cardType: "movie" | "tv" =
+      c.media_type === "tv" ? "tv" : c.media_type === "movie" ? "movie" : type;
+    const cid = `${cardType}-${c.id}`;
+    if (relSeen.has(cid)) continue;
+    relSeen.add(cid);
+    related.push(mapCardRaw(c, cardType));
+    if (related.length >= 12) break;
+  }
+  if (related.length > 0) detail.related = related;
+
+  // Theme keywords (movie payload uses `.keywords`, tv uses `.results`).
+  const kw = (raw.keywords?.keywords ?? raw.keywords?.results ?? [])
+    .map((k) => k?.name)
+    .filter((n): n is string => !!n)
+    .slice(0, 12);
+  if (kw.length > 0) detail.keywords = kw;
 
   // OMDb enrichment from the supplied payload (no network call here).
   if (rawOmdb) applyOmdbRatings(detail, rawOmdb);

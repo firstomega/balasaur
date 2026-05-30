@@ -6,6 +6,7 @@ import { useUserStatus } from "@/hooks/useUserStatus";
 import type { MediaDetail as MediaDetailType } from "@/types/media";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { MediaCard } from "./MediaCard";
 import {
   recordForStatus,
   STATUS_HEX,
@@ -292,6 +293,35 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                       className="h-full w-auto object-cover transition-opacity group-hover:opacity-90"
                     />
                   </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {detail.related && detail.related.length > 0 && (
+            <section>
+              <MicroLabel>More like this</MicroLabel>
+              <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+                {detail.related.map((it) => (
+                  <div key={it.id} className="w-[118px] shrink-0 md:w-[132px]">
+                    <MediaCard item={it} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {detail.keywords && detail.keywords.length > 0 && (
+            <section>
+              <MicroLabel>Themes</MicroLabel>
+              <div className="flex flex-wrap gap-1.5">
+                {detail.keywords.map((k) => (
+                  <span
+                    key={k}
+                    className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-muted"
+                  >
+                    {k}
+                  </span>
                 ))}
               </div>
             </section>

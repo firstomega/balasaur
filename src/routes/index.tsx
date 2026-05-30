@@ -23,17 +23,17 @@ import { Switch } from "@/components/ui/switch";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Balasaur — cross-media discovery" },
+      { title: "Balasaur — Your personal entertainment database" },
       {
         name: "description",
         content:
-          "A dense, professional discovery database for movies, TV, books, and podcasts.",
+          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
       },
-      { property: "og:title", content: "Balasaur — cross-media discovery" },
+      { property: "og:title", content: "Balasaur — Your personal entertainment database" },
       {
         property: "og:description",
         content:
-          "A dense, professional discovery database for movies, TV, books, and podcasts.",
+          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
       },
     ],
   }),
