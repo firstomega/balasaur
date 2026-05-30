@@ -1,9 +1,11 @@
-import { Suspense } from "react";
-import { ExternalLink } from "lucide-react";
+import { Suspense, useState } from "react";
+import { ExternalLink, Play, X } from "lucide-react";
 import { TopBar } from "./TopBar";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import type { MediaDetail as MediaDetailType } from "@/types/media";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
   recordForStatus,
   STATUS_HEX,
