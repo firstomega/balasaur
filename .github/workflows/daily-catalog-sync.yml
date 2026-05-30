@@ -1,0 +1,83 @@
+name: Daily catalog sync
+
+# Grows + refreshes the Balasaur catalog once a day by POSTing the apikey-gated
+# sync endpoint. Each run enriches up to ~350 stalest-first titles (OMDb-budget
+# capped), so the catalog climbs toward full coverage over several days and
+# streaming availability stays fresh — no manual triggering.
+#
+# Verify runs in the repo's Actions tab. No repo secrets needed: the Supabase
+# anon/publishable key is public by design and already committed in .env.
+
+on:
+  schedule:
+    # 08:00 UTC daily (low traffic). Cron is UTC.
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    # Manual "Run workflow" button, for on-demand top-ups.
+    inputs:
+      backfill:
+        description: "Also run backfill (re-derive genres/awards from stored raw data)"
+        type: boolean
+        default: false
+
+# Don't let a slow run overlap the next day's run.
+concurrency:
+  group: catalog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Supabase anon key from .env
+        id: env
+        run: |
+          KEY=$(grep -E '^SUPABASE_PUBLISHABLE_KEY=' .env | head -1 | cut -d= -f2- | tr -d '"')
+          if [ -z "$KEY" ]; then
+            echo "::error::SUPABASE_PUBLISHABLE_KEY not found in .env"
+            exit 1
+          fi
+          echo "::add-mask::$KEY"
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger catalog sync
+        env:
+          BASE_URL: https://balasaur.com
+          APIKEY: ${{ steps.env.outputs.key }}
+        run: |
+          echo "POST $BASE_URL/api/public/hooks/sync-media"
+          HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
+            -X POST "$BASE_URL/api/public/hooks/sync-media" \
+            -H "apikey: $APIKEY" \
+            -H "Content-Type: application/json" \
+            --max-time 870 \
+            -d '{}')
+          echo "HTTP $HTTP"
+          echo "Response:"; cat /tmp/sync.json; echo
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Sync failed with HTTP $HTTP"
+            exit 1
+          fi
+
+      - name: Trigger backfill (manual runs only, when requested)
+        if: github.event_name == 'workflow_dispatch' && inputs.backfill
+        env:
+          BASE_URL: https://balasaur.com
+          APIKEY: ${{ steps.env.outputs.key }}
+        run: |
+          echo "POST $BASE_URL/api/public/hooks/backfill-media"
+          HTTP=$(curl -sS -o /tmp/backfill.json -w "%{http_code}" \
+            -X POST "$BASE_URL/api/public/hooks/backfill-media" \
+            -H "apikey: $APIKEY" \
+            -H "Content-Type: application/json" \
+            --max-time 870 \
+            -d '{}')
+          echo "HTTP $HTTP"
+          echo "Response:"; cat /tmp/backfill.json; echo
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Backfill failed with HTTP $HTTP"
+            exit 1
+          fi
