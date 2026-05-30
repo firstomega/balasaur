@@ -936,6 +936,36 @@ function buildDetailFromRaw(
     .slice(0, 12);
   if (kw.length > 0) detail.keywords = kw;
 
+  // Where-to-watch providers (all regions). Region selection happens client-side.
+  const wpResults = raw["watch/providers"]?.results;
+  if (wpResults && Object.keys(wpResults).length > 0) {
+    const PROVIDER_LOGO_BASE = "https://image.tmdb.org/t/p/original";
+    const mapList = (
+      list?: { provider_name: string; logo_path?: string | null }[],
+    ) =>
+      (list ?? []).map((p) => ({
+        name: p.provider_name,
+        logoUrl: p.logo_path ? `${PROVIDER_LOGO_BASE}${p.logo_path}` : undefined,
+      }));
+    const regionEntries = Object.entries(wpResults);
+    const availableRegions = regionEntries
+      .filter(([, v]) => (v.flatrate?.length || v.rent?.length || v.buy?.length || 0) > 0)
+      .map(([k]) => k)
+      .sort();
+    const preferred = wpResults.US ?? wpResults[availableRegions[0]] ?? {};
+    const region = wpResults.US
+      ? "US"
+      : availableRegions[0] ?? "US";
+    detail.providers = {
+      region,
+      stream: mapList(preferred.flatrate),
+      rent: mapList(preferred.rent),
+      buy: mapList(preferred.buy),
+      link: preferred.link,
+      availableRegions,
+    };
+  }
+
   // OMDb enrichment from the supplied payload (no network call here).
   if (rawOmdb) applyOmdbRatings(detail, rawOmdb);
 
