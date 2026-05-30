@@ -1,7 +1,7 @@
 import type { MediaDetail, MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import type { TablesInsert } from "@/integrations/supabase/types";
+import type { Json, TablesInsert } from "@/integrations/supabase/types";
 
 type MediaRow = TablesInsert<"media">;
 
@@ -892,7 +892,7 @@ export async function fetchMediaDetail(
         title: detail.title,
         year: detail.year || null,
         popularity: detail.popularity ?? null,
-        detail_payload: detail as unknown as Record<string, unknown>,
+        detail_payload: detail as unknown as Json,
         detail_fetched_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
@@ -954,7 +954,7 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
           title: item.title,
           year: item.year || null,
           popularity: item.popularity ?? null,
-          summary_payload: item as unknown as Record<string, unknown>,
+          summary_payload: item as unknown as Json,
           summary_fetched_at: now,
           updated_at: now,
         };
