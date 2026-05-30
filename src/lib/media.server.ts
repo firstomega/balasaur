@@ -1,4 +1,4 @@
-import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
+import type { MediaDetail, MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { TablesInsert } from "@/integrations/supabase/types";
@@ -8,6 +8,7 @@ type MediaRow = TablesInsert<"media">;
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
+const BACKDROP_BASE = "https://image.tmdb.org/t/p/original";
 const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const DISCOVER_PAGES = 38; // ~760 of each type (TMDB returns 20 per page)
