@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Filter } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
@@ -7,8 +7,10 @@ import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { FilterRail } from "@/components/balasaur/FilterRail";
 import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters";
 import { SortControl } from "@/components/balasaur/SortControl";
+import { LandingHero } from "@/components/balasaur/LandingHero";
 import { mediaItemsQueryOptions, useMediaItems } from "@/hooks/useMediaItems";
 import { useUserStatus } from "@/hooks/useUserStatus";
+import { useAuth } from "@/hooks/useAuth";
 import { applyFilters } from "@/lib/filterMedia";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import {
@@ -46,6 +48,12 @@ function HomePage() {
   const [filters, setFilters] = useState<FilterState>(() => defaultFilterState());
   const [mobileOpen, setMobileOpen] = useState(false);
   const { seenIds } = useUserStatus();
+  const { user } = useAuth();
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const scrollToGrid = () => {
+    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -59,6 +67,8 @@ function HomePage() {
         </aside>
 
         <main className="min-w-0 flex-1">
+          {!user && <LandingHero onBrowse={scrollToGrid} />}
+          <div ref={gridRef} tabIndex={-1} className="scroll-mt-16">
           <Suspense fallback={<MediaGridSkeleton />}>
             <GridWithControls
               filters={filters}
@@ -67,6 +77,7 @@ function HomePage() {
               onOpenMobileFilters={() => setMobileOpen(true)}
             />
           </Suspense>
+          </div>
         </main>
       </div>
 
