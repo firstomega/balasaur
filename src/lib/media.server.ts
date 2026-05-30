@@ -5,6 +5,7 @@ import type {
   MediaSeason,
   PersonCreditGroup,
   PersonDetail,
+  WatchProvidersAllRegions,
 } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -702,6 +703,17 @@ interface TmdbDetailRaw {
   };
   recommendations?: { results?: TmdbCardRaw[] };
   similar?: { results?: TmdbCardRaw[] };
+  "watch/providers"?: {
+    results?: Record<
+      string,
+      {
+        link?: string;
+        flatrate?: { provider_name: string; logo_path?: string | null }[];
+        rent?: { provider_name: string; logo_path?: string | null }[];
+        buy?: { provider_name: string; logo_path?: string | null }[];
+      }
+    >;
+  };
   seasons?: {
     season_number: number;
     name: string;
@@ -753,8 +765,8 @@ async function fetchMediaDetailLive(type: "movie" | "tv", id: string): Promise<M
 
   const append =
     type === "movie"
-      ? "external_ids,credits,release_dates,images,videos,recommendations,similar,keywords"
-      : "external_ids,credits,content_ratings,images,videos,recommendations,similar,keywords";
+      ? "external_ids,credits,release_dates,images,videos,recommendations,similar,keywords,watch/providers"
+      : "external_ids,credits,content_ratings,images,videos,recommendations,similar,keywords,watch/providers";
 
   const raw = await tmdb<TmdbDetailRaw>(`/${type}/${id}`, tmdbKey, {
     append_to_response: append,
@@ -924,6 +936,44 @@ function buildDetailFromRaw(
     .filter((n): n is string => !!n)
     .slice(0, 12);
   if (kw.length > 0) detail.keywords = kw;
+
+  // Where-to-watch providers (all regions). Region selection happens client-side.
+  const wpResults = raw["watch/providers"]?.results;
+  if (wpResults && Object.keys(wpResults).length > 0) {
+    const PROVIDER_LOGO_BASE = "https://image.tmdb.org/t/p/original";
+    const mapList = (
+      list?: { provider_name: string; logo_path?: string | null }[],
+    ) =>
+      (list ?? []).map((p) => ({
+        name: p.provider_name,
+        logoUrl: p.logo_path ? `${PROVIDER_LOGO_BASE}${p.logo_path}` : undefined,
+      }));
+    const regionEntries = Object.entries(wpResults);
+    const availableRegions = regionEntries
+      .filter(([, v]) => (v.flatrate?.length || v.rent?.length || v.buy?.length || 0) > 0)
+      .map(([k]) => k)
+      .sort();
+    const byRegion: WatchProvidersAllRegions["byRegion"] = {};
+    for (const [code, v] of regionEntries) {
+      byRegion[code] = {
+        stream: mapList(v.flatrate),
+        rent: mapList(v.rent),
+        buy: mapList(v.buy),
+        link: v.link,
+      };
+    }
+    const region = wpResults.US ? "US" : (availableRegions[0] ?? "US");
+    const preferred = byRegion[region] ?? { stream: [], rent: [], buy: [] };
+    detail.providers = {
+      region,
+      stream: preferred.stream,
+      rent: preferred.rent,
+      buy: preferred.buy,
+      link: preferred.link,
+      availableRegions,
+    };
+    detail.providersAll = { byRegion, availableRegions };
+  }
 
   // OMDb enrichment from the supplied payload (no network call here).
   if (rawOmdb) applyOmdbRatings(detail, rawOmdb);

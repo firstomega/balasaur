@@ -22,6 +22,29 @@ export interface MediaSeason {
   overview?: string;
 }
 
+export interface ProviderRef {
+  name: string;
+  logoUrl?: string;
+}
+
+export interface WatchProviders {
+  region: string;
+  stream: ProviderRef[];
+  rent: ProviderRef[];
+  buy: ProviderRef[];
+  link?: string;
+  /** ISO 3166-1 region codes that have any provider data for this title. */
+  availableRegions: string[];
+}
+
+export interface WatchProvidersAllRegions {
+  byRegion: Record<
+    string,
+    { stream: ProviderRef[]; rent: ProviderRef[]; buy: ProviderRef[]; link?: string }
+  >;
+  availableRegions: string[];
+}
+
 export interface MediaItem {
   id: string;
   mediaType: MediaType;
@@ -70,6 +93,8 @@ export interface MediaDetail extends MediaItem {
   trailer?: { key: string; name: string; site: "YouTube" };
   related?: MediaItem[];
   keywords?: string[];
+  providers?: WatchProviders;
+  providersAll?: WatchProvidersAllRegions;
 }
 
 export interface PersonCreditGroup {
