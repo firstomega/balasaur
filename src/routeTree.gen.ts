@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TriageRouteImport } from './routes/triage'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ListsRouteImport } from './routes/lists'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
@@ -18,6 +19,11 @@ import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/pu
 const TriageRoute = TriageRouteImport.update({
   id: '/triage',
   path: '/triage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListsRoute = ListsRouteImport.update({
@@ -45,6 +51,7 @@ const ApiPublicHooksBackfillMediaRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
+  '/privacy': typeof PrivacyRoute
   '/triage': typeof TriageRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
@@ -52,6 +59,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
+  '/privacy': typeof PrivacyRoute
   '/triage': typeof TriageRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
@@ -60,6 +68,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/lists': typeof ListsRoute
+  '/privacy': typeof PrivacyRoute
   '/triage': typeof TriageRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
@@ -69,6 +78,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/lists'
+    | '/privacy'
     | '/triage'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
@@ -76,6 +86,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/lists'
+    | '/privacy'
     | '/triage'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
@@ -83,6 +94,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/lists'
+    | '/privacy'
     | '/triage'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
@@ -91,6 +103,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ListsRoute: typeof ListsRoute
+  PrivacyRoute: typeof PrivacyRoute
   TriageRoute: typeof TriageRoute
   ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
@@ -103,6 +116,13 @@ declare module '@tanstack/react-router' {
       path: '/triage'
       fullPath: '/triage'
       preLoaderRoute: typeof TriageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lists': {
@@ -139,6 +159,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ListsRoute: ListsRoute,
+  PrivacyRoute: PrivacyRoute,
   TriageRoute: TriageRoute,
   ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
