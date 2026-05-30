@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Footer } from "@/components/balasaur/Footer";
 import { CookieBanner } from "@/components/balasaur/CookieBanner";
+import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
 
 function NotFoundComponent() {
   return (
@@ -131,6 +132,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <AnalyticsManager />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <div className="flex min-h-screen flex-col">
           <div className="flex-1">
