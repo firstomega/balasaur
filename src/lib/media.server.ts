@@ -713,12 +713,13 @@ export async function fetchMediaDetail(
 
   const append =
     type === "movie"
-      ? "external_ids,credits,release_dates"
-      : "external_ids,credits,content_ratings";
+      ? "external_ids,credits,release_dates,images,videos"
+      : "external_ids,credits,content_ratings,images,videos";
 
   const raw = await tmdb<TmdbDetailRaw>(`/${type}/${id}`, tmdbKey, {
     append_to_response: append,
     language: "en-US",
+    include_image_language: "en,null",
   });
 
   const title = (type === "movie" ? raw.title : raw.name) ?? "Untitled";
