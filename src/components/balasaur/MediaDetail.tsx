@@ -1,5 +1,5 @@
 import { Suspense, useState } from "react";
-import { ExternalLink, Play, X } from "lucide-react";
+import { ExternalLink, Play } from "lucide-react";
 import { TopBar } from "./TopBar";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
 import { useUserStatus } from "@/hooks/useUserStatus";
