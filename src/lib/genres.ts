@@ -9,6 +9,8 @@ const GENRE_ALIASES: Record<string, string[]> = {
   Soap: ["Drama"],
   News: ["Documentary"],
   Reality: ["Reality TV"],
+  // TMDB's raw "TV Movie" genre → clearer label.
+  "TV Movie": ["Made-for-TV"],
 };
 
 // Canonical list of unified genres shown in the filter rail.
@@ -31,7 +33,7 @@ export const UNIFIED_GENRES = [
   "Science Fiction",
   "Talk",
   "Thriller",
-  "TV Movie",
+  "Made-for-TV",
   "War",
   "Western",
 ] as const;
