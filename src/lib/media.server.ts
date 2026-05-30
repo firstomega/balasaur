@@ -5,6 +5,7 @@ import type {
   MediaSeason,
   PersonCreditGroup,
   PersonDetail,
+  WatchProvidersAllRegions,
 } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
