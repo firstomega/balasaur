@@ -2,37 +2,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, SkipForward, X } from "lucide-react";
 import type { MediaItem } from "@/types/media";
-import { useUserStatus, type UserStatusRecord } from "@/hooks/useUserStatus";
+import { useUserStatus } from "@/hooks/useUserStatus";
+import { recordForStatus, STATUS_HEX, STATUS_LABEL, type StatusKey } from "@/lib/userStatus";
 
 type Dir = "up" | "down" | "left" | "right";
 
+const DIR_TO_KEY: Record<Dir, StatusKey> = {
+  up: "loved",
+  down: "notLoved",
+  right: "want",
+  left: "notForMe",
+};
 const ACTION_LABEL: Record<Dir, string> = {
-  up: "Seen & loved",
-  down: "Seen, didn't love",
-  right: "Want it",
-  left: "Not for me",
+  up: STATUS_LABEL.loved,
+  down: STATUS_LABEL.notLoved,
+  right: STATUS_LABEL.want,
+  left: STATUS_LABEL.notForMe,
 };
-
 const ACTION_HEX: Record<Dir, string> = {
-  up: "#9fe6a0",
-  down: "#9aa2b1",
-  right: "#3b82f6",
-  left: "#ef4444",
+  up: STATUS_HEX.loved,
+  down: STATUS_HEX.notLoved,
+  right: STATUS_HEX.want,
+  left: STATUS_HEX.notForMe,
 };
-
-function recordFor(dir: Dir): UserStatusRecord {
-  const ts = Date.now();
-  switch (dir) {
-    case "up":
-      return { status: "seen", sentiment: "liked", rewatchOk: true, ts };
-    case "down":
-      return { status: "seen", sentiment: "disliked", rewatchOk: false, ts };
-    case "right":
-      return { status: "unseen", intent: "want", ts };
-    case "left":
-      return { status: "unseen", intent: "not_interested", ts };
-  }
-}
 
 interface Summary {
   total: number;
@@ -71,7 +63,7 @@ export function TriageDeck({ items }: { items: MediaItem[] }) {
     (dir: Dir | null) => {
       if (!current) return;
       if (dir) {
-        recordStatus(current.id, recordFor(dir), current);
+        recordStatus(current.id, recordForStatus(DIR_TO_KEY[dir]), current);
         setSummary((s) => ({
           total: s.total + 1,
           loved: s.loved + (dir === "up" ? 1 : 0),

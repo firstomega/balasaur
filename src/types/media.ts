@@ -40,3 +40,28 @@ export interface MediaItem {
   seasons?: MediaSeason[];
   releaseDate?: string;
 }
+
+export interface MediaDetail extends MediaItem {
+  backdropUrl?: string;
+  tagline?: string;
+  runtime?: number;
+  numberOfSeasons?: number;
+  numberOfEpisodes?: number;
+  cast: MediaPerson[];
+  crew: MediaPerson[];
+  certification?: string;
+  facts: {
+    budget?: number;
+    revenue?: number;
+    originalLanguage?: string;
+    productionCountries?: string[];
+    productionCompanies?: string[];
+    status?: string;
+    releaseDate?: string;
+  };
+  external: {
+    imdbId?: string;
+    homepage?: string;
+    wikidataId?: string;
+  };
+}

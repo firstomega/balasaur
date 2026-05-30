@@ -1,4 +1,4 @@
-import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
+import type { MediaDetail, MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { TablesInsert } from "@/integrations/supabase/types";
@@ -8,6 +8,7 @@ type MediaRow = TablesInsert<"media">;
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
+const BACKDROP_BASE = "https://image.tmdb.org/t/p/original";
 const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const DISCOVER_PAGES = 38; // ~760 of each type (TMDB returns 20 per page)
@@ -629,4 +630,176 @@ function applyOmdbRatings(item: MediaItem, data: OmdbResponse) {
   }
   const rt = data.Ratings?.find((r) => r.Source === "Rotten Tomatoes");
   if (rt) item.ratings.rottenTomatoes = parsePct(rt.Value);
+}
+
+// ---------- Live detail fetch (no DB) ----------
+
+interface TmdbDetailRaw {
+  id: number;
+  title?: string;
+  name?: string;
+  overview?: string;
+  tagline?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  release_date?: string;
+  first_air_date?: string;
+  vote_average?: number;
+  popularity?: number;
+  runtime?: number;
+  episode_run_time?: number[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  genres?: { id: number; name: string }[];
+  status?: string;
+  budget?: number;
+  revenue?: number;
+  original_language?: string;
+  homepage?: string;
+  production_countries?: { name: string }[];
+  production_companies?: { name: string }[];
+  external_ids?: { imdb_id?: string | null; wikidata_id?: string | null };
+  credits?: {
+    cast?: { name: string; character?: string }[];
+    crew?: { name: string; job?: string; department?: string }[];
+  };
+  release_dates?: {
+    results?: { iso_3166_1: string; release_dates: { certification: string }[] }[];
+  };
+  content_ratings?: {
+    results?: { iso_3166_1: string; rating: string }[];
+  };
+  seasons?: {
+    season_number: number;
+    name: string;
+    episode_count: number;
+    air_date: string | null;
+    poster_path: string | null;
+    overview: string | null;
+  }[];
+}
+
+function pickCertification(type: "movie" | "tv", raw: TmdbDetailRaw): string | undefined {
+  if (type === "movie") {
+    const us = raw.release_dates?.results?.find((r) => r.iso_3166_1 === "US");
+    const cert = us?.release_dates?.find((d) => d.certification && d.certification.trim() !== "");
+    return cert?.certification || undefined;
+  }
+  const us = raw.content_ratings?.results?.find((r) => r.iso_3166_1 === "US");
+  return us?.rating || undefined;
+}
+
+export async function fetchMediaDetail(
+  type: "movie" | "tv",
+  id: string,
+): Promise<MediaDetail> {
+  const tmdbKey = process.env.TMDB_API_KEY;
+  const omdbKey = process.env.OMDB_API_KEY;
+  if (!tmdbKey) throw new Error("TMDB_API_KEY is not configured");
+
+  const append =
+    type === "movie"
+      ? "external_ids,credits,release_dates"
+      : "external_ids,credits,content_ratings";
+
+  const raw = await tmdb<TmdbDetailRaw>(`/${type}/${id}`, tmdbKey, {
+    append_to_response: append,
+    language: "en-US",
+  });
+
+  const title = (type === "movie" ? raw.title : raw.name) ?? "Untitled";
+  const date = type === "movie" ? raw.release_date : raw.first_air_date;
+  const genreNames = (raw.genres ?? []).map((g) => g.name);
+
+  const cast: MediaPerson[] = (raw.credits?.cast ?? [])
+    .slice(0, 12)
+    .map((c) => ({ name: c.name, role: c.character || "Cast" }));
+
+  const keyJobs = new Set(["Director", "Creator", "Writer", "Screenplay", "Original Music Composer"]);
+  const crewSeen = new Set<string>();
+  const crew: MediaPerson[] = [];
+  for (const c of raw.credits?.crew ?? []) {
+    if (!c.job || !keyJobs.has(c.job)) continue;
+    const key = `${c.name}|${c.job}`;
+    if (crewSeen.has(key)) continue;
+    crewSeen.add(key);
+    crew.push({ name: c.name, role: c.job });
+  }
+
+  const runtime =
+    type === "movie"
+      ? raw.runtime
+      : raw.episode_run_time && raw.episode_run_time.length > 0
+        ? raw.episode_run_time[0]
+        : undefined;
+
+  let lengthLabel = "";
+  if (type === "movie" && runtime) lengthLabel = `${runtime}m`;
+  else if (type === "tv" && raw.number_of_seasons) {
+    lengthLabel = `${raw.number_of_seasons} season${raw.number_of_seasons === 1 ? "" : "s"}`;
+  }
+
+  const seasons: MediaSeason[] | undefined =
+    type === "tv" && raw.seasons
+      ? raw.seasons
+          .filter((s) => s.season_number > 0)
+          .map((s) => ({
+            seasonNumber: s.season_number,
+            name: s.name,
+            episodeCount: s.episode_count,
+            airDate: s.air_date ?? "",
+            posterUrl: s.poster_path ? `${SEASON_POSTER_BASE}${s.poster_path}` : undefined,
+            overview: s.overview ?? undefined,
+          }))
+      : undefined;
+
+  const detail: MediaDetail = {
+    id: `${type}-${raw.id}`,
+    mediaType: type,
+    title,
+    year: yearOf(date),
+    overview: raw.overview ?? "",
+    posterUrl: raw.poster_path ? `${POSTER_BASE}${raw.poster_path}` : "",
+    backdropUrl: raw.backdrop_path ? `${BACKDROP_BASE}${raw.backdrop_path}` : undefined,
+    tagline: raw.tagline || undefined,
+    ratings: {
+      tmdb: raw.vote_average ? Number(raw.vote_average.toFixed(1)) : undefined,
+    },
+    genres: unifyGenres(genreNames),
+    streaming: [],
+    lengthLabel,
+    people: [...crew.slice(0, 2), ...cast.slice(0, 6)],
+    popularity: raw.popularity,
+    seasons,
+    releaseDate: date,
+    runtime,
+    numberOfSeasons: raw.number_of_seasons,
+    numberOfEpisodes: raw.number_of_episodes,
+    cast,
+    crew,
+    certification: pickCertification(type, raw),
+    facts: {
+      budget: raw.budget && raw.budget > 0 ? raw.budget : undefined,
+      revenue: raw.revenue && raw.revenue > 0 ? raw.revenue : undefined,
+      originalLanguage: raw.original_language || undefined,
+      productionCountries: raw.production_countries?.map((c) => c.name).filter(Boolean),
+      productionCompanies: raw.production_companies?.map((c) => c.name).filter(Boolean),
+      status: raw.status || undefined,
+      releaseDate: date || undefined,
+    },
+    external: {
+      imdbId: raw.external_ids?.imdb_id || undefined,
+      homepage: raw.homepage || undefined,
+      wikidataId: raw.external_ids?.wikidata_id || undefined,
+    },
+  };
+
+  // OMDb enrichment for cross-source ratings.
+  const imdbId = detail.external.imdbId;
+  if (omdbKey && imdbId) {
+    const omdb = (await fetchOmdbRaw(imdbId, omdbKey)) as OmdbResponse | null;
+    if (omdb) applyOmdbRatings(detail, omdb);
+  }
+
+  return detail;
 }

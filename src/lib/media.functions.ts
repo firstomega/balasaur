@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { loadCatalogFromDb, syncCatalog } from "./media.server";
+import { fetchMediaDetail, loadCatalogFromDb, syncCatalog } from "./media.server";
 
 export const getTrendingMedia = createServerFn({ method: "GET" }).handler(async () => {
   return loadCatalogFromDb();
@@ -15,3 +15,7 @@ export const refreshCatalog = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     return syncCatalog({ force: data.force });
   });
+
+export const getMediaDetail = createServerFn({ method: "GET" })
+  .inputValidator((data: { type: "movie" | "tv"; id: string }) => data)
+  .handler(({ data }) => fetchMediaDetail(data.type, data.id));

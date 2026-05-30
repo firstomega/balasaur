@@ -15,6 +15,8 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ListsRouteImport } from './routes/lists'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TvIdRouteImport } from './routes/tv.$id'
+import { Route as MovieIdRouteImport } from './routes/movie.$id'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
 import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
 
@@ -48,6 +50,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TvIdRoute = TvIdRouteImport.update({
+  id: '/tv/$id',
+  path: '/tv/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MovieIdRoute = MovieIdRouteImport.update({
+  id: '/movie/$id',
+  path: '/movie/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncMediaRoute = ApiPublicHooksSyncMediaRouteImport.update({
   id: '/api/public/hooks/sync-media',
   path: '/api/public/hooks/sync-media',
@@ -67,6 +79,8 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
+  '/movie/$id': typeof MovieIdRoute
+  '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
@@ -77,6 +91,8 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
+  '/movie/$id': typeof MovieIdRoute
+  '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
@@ -88,6 +104,8 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
+  '/movie/$id': typeof MovieIdRoute
+  '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
@@ -100,6 +118,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/triage'
+    | '/movie/$id'
+    | '/tv/$id'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
   fileRoutesByTo: FileRoutesByTo
@@ -110,6 +130,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/triage'
+    | '/movie/$id'
+    | '/tv/$id'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
   id:
@@ -120,6 +142,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/terms'
     | '/triage'
+    | '/movie/$id'
+    | '/tv/$id'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
   fileRoutesById: FileRoutesById
@@ -131,6 +155,8 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
+  MovieIdRoute: typeof MovieIdRoute
+  TvIdRoute: typeof TvIdRoute
   ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
 }
@@ -179,6 +205,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tv/$id': {
+      id: '/tv/$id'
+      path: '/tv/$id'
+      fullPath: '/tv/$id'
+      preLoaderRoute: typeof TvIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movie/$id': {
+      id: '/movie/$id'
+      path: '/movie/$id'
+      fullPath: '/movie/$id'
+      preLoaderRoute: typeof MovieIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-media': {
       id: '/api/public/hooks/sync-media'
       path: '/api/public/hooks/sync-media'
@@ -203,6 +243,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,
+  MovieIdRoute: MovieIdRoute,
+  TvIdRoute: TvIdRoute,
   ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
 }
