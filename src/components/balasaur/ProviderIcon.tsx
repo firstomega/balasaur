@@ -129,7 +129,11 @@ const MARKS: Record<ProviderName, ProviderMark> = {
 };
 
 interface ProviderIconProps {
-  provider: ProviderName;
+  provider: ProviderName | string;
+  /** Fallback logo URL when provider is not in the built-in MARKS map. */
+  logoUrl?: string;
+  /** Display label override (used for tooltip / aria-label). */
+  label?: string;
   selected?: boolean;
   onClick?: () => void;
   size?: number;
@@ -140,13 +144,16 @@ interface ProviderIconProps {
 
 export function ProviderIcon({
   provider,
+  logoUrl,
+  label,
   selected = false,
   onClick,
   size = 36,
   asBadge = false,
   className,
 }: ProviderIconProps) {
-  const mark = MARKS[provider];
+  const mark = (MARKS as Record<string, ProviderMark | undefined>)[provider];
+  const displayLabel = label ?? mark?.label ?? provider;
 
   const tile = (
     <span
@@ -159,25 +166,33 @@ export function ProviderIcon({
       style={{
         width: size,
         height: size,
-        backgroundColor: selected ? mark.bg : undefined,
-        color: selected ? mark.fg : "var(--text-muted, #9ca3af)",
+        backgroundColor: selected && mark ? mark.bg : undefined,
+        color: selected && mark ? mark.fg : "var(--text-muted, #9ca3af)",
       }}
       aria-hidden="true"
     >
-      <svg
-        viewBox="0 0 32 32"
-        width={size}
-        height={size}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {mark.glyph}
-      </svg>
+      {mark ? (
+        <svg viewBox="0 0 32 32" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
+          {mark.glyph}
+        </svg>
+      ) : logoUrl ? (
+        <img
+          src={logoUrl}
+          alt=""
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span className="font-mono text-[8px] uppercase tracking-wider">
+          {displayLabel.slice(0, 3)}
+        </span>
+      )}
     </span>
   );
 
   if (asBadge) {
     return (
-      <span className={cn("inline-flex", className)} title={mark.label}>
+      <span className={cn("inline-flex", className)} title={displayLabel}>
         {tile}
       </span>
     );
@@ -191,7 +206,7 @@ export function ProviderIcon({
             type="button"
             onClick={onClick}
             aria-pressed={selected}
-            aria-label={mark.label}
+            aria-label={displayLabel}
             className={cn(
               "cursor-pointer rounded-[5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background",
               className,
@@ -201,7 +216,7 @@ export function ProviderIcon({
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="font-mono text-[10px] uppercase tracking-wider">
-          {mark.label}
+          {displayLabel}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
