@@ -2,26 +2,22 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { buildMeta, canonicalLink, clampDescription, absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { movieJsonLd } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/movie/$id")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(mediaDetailQueryOptions("movie", params.id)),
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const d = loaderData;
+    const url = absoluteUrl(`/movie/${params.id}`);
     const title = d ? `${d.title}${d.year ? ` (${d.year})` : ""} — Balasaur` : "Balasaur";
-    const description = d?.overview
-      ? d.overview.slice(0, 200) + (d.overview.length > 200 ? "…" : "")
-      : "Movie details on Balasaur.";
+    const description = d ? clampDescription(d.overview) : "Movie details on Balasaur.";
     const image = d?.backdropUrl || d?.posterUrl;
     return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:type", content: "video.movie" },
-        ...(image ? [{ property: "og:image", content: image }] : []),
-      ],
+      meta: buildMeta({ title, description, url, image, type: "video.movie" }),
+      links: [canonicalLink(url)],
+      ...(d ? { scripts: [jsonLdScript(movieJsonLd(d, url))] } : {}),
     };
   },
   component: MoviePage,

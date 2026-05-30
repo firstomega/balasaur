@@ -14,14 +14,9 @@ import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { applyFilters } from "@/lib/filterMedia";
 import { defaultFilterState, type FilterState } from "@/types/filters";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,7 +33,9 @@ export const Route = createFileRoute("/")({
         content:
           "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
       },
+      { property: "og:url", content: SITE_ORIGIN + "/" },
     ],
+    links: [canonicalLink(SITE_ORIGIN + "/")],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(mediaItemsQueryOptions),
   errorComponent: HomeError,
@@ -70,14 +67,14 @@ function HomePage() {
         <main className="min-w-0 flex-1">
           {!user && <LandingHero onBrowse={scrollToGrid} />}
           <div ref={gridRef} tabIndex={-1} className="scroll-mt-16">
-          <Suspense fallback={<MediaGridSkeleton />}>
-            <GridWithControls
-              filters={filters}
-              setFilters={setFilters}
-              seenIds={seenIds}
-              onOpenMobileFilters={() => setMobileOpen(true)}
-            />
-          </Suspense>
+            <Suspense fallback={<MediaGridSkeleton />}>
+              <GridWithControls
+                filters={filters}
+                setFilters={setFilters}
+                seenIds={seenIds}
+                onOpenMobileFilters={() => setMobileOpen(true)}
+              />
+            </Suspense>
           </div>
         </main>
       </div>
@@ -124,10 +121,7 @@ function GridWithControls({
   onOpenMobileFilters: () => void;
 }) {
   const { data } = useMediaItems();
-  const filtered = useMemo(
-    () => applyFilters(data, filters, seenIds),
-    [data, filters, seenIds],
-  );
+  const filtered = useMemo(() => applyFilters(data, filters, seenIds), [data, filters, seenIds]);
   const activeCount = countActive(filters);
 
   return (
@@ -207,9 +201,7 @@ function HomeError({ error }: { error: Error }) {
           <h2 className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
             Couldn't load the firehose
           </h2>
-          <p className="mt-2 font-mono text-[11px] text-text-muted">
-            {error.message}
-          </p>
+          <p className="mt-2 font-mono text-[11px] text-text-muted">{error.message}</p>
         </div>
       </main>
     </div>

@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TriageRouteImport } from './routes/triage'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ListsRouteImport } from './routes/lists'
 import { Route as AccountRouteImport } from './routes/account'
@@ -29,6 +31,16 @@ const TriageRoute = TriageRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -83,6 +95,8 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/lists': typeof ListsRoute
   '/privacy': typeof PrivacyRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/movie/$id': typeof MovieIdRoute
@@ -96,6 +110,8 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/lists': typeof ListsRoute
   '/privacy': typeof PrivacyRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/movie/$id': typeof MovieIdRoute
@@ -110,6 +126,8 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/lists': typeof ListsRoute
   '/privacy': typeof PrivacyRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/movie/$id': typeof MovieIdRoute
@@ -125,6 +143,8 @@ export interface FileRouteTypes {
     | '/account'
     | '/lists'
     | '/privacy'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/terms'
     | '/triage'
     | '/movie/$id'
@@ -138,6 +158,8 @@ export interface FileRouteTypes {
     | '/account'
     | '/lists'
     | '/privacy'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/terms'
     | '/triage'
     | '/movie/$id'
@@ -151,6 +173,8 @@ export interface FileRouteTypes {
     | '/account'
     | '/lists'
     | '/privacy'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/terms'
     | '/triage'
     | '/movie/$id'
@@ -165,6 +189,8 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   ListsRoute: typeof ListsRoute
   PrivacyRoute: typeof PrivacyRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
   MovieIdRoute: typeof MovieIdRoute
@@ -188,6 +214,20 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -261,6 +301,8 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   ListsRoute: ListsRoute,
   PrivacyRoute: PrivacyRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,
   MovieIdRoute: MovieIdRoute,
@@ -272,3 +314,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

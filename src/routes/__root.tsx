@@ -16,6 +16,7 @@ import { Footer } from "@/components/balasaur/Footer";
 import { CookieBanner } from "@/components/balasaur/CookieBanner";
 import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
 import { DinoMark } from "@/components/balasaur/DinoMark";
+import { SITE_ORIGIN, SITE_NAME, SITE_TAGLINE, DEFAULT_OG_IMAGE, jsonLdScript } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -97,16 +98,38 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Balasaur" },
-      { name: "description", content: "Your personal entertainment database. Discover, track, and rate movies and TV all in one place." },
+      {
+        name: "description",
+        content:
+          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+      },
       { name: "author", content: "Balasaur" },
       { property: "og:title", content: "Balasaur" },
-      { property: "og:description", content: "Your personal entertainment database. Discover, track, and rate movies and TV all in one place." },
+      {
+        property: "og:description",
+        content:
+          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Balasaur" },
-      { name: "twitter:description", content: "Your personal entertainment database. Discover, track, and rate movies and TV all in one place." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9ee233a8-7a22-41f0-ac0e-85e583add70d/id-preview-7121fac2--60ec2541-7775-4350-a822-2caaf26ce83a.lovable.app-1780089925441.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9ee233a8-7a22-41f0-ac0e-85e583add70d/id-preview-7121fac2--60ec2541-7775-4350-a822-2caaf26ce83a.lovable.app-1780089925441.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+      },
+      { property: "og:image", content: DEFAULT_OG_IMAGE },
+      { name: "twitter:image", content: DEFAULT_OG_IMAGE },
+      { property: "og:site_name", content: SITE_NAME },
+    ],
+    scripts: [
+      jsonLdScript({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: SITE_NAME,
+        description: `${SITE_TAGLINE}. Discover, track, and rate movies and TV.`,
+        url: SITE_ORIGIN,
+      }),
     ],
     links: [
       {

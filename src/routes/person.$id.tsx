@@ -2,27 +2,23 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { PersonDetail } from "@/components/balasaur/PersonDetail";
 import { personDetailQueryOptions } from "@/hooks/usePersonDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { buildMeta, canonicalLink, clampDescription, absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { personJsonLd } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/person/$id")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(personDetailQueryOptions(params.id)),
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const d = loaderData;
+    const url = absoluteUrl(`/person/${params.id}`);
     const title = d ? `${d.name} — Balasaur` : "Balasaur";
-    const description = d?.biography
-      ? d.biography.slice(0, 200) + (d.biography.length > 200 ? "…" : "")
-      : d
-        ? `${d.name}'s movies and TV on Balasaur.`
-        : "Person details on Balasaur.";
+    const description = d
+      ? clampDescription(d.biography || `${d.name}'s movies and TV on Balasaur.`)
+      : "Person details on Balasaur.";
     return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:type", content: "profile" },
-        ...(d?.profileUrl ? [{ property: "og:image", content: d.profileUrl }] : []),
-      ],
+      meta: buildMeta({ title, description, url, image: d?.profileUrl, type: "profile" }),
+      links: [canonicalLink(url)],
+      ...(d ? { scripts: [jsonLdScript(personJsonLd(d, url))] } : {}),
     };
   },
   component: PersonPage,

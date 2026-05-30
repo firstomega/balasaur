@@ -2,26 +2,22 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { buildMeta, canonicalLink, clampDescription, absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { tvJsonLd } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/tv/$id")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(mediaDetailQueryOptions("tv", params.id)),
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const d = loaderData;
+    const url = absoluteUrl(`/tv/${params.id}`);
     const title = d ? `${d.title}${d.year ? ` (${d.year})` : ""} — Balasaur` : "Balasaur";
-    const description = d?.overview
-      ? d.overview.slice(0, 200) + (d.overview.length > 200 ? "…" : "")
-      : "TV details on Balasaur.";
+    const description = d ? clampDescription(d.overview) : "TV details on Balasaur.";
     const image = d?.backdropUrl || d?.posterUrl;
     return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:type", content: "video.tv_show" },
-        ...(image ? [{ property: "og:image", content: image }] : []),
-      ],
+      meta: buildMeta({ title, description, url, image, type: "video.tv_show" }),
+      links: [canonicalLink(url)],
+      ...(d ? { scripts: [jsonLdScript(tvJsonLd(d, url))] } : {}),
     };
   },
   component: TvPage,
