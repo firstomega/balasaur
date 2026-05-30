@@ -120,6 +120,9 @@ export function useUserStatus() {
   const { user } = useAuth();
   const [statuses, setStatuses] = useState<StatusMap>({});
   const migratedRef = useRef<string | null>(null);
+  // One-shot count of picks just migrated local→account on sign-in. The deck
+  // reads this to confirm "Saved your N picks", then calls clearJustMigrated().
+  const [justMigrated, setJustMigrated] = useState(0);
 
   // Anonymous: load from localStorage and stay in sync across tabs.
   useEffect(() => {
@@ -149,6 +152,7 @@ export function useUserStatus() {
             .from("user_media_status")
             .upsert(rows, { onConflict: "user_id,media_id", ignoreDuplicates: true });
           clearLocal();
+          if (!cancelled) setJustMigrated(entries.length);
         }
         migratedRef.current = user.id;
       }
@@ -238,5 +242,16 @@ export function useUserStatus() {
     [user],
   );
 
-  return { statuses, seenIds, recordStatus };
+  const count = useMemo(() => Object.keys(statuses).length, [statuses]);
+  const clearJustMigrated = useCallback(() => setJustMigrated(0), []);
+
+  return {
+    statuses,
+    seenIds,
+    recordStatus,
+    isAnonymous: !user,
+    count,
+    justMigrated,
+    clearJustMigrated,
+  };
 }

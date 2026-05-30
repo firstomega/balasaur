@@ -15,6 +15,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { Footer } from "@/components/balasaur/Footer";
 import { CookieBanner } from "@/components/balasaur/CookieBanner";
 import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
+import { Toaster } from "@/components/ui/sonner";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { SITE_ORIGIN, SITE_NAME, SITE_TAGLINE, DEFAULT_OG_IMAGE, jsonLdScript } from "@/lib/seo";
 
@@ -179,6 +180,7 @@ function RootComponent() {
           <Footer />
         </div>
         <CookieBanner />
+        <Toaster position="bottom-center" />
       </AuthProvider>
     </QueryClientProvider>
   );

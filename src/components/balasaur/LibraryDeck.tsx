@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, SkipForward, X } from "lucide-react";
+import { toast } from "sonner";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, SkipForward, X } from "lucide-react";
 import type { MediaItem } from "@/types/media";
 import { useUserStatus } from "@/hooks/useUserStatus";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthDialog } from "./AuthDialog";
 import { recordForStatus, recordForSkip, type StatusKey } from "@/lib/userStatus";
+
+// After this many anonymous picks, nudge the user to sign in to save them.
+const NUDGE_AFTER = 5;
 
 type Dir = "up" | "down" | "left" | "right";
 
@@ -44,7 +50,12 @@ interface Summary {
 }
 
 export function LibraryDeck({ items }: { items: MediaItem[] }) {
-  const { statuses, recordStatus } = useUserStatus();
+  const { statuses, recordStatus, isAnonymous, justMigrated, clearJustMigrated } = useUserStatus();
+  const { user } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  // Picks made this session (drives the anon "sign in to save your N" nudge).
+  const [sessionPicks, setSessionPicks] = useState(0);
 
   // Build the deck once on mount. Untouched first; previously-skipped items
   // resurface at the back (deprioritized, never hidden). Filed items (like/
@@ -70,6 +81,16 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   const current = deck[index];
   const next = deck[index + 1];
 
+  // Confirm the local→account migration once, after sign-in.
+  useEffect(() => {
+    if (justMigrated > 0) {
+      toast.success(
+        `Saved your ${justMigrated} ${justMigrated === 1 ? "pick" : "picks"} to your account.`,
+      );
+      clearJustMigrated();
+    }
+  }, [justMigrated, clearJustMigrated]);
+
   const advance = useCallback(
     (dir: Dir) => {
       if (!current) return;
@@ -86,7 +107,10 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
           watched: s.watched + (key === "watched" ? 1 : 0),
           didntWatch: s.didntWatch + (key === "didntWatch" ? 1 : 0),
         }));
+        // Signed-in: confirm the save so it never looks like nothing happened.
+        if (user) toast.success(`Saved · ${ACTION_LABEL[dir]}`, { duration: 1400 });
       }
+      setSessionPicks((n) => n + 1);
       setExit(dir);
       window.setTimeout(() => {
         setExit(null);
@@ -97,8 +121,10 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         });
       }, 220);
     },
-    [current, deck.length, recordStatus],
+    [current, deck.length, recordStatus, user],
   );
+
+  const showNudge = isAnonymous && !nudgeDismissed && sessionPicks >= NUDGE_AFTER;
 
   // Keyboard
   useEffect(() => {
@@ -126,7 +152,16 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   }, [advance, done]);
 
   if (done || !current) {
-    return <LibrarySummary summary={summary} />;
+    return (
+      <>
+        <LibrarySummary
+          summary={summary}
+          anonUnsaved={isAnonymous && summary.total > 0 ? summary.total : 0}
+          onSignIn={() => setAuthOpen(true)}
+        />
+        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      </>
+    );
   }
 
   return (
@@ -134,6 +169,29 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
       <div className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
         {index + 1} / {deck.length} · sorted {summary.total}
       </div>
+
+      {showNudge && (
+        <div className="flex w-full max-w-[360px] items-center gap-2 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2">
+          <span className="flex-1 font-mono text-[10.5px] uppercase tracking-wider text-text-bright">
+            Sign in to save your {sessionPicks} picks
+          </span>
+          <button
+            type="button"
+            onClick={() => setAuthOpen(true)}
+            className="cursor-pointer rounded-[4px] bg-primary px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => setNudgeDismissed(true)}
+            aria-label="Dismiss"
+            className="cursor-pointer text-text-muted hover:text-text-bright"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       <div className="relative h-[560px] w-full max-w-[360px]">
         {/* Next card behind, peek */}
@@ -163,6 +221,8 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
           Skip
         </button>
       </div>
+
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </div>
   );
 }
@@ -371,7 +431,15 @@ function Legend() {
   );
 }
 
-function LibrarySummary({ summary }: { summary: Summary }) {
+function LibrarySummary({
+  summary,
+  anonUnsaved,
+  onSignIn,
+}: {
+  summary: Summary;
+  anonUnsaved: number;
+  onSignIn: () => void;
+}) {
   const lines: { label: string; value: number; color: string }[] = [
     { label: "Liked", value: summary.like, color: ACTION_HEX.up },
     { label: "Watched", value: summary.watched, color: ACTION_HEX.right },
@@ -389,6 +457,22 @@ function LibrarySummary({ summary }: { summary: Summary }) {
           You sorted {summary.total}
         </div>
       </div>
+
+      {anonUnsaved > 0 && (
+        <div className="flex w-full items-center gap-3 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2.5 text-left">
+          <Check className="h-4 w-4 shrink-0 text-primary" />
+          <span className="flex-1 font-mono text-[10.5px] uppercase tracking-wider text-text-bright">
+            Saved on this device · sign in to keep your {anonUnsaved} picks
+          </span>
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+          >
+            Sign in
+          </button>
+        </div>
+      )}
 
       <ul className="w-full space-y-1.5">
         {lines.map((l) => (
