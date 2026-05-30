@@ -15,22 +15,28 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { Footer } from "@/components/balasaur/Footer";
 import { CookieBanner } from "@/components/balasaur/CookieBanner";
 import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
+import { DinoMark } from "@/components/balasaur/DinoMark";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+      <div className="w-full max-w-md rounded-[5px] border border-border bg-panel p-8 text-center">
+        <DinoMark className="mx-auto h-10 w-10 text-primary" />
+        <div className="mt-5 font-mono text-[64px] font-semibold leading-none tracking-tighter text-text-bright">
+          404
+        </div>
+        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+          Signal lost · route not found
         </p>
-        <div className="mt-6">
+        <p className="mt-4 text-[13.5px] leading-relaxed text-text-muted">
+          This title isn't in our database. The page you tried doesn't exist or moved.
+        </p>
+        <div className="mt-6 flex justify-center">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Back to grid
           </Link>
         </div>
       </div>
@@ -47,26 +53,35 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+      <div className="w-full max-w-md rounded-[5px] border border-border bg-panel p-8 text-center">
+        <DinoMark className="mx-auto h-10 w-10 text-primary" />
+        <p className="mt-5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+          Process halted · error caught
+        </p>
+        <h1 className="mt-2 text-[20px] font-semibold tracking-tight text-text-bright">
           This page didn't load
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+        <p className="mt-3 text-[13.5px] leading-relaxed text-text-muted">
+          Something went wrong on our end. You can try again or head back home.
         </p>
+        {error?.message && (
+          <pre className="mt-4 max-h-32 overflow-auto rounded-[4px] border border-border bg-background px-3 py-2 text-left font-mono text-[10.5px] text-text-dim">
+            {error.message}
+          </pre>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-[5px] border border-border-strong bg-background px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-text-bright transition-colors hover:border-primary hover:text-primary"
           >
             Go home
           </a>
