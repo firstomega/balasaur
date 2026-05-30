@@ -385,14 +385,6 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                 className="h-auto w-full rounded-[6px] object-contain"
               />
             )}
-            <button
-              type="button"
-              onClick={() => setLightboxIdx(null)}
-              className="absolute right-2 top-2 rounded-[4px] border border-border bg-background/80 p-1 text-text-muted hover:text-text-bright"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </DialogContent>
         </Dialog>
       )}
