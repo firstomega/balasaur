@@ -250,6 +250,37 @@ async function mapWithLimit<T, R>(
 }
 
 /**
+ * Lightweight list of catalogued titles for the sitemap. Reads only the
+ * columns needed to build a URL + lastmod. NO upstream API calls. Capped well
+ * under the 50k sitemap limit, most-popular first.
+ */
+export async function listSitemapEntries(
+  limit = 20000,
+): Promise<{ path: string; lastmod?: string }[]> {
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select("media_id, media_type, updated_at")
+    .order("popularity", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[sitemap] media query failed:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map(
+    (r: { media_id: string; media_type: string; updated_at: string | null }) => {
+      const rawId = r.media_id.replace(/^(movie|tv)-/, "");
+      const seg = r.media_type === "tv" ? "tv" : "movie";
+      return {
+        path: `/${seg}/${rawId}`,
+        lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
+      };
+    },
+  );
+}
+
+/**
  * Read the catalog out of our database. NO upstream API calls.
  * This is what visitor page loads hit.
  */
@@ -941,9 +972,7 @@ function buildDetailFromRaw(
   const wpResults = raw["watch/providers"]?.results;
   if (wpResults && Object.keys(wpResults).length > 0) {
     const PROVIDER_LOGO_BASE = "https://image.tmdb.org/t/p/original";
-    const mapList = (
-      list?: { provider_name: string; logo_path?: string | null }[],
-    ) =>
+    const mapList = (list?: { provider_name: string; logo_path?: string | null }[]) =>
       (list ?? []).map((p) => ({
         name: p.provider_name,
         logoUrl: p.logo_path ? `${PROVIDER_LOGO_BASE}${p.logo_path}` : undefined,
