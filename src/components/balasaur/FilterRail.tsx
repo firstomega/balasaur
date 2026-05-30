@@ -8,6 +8,7 @@ import {
   RT_BOUNDS,
   STREAMING_OPTIONS,
   YEAR_BOUNDS,
+  defaultFilterState,
 } from "@/types/filters";
 import { UNIFIED_GENRES } from "@/lib/genres";
 import {
@@ -27,8 +28,7 @@ interface Props {
   allItems: MediaItem[];
 }
 
-const groupLabelClass =
-  "font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-bright";
+const groupLabelClass = "font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-bright";
 
 const pillBase =
   "cursor-pointer select-none rounded-[4px] border px-2 py-[3px] font-mono text-[10.5px] uppercase tracking-wide transition-colors";
@@ -59,13 +59,7 @@ function Pill({
   );
 }
 
-function TriggerLabel({
-  active,
-  children,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-}) {
+function TriggerLabel({ active, children }: { active: boolean; children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-1.5">
       {children}
@@ -79,6 +73,21 @@ function TriggerLabel({
   );
 }
 
+// Per-category reset, shown inside a group's content only when it's active.
+function GroupClear({ show, onClear }: { show: boolean; onClear: () => void }) {
+  if (!show) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClear}
+      className="mb-2 inline-flex cursor-pointer items-center gap-1 font-mono text-[9.5px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+    >
+      <X className="h-2.5 w-2.5" />
+      Clear
+    </button>
+  );
+}
+
 export function FilterRail({ filters, setFilters, allItems }: Props) {
   const toggleSet = <T,>(key: keyof FilterState, value: T) => {
     setFilters((prev) => {
@@ -89,15 +98,45 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
     });
   };
 
+  // Reset a single filter group back to its default, leaving everything else.
+  const clearGroup = (group: string) => {
+    const d = defaultFilterState();
+    setFilters((prev) => {
+      switch (group) {
+        case "media-type":
+          return { ...prev, mediaTypes: d.mediaTypes };
+        case "genre":
+          return { ...prev, genres: d.genres };
+        case "streaming":
+          return { ...prev, streaming: d.streaming };
+        case "released":
+          return { ...prev, yearRange: d.yearRange };
+        case "rating":
+          return {
+            ...prev,
+            imdbRange: d.imdbRange,
+            rtRange: d.rtRange,
+            metaRange: d.metaRange,
+            includeUnratedImdb: d.includeUnratedImdb,
+            includeUnratedRt: d.includeUnratedRt,
+            includeUnratedMeta: d.includeUnratedMeta,
+          };
+        case "people":
+          return { ...prev, people: d.people };
+        case "accolades":
+          return { ...prev, awardWinners: d.awardWinners, nominated: d.nominated };
+        default:
+          return prev;
+      }
+    });
+  };
+
   const activeGroups = useMemo(() => {
     const s = new Set<string>();
     if (filters.mediaTypes.size !== 2) s.add("media-type");
     if (filters.genres.size > 0) s.add("genre");
     if (filters.streaming.size > 0) s.add("streaming");
-    if (
-      filters.yearRange[0] !== YEAR_BOUNDS[0] ||
-      filters.yearRange[1] !== YEAR_BOUNDS[1]
-    )
+    if (filters.yearRange[0] !== YEAR_BOUNDS[0] || filters.yearRange[1] !== YEAR_BOUNDS[1])
       s.add("released");
     if (
       filters.imdbRange[0] !== IMDB_BOUNDS[0] ||
@@ -122,13 +161,15 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("media-type")}>Media Type</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
+            <GroupClear
+              show={activeGroups.has("media-type")}
+              onClear={() => clearGroup("media-type")}
+            />
             <div className="space-y-2">
-              {(
-                [
-                  { value: "movie" as MediaType, label: "Movies" },
-                  { value: "tv" as MediaType, label: "TV" },
-                ]
-              ).map((opt) => (
+              {[
+                { value: "movie" as MediaType, label: "Movies" },
+                { value: "tv" as MediaType, label: "TV" },
+              ].map((opt) => (
                 <label key={opt.value} className="flex cursor-pointer items-center gap-2">
                   <Checkbox
                     checked={filters.mediaTypes.has(opt.value)}
@@ -147,6 +188,7 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("genre")}>Genre</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
+            <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
             <div className="flex flex-wrap gap-1.5">
               {UNIFIED_GENRES.map((g) => (
                 <Pill
@@ -167,6 +209,10 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("streaming")}>Streaming Service</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
+            <GroupClear
+              show={activeGroups.has("streaming")}
+              onClear={() => clearGroup("streaming")}
+            />
             <div className="flex flex-wrap gap-2">
               {STREAMING_OPTIONS.map((s) => (
                 <ProviderIcon
@@ -188,6 +234,10 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
           </AccordionTrigger>
           <AccordionContent className="pb-4 pt-2">
             <div className="px-1">
+              <GroupClear
+                show={activeGroups.has("released")}
+                onClear={() => clearGroup("released")}
+              />
               <div className="mb-2 flex justify-between font-mono text-[10.5px] text-text-muted">
                 <span>{filters.yearRange[0]}</span>
                 <span>{filters.yearRange[1]}</span>
@@ -211,6 +261,9 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("rating")}>Rating</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-4 pt-2">
+            <div className="px-1">
+              <GroupClear show={activeGroups.has("rating")} onClear={() => clearGroup("rating")} />
+            </div>
             <RatingSliders filters={filters} setFilters={setFilters} allItems={allItems} />
           </AccordionContent>
         </AccordionItem>
@@ -221,6 +274,7 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("people")}>By Person</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
+            <GroupClear show={activeGroups.has("people")} onClear={() => clearGroup("people")} />
             <PeoplePicker filters={filters} setFilters={setFilters} allItems={allItems} />
           </AccordionContent>
         </AccordionItem>
@@ -231,22 +285,22 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("accolades")}>Accolades</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
+            <GroupClear
+              show={activeGroups.has("accolades")}
+              onClear={() => clearGroup("accolades")}
+            />
             <div className="space-y-2">
               <label className="flex cursor-pointer items-center gap-2">
                 <Checkbox
                   checked={filters.awardWinners}
-                  onCheckedChange={(v) =>
-                    setFilters((prev) => ({ ...prev, awardWinners: !!v }))
-                  }
+                  onCheckedChange={(v) => setFilters((prev) => ({ ...prev, awardWinners: !!v }))}
                 />
                 <span className="font-mono text-[11.5px] text-text-bright">Award winners</span>
               </label>
               <label className="flex cursor-pointer items-center gap-2">
                 <Checkbox
                   checked={filters.nominated}
-                  onCheckedChange={(v) =>
-                    setFilters((prev) => ({ ...prev, nominated: !!v }))
-                  }
+                  onCheckedChange={(v) => setFilters((prev) => ({ ...prev, nominated: !!v }))}
                 />
                 <span className="font-mono text-[11.5px] text-text-bright">Nominated</span>
               </label>
@@ -276,9 +330,31 @@ function RatingSliders({
     step: number;
     suffix?: string;
   }[] = [
-    { label: "IMDb", key: "imdbRange", includeKey: "includeUnratedImdb", ratingKey: "imdb", bounds: IMDB_BOUNDS, step: 0.1 },
-    { label: "Rotten Tomatoes", key: "rtRange", includeKey: "includeUnratedRt", ratingKey: "rottenTomatoes", bounds: RT_BOUNDS, step: 1, suffix: "%" },
-    { label: "Metacritic", key: "metaRange", includeKey: "includeUnratedMeta", ratingKey: "metacritic", bounds: META_BOUNDS, step: 1 },
+    {
+      label: "IMDb",
+      key: "imdbRange",
+      includeKey: "includeUnratedImdb",
+      ratingKey: "imdb",
+      bounds: IMDB_BOUNDS,
+      step: 0.1,
+    },
+    {
+      label: "Rotten Tomatoes",
+      key: "rtRange",
+      includeKey: "includeUnratedRt",
+      ratingKey: "rottenTomatoes",
+      bounds: RT_BOUNDS,
+      step: 1,
+      suffix: "%",
+    },
+    {
+      label: "Metacritic",
+      key: "metaRange",
+      includeKey: "includeUnratedMeta",
+      ratingKey: "metacritic",
+      bounds: META_BOUNDS,
+      step: 1,
+    },
   ];
 
   const total = allItems.length;

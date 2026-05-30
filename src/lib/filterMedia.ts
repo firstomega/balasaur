@@ -33,15 +33,18 @@ export function applyFilters(
     }
 
     const year = item.year ? parseInt(item.year, 10) : undefined;
-    const yearFull = filters.yearRange[0] === YEAR_BOUNDS[0] && filters.yearRange[1] === YEAR_BOUNDS[1];
+    const yearFull =
+      filters.yearRange[0] === YEAR_BOUNDS[0] && filters.yearRange[1] === YEAR_BOUNDS[1];
     if (!yearFull) {
       if (year === undefined) return false;
       if (year < filters.yearRange[0] || year > filters.yearRange[1]) return false;
     }
 
     if (!inRange(item.ratings.imdb, filters.imdbRange, filters.includeUnratedImdb)) return false;
-    if (!inRange(item.ratings.rottenTomatoes, filters.rtRange, filters.includeUnratedRt)) return false;
-    if (!inRange(item.ratings.metacritic, filters.metaRange, filters.includeUnratedMeta)) return false;
+    if (!inRange(item.ratings.rottenTomatoes, filters.rtRange, filters.includeUnratedRt))
+      return false;
+    if (!inRange(item.ratings.metacritic, filters.metaRange, filters.includeUnratedMeta))
+      return false;
 
     if (peopleLower.length > 0) {
       const names = item.people.map((p) => p.name.toLowerCase());
@@ -58,24 +61,31 @@ export function applyFilters(
   });
 
   const sorted = [...filtered];
+  const pop = (m: MediaItem) => m.popularity ?? 0;
+  const yr = (m: MediaItem) => (m.year ? parseInt(m.year, 10) : 0);
+  const rating = (m: MediaItem) => m.ratings.imdb ?? m.ratings.tmdb ?? 0;
+
   switch (filters.sort) {
-    case "popular":
-    case "trending":
-      sorted.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
-      break;
     case "newest":
+      // Year desc, ties broken by popularity.
+      sorted.sort((a, b) => yr(b) - yr(a) || pop(b) - pop(a));
+      break;
+    case "oldest":
+      // Year asc, ties broken by popularity. Undated titles sink to the bottom.
       sorted.sort((a, b) => {
-        const ay = a.year ? parseInt(a.year, 10) : 0;
-        const by = b.year ? parseInt(b.year, 10) : 0;
-        return by - ay;
+        const ay = yr(a) || Infinity;
+        const by = yr(b) || Infinity;
+        return ay - by || pop(b) - pop(a);
       });
       break;
     case "topRated":
-      sorted.sort((a, b) => {
-        const ar = a.ratings.imdb ?? a.ratings.tmdb ?? 0;
-        const br = b.ratings.imdb ?? b.ratings.tmdb ?? 0;
-        return br - ar;
-      });
+      // Rating desc, ties broken by popularity.
+      sorted.sort((a, b) => rating(b) - rating(a) || pop(b) - pop(a));
+      break;
+    case "popular":
+    case "trending": // retired alias → behaves as popular
+    default:
+      sorted.sort((a, b) => pop(b) - pop(a));
       break;
   }
   return sorted;

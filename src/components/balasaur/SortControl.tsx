@@ -2,9 +2,9 @@ import type { SortKey } from "@/types/filters";
 
 const OPTIONS: { value: SortKey; label: string }[] = [
   { value: "popular", label: "Popular" },
-  { value: "trending", label: "Trending" },
-  { value: "newest", label: "Newest" },
   { value: "topRated", label: "Top rated" },
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
 ];
 
 export function SortControl({
@@ -25,9 +25,7 @@ export function SortControl({
             onClick={() => onChange(o.value)}
             className={
               "cursor-pointer rounded-[3px] px-2 py-[3px] font-mono text-[10.5px] uppercase tracking-wider transition-colors " +
-              (active
-                ? "bg-accent text-text-bright"
-                : "text-text-muted hover:text-text-bright")
+              (active ? "bg-accent text-text-bright" : "text-text-muted hover:text-text-bright")
             }
           >
             {o.label}
