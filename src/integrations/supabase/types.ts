@@ -140,6 +140,30 @@ export type Database = {
         }
         Relationships: []
       }
+      person_cache: {
+        Row: {
+          fetched_at: string
+          id: number
+          name: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          fetched_at?: string
+          id: number
+          name: string
+          payload: Json
+          updated_at?: string
+        }
+        Update: {
+          fetched_at?: string
+          id?: number
+          name?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trending_cache: {
         Row: {
           fetched_at: string
