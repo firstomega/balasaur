@@ -705,6 +705,10 @@ function pickCertification(type: "movie" | "tv", raw: TmdbDetailRaw): string | u
   return us?.rating || undefined;
 }
 
+/**
+ * Live detail fetch — TMDB (+OMDb) over the network. Used only when we don't
+ * already have the title's raw payloads stored in `media`.
+ */
 async function fetchMediaDetailLive(
   type: "movie" | "tv",
   id: string,
@@ -724,6 +728,24 @@ async function fetchMediaDetailLive(
     include_image_language: "en,null",
   });
 
+  let rawOmdb: OmdbResponse | null = null;
+  const liveImdbId = raw.external_ids?.imdb_id;
+  if (omdbKey && liveImdbId) {
+    rawOmdb = (await fetchOmdbRaw(liveImdbId, omdbKey)) as OmdbResponse | null;
+  }
+
+  return buildDetailFromRaw(type, raw, rawOmdb);
+}
+
+/**
+ * Pure mapping from stored or freshly-fetched raw payloads to a MediaDetail.
+ * Makes NO network calls — OMDb data must be supplied by the caller.
+ */
+function buildDetailFromRaw(
+  type: "movie" | "tv",
+  raw: TmdbDetailRaw,
+  rawOmdb: OmdbResponse | null,
+): MediaDetail {
   const title = (type === "movie" ? raw.title : raw.name) ?? "Untitled";
   const date = type === "movie" ? raw.release_date : raw.first_air_date;
   const genreNames = (raw.genres ?? []).map((g) => g.name);
@@ -843,12 +865,8 @@ async function fetchMediaDetailLive(
     detail.trailer = { key: trailer.key, name: trailer.name, site: "YouTube" };
   }
 
-  // OMDb enrichment for cross-source ratings.
-  const imdbId = detail.external.imdbId;
-  if (omdbKey && imdbId) {
-    const omdb = (await fetchOmdbRaw(imdbId, omdbKey)) as OmdbResponse | null;
-    if (omdb) applyOmdbRatings(detail, omdb);
-  }
+  // OMDb enrichment from the supplied payload (no network call here).
+  if (rawOmdb) applyOmdbRatings(detail, rawOmdb);
 
   return detail;
 }
@@ -880,8 +898,41 @@ export async function fetchMediaDetail(
     }
   }
 
-  const detail = await fetchMediaDetailLive(type, id);
+  // Build from already-synced raw payloads if we have them — no API calls.
+  // syncCatalog stores the full TMDB detail (+OMDb) in `media`, so for any
+  // title in the catalog this serves the detail page without touching TMDB/OMDb.
+  if (!opts?.fresh) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("media")
+        .select("raw_tmdb, raw_omdb")
+        .eq("media_id", cacheId)
+        .maybeSingle();
+      if (!error && data?.raw_tmdb) {
+        const built = buildDetailFromRaw(
+          type,
+          data.raw_tmdb as unknown as TmdbDetailRaw,
+          (data.raw_omdb as unknown as OmdbResponse | null) ?? null,
+        );
+        await writeDetailCache(cacheId, type, id, built);
+        return built;
+      }
+    } catch (e) {
+      console.error("[cache] media raw build failed:", e);
+    }
+  }
 
+  const detail = await fetchMediaDetailLive(type, id);
+  await writeDetailCache(cacheId, type, id, detail);
+  return detail;
+}
+
+async function writeDetailCache(
+  cacheId: string,
+  type: "movie" | "tv",
+  id: string,
+  detail: MediaDetail,
+): Promise<void> {
   try {
     const tmdbIdNum = Number.parseInt(id, 10);
     await supabaseAdmin.from("media_cache").upsert(
@@ -901,8 +952,6 @@ export async function fetchMediaDetail(
   } catch (e) {
     console.error("[cache] media_cache write failed:", e);
   }
-
-  return detail;
 }
 
 /**
