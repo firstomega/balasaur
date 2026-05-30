@@ -8,6 +8,7 @@ import type { MediaDetail as MediaDetailType } from "@/types/media";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
+import { WhereToWatch } from "./WhereToWatch";
 import {
   recordForStatus,
   STATUS_HEX,
@@ -332,6 +333,8 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
         {/* SIDE */}
         <aside className="space-y-4">
           <StatusControls detail={detail} />
+
+          <WhereToWatch detail={detail} />
 
           <div className="rounded-[5px] border border-border bg-panel p-3">
             <MicroLabel>Facts</MicroLabel>
