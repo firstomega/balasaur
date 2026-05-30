@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Search, Zap, LogOut, User } from "lucide-react";
+import { Zap, LogOut, User } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { DinoMark } from "./DinoMark";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "./AuthDialog";
+import { TopBarSearch } from "./TopBarSearch";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -29,19 +30,7 @@ export function TopBar() {
         </a>
 
         {/* Center search */}
-        <div className="mx-auto hidden w-full max-w-md md:block">
-          <label className="relative block">
-            <Search
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              placeholder="Search titles, people, genres…"
-              className="h-8 w-full rounded-[5px] border border-border bg-panel pl-8 pr-3 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
-            />
-          </label>
-        </div>
+        <TopBarSearch />
 
         {/* Right nav */}
         <nav className="ml-auto flex items-center gap-1 md:gap-2">
