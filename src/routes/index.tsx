@@ -8,6 +8,7 @@ import { FilterRail } from "@/components/balasaur/FilterRail";
 import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters";
 import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
+import { DinoMark } from "@/components/balasaur/DinoMark";
 import { mediaItemsQueryOptions, useMediaItems } from "@/hooks/useMediaItems";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
@@ -176,10 +177,21 @@ function GridWithControls({
       <MediaGrid items={filtered} />
 
       {filtered.length === 0 && (
-        <div className="mt-10 rounded-[5px] border border-border bg-panel p-6 text-center">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-            No matches for the current filters
+        <div className="mt-10 flex flex-col items-center rounded-[5px] border border-border bg-panel p-8 text-center">
+          <DinoMark className="h-8 w-8 text-primary opacity-80" />
+          <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+            No matches
           </p>
+          <p className="mt-2 text-[13.5px] text-text-bright">
+            Nothing fits the current filters — try loosening one.
+          </p>
+          <button
+            type="button"
+            onClick={() => setFilters(() => defaultFilterState())}
+            className="mt-5 cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Clear all filters
+          </button>
         </div>
       )}
     </>
