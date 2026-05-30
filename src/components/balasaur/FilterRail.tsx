@@ -154,7 +154,11 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
 
   return (
     <div className="space-y-1">
-      <Accordion type="multiple" defaultValue={["media-type", "genre"]} className="w-full">
+      <Accordion
+        type="multiple"
+        defaultValue={["media-type", "streaming", "genre"]}
+        className="w-full"
+      >
         {/* Media Type */}
         <AccordionItem value="media-type" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
@@ -182,28 +186,7 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Genre */}
-        <AccordionItem value="genre" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("genre")}>Genre</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
-            <div className="flex flex-wrap gap-1.5">
-              {UNIFIED_GENRES.map((g) => (
-                <Pill
-                  key={g}
-                  active={filters.genres.has(g)}
-                  onClick={() => toggleSet<string>("genres", g)}
-                >
-                  {g}
-                </Pill>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Streaming */}
+        {/* Streaming — positioned #2, open by default */}
         <AccordionItem value="streaming" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
             <TriggerLabel active={activeGroups.has("streaming")}>Streaming Service</TriggerLabel>
@@ -222,6 +205,27 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
                   onClick={() => toggleSet<string>("streaming", s)}
                   size={38}
                 />
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Genre */}
+        <AccordionItem value="genre" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("genre")}>Genre</TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-3 pt-1">
+            <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
+            <div className="flex flex-wrap gap-1.5">
+              {UNIFIED_GENRES.map((g) => (
+                <Pill
+                  key={g}
+                  active={filters.genres.has(g)}
+                  onClick={() => toggleSet<string>("genres", g)}
+                >
+                  {g}
+                </Pill>
               ))}
             </div>
           </AccordionContent>
