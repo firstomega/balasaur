@@ -952,18 +952,26 @@ function buildDetailFromRaw(
       .filter(([, v]) => (v.flatrate?.length || v.rent?.length || v.buy?.length || 0) > 0)
       .map(([k]) => k)
       .sort();
-    const preferred = wpResults.US ?? wpResults[availableRegions[0]] ?? {};
-    const region = wpResults.US
-      ? "US"
-      : availableRegions[0] ?? "US";
+    const byRegion: WatchProvidersAllRegions["byRegion"] = {};
+    for (const [code, v] of regionEntries) {
+      byRegion[code] = {
+        stream: mapList(v.flatrate),
+        rent: mapList(v.rent),
+        buy: mapList(v.buy),
+        link: v.link,
+      };
+    }
+    const region = wpResults.US ? "US" : (availableRegions[0] ?? "US");
+    const preferred = byRegion[region] ?? { stream: [], rent: [], buy: [] };
     detail.providers = {
       region,
-      stream: mapList(preferred.flatrate),
-      rent: mapList(preferred.rent),
-      buy: mapList(preferred.buy),
+      stream: preferred.stream,
+      rent: preferred.rent,
+      buy: preferred.buy,
       link: preferred.link,
       availableRegions,
     };
+    detail.providersAll = { byRegion, availableRegions };
   }
 
   // OMDb enrichment from the supplied payload (no network call here).
