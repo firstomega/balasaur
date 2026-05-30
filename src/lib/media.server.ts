@@ -702,6 +702,17 @@ interface TmdbDetailRaw {
   };
   recommendations?: { results?: TmdbCardRaw[] };
   similar?: { results?: TmdbCardRaw[] };
+  "watch/providers"?: {
+    results?: Record<
+      string,
+      {
+        link?: string;
+        flatrate?: { provider_name: string; logo_path?: string | null }[];
+        rent?: { provider_name: string; logo_path?: string | null }[];
+        buy?: { provider_name: string; logo_path?: string | null }[];
+      }
+    >;
+  };
   seasons?: {
     season_number: number;
     name: string;
