@@ -116,6 +116,8 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
 
 function DetailInner({ detail }: { detail: MediaDetailType }) {
   const { ratings, facts, external } = detail;
+  const [trailerOpen, setTrailerOpen] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const typeLabel = detail.mediaType === "movie" ? "Movie" : "TV";
   const length =
     detail.mediaType === "movie"
@@ -185,6 +187,16 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                 <p className="mt-3 max-w-2xl text-[14px] italic text-text-muted">
                   "{detail.tagline}"
                 </p>
+              )}
+              {detail.trailer && (
+                <button
+                  type="button"
+                  onClick={() => setTrailerOpen(true)}
+                  className="mt-4 inline-flex items-center gap-2 rounded-[5px] border border-border-strong bg-panel px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-text-bright transition-colors hover:bg-background"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                  Watch trailer
+                </button>
               )}
             </div>
           </div>
@@ -259,6 +271,31 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               </ul>
             </section>
           )}
+
+          {detail.images && detail.images.length > 0 && (
+            <section>
+              <MicroLabel>Stills</MicroLabel>
+              <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2">
+                {detail.images.map((src, i) => (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => setLightboxIdx(i)}
+                    className="group relative h-[140px] shrink-0 snap-start overflow-hidden rounded-[6px] border border-border bg-panel md:h-[170px]"
+                    aria-label={`Open still ${i + 1}`}
+                  >
+                    <img
+                      src={src}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-auto object-cover transition-opacity group-hover:opacity-90"
+                    />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* SIDE */}
@@ -312,6 +349,53 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
           )}
         </aside>
       </div>
+
+      {/* Trailer dialog: iframe only mounted on open */}
+      {detail.trailer && (
+        <Dialog open={trailerOpen} onOpenChange={setTrailerOpen}>
+          <DialogContent className="max-w-[960px] border-border bg-panel p-0">
+            <DialogTitle className="sr-only">{detail.trailer.name}</DialogTitle>
+            <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-[6px] bg-black">
+              {trailerOpen && (
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${detail.trailer.key}?autoplay=1&rel=0`}
+                  title={detail.trailer.name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="h-full w-full border-0"
+                />
+              )}
+            </AspectRatio>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Lightbox */}
+      {detail.images && detail.images.length > 0 && (
+        <Dialog
+          open={lightboxIdx !== null}
+          onOpenChange={(o) => !o && setLightboxIdx(null)}
+        >
+          <DialogContent className="max-w-[1200px] border-border bg-panel p-0">
+            <DialogTitle className="sr-only">Still image</DialogTitle>
+            {lightboxIdx !== null && (
+              <img
+                src={(detail.imagesOriginal ?? detail.images)[lightboxIdx]}
+                alt=""
+                className="h-auto w-full rounded-[6px] object-contain"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setLightboxIdx(null)}
+              className="absolute right-2 top-2 rounded-[4px] border border-border bg-background/80 p-1 text-text-muted hover:text-text-bright"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogContent>
+        </Dialog>
+      )}
     </article>
   );
 }
