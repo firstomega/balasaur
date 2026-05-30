@@ -31,6 +31,19 @@ function primaryRating(item: MediaItem): { value: string; raw: number } | null {
   return null;
 }
 
+function displayYear(item: MediaItem): string {
+  // TV: show a start–end range using the latest season's air year.
+  if (item.mediaType === "tv" && item.seasons && item.seasons.length > 0) {
+    let end = "";
+    for (const s of item.seasons) {
+      const y = s.airDate ? s.airDate.slice(0, 4) : "";
+      if (y && y > end) end = y;
+    }
+    if (item.year && end && end !== item.year) return `${item.year}–${end}`;
+  }
+  return item.year || "—";
+}
+
 export function MediaCard({ item }: { item: MediaItem }) {
   const rating = primaryRating(item);
   const [expanded, setExpanded] = useState(false);
@@ -69,7 +82,7 @@ export function MediaCard({ item }: { item: MediaItem }) {
           </h3>
         )}
         <p className="mt-1 font-mono text-[10.5px] text-text-muted">
-          {item.year || "—"} · {TYPE_CAPTION[item.mediaType]}
+          {displayYear(item)} · {TYPE_CAPTION[item.mediaType]}
           {item.mediaType === "tv" && item.seasons && item.seasons.length > 0
             ? ` · ${item.seasons.length}S`
             : ""}
