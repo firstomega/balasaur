@@ -37,6 +37,14 @@ export interface WatchProviders {
   availableRegions: string[];
 }
 
+export interface WatchProvidersAllRegions {
+  byRegion: Record<
+    string,
+    { stream: ProviderRef[]; rent: ProviderRef[]; buy: ProviderRef[]; link?: string }
+  >;
+  availableRegions: string[];
+}
+
 export interface MediaItem {
   id: string;
   mediaType: MediaType;
@@ -86,6 +94,7 @@ export interface MediaDetail extends MediaItem {
   related?: MediaItem[];
   keywords?: string[];
   providers?: WatchProviders;
+  providersAll?: WatchProvidersAllRegions;
 }
 
 export interface PersonCreditGroup {
