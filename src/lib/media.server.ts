@@ -852,3 +852,131 @@ async function fetchMediaDetailLive(
 
   return detail;
 }
+
+// ---------- Read-through cache (media_cache + trending_cache) ----------
+
+export async function fetchMediaDetail(
+  type: "movie" | "tv",
+  id: string,
+  opts?: { fresh?: boolean },
+): Promise<MediaDetail> {
+  const cacheId = `${type}-${id}`;
+
+  if (!opts?.fresh) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("media_cache")
+        .select("detail_payload, detail_fetched_at")
+        .eq("id", cacheId)
+        .maybeSingle();
+      if (!error && data?.detail_payload && data.detail_fetched_at) {
+        const age = Date.now() - new Date(data.detail_fetched_at).getTime();
+        if (age < DETAIL_TTL_MS) {
+          return data.detail_payload as unknown as MediaDetail;
+        }
+      }
+    } catch (e) {
+      console.error("[cache] media_cache read failed:", e);
+    }
+  }
+
+  const detail = await fetchMediaDetailLive(type, id);
+
+  try {
+    const tmdbIdNum = Number.parseInt(id, 10);
+    await supabaseAdmin.from("media_cache").upsert(
+      {
+        id: cacheId,
+        media_type: type,
+        tmdb_id: Number.isFinite(tmdbIdNum) ? tmdbIdNum : 0,
+        title: detail.title,
+        year: detail.year || null,
+        popularity: detail.popularity ?? null,
+        detail_payload: detail as unknown as Record<string, unknown>,
+        detail_fetched_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    );
+  } catch (e) {
+    console.error("[cache] media_cache write failed:", e);
+  }
+
+  return detail;
+}
+
+/**
+ * Trending list with read-through cache. Falls back to the existing
+ * `loadCatalogFromDb()` live source on any Supabase error.
+ */
+export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<MediaItem[]> {
+  if (!opts?.fresh) {
+    try {
+      const { data: trend, error: tErr } = await supabaseAdmin
+        .from("trending_cache")
+        .select("ids, fetched_at")
+        .eq("key", "trending")
+        .maybeSingle();
+      if (!tErr && trend?.ids && trend.fetched_at) {
+        const age = Date.now() - new Date(trend.fetched_at).getTime();
+        if (age < TRENDING_TTL_MS && trend.ids.length > 0) {
+          const order = new Map(trend.ids.map((id: string, i: number) => [id, i]));
+          const { data: rows, error: rErr } = await supabaseAdmin
+            .from("media_cache")
+            .select("id, summary_payload")
+            .in("id", trend.ids);
+          if (!rErr && rows && rows.length > 0) {
+            const items = rows
+              .filter((r) => r.summary_payload)
+              .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+              .map((r) => r.summary_payload as unknown as MediaItem);
+            if (items.length > 0) return items;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[cache] trending_cache read failed:", e);
+    }
+  }
+
+  const items = await loadCatalogFromDb();
+
+  try {
+    if (items.length > 0) {
+      const now = new Date().toISOString();
+      const rows = items.map((item) => {
+        const [type, rawId] = item.id.split("-");
+        const tmdbIdNum = Number.parseInt(rawId ?? "", 10);
+        return {
+          id: item.id,
+          media_type: type,
+          tmdb_id: Number.isFinite(tmdbIdNum) ? tmdbIdNum : 0,
+          title: item.title,
+          year: item.year || null,
+          popularity: item.popularity ?? null,
+          summary_payload: item as unknown as Record<string, unknown>,
+          summary_fetched_at: now,
+          updated_at: now,
+        };
+      });
+      const CHUNK = 200;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        await supabaseAdmin
+          .from("media_cache")
+          .upsert(rows.slice(i, i + CHUNK), { onConflict: "id" });
+      }
+      await supabaseAdmin.from("trending_cache").upsert(
+        {
+          key: "trending",
+          ids: items.map((i) => i.id),
+          fetched_at: now,
+        },
+        { onConflict: "key" },
+      );
+    }
+  } catch (e) {
+    console.error("[cache] trending_cache write failed:", e);
+  }
+
+  return items;
+}
