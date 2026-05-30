@@ -14,20 +14,30 @@ export const Route = createFileRoute("/lists")({
   component: ListsPage,
 });
 
-type Bucket = "want" | "loved" | "notLoved" | "notForMe";
+type Bucket = "favorites" | "history" | "watchlist";
+
+const BUCKET_ORDER: Bucket[] = ["favorites", "watchlist", "history"];
 
 const BUCKET_LABEL: Record<Bucket, string> = {
-  want: "Want it",
-  loved: "Seen & loved",
-  notLoved: "Seen, didn't love",
-  notForMe: "Not for me",
+  favorites: "Favorites",
+  watchlist: "Watchlist",
+  history: "History",
 };
 
-function statusToItem(id: string, snap: NonNullable<ReturnType<typeof bucketize>>["snap"]): MediaItem {
+const BUCKET_HINT: Record<Bucket, string> = {
+  favorites: "Titles you liked",
+  watchlist: "Saved to watch later",
+  history: "Everything you've watched",
+};
+
+function snapToItem(
+  id: string,
+  snap: { mediaType?: string; title?: string; posterUrl?: string; year?: string },
+): MediaItem {
   return {
     id,
     mediaType: (snap.mediaType as MediaType) ?? "movie",
-    title: snap.title,
+    title: snap.title ?? "(untitled)",
     year: snap.year ?? "",
     overview: "",
     posterUrl: snap.posterUrl ?? "",
@@ -39,17 +49,16 @@ function statusToItem(id: string, snap: NonNullable<ReturnType<typeof bucketize>
   };
 }
 
-function bucketize(
-  rec: { status: string; sentiment?: string; intent?: string },
-  snap: { mediaType?: string; title?: string; posterUrl?: string; year?: string },
-): { bucket: Bucket; snap: { mediaType?: string; title: string; posterUrl?: string; year?: string } } | null {
-  let bucket: Bucket | null = null;
-  if (rec.status === "seen" && rec.sentiment === "liked") bucket = "loved";
-  else if (rec.status === "seen" && rec.sentiment === "disliked") bucket = "notLoved";
-  else if (rec.status === "unseen" && rec.intent === "want") bucket = "want";
-  else if (rec.status === "unseen" && rec.intent === "not_interested") bucket = "notForMe";
-  if (!bucket) return null;
-  return { bucket, snap: { ...snap, title: snap.title ?? "(untitled)" } };
+/**
+ * A record can land in MULTIPLE buckets: a "liked" title is both a Favorite
+ * AND part of History (you liked it, so you watched it). "skipped" files nowhere.
+ */
+function bucketsFor(rec: { status: string; sentiment?: string; intent?: string }): Bucket[] {
+  if (rec.status === "seen") {
+    return rec.sentiment === "liked" ? ["favorites", "history"] : ["history"];
+  }
+  if (rec.status === "unseen" && rec.intent === "want") return ["watchlist"];
+  return []; // skipped / anything else
 }
 
 function ListsPage() {
@@ -59,15 +68,13 @@ function ListsPage() {
 
   const grouped = useMemo(() => {
     const out: Record<Bucket, MediaItem[]> = {
-      want: [],
-      loved: [],
-      notLoved: [],
-      notForMe: [],
+      favorites: [],
+      watchlist: [],
+      history: [],
     };
     for (const [id, rec] of Object.entries(statuses)) {
-      const b = bucketize(rec, rec.snapshot ?? {});
-      if (!b) continue;
-      out[b.bucket].push(statusToItem(id, b.snap));
+      const item = snapToItem(id, rec.snapshot ?? {});
+      for (const b of bucketsFor(rec)) out[b].push(item);
     }
     return out;
   }, [statuses]);
@@ -86,7 +93,7 @@ function ListsPage() {
               Sign in to see your saved choices
             </p>
             <p className="mt-2 font-mono text-[10.5px] text-text-muted">
-              Your triage history travels with your account.
+              Your library travels with your account.
             </p>
             <button
               type="button"
@@ -99,12 +106,17 @@ function ListsPage() {
           </div>
         ) : (
           <div className="space-y-10">
-            {(Object.keys(grouped) as Bucket[]).map((b) => (
+            {BUCKET_ORDER.map((b) => (
               <section key={b}>
                 <div className="mb-3 flex items-baseline justify-between border-b border-border pb-1">
-                  <h2 className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
-                    {BUCKET_LABEL[b]}
-                  </h2>
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
+                      {BUCKET_LABEL[b]}
+                    </h2>
+                    <span className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+                      {BUCKET_HINT[b]}
+                    </span>
+                  </div>
                   <span className="font-mono text-[10.5px] text-text-muted">
                     {grouped[b].length}
                   </span>

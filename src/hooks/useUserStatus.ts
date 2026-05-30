@@ -5,7 +5,7 @@ import type { MediaItem } from "@/types/media";
 
 const KEY = "balasaur:userStatus";
 
-export type SeenStatus = "seen" | "unseen";
+export type SeenStatus = "seen" | "unseen" | "skipped";
 export type Sentiment = "liked" | "disliked";
 export type Intent = "want" | "not_interested";
 

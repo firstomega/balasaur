@@ -46,11 +46,11 @@ export function TopBar() {
         {/* Right nav */}
         <nav className="ml-auto flex items-center gap-1 md:gap-2">
           <Link
-            to="/triage"
+            to="/watched"
             className="inline-flex items-center gap-1.5 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary"
           >
             <Zap className="h-3.5 w-3.5" />
-            Triage
+            Build
           </Link>
           <Link
             to="/lists"
