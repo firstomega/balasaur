@@ -12,6 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
+import { Footer } from "@/components/balasaur/Footer";
+import { CookieBanner } from "@/components/balasaur/CookieBanner";
 
 function NotFoundComponent() {
   return (
@@ -130,7 +132,13 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        <div className="flex min-h-screen flex-col">
+          <div className="flex-1">
+            <Outlet />
+          </div>
+          <Footer />
+        </div>
+        <CookieBanner />
       </AuthProvider>
     </QueryClientProvider>
   );
