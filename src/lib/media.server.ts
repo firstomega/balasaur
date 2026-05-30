@@ -809,6 +809,38 @@ export async function fetchMediaDetail(
     },
   };
 
+  // Stills / backdrops gallery
+  const IMG_ROW = "https://image.tmdb.org/t/p/w780";
+  const IMG_FULL = "https://image.tmdb.org/t/p/original";
+  const imgSources = [
+    ...(raw.images?.backdrops ?? []),
+    ...(raw.images?.stills ?? []),
+  ];
+  const seenPaths = new Set<string>();
+  const picked = imgSources
+    .filter((i) => {
+      if (!i?.file_path || seenPaths.has(i.file_path)) return false;
+      seenPaths.add(i.file_path);
+      return true;
+    })
+    .sort((a, b) => (b.vote_average ?? 0) - (a.vote_average ?? 0))
+    .slice(0, 12);
+  if (picked.length > 0) {
+    detail.images = picked.map((i) => `${IMG_ROW}${i.file_path}`);
+    detail.imagesOriginal = picked.map((i) => `${IMG_FULL}${i.file_path}`);
+  }
+
+  // Trailer pick
+  const vids = raw.videos?.results ?? [];
+  const yt = vids.filter((v) => v.site === "YouTube");
+  const trailer =
+    yt.find((v) => v.type === "Trailer" && v.official) ||
+    yt.find((v) => v.type === "Trailer") ||
+    yt.find((v) => v.type === "Teaser");
+  if (trailer) {
+    detail.trailer = { key: trailer.key, name: trailer.name, site: "YouTube" };
+  }
+
   // OMDb enrichment for cross-source ratings.
   const imdbId = detail.external.imdbId;
   if (omdbKey && imdbId) {
