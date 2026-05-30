@@ -1,5 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { fetchMediaDetail, fetchTrendingMedia, syncCatalog } from "./media.server";
+import {
+  fetchMediaDetail,
+  fetchPersonDetail,
+  fetchTrendingMedia,
+  syncCatalog,
+} from "./media.server";
 
 export const getTrendingMedia = createServerFn({ method: "GET" }).handler(async () => {
   return fetchTrendingMedia();
@@ -19,3 +24,7 @@ export const refreshCatalog = createServerFn({ method: "POST" })
 export const getMediaDetail = createServerFn({ method: "GET" })
   .inputValidator((data: { type: "movie" | "tv"; id: string }) => data)
   .handler(({ data }) => fetchMediaDetail(data.type, data.id));
+
+export const getPersonDetail = createServerFn({ method: "GET" })
+  .inputValidator((data: { id: string }) => data)
+  .handler(({ data }) => fetchPersonDetail(data.id));

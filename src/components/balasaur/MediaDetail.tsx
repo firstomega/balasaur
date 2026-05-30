@@ -1,4 +1,5 @@
 import { Suspense, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { ExternalLink, Play } from "lucide-react";
 import { TopBar } from "./TopBar";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
@@ -33,6 +34,21 @@ function fmtRuntime(min?: number) {
   return h ? `${h}h ${m}m` : `${m}m`;
 }
 
+function PersonName({ name, personId }: { name: string; personId?: number }) {
+  if (personId) {
+    return (
+      <Link
+        to="/person/$id"
+        params={{ id: String(personId) }}
+        className="truncate text-text-bright hover:text-primary"
+      >
+        {name}
+      </Link>
+    );
+  }
+  return <span className="truncate text-text-bright">{name}</span>;
+}
+
 function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-text-dim">
@@ -41,20 +57,10 @@ function MicroLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RatingTile({
-  label,
-  value,
-  suffix,
-}: {
-  label: string;
-  value: number;
-  suffix: string;
-}) {
+function RatingTile({ label, value, suffix }: { label: string; value: number; suffix: string }) {
   return (
     <div className="rounded-[5px] border border-border bg-panel px-3 py-2.5">
-      <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
-        {label}
-      </div>
+      <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">{label}</div>
       <div className="mt-1 font-mono text-[18px] text-text-bright">
         {value}
         <span className="ml-0.5 text-[11px] text-text-muted">{suffix}</span>
@@ -230,14 +236,11 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               {ratings.tmdb !== undefined && (
                 <RatingTile label="TMDB" value={ratings.tmdb} suffix="/10" />
               )}
-              {!ratings.imdb &&
-                !ratings.rottenTomatoes &&
-                !ratings.metacritic &&
-                !ratings.tmdb && (
-                  <div className="col-span-full font-mono text-[11px] text-text-dim">
-                    No ratings available yet.
-                  </div>
-                )}
+              {!ratings.imdb && !ratings.rottenTomatoes && !ratings.metacritic && !ratings.tmdb && (
+                <div className="col-span-full font-mono text-[11px] text-text-dim">
+                  No ratings available yet.
+                </div>
+              )}
             </div>
           </section>
 
@@ -247,7 +250,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
                 {detail.crew.map((p, i) => (
                   <li key={`${p.name}-${p.role}-${i}`} className="flex justify-between text-[13px]">
-                    <span className="text-text-bright">{p.name}</span>
+                    <PersonName name={p.name} personId={p.personId} />
                     <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
                       {p.role}
                     </span>
@@ -263,10 +266,8 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
                 {detail.cast.map((p, i) => (
                   <li key={`${p.name}-${i}`} className="flex justify-between gap-3 text-[13px]">
-                    <span className="truncate text-text-bright">{p.name}</span>
-                    <span className="truncate font-mono text-[11px] text-text-muted">
-                      {p.role}
-                    </span>
+                    <PersonName name={p.name} personId={p.personId} />
+                    <span className="truncate font-mono text-[11px] text-text-muted">{p.role}</span>
                   </li>
                 ))}
               </ul>
@@ -335,12 +336,8 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
           <div className="rounded-[5px] border border-border bg-panel p-3">
             <MicroLabel>Facts</MicroLabel>
             <dl className="space-y-1.5 font-mono text-[11px]">
-              {fmtMoney(facts.budget) && (
-                <FactRow k="Budget" v={fmtMoney(facts.budget)!} />
-              )}
-              {fmtMoney(facts.revenue) && (
-                <FactRow k="Box office" v={fmtMoney(facts.revenue)!} />
-              )}
+              {fmtMoney(facts.budget) && <FactRow k="Budget" v={fmtMoney(facts.budget)!} />}
+              {fmtMoney(facts.revenue) && <FactRow k="Box office" v={fmtMoney(facts.revenue)!} />}
               {facts.originalLanguage && (
                 <FactRow k="Language" v={facts.originalLanguage.toUpperCase()} />
               )}
@@ -360,14 +357,9 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               <MicroLabel>Links</MicroLabel>
               <ul className="space-y-1.5">
                 {external.imdbId && (
-                  <LinkRow
-                    href={`https://www.imdb.com/title/${external.imdbId}/`}
-                    label="IMDb"
-                  />
+                  <LinkRow href={`https://www.imdb.com/title/${external.imdbId}/`} label="IMDb" />
                 )}
-                {external.homepage && (
-                  <LinkRow href={external.homepage} label="Official site" />
-                )}
+                {external.homepage && <LinkRow href={external.homepage} label="Official site" />}
                 {external.wikidataId && (
                   <LinkRow
                     href={`https://www.wikidata.org/wiki/${external.wikidataId}`}
@@ -402,10 +394,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 
       {/* Lightbox */}
       {detail.images && detail.images.length > 0 && (
-        <Dialog
-          open={lightboxIdx !== null}
-          onOpenChange={(o) => !o && setLightboxIdx(null)}
-        >
+        <Dialog open={lightboxIdx !== null} onOpenChange={(o) => !o && setLightboxIdx(null)}>
           <DialogContent className="max-w-[1200px] border-border bg-panel p-0">
             <DialogTitle className="sr-only">Still image</DialogTitle>
             {lightboxIdx !== null && (

@@ -1,4 +1,11 @@
-import type { MediaDetail, MediaItem, MediaPerson, MediaSeason } from "@/types/media";
+import type {
+  MediaDetail,
+  MediaItem,
+  MediaPerson,
+  MediaSeason,
+  PersonCreditGroup,
+  PersonDetail,
+} from "@/types/media";
 import { unifyGenres } from "./genres";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
@@ -70,7 +77,9 @@ function mapItem(
 ): MediaItem {
   const title = (type === "movie" ? raw.title : raw.name) ?? "Untitled";
   const date = type === "movie" ? raw.release_date : raw.first_air_date;
-  const rawGenres = (raw.genre_ids ?? []).map((id) => genreMap.get(id)).filter((x): x is string => !!x);
+  const rawGenres = (raw.genre_ids ?? [])
+    .map((id) => genreMap.get(id))
+    .filter((x): x is string => !!x);
   return {
     id: `${type}-${raw.id}`,
     mediaType: type,
@@ -221,8 +230,11 @@ export function parseAwards(text: string | undefined | null): AwardInfo {
   return info;
 }
 
-
-async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+async function mapWithLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let i = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
@@ -254,29 +266,31 @@ export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
     return [];
   }
 
-  return (data ?? []).map((r): MediaItem => ({
-    id: r.media_id,
-    mediaType: r.media_type as MediaItem["mediaType"],
-    title: r.title,
-    year: r.year ?? "",
-    overview: r.overview ?? "",
-    posterUrl: r.poster_url ?? "",
-    ratings: {
-      imdb: r.rating_imdb ?? undefined,
-      rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
-      metacritic: r.rating_metacritic ?? undefined,
-      tmdb: r.rating_tmdb ?? undefined,
-    },
-    genres: r.genres ?? [],
-    streaming: r.streaming ?? [],
-    lengthLabel: r.length_label ?? "",
-    people: (r.people as unknown as MediaPerson[]) ?? [],
-    popularity: r.popularity ?? undefined,
-    seasons: (r.seasons as unknown as MediaSeason[] | null) ?? undefined,
-    releaseDate: r.release_date ?? undefined,
-    awardWinner: r.award_winner ?? false,
-    awardNominee: r.award_nominee ?? false,
-  }));
+  return (data ?? []).map(
+    (r): MediaItem => ({
+      id: r.media_id,
+      mediaType: r.media_type as MediaItem["mediaType"],
+      title: r.title,
+      year: r.year ?? "",
+      overview: r.overview ?? "",
+      posterUrl: r.poster_url ?? "",
+      ratings: {
+        imdb: r.rating_imdb ?? undefined,
+        rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
+        metacritic: r.rating_metacritic ?? undefined,
+        tmdb: r.rating_tmdb ?? undefined,
+      },
+      genres: r.genres ?? [],
+      streaming: r.streaming ?? [],
+      lengthLabel: r.length_label ?? "",
+      people: (r.people as unknown as MediaPerson[]) ?? [],
+      popularity: r.popularity ?? undefined,
+      seasons: (r.seasons as unknown as MediaSeason[] | null) ?? undefined,
+      releaseDate: r.release_date ?? undefined,
+      awardWinner: r.award_winner ?? false,
+      awardNominee: r.award_nominee ?? false,
+    }),
+  );
 }
 
 interface DiscoverResult {
@@ -314,11 +328,7 @@ async function discoverIds(
   return all;
 }
 
-async function listFromPath(
-  path: string,
-  key: string,
-  pages: number,
-): Promise<DiscoverResult[]> {
+async function listFromPath(path: string, key: string, pages: number): Promise<DiscoverResult[]> {
   const all: DiscoverResult[] = [];
   for (let page = 1; page <= pages; page++) {
     try {
@@ -345,11 +355,7 @@ function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
   return out;
 }
 
-function rowFromEnrichedItem(
-  item: MediaItem,
-  rawTmdb: unknown,
-  rawOmdb: unknown,
-): MediaRow {
+function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown): MediaRow {
   const awards = parseAwards((rawOmdb as OmdbResponse | null)?.Awards);
   return {
     media_id: item.id,
@@ -430,13 +436,13 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
         const tmdbGenreNames = (raw?.genres ?? [])
           .map((g) => g?.name)
           .filter((n): n is string => !!n);
-        const newGenres = tmdbGenreNames.length > 0 ? unifyGenres(tmdbGenreNames) : (row.genres ?? []);
+        const newGenres =
+          tmdbGenreNames.length > 0 ? unifyGenres(tmdbGenreNames) : (row.genres ?? []);
 
         const awardsText = (row.raw_omdb as { Awards?: string } | null)?.Awards;
         const awards = parseAwards(awardsText);
 
-        const genresChanged =
-          JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
+        const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
 
         const { error: updErr } = await supabaseAdmin
           .from("media")
@@ -492,21 +498,15 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
   const genres = await loadGenres(tmdbKey);
 
   // 1. Seed from multiple TMDB sources, then merge + dedupe.
-  const [
-    discoverMovies,
-    discoverTv,
-    topMovies,
-    topTv,
-    trendingMovies,
-    trendingTv,
-  ] = await Promise.all([
-    discoverIds("movie", tmdbKey, DISCOVER_PAGES),
-    discoverIds("tv", tmdbKey, DISCOVER_PAGES),
-    listFromPath("/movie/top_rated", tmdbKey, TOP_RATED_PAGES),
-    listFromPath("/tv/top_rated", tmdbKey, TOP_RATED_PAGES),
-    listFromPath("/trending/movie/week", tmdbKey, TRENDING_PAGES),
-    listFromPath("/trending/tv/week", tmdbKey, TRENDING_PAGES),
-  ]);
+  const [discoverMovies, discoverTv, topMovies, topTv, trendingMovies, trendingTv] =
+    await Promise.all([
+      discoverIds("movie", tmdbKey, DISCOVER_PAGES),
+      discoverIds("tv", tmdbKey, DISCOVER_PAGES),
+      listFromPath("/movie/top_rated", tmdbKey, TOP_RATED_PAGES),
+      listFromPath("/tv/top_rated", tmdbKey, TOP_RATED_PAGES),
+      listFromPath("/trending/movie/week", tmdbKey, TRENDING_PAGES),
+      listFromPath("/trending/tv/week", tmdbKey, TRENDING_PAGES),
+    ]);
 
   const movies = dedupeById([...discoverMovies, ...topMovies, ...trendingMovies]);
   const tv = dedupeById([...discoverTv, ...topTv, ...trendingTv]);
@@ -592,9 +592,7 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
   const CHUNK = 25;
   for (let i = 0; i < rows.length; i += CHUNK) {
     const chunk = rows.slice(i, i + CHUNK);
-    const { error } = await supabaseAdmin
-      .from("media")
-      .upsert(chunk, { onConflict: "media_id" });
+    const { error } = await supabaseAdmin.from("media").upsert(chunk, { onConflict: "media_id" });
     if (error) {
       console.error(`[sync] upsert chunk failed:`, error.message);
     }
@@ -675,8 +673,8 @@ interface TmdbDetailRaw {
   production_companies?: { name: string }[];
   external_ids?: { imdb_id?: string | null; wikidata_id?: string | null };
   credits?: {
-    cast?: { name: string; character?: string }[];
-    crew?: { name: string; job?: string; department?: string }[];
+    cast?: { id?: number; name: string; character?: string }[];
+    crew?: { id?: number; name: string; job?: string; department?: string }[];
   };
   release_dates?: {
     results?: { iso_3166_1: string; release_dates: { certification: string }[] }[];
@@ -748,10 +746,7 @@ function pickCertification(type: "movie" | "tv", raw: TmdbDetailRaw): string | u
  * Live detail fetch — TMDB (+OMDb) over the network. Used only when we don't
  * already have the title's raw payloads stored in `media`.
  */
-async function fetchMediaDetailLive(
-  type: "movie" | "tv",
-  id: string,
-): Promise<MediaDetail> {
+async function fetchMediaDetailLive(type: "movie" | "tv", id: string): Promise<MediaDetail> {
   const tmdbKey = process.env.TMDB_API_KEY;
   const omdbKey = process.env.OMDB_API_KEY;
   if (!tmdbKey) throw new Error("TMDB_API_KEY is not configured");
@@ -791,9 +786,15 @@ function buildDetailFromRaw(
 
   const cast: MediaPerson[] = (raw.credits?.cast ?? [])
     .slice(0, 12)
-    .map((c) => ({ name: c.name, role: c.character || "Cast" }));
+    .map((c) => ({ name: c.name, role: c.character || "Cast", personId: c.id }));
 
-  const keyJobs = new Set(["Director", "Creator", "Writer", "Screenplay", "Original Music Composer"]);
+  const keyJobs = new Set([
+    "Director",
+    "Creator",
+    "Writer",
+    "Screenplay",
+    "Original Music Composer",
+  ]);
   const crewSeen = new Set<string>();
   const crew: MediaPerson[] = [];
   for (const c of raw.credits?.crew ?? []) {
@@ -801,7 +802,7 @@ function buildDetailFromRaw(
     const key = `${c.name}|${c.job}`;
     if (crewSeen.has(key)) continue;
     crewSeen.add(key);
-    crew.push({ name: c.name, role: c.job });
+    crew.push({ name: c.name, role: c.job, personId: c.id });
   }
 
   const runtime =
@@ -875,10 +876,7 @@ function buildDetailFromRaw(
   // Stills / backdrops gallery
   const IMG_ROW = "https://image.tmdb.org/t/p/w780";
   const IMG_FULL = "https://image.tmdb.org/t/p/original";
-  const imgSources = [
-    ...(raw.images?.backdrops ?? []),
-    ...(raw.images?.stills ?? []),
-  ];
+  const imgSources = [...(raw.images?.backdrops ?? []), ...(raw.images?.stills ?? [])];
   const seenPaths = new Set<string>();
   const picked = imgSources
     .filter((i) => {
@@ -905,10 +903,7 @@ function buildDetailFromRaw(
   }
 
   // Related titles ("More like this") from recommendations + similar.
-  const relatedRaw = [
-    ...(raw.recommendations?.results ?? []),
-    ...(raw.similar?.results ?? []),
-  ];
+  const relatedRaw = [...(raw.recommendations?.results ?? []), ...(raw.similar?.results ?? [])];
   const relSeen = new Set<string>([detail.id]);
   const related: MediaItem[] = [];
   for (const c of relatedRaw) {
@@ -1093,4 +1088,140 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
   }
 
   return items;
+}
+
+// ---------- Person detail (read-through person_cache) ----------
+
+const PERSON_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days — bios/filmographies rarely change
+const PROFILE_BASE = "https://image.tmdb.org/t/p/w300";
+
+interface TmdbPersonCredit {
+  id: number;
+  media_type?: string;
+  title?: string;
+  name?: string;
+  poster_path?: string | null;
+  vote_average?: number;
+  popularity?: number;
+  release_date?: string;
+  first_air_date?: string;
+  overview?: string;
+  department?: string;
+  job?: string;
+}
+
+interface TmdbPersonRaw {
+  id: number;
+  name: string;
+  biography?: string;
+  birthday?: string | null;
+  deathday?: string | null;
+  place_of_birth?: string | null;
+  known_for_department?: string;
+  profile_path?: string | null;
+  imdb_id?: string | null;
+  combined_credits?: { cast?: TmdbPersonCredit[]; crew?: TmdbPersonCredit[] };
+}
+
+function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
+  // Group every credited title under a department bucket, newest first,
+  // deduping the same title within a group. Acting first, then the rest by size.
+  const buckets = new Map<string, Map<string, MediaItem>>();
+
+  const add = (dept: string, c: TmdbPersonCredit) => {
+    const t = c.media_type === "tv" ? "tv" : c.media_type === "movie" ? "movie" : null;
+    if (!t || !c.poster_path) return; // only catalogued media types, skip art-less
+    const item = mapCardRaw(c as TmdbCardRaw, t);
+    let g = buckets.get(dept);
+    if (!g) {
+      g = new Map<string, MediaItem>();
+      buckets.set(dept, g);
+    }
+    if (!g.has(item.id)) g.set(item.id, item);
+  };
+
+  for (const c of raw.combined_credits?.cast ?? []) add("Acting", c);
+  for (const c of raw.combined_credits?.crew ?? []) {
+    add(c.department || c.job || "Other", c);
+  }
+
+  const sortByDate = (a: MediaItem, b: MediaItem) =>
+    (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
+
+  const groups: PersonCreditGroup[] = Array.from(buckets.entries())
+    .map(([department, items]) => ({
+      department,
+      items: Array.from(items.values()).sort(sortByDate),
+    }))
+    .sort((a, b) => {
+      if (a.department === "Acting") return -1;
+      if (b.department === "Acting") return 1;
+      return b.items.length - a.items.length;
+    });
+
+  return {
+    id: String(raw.id),
+    name: raw.name,
+    biography: raw.biography || undefined,
+    birthday: raw.birthday || undefined,
+    deathday: raw.deathday || undefined,
+    placeOfBirth: raw.place_of_birth || undefined,
+    knownForDepartment: raw.known_for_department || undefined,
+    profileUrl: raw.profile_path ? `${PROFILE_BASE}${raw.profile_path}` : undefined,
+    imdbId: raw.imdb_id || undefined,
+    groups,
+  };
+}
+
+export async function fetchPersonDetail(
+  id: string,
+  opts?: { fresh?: boolean },
+): Promise<PersonDetail> {
+  const personIdNum = Number.parseInt(id, 10);
+
+  if (!opts?.fresh && Number.isFinite(personIdNum)) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("person_cache")
+        .select("payload, fetched_at")
+        .eq("id", personIdNum)
+        .maybeSingle();
+      if (!error && data?.payload && data.fetched_at) {
+        const age = Date.now() - new Date(data.fetched_at).getTime();
+        if (age < PERSON_TTL_MS) {
+          return data.payload as unknown as PersonDetail;
+        }
+      }
+    } catch (e) {
+      console.error("[cache] person_cache read failed:", e);
+    }
+  }
+
+  const tmdbKey = process.env.TMDB_API_KEY;
+  if (!tmdbKey) throw new Error("TMDB_API_KEY is not configured");
+
+  const raw = await tmdb<TmdbPersonRaw>(`/person/${id}`, tmdbKey, {
+    append_to_response: "combined_credits,external_ids",
+    language: "en-US",
+  });
+  const detail = buildPersonFromRaw(raw);
+
+  try {
+    if (Number.isFinite(personIdNum)) {
+      await supabaseAdmin.from("person_cache").upsert(
+        {
+          id: personIdNum,
+          name: detail.name,
+          payload: detail as unknown as Json,
+          fetched_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" },
+      );
+    }
+  } catch (e) {
+    console.error("[cache] person_cache write failed:", e);
+  }
+
+  return detail;
 }

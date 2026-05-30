@@ -16,6 +16,7 @@ import { Route as ListsRouteImport } from './routes/lists'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TvIdRouteImport } from './routes/tv.$id'
+import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
 import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
@@ -55,6 +56,11 @@ const TvIdRoute = TvIdRouteImport.update({
   path: '/tv/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PersonIdRoute = PersonIdRouteImport.update({
+  id: '/person/$id',
+  path: '/person/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MovieIdRoute = MovieIdRouteImport.update({
   id: '/movie/$id',
   path: '/movie/$id',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/movie/$id': typeof MovieIdRoute
+  '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/movie/$id': typeof MovieIdRoute
+  '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/movie/$id': typeof MovieIdRoute
+  '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/triage'
     | '/movie/$id'
+    | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/triage'
     | '/movie/$id'
+    | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/triage'
     | '/movie/$id'
+    | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
   MovieIdRoute: typeof MovieIdRoute
+  PersonIdRoute: typeof PersonIdRoute
   TvIdRoute: typeof TvIdRoute
   ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TvIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/person/$id': {
+      id: '/person/$id'
+      path: '/person/$id'
+      fullPath: '/person/$id'
+      preLoaderRoute: typeof PersonIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/movie/$id': {
       id: '/movie/$id'
       path: '/movie/$id'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,
   MovieIdRoute: MovieIdRoute,
+  PersonIdRoute: PersonIdRoute,
   TvIdRoute: TvIdRoute,
   ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
@@ -251,3 +272,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
