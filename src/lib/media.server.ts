@@ -504,6 +504,12 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
     offset += PAGE;
   }
 
+  // Bust the grid cache so rewritten rows show on the next load (not after 24h).
+  if (result.updatedGenres > 0 || result.updatedAwards > 0) {
+    const { error } = await supabaseAdmin.from("trending_cache").delete().eq("key", "trending");
+    if (error) console.error("[backfill] trending_cache bust failed:", error.message);
+  }
+
   result.durationMs = Date.now() - start;
   return result;
 }
@@ -628,6 +634,14 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
     if (error) {
       console.error(`[sync] upsert chunk failed:`, error.message);
     }
+  }
+
+  // 4. Bust the grid's trending cache when the catalog actually changed, so new
+  //    titles appear on the next page load instead of waiting out the 24h TTL.
+  //    (fetchTrendingMedia rebuilds it from the `media` table on the next miss.)
+  if (refreshed > 0) {
+    const { error } = await supabaseAdmin.from("trending_cache").delete().eq("key", "trending");
+    if (error) console.error("[sync] trending_cache bust failed:", error.message);
   }
 
   return {
