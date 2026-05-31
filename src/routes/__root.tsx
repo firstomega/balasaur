@@ -66,11 +66,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-3 text-[13.5px] leading-relaxed text-text-muted">
           Something went wrong on our end. You can try again or head back home.
         </p>
-        {error?.message && (
-          <pre className="mt-4 max-h-32 overflow-auto rounded-[4px] border border-border bg-background px-3 py-2 text-left font-mono text-[10.5px] text-text-dim">
-            {error.message}
-          </pre>
-        )}
+        {/* Raw error.message is intentionally not rendered — it can leak
+            DB schema, API paths, or env var names. Full error is logged
+            server-side via console.error + reportLovableError above. */}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
