@@ -1246,11 +1246,21 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
         const age = Date.now() - new Date(trend.fetched_at).getTime();
         if (age < TRENDING_TTL_MS && trend.ids.length > 0) {
           const order = new Map(trend.ids.map((id: string, i: number) => [id, i]));
-          const { data: rows, error: rErr } = await supabaseAdmin
-            .from("media_cache")
-            .select("id, summary_payload")
-            .in("id", trend.ids);
-          if (!rErr && rows && rows.length > 0) {
+          const rows: Array<{ id: string; summary_payload: Json | null }> = [];
+          for (let offset = 0; offset < trend.ids.length; offset += POSTGREST_PAGE) {
+            const idPage = trend.ids.slice(offset, offset + POSTGREST_PAGE);
+            const { data: pageRows, error: rErr } = await supabaseAdmin
+              .from("media_cache")
+              .select("id, summary_payload")
+              .in("id", idPage);
+            if (rErr) {
+              console.error("[cache] media_cache trending read failed:", rErr.message);
+              rows.length = 0;
+              break;
+            }
+            rows.push(...((pageRows ?? []) as Array<{ id: string; summary_payload: Json | null }>));
+          }
+          if (rows.length > 0) {
             const items = rows
               .filter((r) => r.summary_payload)
               .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
