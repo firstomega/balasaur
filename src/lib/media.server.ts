@@ -643,10 +643,13 @@ export interface SyncResult {
 
 /**
  * Pull discover/movie + discover/tv, enrich each with TMDB details +
- * OMDB ratings, then upsert into `public.media`. Skips items already
- * fresher than STALE_MS to avoid burning API calls.
+ * OMDB ratings, then upsert into `public.media`. By default it only enriches
+ * never-seen titles so top-ups grow the catalog instead of re-calling existing rows.
  */
-export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResult> {
+export async function syncCatalog(opts?: {
+  force?: boolean;
+  refreshExisting?: boolean;
+}): Promise<SyncResult> {
   const start = Date.now();
   const tmdbKey = process.env.TMDB_API_KEY;
   const omdbKey = process.env.OMDB_API_KEY;
@@ -700,11 +703,12 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
     ? seedItems.slice()
     : seedItems.filter((i) => {
         const last = fetchedAt.get(i.id);
-        return !last || now - last > STALE_MS;
+        if (!last) return true;
+        return !!opts?.refreshExisting && now - last > STALE_MS;
       });
 
-  // Process never-fetched items first, then stalest-first, so subsequent
-  // scheduled runs naturally continue where this one stopped.
+  // Process never-fetched items first, then stalest-first only when explicitly
+  // allowed, so scheduled top-ups naturally keep growing beyond the first page.
   candidates.sort((a, b) => {
     const la = fetchedAt.get(a.id) ?? 0;
     const lb = fetchedAt.get(b.id) ?? 0;
