@@ -13,9 +13,9 @@ export const Route = createFileRoute("/api/public/hooks/sync-media")({
     handlers: {
       POST: async ({ request }) => {
         const apikey = request.headers.get("apikey");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ??
-          process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        // Gate with the server-only service role key. The publishable/anon
+        // key is shipped to every browser and cannot be used as a secret.
+        const expected = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!expected || apikey !== expected) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
