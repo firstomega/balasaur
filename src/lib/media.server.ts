@@ -311,10 +311,9 @@ export async function listSitemapEntries(
  * Read the catalog out of our database. NO upstream API calls.
  * This is what visitor page loads hit.
  */
-export async function loadCatalogFromDb(limit = 10000): Promise<MediaItem[]> {
+export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaItem[]> {
   // PostgREST caps a single response at 1000 rows regardless of .limit(),
   // so page with .range() until we hit `limit` or run out of rows.
-  const PAGE = 1000;
   type Row = {
     media_id: string;
     media_type: string;
@@ -338,8 +337,8 @@ export async function loadCatalogFromDb(limit = 10000): Promise<MediaItem[]> {
     award_nominee: boolean | null;
   };
   const rows: Row[] = [];
-  for (let offset = 0; offset < limit; offset += PAGE) {
-    const end = Math.min(offset + PAGE, limit) - 1;
+  for (let offset = 0; offset < limit; offset += POSTGREST_PAGE) {
+    const end = Math.min(offset + POSTGREST_PAGE, limit) - 1;
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
@@ -392,12 +391,11 @@ export async function loadCatalogFromDb(limit = 10000): Promise<MediaItem[]> {
  * migration was meant to add (the failure that blanked the homepage when
  * `media.origins` was missing). Used only as a fail-soft fallback.
  */
-async function loadCatalogFromCache(limit = 10000): Promise<MediaItem[]> {
+async function loadCatalogFromCache(limit = CATALOG_LIMIT): Promise<MediaItem[]> {
   try {
-    const PAGE = 1000;
     const rows: Array<{ summary_payload: Json | null }> = [];
-    for (let offset = 0; offset < limit; offset += PAGE) {
-      const end = Math.min(offset + PAGE, limit) - 1;
+    for (let offset = 0; offset < limit; offset += POSTGREST_PAGE) {
+      const end = Math.min(offset + POSTGREST_PAGE, limit) - 1;
       const { data, error } = await supabaseAdmin
         .from("media_cache")
         .select("summary_payload")
