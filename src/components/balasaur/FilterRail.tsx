@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { searchPeople } from "@/lib/filterMedia";
+import { originFacetCounts, searchPeople } from "@/lib/filterMedia";
 import { ProviderIcon, type ProviderName } from "./ProviderIcon";
 import { MediaTypeSwitch, modeFromSet, setFromMode } from "./MediaTypeSwitch";
 
@@ -28,6 +28,7 @@ interface Props {
   filters: FilterState;
   setFilters: (updater: (prev: FilterState) => FilterState) => void;
   allItems: MediaItem[];
+  seenIds: Set<string>;
 }
 
 const groupLabelClass = "font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-bright";
@@ -39,24 +40,36 @@ function Pill({
   active,
   onClick,
   children,
+  disabled = false,
+  count,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  disabled?: boolean;
+  count?: number;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onClick}
       className={
         pillBase +
         " " +
-        (active
-          ? "border-primary bg-primary/15 text-primary"
-          : "border-border bg-panel text-text-muted hover:border-border-strong hover:text-text-bright")
+        (disabled
+          ? "cursor-not-allowed border-border/50 bg-panel/40 text-text-dim"
+          : active
+            ? "border-primary bg-primary/15 text-primary"
+            : "border-border bg-panel text-text-muted hover:border-border-strong hover:text-text-bright")
       }
     >
       {children}
+      {count !== undefined && (
+        <span className={"ml-1 tabular-nums " + (active ? "text-primary/70" : "text-text-dim")}>
+          {count}
+        </span>
+      )}
     </button>
   );
 }
@@ -90,7 +103,20 @@ function GroupClear({ show, onClear }: { show: boolean; onClear: () => void }) {
   );
 }
 
-export function FilterRail({ filters, setFilters, allItems }: Props) {
+export function FilterRail({ filters, setFilters, allItems, seenIds }: Props) {
+  // Live per-origin counts (respecting every other active filter) so we can show
+  // a tally and grey out dead-end origins. When the catalog's origins haven't
+  // been populated yet, every count is 0 → all chips disable, which reads as
+  // "no origin data" instead of a click landing on a blank grid.
+  const originCounts = useMemo(
+    () => originFacetCounts(allItems, filters, seenIds),
+    [allItems, filters, seenIds],
+  );
+  const originTagged = useMemo(
+    () => allItems.reduce((n, it) => ((it.origins?.length ?? 0) > 0 ? n + 1 : n), 0),
+    [allItems],
+  );
+
   const toggleSet = <T,>(key: keyof FilterState, value: T) => {
     setFilters((prev) => {
       const set = new Set(prev[key] as unknown as Set<T>);
@@ -209,15 +235,24 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
           <AccordionContent className="pb-3 pt-1">
             <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
             <div className="flex flex-wrap gap-1.5">
-              {ORIGIN_OPTIONS.map((o) => (
-                <Pill
-                  key={o}
-                  active={filters.origins.has(o)}
-                  onClick={() => toggleSet<string>("origins", o)}
-                >
-                  {o}
-                </Pill>
-              ))}
+              {ORIGIN_OPTIONS.map((o) => {
+                const count = originCounts.get(o) ?? 0;
+                const active = filters.origins.has(o);
+                return (
+                  <Pill
+                    key={o}
+                    active={active}
+                    count={count}
+                    disabled={count === 0 && !active}
+                    onClick={() => toggleSet<string>("origins", o)}
+                  >
+                    {o}
+                  </Pill>
+                );
+              })}
+            </div>
+            <div className="mt-2 font-mono text-[10px] text-text-dim">
+              {originTagged.toLocaleString()} of {allItems.length.toLocaleString()} tagged
             </div>
           </AccordionContent>
         </AccordionItem>
