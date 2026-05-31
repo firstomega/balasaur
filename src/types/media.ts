@@ -63,6 +63,7 @@ export interface MediaItem {
   popularity?: number;
   seasons?: MediaSeason[];
   releaseDate?: string;
+  origins?: string[];
 }
 
 export interface MediaDetail extends MediaItem {

@@ -22,6 +22,7 @@ export type Database = {
           award_wins: number | null
           fetched_at: string
           genres: string[]
+          origins: string[]
           length_label: string | null
           media_id: string
           media_type: string
@@ -49,6 +50,7 @@ export type Database = {
           award_wins?: number | null
           fetched_at?: string
           genres?: string[]
+          origins?: string[]
           length_label?: string | null
           media_id: string
           media_type: string
@@ -76,6 +78,7 @@ export type Database = {
           award_wins?: number | null
           fetched_at?: string
           genres?: string[]
+          origins?: string[]
           length_label?: string | null
           media_id?: string
           media_type?: string

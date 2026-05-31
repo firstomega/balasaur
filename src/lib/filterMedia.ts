@@ -27,6 +27,11 @@ export function applyFilters(
       if (!hit) return false;
     }
 
+    if (filters.origins.size > 0) {
+      const hit = (item.origins ?? []).some((o) => filters.origins.has(o));
+      if (!hit) return false;
+    }
+
     if (filters.streaming.size > 0) {
       const hit = item.streaming.some((s) => filters.streaming.has(s));
       if (!hit) return false;
