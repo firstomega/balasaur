@@ -80,7 +80,7 @@ function HomePage() {
         {/* Desktop rail */}
         <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 md:block">
           <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-            <RailWithData filters={filters} setFilters={setFilters} />
+            <RailWithData filters={filters} setFilters={setFilters} seenIds={seenIds} />
           </Suspense>
         </aside>
 
@@ -116,7 +116,7 @@ function HomePage() {
           </SheetHeader>
           <div className="mt-3">
             <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-              <RailWithData filters={filters} setFilters={setFilters} />
+              <RailWithData filters={filters} setFilters={setFilters} seenIds={seenIds} />
             </Suspense>
           </div>
         </SheetContent>
@@ -128,12 +128,14 @@ function HomePage() {
 function RailWithData({
   filters,
   setFilters,
+  seenIds,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
+  seenIds: Set<string>;
 }) {
   const { data } = useMediaItems();
-  return <FilterRail filters={filters} setFilters={setFilters} allItems={data} />;
+  return <FilterRail filters={filters} setFilters={setFilters} allItems={data} seenIds={seenIds} />;
 }
 
 function GridWithControls({
