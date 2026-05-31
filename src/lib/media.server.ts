@@ -108,6 +108,8 @@ const PROVIDER_NAME_MAP: Record<string, string> = {
   "Apple TV+": "Apple TV+",
   "Apple TV Plus": "Apple TV+",
   Hulu: "Hulu",
+  "Disney Plus": "Disney+",
+  "Disney+": "Disney+",
 };
 
 interface TmdbDetails {

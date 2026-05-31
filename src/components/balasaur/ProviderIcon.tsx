@@ -1,12 +1,7 @@
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export type ProviderName = "Netflix" | "Max" | "Prime" | "Apple TV+" | "Hulu";
+export type ProviderName = "Netflix" | "Max" | "Prime" | "Apple TV+" | "Hulu" | "Disney+";
 
 interface ProviderMark {
   label: string;
@@ -92,7 +87,10 @@ const MARKS: Record<ProviderName, ProviderMark> = {
     glyph: (
       <g fill="currentColor">
         <path d="M18.6 9.2c.7-.9 1.2-2.1 1-3.2-1 .05-2.2.65-2.95 1.55-.65.8-1.2 2-1.05 3.1 1.1.1 2.25-.55 3-1.45z" />
-        <path d="M22.5 22.4c-.55 1.25-1.2 2.5-2.25 2.5-1 0-1.35-.6-2.55-.6s-1.55.6-2.55.6c-1.05 0-1.85-1.35-2.4-2.6-1.15-2.55-2.05-7.2.85-10.35.7-.75 1.95-1.45 3.25-1.45 1.1 0 2.05.6 2.7.6.65 0 1.85-.7 3.15-.6.55.025 2.1.225 3.05 1.65-3.1 1.9-2.55 6.1.75 7.2-.5 1.05-.85 1.4-.6.55l-3.4 2.5z" transform="scale(0.55) translate(8,8)" />
+        <path
+          d="M22.5 22.4c-.55 1.25-1.2 2.5-2.25 2.5-1 0-1.35-.6-2.55-.6s-1.55.6-2.55.6c-1.05 0-1.85-1.35-2.4-2.6-1.15-2.55-2.05-7.2.85-10.35.7-.75 1.95-1.45 3.25-1.45 1.1 0 2.05.6 2.7.6.65 0 1.85-.7 3.15-.6.55.025 2.1.225 3.05 1.65-3.1 1.9-2.55 6.1.75 7.2-.5 1.05-.85 1.4-.6.55l-3.4 2.5z"
+          transform="scale(0.55) translate(8,8)"
+        />
         <text
           x="16"
           y="23"
@@ -176,12 +174,7 @@ export function ProviderIcon({
           {mark.glyph}
         </svg>
       ) : logoUrl ? (
-        <img
-          src={logoUrl}
-          alt=""
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
+        <img src={logoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
       ) : (
         <span className="font-mono text-[8px] uppercase tracking-wider">
           {displayLabel.slice(0, 3)}

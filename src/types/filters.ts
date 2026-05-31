@@ -28,7 +28,14 @@ export interface FilterState {
   sort: SortKey;
 }
 
-export const STREAMING_OPTIONS = ["Netflix", "Max", "Prime", "Apple TV+", "Hulu"] as const;
+export const STREAMING_OPTIONS = [
+  "Netflix",
+  "Max",
+  "Prime",
+  "Disney+",
+  "Apple TV+",
+  "Hulu",
+] as const;
 
 export const YEAR_BOUNDS: [number, number] = [1950, new Date().getFullYear()];
 export const IMDB_BOUNDS: [number, number] = [0, 10];
