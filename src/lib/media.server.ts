@@ -22,11 +22,13 @@ const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const DETAIL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const TRENDING_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-const DISCOVER_PAGES = 65; // ~1,300 of each type (TMDB returns 20/page) — catalog ceiling ≈ 2,800
-const TOP_RATED_PAGES = 10; // ~200 of each type — classics
-const TRENDING_PAGES = 2; // ~40 of each type — currently hot
+const CATALOG_LIMIT = 10000;
+const POSTGREST_PAGE = 1000;
+const DISCOVER_PAGES = 500; // TMDB max: ~10,000 of each type — enough headroom to keep adding new titles
+const TOP_RATED_PAGES = 25; // ~500 of each type — classics
+const TRENDING_PAGES = 5; // ~100 of each type — currently hot
 const OMDB_BUDGET_PER_RUN = 900; // free tier is ~1000/day, leave headroom
-const MAX_ENRICH_PER_RUN = 350; // keep one run under serverless time limits
+const MAX_ENRICH_PER_RUN = 1200; // prioritize catalog growth; OMDb enrichment stops at the budget above
 const TMDB_APPEND =
   "external_ids,credits,watch/providers,keywords,release_dates,content_ratings,images,videos,recommendations,similar";
 
