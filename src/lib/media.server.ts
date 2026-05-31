@@ -436,8 +436,8 @@ async function discoverIds(
   key: string,
   pages: number,
 ): Promise<DiscoverResult[]> {
-  const all: DiscoverResult[] = [];
-  for (let page = 1; page <= pages; page++) {
+  const pageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
+  const pageResults = await mapWithLimit(pageNumbers, 12, async (page) => {
     try {
       const r = await tmdb<{ results: DiscoverResult[] }>(`/discover/${type}`, key, {
         sort_by: "popularity.desc",
@@ -445,28 +445,30 @@ async function discoverIds(
         page: String(page),
         language: "en-US",
       });
-      all.push(...r.results);
+      return r.results;
     } catch (e) {
       console.error(`[sync] discover ${type} page ${page} failed:`, e);
+      return [];
     }
-  }
-  return all;
+  });
+  return pageResults.flat();
 }
 
 async function listFromPath(path: string, key: string, pages: number): Promise<DiscoverResult[]> {
-  const all: DiscoverResult[] = [];
-  for (let page = 1; page <= pages; page++) {
+  const pageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
+  const pageResults = await mapWithLimit(pageNumbers, 12, async (page) => {
     try {
       const r = await tmdb<{ results: DiscoverResult[] }>(path, key, {
         page: String(page),
         language: "en-US",
       });
-      all.push(...r.results);
+      return r.results;
     } catch (e) {
       console.error(`[sync] ${path} page ${page} failed:`, e);
+      return [];
     }
-  }
-  return all;
+  });
+  return pageResults.flat();
 }
 
 function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
