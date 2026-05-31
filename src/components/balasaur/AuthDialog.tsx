@@ -12,9 +12,11 @@ import {
 export function AuthDialog({
   open,
   onOpenChange,
+  reason,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  reason?: string;
 }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -63,7 +65,7 @@ export function AuthDialog({
             {mode === "signin" ? "Sign in" : "Create account"}
           </DialogTitle>
           <DialogDescription className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
-            Save your library across devices
+            {reason ?? "Save your library across devices"}
           </DialogDescription>
         </DialogHeader>
 

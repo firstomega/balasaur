@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
+import { Check, Eye } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
+import { cn } from "@/lib/utils";
 
 const TYPE_LABEL: Record<MediaType, string> = {
   movie: "MOVIE",
@@ -42,24 +44,59 @@ function displayYear(item: MediaItem): string {
   return item.year || "—";
 }
 
-export function MediaCard({ item }: { item: MediaItem }) {
+export function MediaCard({
+  item,
+  onQuickWatch,
+  watched = false,
+}: {
+  item: MediaItem;
+  /** When provided, shows a desktop hover "Watched" quick-add button on the poster. */
+  onQuickWatch?: (item: MediaItem) => void;
+  /** Current watched state, to style the quick-add button as active. */
+  watched?: boolean;
+}) {
   const rating = primaryRating(item);
   const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
   const rawId = item.id.replace(/^(movie|tv)-/, "");
 
   return (
     <article className="group flex flex-col">
-      {isLinkable ? (
-        <Link
-          to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
-          params={{ id: rawId }}
-          className="block"
-        >
+      <div className="relative">
+        {isLinkable ? (
+          <Link
+            to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
+            params={{ id: rawId }}
+            className="block"
+          >
+            <CardArt item={item} rating={rating} />
+          </Link>
+        ) : (
           <CardArt item={item} rating={rating} />
-        </Link>
-      ) : (
-        <CardArt item={item} rating={rating} />
-      )}
+        )}
+
+        {onQuickWatch && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onQuickWatch(item);
+            }}
+            aria-label={watched ? "Watched — click to remove" : "Mark as watched"}
+            aria-pressed={watched}
+            className={cn(
+              // desktop-only quick action; mobile uses the swipe deck
+              "absolute bottom-2 left-1/2 hidden -translate-x-1/2 items-center gap-1.5 rounded-[5px] border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider backdrop-blur-sm transition-all md:flex",
+              watched
+                ? "border-rating/60 bg-rating/25 text-rating opacity-100"
+                : "border-white/30 bg-black/70 text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
+            )}
+          >
+            {watched ? <Check className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            Watched
+          </button>
+        )}
+      </div>
 
       <div className="mt-2 px-0.5">
         {isLinkable ? (

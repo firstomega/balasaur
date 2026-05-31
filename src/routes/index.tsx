@@ -9,11 +9,15 @@ import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters"
 import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
+import { AuthDialog } from "@/components/balasaur/AuthDialog";
 import { mediaItemsQueryOptions, useMediaItems } from "@/hooks/useMediaItems";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { applyFilters } from "@/lib/filterMedia";
+import { recordForStatus } from "@/lib/userStatus";
 import { defaultFilterState, type FilterState } from "@/types/filters";
+import type { MediaItem } from "@/types/media";
+import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
@@ -45,12 +49,28 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const [filters, setFilters] = useState<FilterState>(() => defaultFilterState());
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { seenIds } = useUserStatus();
+  const [authOpen, setAuthOpen] = useState(false);
+  const { seenIds, statuses, recordStatus } = useUserStatus();
   const { user } = useAuth();
   const gridRef = useRef<HTMLDivElement>(null);
 
   const scrollToGrid = () => {
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Quick-add "Watched" from the grid (desktop hover). Supplements the swipe deck.
+  const handleQuickWatch = (item: MediaItem) => {
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+    if (statuses[item.id]?.status === "seen") {
+      recordStatus(item.id, null); // toggle off
+      toast(`Removed · ${item.title}`, { duration: 1400 });
+    } else {
+      recordStatus(item.id, recordForStatus("watched"), item);
+      toast.success(`Watched · ${item.title}`, { duration: 1400 });
+    }
   };
 
   return (
@@ -73,11 +93,18 @@ function HomePage() {
                 setFilters={setFilters}
                 seenIds={seenIds}
                 onOpenMobileFilters={() => setMobileOpen(true)}
+                onQuickWatch={handleQuickWatch}
               />
             </Suspense>
           </div>
         </main>
       </div>
+
+      <AuthDialog
+        open={authOpen}
+        onOpenChange={setAuthOpen}
+        reason="Sign in to personalize your Balasaur database"
+      />
 
       {/* Mobile drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -168,7 +195,7 @@ function GridWithControls({
         <ActiveFilters filters={filters} setFilters={setFilters} />
       </div>
 
-      <MediaGrid items={filtered} />
+      <MediaGrid items={filtered} onQuickWatch={onQuickWatch} watchedIds={seenIds} />
 
       {filtered.length === 0 && (
         <div className="mt-10 flex flex-col items-center rounded-[5px] border border-border bg-panel p-8 text-center">
