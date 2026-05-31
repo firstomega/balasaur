@@ -142,18 +142,20 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
     <article>
       {/* Hero */}
       <header className="relative">
-        <div className="relative h-[300px] w-full overflow-hidden bg-panel md:h-[440px]">
+        <div className="absolute inset-x-0 top-0 h-[300px] overflow-hidden bg-panel md:h-[440px]">
           {detail.backdropUrl && (
             <img
               src={detail.backdropUrl}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-60"
+              className="absolute inset-0 h-full w-full object-cover opacity-50"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
+          {/* Scrim: darkens the lower half (where the title sits) so it stays
+              legible over any backdrop, bright or dark. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30" />
         </div>
 
-        <div className="mx-auto -mt-32 max-w-[1100px] px-4 md:-mt-44">
+        <div className="relative z-10 mx-auto max-w-[1100px] px-4 pt-[168px] md:pt-[260px]">
           <div className="flex flex-col gap-5 md:flex-row md:items-end">
             <div className="w-[160px] shrink-0 overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)] md:w-[220px]">
               <div className="aspect-[2/3] w-full">
@@ -171,7 +173,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-[28px] font-semibold leading-tight text-text-bright md:text-[40px]">
+              <h1 className="text-[28px] font-semibold leading-tight text-text-bright md:text-[40px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
                 {detail.title}
               </h1>
               {meta.length > 0 && (
