@@ -309,21 +309,53 @@ export async function listSitemapEntries(
  * Read the catalog out of our database. NO upstream API calls.
  * This is what visitor page loads hit.
  */
-export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
-  const { data, error } = await supabaseAdmin
-    .from("media")
-    .select(
-      "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,length_label,people,seasons,award_winner,award_nominee",
-    )
-    .order("popularity", { ascending: false, nullsFirst: false })
-    .limit(limit);
+export async function loadCatalogFromDb(limit = 10000): Promise<MediaItem[]> {
+  // PostgREST caps a single response at 1000 rows regardless of .limit(),
+  // so page with .range() until we hit `limit` or run out of rows.
+  const PAGE = 1000;
+  type Row = {
+    media_id: string;
+    media_type: string;
+    title: string;
+    year: string | null;
+    poster_url: string | null;
+    overview: string | null;
+    popularity: number | null;
+    release_date: string | null;
+    rating_imdb: number | null;
+    rating_rotten_tomatoes: number | null;
+    rating_metacritic: number | null;
+    rating_tmdb: number | null;
+    genres: string[] | null;
+    origins: string[] | null;
+    streaming: string[] | null;
+    length_label: string | null;
+    people: unknown;
+    seasons: unknown;
+    award_winner: boolean | null;
+    award_nominee: boolean | null;
+  };
+  const rows: Row[] = [];
+  for (let offset = 0; offset < limit; offset += PAGE) {
+    const end = Math.min(offset + PAGE, limit) - 1;
+    const { data, error } = await supabaseAdmin
+      .from("media")
+      .select(
+        "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,length_label,people,seasons,award_winner,award_nominee",
+      )
+      .order("popularity", { ascending: false, nullsFirst: false })
+      .range(offset, end);
 
-  if (error) {
-    console.error("[catalog] load failed:", error.message);
-    return [];
+    if (error) {
+      console.error("[catalog] load failed:", error.message);
+      return [];
+    }
+    const page = (data ?? []) as Row[];
+    rows.push(...page);
+    if (page.length < end - offset + 1) break; // exhausted
   }
 
-  return (data ?? []).map(
+  return rows.map(
     (r): MediaItem => ({
       id: r.media_id,
       mediaType: r.media_type as MediaItem["mediaType"],
@@ -358,18 +390,26 @@ export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
  * migration was meant to add (the failure that blanked the homepage when
  * `media.origins` was missing). Used only as a fail-soft fallback.
  */
-async function loadCatalogFromCache(limit = 1500): Promise<MediaItem[]> {
+async function loadCatalogFromCache(limit = 10000): Promise<MediaItem[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("media_cache")
-      .select("summary_payload")
-      .order("popularity", { ascending: false, nullsFirst: false })
-      .limit(limit);
-    if (error || !data) {
-      if (error) console.error("[cache] last-known-good read failed:", error.message);
-      return [];
+    const PAGE = 1000;
+    const rows: Array<{ summary_payload: Json | null }> = [];
+    for (let offset = 0; offset < limit; offset += PAGE) {
+      const end = Math.min(offset + PAGE, limit) - 1;
+      const { data, error } = await supabaseAdmin
+        .from("media_cache")
+        .select("summary_payload")
+        .order("popularity", { ascending: false, nullsFirst: false })
+        .range(offset, end);
+      if (error || !data) {
+        if (error) console.error("[cache] last-known-good read failed:", error.message);
+        return [];
+      }
+      const page = data as unknown as Array<{ summary_payload: Json | null }>;
+      rows.push(...page);
+      if (page.length < end - offset + 1) break;
     }
-    return (data as unknown as Array<{ summary_payload: Json | null }>)
+    return rows
       .filter((r) => r.summary_payload)
       .map((r) => r.summary_payload as unknown as MediaItem);
   } catch (e) {
