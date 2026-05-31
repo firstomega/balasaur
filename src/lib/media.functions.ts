@@ -3,28 +3,31 @@ import {
   fetchMediaDetail,
   fetchPersonDetail,
   fetchTrendingMedia,
-  syncCatalog,
 } from "./media.server";
 
 export const getTrendingMedia = createServerFn({ method: "GET" }).handler(async () => {
   return fetchTrendingMedia();
 });
 
-/**
- * Manual catalog refresh. Internal-only — callers must already be trusted
- * (e.g. the /api/public/hooks/sync-media route guarded by the apikey header,
- * or an admin invocation). Never exposes upstream API keys to the browser.
- */
-export const refreshCatalog = createServerFn({ method: "POST" })
-  .inputValidator((data: { force?: boolean } | undefined) => data ?? {})
-  .handler(async ({ data }) => {
-    return syncCatalog({ force: data.force });
-  });
+const ID_RE = /^[1-9]\d{0,9}$/;
 
 export const getMediaDetail = createServerFn({ method: "GET" })
-  .inputValidator((data: { type: "movie" | "tv"; id: string }) => data)
+  .inputValidator((data: { type: "movie" | "tv"; id: string }) => {
+    if (!data || (data.type !== "movie" && data.type !== "tv")) {
+      throw new Error("Invalid media type");
+    }
+    if (typeof data.id !== "string" || !ID_RE.test(data.id)) {
+      throw new Error("Invalid media id");
+    }
+    return { type: data.type, id: data.id };
+  })
   .handler(({ data }) => fetchMediaDetail(data.type, data.id));
 
 export const getPersonDetail = createServerFn({ method: "GET" })
-  .inputValidator((data: { id: string }) => data)
+  .inputValidator((data: { id: string }) => {
+    if (!data || typeof data.id !== "string" || !ID_RE.test(data.id)) {
+      throw new Error("Invalid person id");
+    }
+    return { id: data.id };
+  })
   .handler(({ data }) => fetchPersonDetail(data.id));

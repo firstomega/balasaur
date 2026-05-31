@@ -6,7 +6,9 @@ name: Daily catalog sync
 # streaming availability stays fresh — no manual triggering.
 #
 # Verify runs in the repo's Actions tab. No repo secrets needed: the Supabase
-# anon/publishable key is public by design and already committed in .env.
+# Requires a GitHub repository secret named SUPABASE_SERVICE_ROLE_KEY (server-
+# only key — never commit it to the repo). Add it under Settings → Secrets and
+# variables → Actions.
 
 on:
   schedule:
@@ -32,22 +34,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Read Supabase anon key from .env
-        id: env
-        run: |
-          KEY=$(grep -E '^SUPABASE_PUBLISHABLE_KEY=' .env | head -1 | cut -d= -f2- | tr -d '"')
-          if [ -z "$KEY" ]; then
-            echo "::error::SUPABASE_PUBLISHABLE_KEY not found in .env"
-            exit 1
-          fi
-          echo "::add-mask::$KEY"
-          echo "key=$KEY" >> "$GITHUB_OUTPUT"
-
       - name: Trigger catalog sync
         env:
           BASE_URL: https://balasaur.com
-          APIKEY: ${{ steps.env.outputs.key }}
+          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          if [ -z "$APIKEY" ]; then
+            echo "::error::Missing repo secret SUPABASE_SERVICE_ROLE_KEY"
+            exit 1
+          fi
           echo "POST $BASE_URL/api/public/hooks/sync-media"
           HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
             -X POST "$BASE_URL/api/public/hooks/sync-media" \
@@ -66,7 +61,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.backfill
         env:
           BASE_URL: https://balasaur.com
-          APIKEY: ${{ steps.env.outputs.key }}
+          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "POST $BASE_URL/api/public/hooks/backfill-media"
           HTTP=$(curl -sS -o /tmp/backfill.json -w "%{http_code}" \

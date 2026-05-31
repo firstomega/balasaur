@@ -224,6 +224,7 @@ function GridWithControls({
 }
 
 function HomeError({ error }: { error: Error }) {
+  console.error(error);
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
@@ -232,7 +233,9 @@ function HomeError({ error }: { error: Error }) {
           <h2 className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
             Couldn't load the firehose
           </h2>
-          <p className="mt-2 font-mono text-[11px] text-text-muted">{error.message}</p>
+          <p className="mt-2 font-mono text-[11px] text-text-muted">
+            Something went wrong on our end. Try refreshing in a moment.
+          </p>
         </div>
       </main>
     </div>
