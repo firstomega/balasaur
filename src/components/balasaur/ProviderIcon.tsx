@@ -124,6 +124,25 @@ const MARKS: Record<ProviderName, ProviderMark> = {
       </text>
     ),
   },
+  "Disney+": {
+    label: "Disney+",
+    bg: "#0B1A3A",
+    fg: "#FFFFFF",
+    glyph: (
+      <text
+        x="16"
+        y="22"
+        textAnchor="middle"
+        fontFamily="Archivo, system-ui, sans-serif"
+        fontWeight={800}
+        fontSize="13"
+        fill="currentColor"
+        letterSpacing="-0.5"
+      >
+        D+
+      </text>
+    ),
+  },
 };
 
 interface ProviderIconProps {
