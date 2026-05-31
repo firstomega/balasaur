@@ -53,6 +53,19 @@ export function buildChips(
     });
   }
 
+  for (const o of filters.origins) {
+    chips.push({
+      key: `o-${o}`,
+      label: o,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.origins);
+          next.delete(o);
+          return { ...p, origins: next };
+        }),
+    });
+  }
+
   for (const s of filters.streaming) {
     chips.push({
       key: `s-${s}`,

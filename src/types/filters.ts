@@ -12,6 +12,7 @@ export interface RangeFilter {
 export interface FilterState {
   mediaTypes: Set<MediaType>;
   genres: Set<string>;
+  origins: Set<string>;
   streaming: Set<string>;
   yearRange: [number, number];
   imdbRange: [number, number];
@@ -38,6 +39,7 @@ export function defaultFilterState(): FilterState {
   return {
     mediaTypes: new Set<MediaType>(["movie", "tv"]),
     genres: new Set(),
+    origins: new Set(),
     streaming: new Set(),
     yearRange: [...YEAR_BOUNDS],
     imdbRange: [...IMDB_BOUNDS],

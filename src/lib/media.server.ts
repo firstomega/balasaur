@@ -8,6 +8,7 @@ import type {
   WatchProvidersAllRegions,
 } from "@/types/media";
 import { unifyGenres } from "./genres";
+import { deriveOrigins } from "./origins";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
 
@@ -115,6 +116,9 @@ interface TmdbDetails {
   runtime?: number;
   episode_run_time?: number[];
   number_of_seasons?: number;
+  original_language?: string;
+  origin_country?: string[];
+  production_countries?: { iso_3166_1?: string; name?: string }[];
   credits?: {
     cast?: { name: string; character?: string }[];
     crew?: { name: string; job?: string; department?: string }[];
@@ -186,6 +190,13 @@ function enrichFromDetails(item: MediaItem, d: TmdbDetails): string | undefined 
       item.seasons = seasons;
     }
   }
+
+  // Origin facet: from original language + production / origin countries.
+  const countries = [
+    ...(d.origin_country ?? []),
+    ...(d.production_countries ?? []).map((c) => c.iso_3166_1 ?? "").filter(Boolean),
+  ];
+  item.origins = deriveOrigins(d.original_language, countries);
 
   return d.imdb_id ?? d.external_ids?.imdb_id ?? undefined;
 }
@@ -288,7 +299,7 @@ export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
   const { data, error } = await supabaseAdmin
     .from("media")
     .select(
-      "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,streaming,length_label,people,seasons,award_winner,award_nominee",
+      "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,length_label,people,seasons,award_winner,award_nominee",
     )
     .order("popularity", { ascending: false, nullsFirst: false })
     .limit(limit);
@@ -313,6 +324,7 @@ export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
         tmdb: r.rating_tmdb ?? undefined,
       },
       genres: r.genres ?? [],
+      origins: r.origins ?? [],
       streaming: r.streaming ?? [],
       lengthLabel: r.length_label ?? "",
       people: (r.people as unknown as MediaPerson[]) ?? [],
@@ -403,6 +415,7 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     rating_metacritic: item.ratings.metacritic ?? null,
     rating_tmdb: item.ratings.tmdb ?? null,
     genres: item.genres,
+    origins: item.origins ?? [],
     streaming: item.streaming,
     length_label: item.lengthLabel || null,
     people: item.people as unknown as MediaRow["people"],
@@ -492,7 +505,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
           console.error(`[backfill] update ${row.media_id} failed:`, updErr.message);
           continue;
         }
-        if (genresChanged) result.updatedGenres++;
+        if (genresChanged || originsChanged) result.updatedGenres++;
         if (awards.winner || awards.nominee) result.updatedAwards++;
       } catch (e) {
         result.failed++;

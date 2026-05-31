@@ -11,6 +11,7 @@ import {
   defaultFilterState,
 } from "@/types/filters";
 import { UNIFIED_GENRES } from "@/lib/genres";
+import { ORIGIN_OPTIONS } from "@/lib/origins";
 import {
   Accordion,
   AccordionContent,
@@ -108,6 +109,8 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
           return { ...prev, mediaTypes: d.mediaTypes };
         case "genre":
           return { ...prev, genres: d.genres };
+        case "origin":
+          return { ...prev, origins: d.origins };
         case "streaming":
           return { ...prev, streaming: d.streaming };
         case "released":
@@ -136,6 +139,7 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
     const s = new Set<string>();
     if (filters.mediaTypes.size !== 2) s.add("media-type");
     if (filters.genres.size > 0) s.add("genre");
+    if (filters.origins.size > 0) s.add("origin");
     if (filters.streaming.size > 0) s.add("streaming");
     if (filters.yearRange[0] !== YEAR_BOUNDS[0] || filters.yearRange[1] !== YEAR_BOUNDS[1])
       s.add("released");
@@ -192,6 +196,27 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
                   onClick={() => toggleSet<string>("streaming", s)}
                   size={38}
                 />
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Origin */}
+        <AccordionItem value="origin" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("origin")}>Origin</TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-3 pt-1">
+            <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
+            <div className="flex flex-wrap gap-1.5">
+              {ORIGIN_OPTIONS.map((o) => (
+                <Pill
+                  key={o}
+                  active={filters.origins.has(o)}
+                  onClick={() => toggleSet<string>("origins", o)}
+                >
+                  {o}
+                </Pill>
               ))}
             </div>
           </AccordionContent>
