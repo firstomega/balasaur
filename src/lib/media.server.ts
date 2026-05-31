@@ -339,6 +339,33 @@ export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
   );
 }
 
+/**
+ * Last-known-good catalog, read from media_cache. Schema-independent: it returns
+ * the stored summary_payload JSON, so it keeps working even when the live `media`
+ * read is broken — e.g. the deployed code selects a column that a not-yet-applied
+ * migration was meant to add (the failure that blanked the homepage when
+ * `media.origins` was missing). Used only as a fail-soft fallback.
+ */
+async function loadCatalogFromCache(limit = 1500): Promise<MediaItem[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("media_cache")
+      .select("summary_payload")
+      .order("popularity", { ascending: false, nullsFirst: false })
+      .limit(limit);
+    if (error || !data) {
+      if (error) console.error("[cache] last-known-good read failed:", error.message);
+      return [];
+    }
+    return (data as unknown as Array<{ summary_payload: Json | null }>)
+      .filter((r) => r.summary_payload)
+      .map((r) => r.summary_payload as unknown as MediaItem);
+  } catch (e) {
+    console.error("[cache] last-known-good read threw:", e);
+    return [];
+  }
+}
+
 interface DiscoverResult {
   id: number;
   popularity?: number;
@@ -1170,6 +1197,22 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
   }
 
   const items = await loadCatalogFromDb();
+
+  // Fail-soft: a non-empty catalog is expected here. If the live read came back
+  // empty — e.g. the deployed code references a column that a not-yet-applied
+  // migration was meant to add (exactly what blanked the homepage when
+  // `media.origins` was missing) — serve the last-known-good rows from media_cache
+  // rather than a blank site. Self-heals: once the schema catches up,
+  // loadCatalogFromDb succeeds again and the cache is refreshed below.
+  if (items.length === 0) {
+    const lastKnownGood = await loadCatalogFromCache();
+    if (lastKnownGood.length > 0) {
+      console.error(
+        `[catalog] live read empty — serving ${lastKnownGood.length} last-known-good items from media_cache`,
+      );
+      return lastKnownGood;
+    }
+  }
 
   try {
     if (items.length > 0) {
