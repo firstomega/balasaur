@@ -141,11 +141,13 @@ function GridWithControls({
   setFilters,
   seenIds,
   onOpenMobileFilters,
+  onQuickWatch,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
   seenIds: Set<string>;
   onOpenMobileFilters: () => void;
+  onQuickWatch: (item: MediaItem) => void;
 }) {
   const { data } = useMediaItems();
   const filtered = useMemo(() => applyFilters(data, filters, seenIds), [data, filters, seenIds]);
