@@ -275,6 +275,62 @@ async function mapWithLimit<T, R>(
 }
 
 /**
+ * Fetch up to `limit` rows from a Supabase range query, paging in 1000-row
+ * batches. PostgREST hard-caps any single response at db.max_rows (1000 by
+ * default on Lovable Cloud), so a bare `.limit(1500)` silently returns only the
+ * first 1000 — which pinned the catalog grid at 1000 titles no matter how large
+ * the table grew. Paging with `.range()` returns the full set. A first-page error
+ * yields [] (so callers can fail soft); a later-page error returns what we have.
+ */
+async function fetchAllPages<Row>(
+  fetchPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>,
+  limit: number,
+  label: string,
+): Promise<Row[]> {
+  const BATCH = 1000;
+  const all: Row[] = [];
+  for (let from = 0; from < limit; from += BATCH) {
+    const to = Math.min(from + BATCH, limit) - 1;
+    const { data, error } = await fetchPage(from, to);
+    if (error) {
+      console.error(`[${label}] page ${from}-${to} failed:`, error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < to - from + 1) break;
+  }
+  return all;
+}
+
+/** Row shape for the catalog read (mirrors the `media` columns selected below). */
+interface CatalogRow {
+  media_id: string;
+  media_type: string;
+  title: string;
+  year: string | null;
+  poster_url: string | null;
+  overview: string | null;
+  popularity: number | null;
+  release_date: string | null;
+  rating_imdb: number | null;
+  rating_rotten_tomatoes: number | null;
+  rating_metacritic: number | null;
+  rating_tmdb: number | null;
+  genres: string[] | null;
+  origins: string[] | null;
+  streaming: string[] | null;
+  length_label: string | null;
+  people: unknown;
+  seasons: unknown;
+  award_winner: boolean | null;
+  award_nominee: boolean | null;
+}
+
+/**
  * Lightweight list of catalogued titles for the sitemap. Reads only the
  * columns needed to build a URL + lastmod. NO upstream API calls. Capped well
  * under the 50k sitemap limit, most-popular first.
@@ -282,48 +338,63 @@ async function mapWithLimit<T, R>(
 export async function listSitemapEntries(
   limit = 20000,
 ): Promise<{ path: string; lastmod?: string }[]> {
-  const { data, error } = await supabaseAdmin
-    .from("media")
-    .select("media_id, media_type, updated_at")
-    .order("popularity", { ascending: false, nullsFirst: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("[sitemap] media query failed:", error.message);
-    return [];
-  }
-
-  return (data ?? []).map(
-    (r: { media_id: string; media_type: string; updated_at: string | null }) => {
-      const rawId = r.media_id.replace(/^(movie|tv)-/, "");
-      const seg = r.media_type === "tv" ? "tv" : "movie";
+  const rows = await fetchAllPages<{
+    media_id: string;
+    media_type: string;
+    updated_at: string | null;
+  }>(
+    async (from, to) => {
+      const r = await supabaseAdmin
+        .from("media")
+        .select("media_id, media_type, updated_at")
+        .order("popularity", { ascending: false, nullsFirst: false })
+        .range(from, to);
       return {
-        path: `/${seg}/${rawId}`,
-        lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
+        data: r.data as unknown as
+          | {
+              media_id: string;
+              media_type: string;
+              updated_at: string | null;
+            }[]
+          | null,
+        error: r.error,
       };
     },
+    limit,
+    "sitemap",
   );
+
+  return rows.map((r: { media_id: string; media_type: string; updated_at: string | null }) => {
+    const rawId = r.media_id.replace(/^(movie|tv)-/, "");
+    const seg = r.media_type === "tv" ? "tv" : "movie";
+    return {
+      path: `/${seg}/${rawId}`,
+      lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
+    };
+  });
 }
 
 /**
  * Read the catalog out of our database. NO upstream API calls.
  * This is what visitor page loads hit.
  */
-export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
-  const { data, error } = await supabaseAdmin
-    .from("media")
-    .select(
-      "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,length_label,people,seasons,award_winner,award_nominee",
-    )
-    .order("popularity", { ascending: false, nullsFirst: false })
-    .limit(limit);
+export async function loadCatalogFromDb(limit = 3000): Promise<MediaItem[]> {
+  const rows = await fetchAllPages<CatalogRow>(
+    async (from, to) => {
+      const r = await supabaseAdmin
+        .from("media")
+        .select(
+          "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,length_label,people,seasons,award_winner,award_nominee",
+        )
+        .order("popularity", { ascending: false, nullsFirst: false })
+        .range(from, to);
+      return { data: r.data as unknown as CatalogRow[] | null, error: r.error };
+    },
+    limit,
+    "catalog",
+  );
 
-  if (error) {
-    console.error("[catalog] load failed:", error.message);
-    return [];
-  }
-
-  return (data ?? []).map(
+  return rows.map(
     (r): MediaItem => ({
       id: r.media_id,
       mediaType: r.media_type as MediaItem["mediaType"],
@@ -358,18 +429,24 @@ export async function loadCatalogFromDb(limit = 1500): Promise<MediaItem[]> {
  * migration was meant to add (the failure that blanked the homepage when
  * `media.origins` was missing). Used only as a fail-soft fallback.
  */
-async function loadCatalogFromCache(limit = 1500): Promise<MediaItem[]> {
+async function loadCatalogFromCache(limit = 3000): Promise<MediaItem[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("media_cache")
-      .select("summary_payload")
-      .order("popularity", { ascending: false, nullsFirst: false })
-      .limit(limit);
-    if (error || !data) {
-      if (error) console.error("[cache] last-known-good read failed:", error.message);
-      return [];
-    }
-    return (data as unknown as Array<{ summary_payload: Json | null }>)
+    const rows = await fetchAllPages<{ summary_payload: Json | null }>(
+      async (from, to) => {
+        const r = await supabaseAdmin
+          .from("media_cache")
+          .select("summary_payload")
+          .order("popularity", { ascending: false, nullsFirst: false })
+          .range(from, to);
+        return {
+          data: r.data as unknown as { summary_payload: Json | null }[] | null,
+          error: r.error,
+        };
+      },
+      limit,
+      "last-known-good",
+    );
+    return rows
       .filter((r) => r.summary_payload)
       .map((r) => r.summary_payload as unknown as MediaItem);
   } catch (e) {
@@ -1199,13 +1276,30 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
       if (!tErr && trend?.ids && trend.fetched_at) {
         const age = Date.now() - new Date(trend.fetched_at).getTime();
         if (age < TRENDING_TTL_MS && trend.ids.length > 0) {
-          const order = new Map(trend.ids.map((id: string, i: number) => [id, i]));
-          const { data: rows, error: rErr } = await supabaseAdmin
-            .from("media_cache")
-            .select("id, summary_payload")
-            .in("id", trend.ids);
-          if (!rErr && rows && rows.length > 0) {
-            const items = rows
+          const ids = trend.ids as string[];
+          const order = new Map<string, number>(ids.map((id, i): [string, number] => [id, i]));
+          // PostgREST caps a single response at 1000 rows, so fetch the cached
+          // payloads in id-chunks — one .in() would silently drop everything past
+          // the first 1000 once the catalog grows beyond it.
+          const cached: Array<{ id: string; summary_payload: Json | null }> = [];
+          const ID_BATCH = 1000;
+          for (let i = 0; i < ids.length; i += ID_BATCH) {
+            const { data, error: rErr } = await supabaseAdmin
+              .from("media_cache")
+              .select("id, summary_payload")
+              .in("id", ids.slice(i, i + ID_BATCH));
+            if (rErr) {
+              console.error("[cache] trending read failed:", rErr.message);
+              break;
+            }
+            if (data) {
+              cached.push(
+                ...(data as unknown as Array<{ id: string; summary_payload: Json | null }>),
+              );
+            }
+          }
+          if (cached.length > 0) {
+            const items = cached
               .filter((r) => r.summary_payload)
               .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
               .map((r) => r.summary_payload as unknown as MediaItem);
