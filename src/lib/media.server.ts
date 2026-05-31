@@ -22,7 +22,7 @@ const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const DETAIL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const TRENDING_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-const DISCOVER_PAGES = 38; // ~760 of each type (TMDB returns 20 per page)
+const DISCOVER_PAGES = 65; // ~1,300 of each type (TMDB returns 20/page) — catalog ceiling ≈ 2,800
 const TOP_RATED_PAGES = 10; // ~200 of each type — classics
 const TRENDING_PAGES = 2; // ~40 of each type — currently hot
 const OMDB_BUDGET_PER_RUN = 900; // free tier is ~1000/day, leave headroom
@@ -112,6 +112,26 @@ const PROVIDER_NAME_MAP: Record<string, string> = {
   "Disney+": "Disney+",
 };
 
+/**
+ * Map a TMDB US `watch/providers` block to our normalized streaming-service set
+ * (flatrate / subscription only). Shared by live enrichment and the raw backfill
+ * so both produce identical `streaming` values.
+ */
+function deriveStreaming(
+  watchProviders:
+    | { results?: Record<string, { flatrate?: { provider_name: string }[] }> }
+    | undefined,
+): string[] {
+  const flatrate = watchProviders?.results?.US?.flatrate;
+  if (!flatrate) return [];
+  const mapped = new Set<string>();
+  for (const p of flatrate) {
+    const name = PROVIDER_NAME_MAP[p.provider_name];
+    if (name) mapped.add(name);
+  }
+  return Array.from(mapped);
+}
+
 interface TmdbDetails {
   imdb_id?: string | null;
   external_ids?: { imdb_id?: string | null };
@@ -160,16 +180,8 @@ function enrichFromDetails(item: MediaItem, d: TmdbDetails): string | undefined 
     return true;
   });
 
-  // Streaming providers (US)
-  const us = d["watch/providers"]?.results?.US;
-  if (us?.flatrate) {
-    const mapped = new Set<string>();
-    for (const p of us.flatrate) {
-      const name = PROVIDER_NAME_MAP[p.provider_name];
-      if (name) mapped.add(name);
-    }
-    item.streaming = Array.from(mapped);
-  }
+  // Streaming providers (US, flatrate only)
+  item.streaming = deriveStreaming(d["watch/providers"]);
 
   // Length
   if (item.mediaType === "movie" && d.runtime) {
@@ -465,6 +477,7 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
 export interface BackfillResult {
   scanned: number;
   updatedGenres: number;
+  updatedStreaming: number;
   updatedAwards: number;
   failed: number;
   durationMs: number;
@@ -476,15 +489,16 @@ interface TmdbGenreObj {
 }
 
 /**
- * Rewrite `genres`, `award_winner`, `award_nominee`, `award_wins`,
- * `award_nominations` columns on every existing media row, sourced from
- * raw_tmdb / raw_omdb already stored. Makes NO external API calls.
+ * Rewrite `genres`, `origins`, `streaming`, `award_winner`, `award_nominee`,
+ * `award_wins`, `award_nominations` columns on every existing media row, sourced
+ * from raw_tmdb / raw_omdb already stored. Makes NO external API calls.
  */
 export async function backfillFromRaw(): Promise<BackfillResult> {
   const start = Date.now();
   const result: BackfillResult = {
     scanned: 0,
     updatedGenres: 0,
+    updatedStreaming: 0,
     updatedAwards: 0,
     failed: 0,
     durationMs: 0,
@@ -495,7 +509,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
   while (true) {
     const { data, error } = await supabaseAdmin
       .from("media")
-      .select("media_id, genres, origins, raw_tmdb, raw_omdb")
+      .select("media_id, genres, origins, streaming, raw_tmdb, raw_omdb")
       .range(offset, offset + PAGE - 1);
     if (error) {
       console.error("[backfill] select failed:", error.message);
@@ -511,6 +525,9 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
           original_language?: string;
           origin_country?: string[];
           production_countries?: { iso_3166_1?: string }[];
+          "watch/providers"?: {
+            results?: Record<string, { flatrate?: { provider_name: string }[] }>;
+          };
         } | null;
         const tmdbGenreNames = (raw?.genres ?? [])
           .map((g) => g?.name)
@@ -526,15 +543,19 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
           ...(raw?.production_countries ?? []).map((c) => c.iso_3166_1 ?? "").filter(Boolean),
         ];
         const newOrigins = deriveOrigins(raw?.original_language, countries);
+        const newStreaming = deriveStreaming(raw?.["watch/providers"]);
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
+        const streamingChanged =
+          JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []);
 
         const { error: updErr } = await supabaseAdmin
           .from("media")
           .update({
             genres: newGenres,
             origins: newOrigins,
+            streaming: newStreaming,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,
@@ -548,6 +569,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
           continue;
         }
         if (genresChanged || originsChanged) result.updatedGenres++;
+        if (streamingChanged) result.updatedStreaming++;
         if (awards.winner || awards.nominee) result.updatedAwards++;
       } catch (e) {
         result.failed++;
@@ -560,7 +582,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
   }
 
   // Bust the grid cache so rewritten rows show on the next load (not after 24h).
-  if (result.updatedGenres > 0 || result.updatedAwards > 0) {
+  if (result.updatedGenres > 0 || result.updatedStreaming > 0 || result.updatedAwards > 0) {
     const { error } = await supabaseAdmin.from("trending_cache").delete().eq("key", "trending");
     if (error) console.error("[backfill] trending_cache bust failed:", error.message);
   }

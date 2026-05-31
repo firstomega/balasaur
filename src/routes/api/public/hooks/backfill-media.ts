@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { backfillFromRaw } from "@/lib/media.server";
 
 /**
- * One-shot backfill that rewrites `genres` + award columns from already-stored
- * raw_tmdb / raw_omdb. NO external API calls. Same apikey gate as sync-media.
+ * One-shot backfill that rewrites `genres`, `origins`, `streaming` + award columns
+ * from already-stored raw_tmdb / raw_omdb. NO external API calls. Same apikey gate
+ * as sync-media.
  */
 export const Route = createFileRoute("/api/public/hooks/backfill-media")({
   server: {
