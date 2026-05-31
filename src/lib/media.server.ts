@@ -466,7 +466,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
   while (true) {
     const { data, error } = await supabaseAdmin
       .from("media")
-      .select("media_id, genres, raw_tmdb, raw_omdb")
+      .select("media_id, genres, origins, raw_tmdb, raw_omdb")
       .range(offset, offset + PAGE - 1);
     if (error) {
       console.error("[backfill] select failed:", error.message);
@@ -477,7 +477,12 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
     for (const row of data) {
       result.scanned++;
       try {
-        const raw = row.raw_tmdb as { genres?: TmdbGenreObj[] } | null;
+        const raw = row.raw_tmdb as {
+          genres?: TmdbGenreObj[];
+          original_language?: string;
+          origin_country?: string[];
+          production_countries?: { iso_3166_1?: string }[];
+        } | null;
         const tmdbGenreNames = (raw?.genres ?? [])
           .map((g) => g?.name)
           .filter((n): n is string => !!n);
@@ -487,12 +492,20 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
         const awardsText = (row.raw_omdb as { Awards?: string } | null)?.Awards;
         const awards = parseAwards(awardsText);
 
+        const countries = [
+          ...(raw?.origin_country ?? []),
+          ...(raw?.production_countries ?? []).map((c) => c.iso_3166_1 ?? "").filter(Boolean),
+        ];
+        const newOrigins = deriveOrigins(raw?.original_language, countries);
+
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
+        const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
 
         const { error: updErr } = await supabaseAdmin
           .from("media")
           .update({
             genres: newGenres,
+            origins: newOrigins,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,
