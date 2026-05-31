@@ -22,11 +22,13 @@ const SEASON_POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 const STALE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const DETAIL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const TRENDING_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-const DISCOVER_PAGES = 65; // ~1,300 of each type (TMDB returns 20/page) — catalog ceiling ≈ 2,800
-const TOP_RATED_PAGES = 10; // ~200 of each type — classics
-const TRENDING_PAGES = 2; // ~40 of each type — currently hot
+const CATALOG_LIMIT = 10000;
+const POSTGREST_PAGE = 1000;
+const DISCOVER_PAGES = 500; // TMDB max: ~10,000 of each type — enough headroom to keep adding new titles
+const TOP_RATED_PAGES = 25; // ~500 of each type — classics
+const TRENDING_PAGES = 5; // ~100 of each type — currently hot
 const OMDB_BUDGET_PER_RUN = 900; // free tier is ~1000/day, leave headroom
-const MAX_ENRICH_PER_RUN = 350; // keep one run under serverless time limits
+const MAX_ENRICH_PER_RUN = 1200; // prioritize catalog growth; OMDb enrichment stops at the budget above
 const TMDB_APPEND =
   "external_ids,credits,watch/providers,keywords,release_dates,content_ratings,images,videos,recommendations,similar";
 
@@ -309,10 +311,9 @@ export async function listSitemapEntries(
  * Read the catalog out of our database. NO upstream API calls.
  * This is what visitor page loads hit.
  */
-export async function loadCatalogFromDb(limit = 10000): Promise<MediaItem[]> {
+export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaItem[]> {
   // PostgREST caps a single response at 1000 rows regardless of .limit(),
   // so page with .range() until we hit `limit` or run out of rows.
-  const PAGE = 1000;
   type Row = {
     media_id: string;
     media_type: string;
@@ -336,8 +337,8 @@ export async function loadCatalogFromDb(limit = 10000): Promise<MediaItem[]> {
     award_nominee: boolean | null;
   };
   const rows: Row[] = [];
-  for (let offset = 0; offset < limit; offset += PAGE) {
-    const end = Math.min(offset + PAGE, limit) - 1;
+  for (let offset = 0; offset < limit; offset += POSTGREST_PAGE) {
+    const end = Math.min(offset + POSTGREST_PAGE, limit) - 1;
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
@@ -390,12 +391,11 @@ export async function loadCatalogFromDb(limit = 10000): Promise<MediaItem[]> {
  * migration was meant to add (the failure that blanked the homepage when
  * `media.origins` was missing). Used only as a fail-soft fallback.
  */
-async function loadCatalogFromCache(limit = 10000): Promise<MediaItem[]> {
+async function loadCatalogFromCache(limit = CATALOG_LIMIT): Promise<MediaItem[]> {
   try {
-    const PAGE = 1000;
     const rows: Array<{ summary_payload: Json | null }> = [];
-    for (let offset = 0; offset < limit; offset += PAGE) {
-      const end = Math.min(offset + PAGE, limit) - 1;
+    for (let offset = 0; offset < limit; offset += POSTGREST_PAGE) {
+      const end = Math.min(offset + POSTGREST_PAGE, limit) - 1;
       const { data, error } = await supabaseAdmin
         .from("media_cache")
         .select("summary_payload")
@@ -436,8 +436,8 @@ async function discoverIds(
   key: string,
   pages: number,
 ): Promise<DiscoverResult[]> {
-  const all: DiscoverResult[] = [];
-  for (let page = 1; page <= pages; page++) {
+  const pageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
+  const pageResults = await mapWithLimit(pageNumbers, 12, async (page) => {
     try {
       const r = await tmdb<{ results: DiscoverResult[] }>(`/discover/${type}`, key, {
         sort_by: "popularity.desc",
@@ -445,28 +445,30 @@ async function discoverIds(
         page: String(page),
         language: "en-US",
       });
-      all.push(...r.results);
+      return r.results;
     } catch (e) {
       console.error(`[sync] discover ${type} page ${page} failed:`, e);
+      return [];
     }
-  }
-  return all;
+  });
+  return pageResults.flat();
 }
 
 async function listFromPath(path: string, key: string, pages: number): Promise<DiscoverResult[]> {
-  const all: DiscoverResult[] = [];
-  for (let page = 1; page <= pages; page++) {
+  const pageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
+  const pageResults = await mapWithLimit(pageNumbers, 12, async (page) => {
     try {
       const r = await tmdb<{ results: DiscoverResult[] }>(path, key, {
         page: String(page),
         language: "en-US",
       });
-      all.push(...r.results);
+      return r.results;
     } catch (e) {
       console.error(`[sync] ${path} page ${page} failed:`, e);
+      return [];
     }
-  }
-  return all;
+  });
+  return pageResults.flat();
 }
 
 function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
@@ -641,10 +643,13 @@ export interface SyncResult {
 
 /**
  * Pull discover/movie + discover/tv, enrich each with TMDB details +
- * OMDB ratings, then upsert into `public.media`. Skips items already
- * fresher than STALE_MS to avoid burning API calls.
+ * OMDB ratings, then upsert into `public.media`. By default it only enriches
+ * never-seen titles so top-ups grow the catalog instead of re-calling existing rows.
  */
-export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResult> {
+export async function syncCatalog(opts?: {
+  force?: boolean;
+  refreshExisting?: boolean;
+}): Promise<SyncResult> {
   const start = Date.now();
   const tmdbKey = process.env.TMDB_API_KEY;
   const omdbKey = process.env.OMDB_API_KEY;
@@ -698,11 +703,12 @@ export async function syncCatalog(opts?: { force?: boolean }): Promise<SyncResul
     ? seedItems.slice()
     : seedItems.filter((i) => {
         const last = fetchedAt.get(i.id);
-        return !last || now - last > STALE_MS;
+        if (!last) return true;
+        return !!opts?.refreshExisting && now - last > STALE_MS;
       });
 
-  // Process never-fetched items first, then stalest-first, so subsequent
-  // scheduled runs naturally continue where this one stopped.
+  // Process never-fetched items first, then stalest-first only when explicitly
+  // allowed, so scheduled top-ups naturally keep growing beyond the first page.
   candidates.sort((a, b) => {
     const la = fetchedAt.get(a.id) ?? 0;
     const lb = fetchedAt.get(b.id) ?? 0;
@@ -1240,11 +1246,21 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
         const age = Date.now() - new Date(trend.fetched_at).getTime();
         if (age < TRENDING_TTL_MS && trend.ids.length > 0) {
           const order = new Map(trend.ids.map((id: string, i: number) => [id, i]));
-          const { data: rows, error: rErr } = await supabaseAdmin
-            .from("media_cache")
-            .select("id, summary_payload")
-            .in("id", trend.ids);
-          if (!rErr && rows && rows.length > 0) {
+          const rows: Array<{ id: string; summary_payload: Json | null }> = [];
+          for (let offset = 0; offset < trend.ids.length; offset += POSTGREST_PAGE) {
+            const idPage = trend.ids.slice(offset, offset + POSTGREST_PAGE);
+            const { data: pageRows, error: rErr } = await supabaseAdmin
+              .from("media_cache")
+              .select("id, summary_payload")
+              .in("id", idPage);
+            if (rErr) {
+              console.error("[cache] media_cache trending read failed:", rErr.message);
+              rows.length = 0;
+              break;
+            }
+            rows.push(...((pageRows ?? []) as Array<{ id: string; summary_payload: Json | null }>));
+          }
+          if (rows.length > 0) {
             const items = rows
               .filter((r) => r.summary_payload)
               .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
