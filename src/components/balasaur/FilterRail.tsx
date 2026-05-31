@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
-import type { MediaItem, MediaType } from "@/types/media";
+import type { MediaItem } from "@/types/media";
 import type { FilterState } from "@/types/filters";
 import {
   IMDB_BOUNDS,
@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { searchPeople } from "@/lib/filterMedia";
 import { ProviderIcon, type ProviderName } from "./ProviderIcon";
+import { MediaTypeSwitch, modeFromSet, setFromMode } from "./MediaTypeSwitch";
 
 interface Props {
   filters: FilterState;
@@ -165,24 +166,10 @@ export function FilterRail({ filters, setFilters, allItems }: Props) {
             <TriggerLabel active={activeGroups.has("media-type")}>Media Type</TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
-            <GroupClear
-              show={activeGroups.has("media-type")}
-              onClear={() => clearGroup("media-type")}
+            <MediaTypeSwitch
+              mode={modeFromSet(filters.mediaTypes)}
+              onChange={(m) => setFilters((prev) => ({ ...prev, mediaTypes: setFromMode(m) }))}
             />
-            <div className="space-y-2">
-              {[
-                { value: "movie" as MediaType, label: "Movies" },
-                { value: "tv" as MediaType, label: "TV" },
-              ].map((opt) => (
-                <label key={opt.value} className="flex cursor-pointer items-center gap-2">
-                  <Checkbox
-                    checked={filters.mediaTypes.has(opt.value)}
-                    onCheckedChange={() => toggleSet<MediaType>("mediaTypes", opt.value)}
-                  />
-                  <span className="font-mono text-[11.5px] text-text-bright">{opt.label}</span>
-                </label>
-              ))}
-            </div>
           </AccordionContent>
         </AccordionItem>
 
