@@ -2,9 +2,12 @@ name: Catalog fill (loop)
 
 # One-shot "fill the catalog" job: repeatedly POSTs the same apikey-gated sync
 # endpoint the daily cron uses, looping until the catalog is caught up (a pass that
-# enriches 0 new titles) or the iteration budget is hit. Each pass enriches up to
-# MAX_ENRICH_PER_RUN titles and is bounded by the ~14.5-min request window, so the
-# loop is how we ingest tens of thousands of titles without a single long request.
+# enriches 0 new titles) or the iteration budget is hit. Each pass enriches a small
+# batch (MAX_ENRICH_PER_RUN, ~300) and returns in ~1-2 min — short on purpose so the
+# host never kills it mid-flight. The loop is how we ingest tens of thousands of
+# titles: many short calls instead of one long one. Progress is saved every pass, so
+# a re-run resumes where the last left off, and a transient gateway hiccup (502/503/
+# 504) on one pass is retried rather than aborting the whole fill.
 #
 # Gated by the repo secret SYNC_HOOK_SECRET (same gate as the daily
 # sync). Manual-only — kick it from the Actions tab.
@@ -13,8 +16,8 @@ on:
   workflow_dispatch:
     inputs:
       max_iterations:
-        description: "Max sync passes (each ~14 min; stops early once caught up)"
-        default: "30"
+        description: "Max sync passes (each ~1-2 min, ~300 titles; stops early once caught up)"
+        default: "150"
       backfill:
         description: "Run one backfill pass first (re-derive genres/origins/streaming/awards from stored raw)"
         type: boolean
@@ -60,13 +63,27 @@ jobs:
           total_refreshed=0
           for i in $(seq 1 "$MAX"); do
             echo "──────── sync pass $i / $MAX ────────"
-            HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
-              -X POST "$BASE_URL/api/public/hooks/sync-media" \
-              -H "apikey: $APIKEY" -H "Content-Type: application/json" \
-              --max-time 870 -d '{}')
+            # Each pass is short now (~1-2 min). Retry transient gateway errors a
+            # few times with backoff so one blip doesn't abort the whole fill.
+            HTTP=000
+            for attempt in 1 2 3 4; do
+              HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
+                -X POST "$BASE_URL/api/public/hooks/sync-media" \
+                -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+                --max-time 300 -d '{}' || echo 000)
+              [ "$HTTP" = "200" ] && break
+              echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/sync.json 2>/dev/null; echo
+              # Only retry transient failures; fail fast on anything else (e.g. 401).
+              case "$HTTP" in
+                502 | 503 | 504 | 429 | 000) ;;
+                *) break ;;
+              esac
+              backoff=$((attempt * attempt * 5)) # 5s, 20s, 45s
+              echo "retrying in ${backoff}s…"; sleep "$backoff"
+            done
             echo "HTTP $HTTP"; echo "Response:"; cat /tmp/sync.json; echo
             if [ "$HTTP" != "200" ]; then
-              echo "::error::sync pass $i failed with HTTP $HTTP"
+              echo "::error::sync pass $i failed with HTTP $HTTP (after retries)"
               exit 1
             fi
             # How many titles this pass enriched. Non-numeric (parse miss) → assume
@@ -79,6 +96,6 @@ jobs:
               echo "✅ Caught up — a pass enriched 0 new titles. Stopping at pass $i."
               break
             fi
-            sleep 10
+            sleep 5
           done
           echo "Done. Total titles enriched across the loop: $total_refreshed"

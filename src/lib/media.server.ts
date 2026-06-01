@@ -28,7 +28,14 @@ const DISCOVER_PAGES = 500; // TMDB max: ~10,000 of each type — enough headroo
 const TOP_RATED_PAGES = 25; // ~500 of each type — classics
 const TRENDING_PAGES = 5; // ~100 of each type — currently hot
 const OMDB_BUDGET_PER_RUN = 1500; // patron tier ~100k/day; ≥ MAX_ENRICH so every enriched title also gets OMDb ratings
-const MAX_ENRICH_PER_RUN = 1200; // prioritize catalog growth; OMDb enrichment stops at the budget above
+// Keep each request SHORT. Enriching hundreds of titles in one HTTP call holds the
+// request open for many minutes, and the host kills any request that runs that
+// long — the gateway then returns a 502 and (since we only save at the end) the
+// whole batch is lost. So we enrich a small batch per call and lean on the GitHub
+// Actions loop to call this endpoint repeatedly — that's how the catalog fills.
+const MAX_ENRICH_PER_RUN = 300; // titles enriched per request; the loop calls this many times
+const ENRICH_HARD_CEILING = 500; // absolute per-request cap even if a caller asks for more (memory guard)
+const ENRICH_TIME_BUDGET_MS = 120_000; // stop starting new enrichments past this so the request returns long before any host timeout
 const TMDB_APPEND =
   "external_ids,credits,watch/providers,keywords,release_dates,content_ratings,images,videos,recommendations,similar";
 
@@ -702,8 +709,14 @@ export interface SyncResult {
 export async function syncCatalog(opts?: {
   force?: boolean;
   refreshExisting?: boolean;
+  /** Titles to enrich this request. Defaults to MAX_ENRICH_PER_RUN, hard-capped at ENRICH_HARD_CEILING. */
+  limit?: number;
+  /** Wall-clock budget (ms) for the enrich phase. Defaults to ENRICH_TIME_BUDGET_MS. */
+  timeBudgetMs?: number;
 }): Promise<SyncResult> {
   const start = Date.now();
+  const enrichLimit = Math.min(Math.max(1, opts?.limit ?? MAX_ENRICH_PER_RUN), ENRICH_HARD_CEILING);
+  const timeBudgetMs = opts?.timeBudgetMs ?? ENRICH_TIME_BUDGET_MS;
   const tmdbKey = process.env.TMDB_API_KEY;
   const omdbKey = process.env.OMDB_API_KEY;
   if (!tmdbKey) throw new Error("TMDB_API_KEY is not configured");
@@ -768,14 +781,22 @@ export async function syncCatalog(opts?: {
     return la - lb;
   });
 
-  const toRefresh = candidates.slice(0, MAX_ENRICH_PER_RUN);
+  const toRefresh = candidates.slice(0, enrichLimit);
 
   let refreshed = 0;
   let failed = 0;
   let omdbCalls = 0;
+  let budgetHit = false;
   const rows: MediaRow[] = [];
 
   await mapWithLimit(toRefresh, 6, async (item) => {
+    // Soft deadline: once we're past the budget, stop STARTING new enrichments
+    // (in-flight ones still finish). Keeps the request short so the host won't
+    // kill it and 502. The loop's next pass picks up where this one left off.
+    if (Date.now() - start > timeBudgetMs) {
+      budgetHit = true;
+      return;
+    }
     try {
       const [type, rawId] = item.id.split("-");
       const rawTmdb = await tmdb<TmdbDetails & Record<string, unknown>>(
@@ -818,6 +839,12 @@ export async function syncCatalog(opts?: {
   if (refreshed > 0) {
     const { error } = await supabaseAdmin.from("trending_cache").delete().eq("key", "trending");
     if (error) console.error("[sync] trending_cache bust failed:", error.message);
+  }
+
+  if (budgetHit) {
+    console.log(
+      `[sync] time budget (${timeBudgetMs}ms) reached — enriched ${refreshed} this pass; more remain for the next call`,
+    );
   }
 
   return {
