@@ -1309,7 +1309,7 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
             const items = rows
               .filter((r) => r.summary_payload)
               .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
-              .map((r) => r.summary_payload as unknown as MediaItem);
+              .map((r) => slimCatalogItem(r.summary_payload as unknown as MediaItem));
             if (items.length > 0) return items;
           }
         }
