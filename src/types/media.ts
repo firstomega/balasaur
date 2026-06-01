@@ -64,6 +64,12 @@ export interface MediaItem {
   seasons?: MediaSeason[];
   releaseDate?: string;
   origins?: string[];
+  /**
+   * For TV: the latest season air year, precomputed server-side so the catalog
+   * payload can omit the heavy `seasons` array. MediaCard uses this for the
+   * `year–endYear` range display.
+   */
+  lastAirYear?: string;
 }
 
 export interface MediaDetail extends MediaItem {
