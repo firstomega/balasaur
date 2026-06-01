@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Zap, LogOut, User } from "lucide-react";
+import { Zap, LogOut, User, Pencil, Settings } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { DinoMark } from "./DinoMark";
 import { useAuth } from "@/hooks/useAuth";
+import { useMyProfile } from "@/hooks/useMyProfile";
+import { Avatar } from "./Avatar";
 import { AuthDialog } from "./AuthDialog";
 import { TopBarSearch } from "./TopBarSearch";
 import {
@@ -16,6 +18,7 @@ import {
 
 export function TopBar() {
   const { user, signOut } = useAuth();
+  const { data: profile } = useMyProfile();
   const [authOpen, setAuthOpen] = useState(false);
 
   return (
@@ -52,26 +55,78 @@ export function TopBar() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex max-w-[180px] items-center gap-1.5 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[12px] text-text-bright hover:border-border-strong"
+                  className="inline-flex max-w-[200px] items-center gap-2 rounded-[5px] border border-border bg-panel px-2 py-1 font-mono text-[12px] text-text-bright hover:border-border-strong"
                 >
-                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] uppercase text-primary-foreground">
-                    {user.email?.[0] ?? "?"}
+                  {profile ? (
+                    <Avatar
+                      username={profile.username}
+                      displayName={profile.displayName}
+                      preset={profile.avatarPreset}
+                      size={22}
+                      className="text-[10px]"
+                    />
+                  ) : (
+                    <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-primary text-[10px] uppercase text-primary-foreground">
+                      {user.email?.[0] ?? "?"}
+                    </span>
+                  )}
+                  <span className="hidden truncate sm:inline">
+                    {profile ? profile.displayName || `@${profile.username}` : user.email}
                   </span>
-                  <span className="hidden truncate sm:inline">{user.email}</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="border-border bg-panel font-mono text-[12px] text-text-bright"
+                className="min-w-[210px] border-border bg-panel font-mono text-[12px] text-text-bright"
               >
-                <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-text-dim">
-                  Signed in
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-border" />
+                {profile ? (
+                  <>
+                    {/* Public identity */}
+                    <DropdownMenuLabel className="flex items-center gap-2 py-2">
+                      <Avatar
+                        username={profile.username}
+                        displayName={profile.displayName}
+                        preset={profile.avatarPreset}
+                        size={30}
+                        className="text-[12px]"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12px] text-text-bright">
+                          {profile.displayName || profile.username}
+                        </span>
+                        <span className="block truncate text-[10px] text-primary">
+                          @{profile.username}
+                        </span>
+                      </span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-border" />
+                    <DropdownMenuItem asChild className="cursor-pointer focus:bg-background">
+                      <a href={`/@${profile.username}`}>
+                        <User className="mr-2 h-3.5 w-3.5" />
+                        View profile
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer focus:bg-background">
+                      <Link to="/profile">
+                        <Pencil className="mr-2 h-3.5 w-3.5" />
+                        Edit profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-border" />
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-text-dim">
+                      Signed in
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-border" />
+                  </>
+                )}
+                {/* Private settings — deliberately separate from the public profile above */}
                 <DropdownMenuItem asChild className="cursor-pointer focus:bg-background">
                   <Link to="/account">
-                    <User className="mr-2 h-3.5 w-3.5" />
-                    Account
+                    <Settings className="mr-2 h-3.5 w-3.5" />
+                    Account settings
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem

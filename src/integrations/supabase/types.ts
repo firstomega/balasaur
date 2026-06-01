@@ -167,6 +167,42 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_preset: string | null
+          bio: string
+          created_at: string
+          display_name: string
+          favorite_genres: string[]
+          id: string
+          is_public: boolean
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          avatar_preset?: string | null
+          bio?: string
+          created_at?: string
+          display_name?: string
+          favorite_genres?: string[]
+          id: string
+          is_public?: boolean
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          avatar_preset?: string | null
+          bio?: string
+          created_at?: string
+          display_name?: string
+          favorite_genres?: string[]
+          id?: string
+          is_public?: boolean
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       trending_cache: {
         Row: {
           fetched_at: string
