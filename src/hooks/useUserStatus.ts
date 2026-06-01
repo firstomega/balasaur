@@ -119,6 +119,11 @@ export type RecordStatusFn = (
 export function useUserStatus() {
   const { user } = useAuth();
   const [statuses, setStatuses] = useState<StatusMap>({});
+  // Flips true once the initial status load (localStorage for anon, DB for
+  // signed-in) has settled, so consumers can build off real data instead of the
+  // empty initial map. The swipe deck depends on this to avoid re-showing titles
+  // the user has already filed.
+  const [ready, setReady] = useState(false);
   const migratedRef = useRef<string | null>(null);
   // One-shot count of picks just migrated local→account on sign-in. The deck
   // reads this to confirm "Saved your N picks", then calls clearJustMigrated().
@@ -128,6 +133,7 @@ export function useUserStatus() {
   useEffect(() => {
     if (user) return;
     setStatuses(read());
+    setReady(true);
     const onStorage = (e: StorageEvent) => {
       if (e.key === KEY) setStatuses(read());
     };
@@ -148,13 +154,23 @@ export function useUserStatus() {
         if (entries.length > 0) {
           const rows = entries.map(([id, rec]) => recordToInsert(user.id, id, rec));
           // onConflict ignore so we don't stomp newer server state.
-          await supabase
+          const { error: migrateErr } = await supabase
             .from("user_media_status")
             .upsert(rows, { onConflict: "user_id,media_id", ignoreDuplicates: true });
-          clearLocal();
-          if (!cancelled) setJustMigrated(entries.length);
+          // Supabase RETURNS the error rather than throwing, so it must be checked
+          // before clearing local data — otherwise a failed write silently destroys
+          // the user's picks while the UI tells them they were saved.
+          if (migrateErr) {
+            console.error("[userStatus] sign-in migration failed:", migrateErr.message);
+            // Keep localStorage and leave migratedRef unset so a later load retries.
+          } else {
+            clearLocal();
+            if (!cancelled) setJustMigrated(entries.length);
+            migratedRef.current = user.id;
+          }
+        } else {
+          migratedRef.current = user.id;
         }
-        migratedRef.current = user.id;
       }
 
       // 2. Load all rows for the user.
@@ -164,12 +180,17 @@ export function useUserStatus() {
           "media_id, media_type, title, poster_url, year, status, sentiment, intent, rewatch_ok, updated_at",
         )
         .eq("user_id", user.id);
-      if (cancelled || error || !data) return;
-      const map: StatusMap = {};
-      for (const row of data as DbRow[]) {
-        map[row.media_id] = rowToRecord(row);
+      if (cancelled) return;
+      if (!error && data) {
+        const map: StatusMap = {};
+        for (const row of data as DbRow[]) {
+          map[row.media_id] = rowToRecord(row);
+        }
+        setStatuses(map);
       }
-      setStatuses(map);
+      // Mark ready even if the load failed, so the UI proceeds with what we have
+      // rather than hanging — never block on a spinner forever.
+      setReady(true);
     })();
 
     return () => {
@@ -250,6 +271,7 @@ export function useUserStatus() {
     seenIds,
     recordStatus,
     isAnonymous: !user,
+    ready,
     count,
     justMigrated,
     clearJustMigrated,
