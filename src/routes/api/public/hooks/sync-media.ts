@@ -13,9 +13,10 @@ export const Route = createFileRoute("/api/public/hooks/sync-media")({
     handlers: {
       POST: async ({ request }) => {
         const apikey = request.headers.get("apikey");
-        // Gate with the server-only service role key. The publishable/anon
-        // key is shipped to every browser and cannot be used as a secret.
-        const expected = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        // Gate with a server-only shared secret (SYNC_HOOK_SECRET), falling back to
+        // the service-role key for the platform's own pg_cron. The publishable/anon
+        // key is shipped to every browser and can't be used as a secret.
+        const expected = process.env.SYNC_HOOK_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!expected || apikey !== expected) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,

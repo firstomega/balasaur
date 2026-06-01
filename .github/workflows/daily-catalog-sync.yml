@@ -5,8 +5,8 @@ name: Daily catalog sync
 # capped), so the catalog climbs toward full coverage over several days and
 # streaming availability stays fresh — no manual triggering.
 #
-# Verify runs in the repo's Actions tab. No repo secrets needed: the Supabase
-# Requires a GitHub repository secret named SUPABASE_SERVICE_ROLE_KEY (server-
+# Verify runs in the repo's Actions tab.
+# Requires a GitHub repository secret named SYNC_HOOK_SECRET (server-
 # only key — never commit it to the repo). Add it under Settings → Secrets and
 # variables → Actions.
 
@@ -37,10 +37,10 @@ jobs:
       - name: Trigger catalog sync
         env:
           BASE_URL: https://balasaur.com
-          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
         run: |
           if [ -z "$APIKEY" ]; then
-            echo "::error::Missing repo secret SUPABASE_SERVICE_ROLE_KEY"
+            echo "::error::Missing repo secret SYNC_HOOK_SECRET"
             exit 1
           fi
           echo "POST $BASE_URL/api/public/hooks/sync-media"
@@ -61,7 +61,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.backfill
         env:
           BASE_URL: https://balasaur.com
-          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
         run: |
           echo "POST $BASE_URL/api/public/hooks/backfill-media"
           HTTP=$(curl -sS -o /tmp/backfill.json -w "%{http_code}" \
