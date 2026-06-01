@@ -32,13 +32,15 @@ function primaryRating(item: MediaItem): { value: string; raw: number } | null {
 }
 
 function displayYear(item: MediaItem): string {
-  // TV: show a start–end range using the latest season's air year.
-  if (item.mediaType === "tv" && item.seasons && item.seasons.length > 0) {
-    let end = "";
-    for (const s of item.seasons) {
-      const y = s.airDate ? s.airDate.slice(0, 4) : "";
-      if (y && y > end) end = y;
-    }
+  // TV: show a start–end range. Catalog rows carry `lastAirYear` precomputed
+  // server-side; detail rows still carry full `seasons` and fall back below.
+  if (item.mediaType === "tv") {
+    const end =
+      item.lastAirYear ||
+      (item.seasons ?? []).reduce<string>((acc, s) => {
+        const y = s.airDate ? s.airDate.slice(0, 4) : "";
+        return y && y > acc ? y : acc;
+      }, "");
     if (item.year && end && end !== item.year) return `${item.year}–${end}`;
   }
   return item.year || "—";
