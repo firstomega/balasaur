@@ -367,11 +367,13 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
     // entirely from the wire payload. MediaCard reads `lastAirYear` instead
     // of iterating seasons.
     let lastAirYear: string | undefined;
+    let seasonCount: number | undefined;
     if (r.media_type === "tv" && seasons) {
       for (const s of seasons) {
         const y = s?.airDate ? s.airDate.slice(0, 4) : "";
         if (y && (!lastAirYear || y > lastAirYear)) lastAirYear = y;
       }
+      seasonCount = seasons.length;
     }
     return {
       id: r.media_id,
@@ -393,6 +395,7 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
       people: (r.people as unknown as MediaPerson[]) ?? [],
       popularity: r.popularity ?? undefined,
       lastAirYear,
+      seasonCount,
       releaseDate: r.release_date ?? undefined,
       awardWinner: r.award_winner ?? false,
       awardNominee: r.award_nominee ?? false,
