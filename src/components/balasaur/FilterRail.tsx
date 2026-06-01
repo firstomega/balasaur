@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-import type { MediaItem } from "@/types/media";
+import { useServerFn } from "@tanstack/react-start";
 import type { FilterState } from "@/types/filters";
 import {
   IMDB_BOUNDS,
@@ -20,15 +20,14 @@ import {
 } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { originFacetCounts, searchPeople } from "@/lib/filterMedia";
+import { searchCast, type CatalogFacets } from "@/lib/catalog.functions";
 import { ProviderIcon, type ProviderName } from "./ProviderIcon";
 import { MediaTypeSwitch, modeFromSet, setFromMode } from "./MediaTypeSwitch";
 
 interface Props {
   filters: FilterState;
   setFilters: (updater: (prev: FilterState) => FilterState) => void;
-  allItems: MediaItem[];
-  seenIds: Set<string>;
+  facets: CatalogFacets | undefined;
 }
 
 const groupLabelClass = "font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-bright";
@@ -103,19 +102,14 @@ function GroupClear({ show, onClear }: { show: boolean; onClear: () => void }) {
   );
 }
 
-export function FilterRail({ filters, setFilters, allItems, seenIds }: Props) {
-  // Live per-origin counts (respecting every other active filter) so we can show
-  // a tally and grey out dead-end origins. When the catalog's origins haven't
-  // been populated yet, every count is 0 → all chips disable, which reads as
-  // "no origin data" instead of a click landing on a blank grid.
-  const originCounts = useMemo(
-    () => originFacetCounts(allItems, filters, seenIds),
-    [allItems, filters, seenIds],
-  );
-  const originTagged = useMemo(
-    () => allItems.reduce((n, it) => ((it.origins?.length ?? 0) > 0 ? n + 1 : n), 0),
-    [allItems],
-  );
+export function FilterRail({ filters, setFilters, facets }: Props) {
+  // Origin facet stats come from a cheap cached global aggregate rather than the
+  // full catalog. Counts let us grey out origins with no data; when origins haven't
+  // been populated yet every count is 0 → chips disable, reading as "no origin
+  // data" instead of a click landing on a blank grid.
+  const originCounts = facets?.origins ?? {};
+  const originTagged = facets?.tagged ?? 0;
+  const catalogTotal = facets?.total ?? 0;
 
   const toggleSet = <T,>(key: keyof FilterState, value: T) => {
     setFilters((prev) => {
@@ -236,7 +230,7 @@ export function FilterRail({ filters, setFilters, allItems, seenIds }: Props) {
             <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
             <div className="flex flex-wrap gap-1.5">
               {ORIGIN_OPTIONS.map((o) => {
-                const count = originCounts.get(o) ?? 0;
+                const count = originCounts[o] ?? 0;
                 const active = filters.origins.has(o);
                 return (
                   <Pill
@@ -252,7 +246,7 @@ export function FilterRail({ filters, setFilters, allItems, seenIds }: Props) {
               })}
             </div>
             <div className="mt-2 font-mono text-[10px] text-text-dim">
-              {originTagged.toLocaleString()} of {allItems.length.toLocaleString()} tagged
+              {originTagged.toLocaleString()} of {catalogTotal.toLocaleString()} tagged
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -315,7 +309,7 @@ export function FilterRail({ filters, setFilters, allItems, seenIds }: Props) {
             <div className="px-1">
               <GroupClear show={activeGroups.has("rating")} onClear={() => clearGroup("rating")} />
             </div>
-            <RatingSliders filters={filters} setFilters={setFilters} allItems={allItems} />
+            <RatingSliders filters={filters} setFilters={setFilters} facets={facets} />
           </AccordionContent>
         </AccordionItem>
 
@@ -326,7 +320,7 @@ export function FilterRail({ filters, setFilters, allItems, seenIds }: Props) {
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <GroupClear show={activeGroups.has("people")} onClear={() => clearGroup("people")} />
-            <PeoplePicker filters={filters} setFilters={setFilters} allItems={allItems} />
+            <PeoplePicker filters={filters} setFilters={setFilters} />
           </AccordionContent>
         </AccordionItem>
 
@@ -366,17 +360,17 @@ export function FilterRail({ filters, setFilters, allItems, seenIds }: Props) {
 function RatingSliders({
   filters,
   setFilters,
-  allItems,
+  facets,
 }: {
   filters: FilterState;
   setFilters: Props["setFilters"];
-  allItems: MediaItem[];
+  facets: CatalogFacets | undefined;
 }) {
   const rows: {
     label: string;
     key: "imdbRange" | "rtRange" | "metaRange";
     includeKey: "includeUnratedImdb" | "includeUnratedRt" | "includeUnratedMeta";
-    ratingKey: "imdb" | "rottenTomatoes" | "metacritic";
+    scoredKey: "imdb" | "rt" | "meta";
     bounds: [number, number];
     step: number;
     suffix?: string;
@@ -385,7 +379,7 @@ function RatingSliders({
       label: "IMDb",
       key: "imdbRange",
       includeKey: "includeUnratedImdb",
-      ratingKey: "imdb",
+      scoredKey: "imdb",
       bounds: IMDB_BOUNDS,
       step: 0.1,
     },
@@ -393,7 +387,7 @@ function RatingSliders({
       label: "Rotten Tomatoes",
       key: "rtRange",
       includeKey: "includeUnratedRt",
-      ratingKey: "rottenTomatoes",
+      scoredKey: "rt",
       bounds: RT_BOUNDS,
       step: 1,
       suffix: "%",
@@ -402,22 +396,19 @@ function RatingSliders({
       label: "Metacritic",
       key: "metaRange",
       includeKey: "includeUnratedMeta",
-      ratingKey: "metacritic",
+      scoredKey: "meta",
       bounds: META_BOUNDS,
       step: 1,
     },
   ];
 
-  const total = allItems.length;
+  const total = facets?.total ?? 0;
 
   return (
     <div className="space-y-4 px-1">
       {rows.map((row) => {
         const value = filters[row.key];
-        const covered = allItems.reduce(
-          (n, it) => (it.ratings[row.ratingKey] !== undefined ? n + 1 : n),
-          0,
-        );
+        const covered = facets?.scored[row.scoredKey] ?? 0;
         return (
           <div key={row.key}>
             <div className="mb-1.5 flex items-center justify-between">
@@ -465,17 +456,35 @@ function RatingSliders({
 function PeoplePicker({
   filters,
   setFilters,
-  allItems,
 }: {
   filters: FilterState;
   setFilters: Props["setFilters"];
-  allItems: MediaItem[];
 }) {
   const [query, setQuery] = useState("");
-  const matches = useMemo(
-    () => (query.trim() ? searchPeople(allItems, query, filters.people) : []),
-    [query, allItems, filters.people],
-  );
+  const [matches, setMatches] = useState<string[]>([]);
+  const search = useServerFn(searchCast);
+
+  // Debounced server-side cast/crew search (replaces scanning the in-memory catalog).
+  useEffect(() => {
+    const qq = query.trim();
+    if (!qq) {
+      setMatches([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const res = await search({ data: { query: qq, exclude: filters.people } });
+        if (!cancelled) setMatches(res);
+      } catch {
+        if (!cancelled) setMatches([]);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query, filters.people, search]);
 
   const add = (name: string) => {
     setFilters((prev) =>

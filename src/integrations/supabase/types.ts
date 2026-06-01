@@ -271,7 +271,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      catalog_facets: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      search_cast: {
+        Args: { p_q: string; p_exclude?: string[] }
+        Returns: { name: string }[]
+      }
     }
     Enums: {
       [_ in never]: never
