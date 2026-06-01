@@ -118,8 +118,8 @@ export function MediaCard({
         )}
         <p className="mt-1 font-mono text-[10.5px] text-text-muted">
           {displayYear(item)} · {TYPE_CAPTION[item.mediaType]}
-          {item.mediaType === "tv" && item.seasons && item.seasons.length > 0
-            ? ` · ${item.seasons.length}S`
+          {item.mediaType === "tv" && (item.seasonCount ?? item.seasons?.length ?? 0) > 0
+            ? ` · ${item.seasonCount ?? item.seasons?.length}S`
             : ""}
         </p>
       </div>
