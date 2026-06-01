@@ -314,13 +314,19 @@ export async function listSitemapEntries(
 export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaItem[]> {
   // PostgREST caps a single response at 1000 rows regardless of .limit(),
   // so page with .range() until we hit `limit` or run out of rows.
+  // IMPORTANT: this is the HOMEPAGE catalog payload — every byte we ship here
+  // ends up in the SSR HTML and the client hydration JSON. Project only the
+  // fields used by MediaCard + filterMedia + FilterRail. Heavy fields like
+  // `overview` (300+ chars/row) and `seasons` (JSON array, can be 4KB+ on
+  // long-running shows) are intentionally excluded — they're fetched on the
+  // detail page where they're actually rendered. `lastAirYear` replaces
+  // `seasons` for the card's year-range display.
   type Row = {
     media_id: string;
     media_type: string;
     title: string;
     year: string | null;
     poster_url: string | null;
-    overview: string | null;
     popularity: number | null;
     release_date: string | null;
     rating_imdb: number | null;
@@ -330,7 +336,6 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
     genres: string[] | null;
     origins: string[] | null;
     streaming: string[] | null;
-    length_label: string | null;
     people: unknown;
     seasons: unknown;
     award_winner: boolean | null;
@@ -342,7 +347,7 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
-        "media_id,media_type,title,year,poster_url,overview,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,length_label,people,seasons,award_winner,award_nominee",
+        "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,people,seasons,award_winner,award_nominee",
       )
       .order("popularity", { ascending: false, nullsFirst: false })
       .range(offset, end);
@@ -356,13 +361,26 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
     if (page.length < end - offset + 1) break; // exhausted
   }
 
-  return rows.map(
-    (r): MediaItem => ({
+  return rows.map((r): MediaItem => {
+    const seasons = r.seasons as MediaSeason[] | null;
+    // Precompute the latest season air year so we can drop the seasons array
+    // entirely from the wire payload. MediaCard reads `lastAirYear` instead
+    // of iterating seasons.
+    let lastAirYear: string | undefined;
+    let seasonCount: number | undefined;
+    if (r.media_type === "tv" && seasons) {
+      for (const s of seasons) {
+        const y = s?.airDate ? s.airDate.slice(0, 4) : "";
+        if (y && (!lastAirYear || y > lastAirYear)) lastAirYear = y;
+      }
+      seasonCount = seasons.length;
+    }
+    return {
       id: r.media_id,
       mediaType: r.media_type as MediaItem["mediaType"],
       title: r.title,
       year: r.year ?? "",
-      overview: r.overview ?? "",
+      overview: "", // intentionally omitted — fetched on detail page
       posterUrl: r.poster_url ?? "",
       ratings: {
         imdb: r.rating_imdb ?? undefined,
@@ -373,15 +391,16 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
       genres: r.genres ?? [],
       origins: r.origins ?? [],
       streaming: r.streaming ?? [],
-      lengthLabel: r.length_label ?? "",
+      lengthLabel: "", // intentionally omitted — fetched on detail page
       people: (r.people as unknown as MediaPerson[]) ?? [],
       popularity: r.popularity ?? undefined,
-      seasons: (r.seasons as unknown as MediaSeason[] | null) ?? undefined,
+      lastAirYear,
+      seasonCount,
       releaseDate: r.release_date ?? undefined,
       awardWinner: r.award_winner ?? false,
       awardNominee: r.award_nominee ?? false,
-    }),
-  );
+    };
+  });
 }
 
 /**
@@ -411,11 +430,45 @@ async function loadCatalogFromCache(limit = CATALOG_LIMIT): Promise<MediaItem[]>
     }
     return rows
       .filter((r) => r.summary_payload)
-      .map((r) => r.summary_payload as unknown as MediaItem);
+      .map((r) => {
+        // Cached payloads were written before the slimmed-catalog change and
+        // may still contain `overview` / `seasons`. Strip them on the way out
+        // so the fail-soft path is just as lean as the live read.
+        const item = r.summary_payload as unknown as MediaItem;
+        return slimCatalogItem(item);
+      });
   } catch (e) {
     console.error("[cache] last-known-good read threw:", e);
     return [];
   }
+}
+
+/**
+ * Strip detail-page fields from a cached MediaItem so the wire payload stays
+ * small even when reading historical summary_payload rows. Precomputes
+ * `lastAirYear` from `seasons` before dropping the array, matching what
+ * `loadCatalogFromDb` returns now.
+ */
+function slimCatalogItem(item: MediaItem): MediaItem {
+  let lastAirYear = item.lastAirYear;
+  let seasonCount = item.seasonCount;
+  if (!lastAirYear && item.mediaType === "tv" && item.seasons) {
+    for (const s of item.seasons) {
+      const y = s?.airDate ? s.airDate.slice(0, 4) : "";
+      if (y && (!lastAirYear || y > lastAirYear)) lastAirYear = y;
+    }
+  }
+  if (seasonCount === undefined && item.mediaType === "tv" && item.seasons) {
+    seasonCount = item.seasons.length;
+  }
+  return {
+    ...item,
+    overview: "",
+    lengthLabel: "",
+    seasons: undefined,
+    lastAirYear,
+    seasonCount,
+  };
 }
 
 interface DiscoverResult {
@@ -1264,7 +1317,7 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
             const items = rows
               .filter((r) => r.summary_payload)
               .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
-              .map((r) => r.summary_payload as unknown as MediaItem);
+              .map((r) => slimCatalogItem(r.summary_payload as unknown as MediaItem));
             if (items.length > 0) return items;
           }
         }
