@@ -70,6 +70,11 @@ export interface MediaItem {
    * `year–endYear` range display.
    */
   lastAirYear?: string;
+  /**
+   * For TV: number of seasons (excluding specials), precomputed server-side
+   * so the catalog payload can omit the heavy `seasons` array.
+   */
+  seasonCount?: number;
 }
 
 export interface MediaDetail extends MediaItem {
