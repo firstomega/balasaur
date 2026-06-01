@@ -27,7 +27,7 @@ const POSTGREST_PAGE = 1000;
 const DISCOVER_PAGES = 500; // TMDB max: ~10,000 of each type — enough headroom to keep adding new titles
 const TOP_RATED_PAGES = 25; // ~500 of each type — classics
 const TRENDING_PAGES = 5; // ~100 of each type — currently hot
-const OMDB_BUDGET_PER_RUN = 900; // free tier is ~1000/day, leave headroom
+const OMDB_BUDGET_PER_RUN = 1500; // patron tier ~100k/day; ≥ MAX_ENRICH so every enriched title also gets OMDb ratings
 const MAX_ENRICH_PER_RUN = 1200; // prioritize catalog growth; OMDb enrichment stops at the budget above
 const TMDB_APPEND =
   "external_ids,credits,watch/providers,keywords,release_dates,content_ratings,images,videos,recommendations,similar";

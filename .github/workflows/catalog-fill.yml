@@ -1,0 +1,84 @@
+name: Catalog fill (loop)
+
+# One-shot "fill the catalog" job: repeatedly POSTs the same apikey-gated sync
+# endpoint the daily cron uses, looping until the catalog is caught up (a pass that
+# enriches 0 new titles) or the iteration budget is hit. Each pass enriches up to
+# MAX_ENRICH_PER_RUN titles and is bounded by the ~14.5-min request window, so the
+# loop is how we ingest tens of thousands of titles without a single long request.
+#
+# Reuses the existing repo secret SUPABASE_SERVICE_ROLE_KEY (same gate as the daily
+# sync). Manual-only — kick it from the Actions tab.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_iterations:
+        description: "Max sync passes (each ~14 min; stops early once caught up)"
+        default: "30"
+      backfill:
+        description: "Run one backfill pass first (re-derive genres/origins/streaming/awards from stored raw)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: catalog-fill
+  cancel-in-progress: false
+
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350 # under the 360-min GitHub job ceiling
+    steps:
+      - name: Check secret
+        env:
+          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$APIKEY" ]; then
+            echo "::error::Missing repo secret SUPABASE_SERVICE_ROLE_KEY"
+            exit 1
+          fi
+
+      - name: Optional backfill pass
+        if: ${{ inputs.backfill }}
+        env:
+          BASE_URL: https://balasaur.com
+          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "POST $BASE_URL/api/public/hooks/backfill-media"
+          HTTP=$(curl -sS -o /tmp/bf.json -w "%{http_code}" \
+            -X POST "$BASE_URL/api/public/hooks/backfill-media" \
+            -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+            --max-time 870 -d '{}')
+          echo "HTTP $HTTP"; echo "Response:"; cat /tmp/bf.json; echo
+
+      - name: Fill loop
+        env:
+          BASE_URL: https://balasaur.com
+          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MAX: ${{ inputs.max_iterations }}
+        run: |
+          total_refreshed=0
+          for i in $(seq 1 "$MAX"); do
+            echo "──────── sync pass $i / $MAX ────────"
+            HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
+              -X POST "$BASE_URL/api/public/hooks/sync-media" \
+              -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+              --max-time 870 -d '{}')
+            echo "HTTP $HTTP"; echo "Response:"; cat /tmp/sync.json; echo
+            if [ "$HTTP" != "200" ]; then
+              echo "::error::sync pass $i failed with HTTP $HTTP"
+              exit 1
+            fi
+            # How many titles this pass enriched. Non-numeric (parse miss) → assume
+            # progress and keep going, so we never stop the fill prematurely.
+            refreshed=$(jq -r '.refreshed // empty' /tmp/sync.json 2>/dev/null || true)
+            case "$refreshed" in '' | *[!0-9]*) refreshed=1 ;; esac
+            total_refreshed=$((total_refreshed + refreshed))
+            echo "pass $i: refreshed=$refreshed (cumulative=$total_refreshed)"
+            if [ "$refreshed" -eq 0 ]; then
+              echo "✅ Caught up — a pass enriched 0 new titles. Stopping at pass $i."
+              break
+            fi
+            sleep 10
+          done
+          echo "Done. Total titles enriched across the loop: $total_refreshed"
