@@ -8,6 +8,7 @@ import type { MediaDetail as MediaDetailType } from "@/types/media";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
+import { displayYear } from "@/lib/mediaFormat";
 import { WhereToWatch } from "./WhereToWatch";
 import {
   recordForStatus,
@@ -26,6 +27,19 @@ function fmtMoney(n?: number) {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(n);
+}
+
+// ISO-639-1 code → full English language name ("en" → "English"). Falls back to
+// the upper-cased code for anything Intl can't resolve.
+let langNames: Intl.DisplayNames | null = null;
+function languageName(code?: string): string {
+  if (!code) return "";
+  try {
+    langNames ??= new Intl.DisplayNames(["en"], { type: "language" });
+    return langNames.of(code.toLowerCase()) ?? code.toUpperCase();
+  } catch {
+    return code.toUpperCase();
+  }
 }
 
 function fmtRuntime(min?: number) {
@@ -132,11 +146,13 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
       ? fmtRuntime(detail.runtime)
       : detail.numberOfSeasons
         ? `${detail.numberOfSeasons} season${detail.numberOfSeasons === 1 ? "" : "s"}${
-            detail.numberOfEpisodes ? ` · ${detail.numberOfEpisodes}ep` : ""
+            detail.numberOfEpisodes
+              ? ` · ${detail.numberOfEpisodes} episode${detail.numberOfEpisodes === 1 ? "" : "s"}`
+              : ""
           }`
         : undefined;
 
-  const meta = [detail.year, typeLabel, length, detail.certification].filter(Boolean);
+  const meta = [displayYear(detail), typeLabel, length, detail.certification].filter(Boolean);
 
   return (
     <article>
@@ -236,7 +252,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               {ratings.metacritic !== undefined && (
                 <RatingTile label="Metacritic" value={ratings.metacritic} suffix="/100" />
               )}
-              {ratings.tmdb !== undefined && (
+              {ratings.tmdb !== undefined && ratings.imdb === undefined && (
                 <RatingTile label="TMDB" value={ratings.tmdb} suffix="/10" />
               )}
               {!ratings.imdb && !ratings.rottenTomatoes && !ratings.metacritic && !ratings.tmdb && (
@@ -344,7 +360,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               {fmtMoney(facts.budget) && <FactRow k="Budget" v={fmtMoney(facts.budget)!} />}
               {fmtMoney(facts.revenue) && <FactRow k="Box office" v={fmtMoney(facts.revenue)!} />}
               {facts.originalLanguage && (
-                <FactRow k="Language" v={facts.originalLanguage.toUpperCase()} />
+                <FactRow k="Language" v={languageName(facts.originalLanguage)} />
               )}
               {facts.productionCountries && facts.productionCountries.length > 0 && (
                 <FactRow k="Countries" v={facts.productionCountries.slice(0, 3).join(", ")} />

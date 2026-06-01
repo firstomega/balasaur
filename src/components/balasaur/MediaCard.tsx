@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Check, Eye } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
+import { displayYear } from "@/lib/mediaFormat";
 
 const TYPE_LABEL: Record<MediaType, string> = {
   movie: "MOVIE",
@@ -29,21 +30,6 @@ function primaryRating(item: MediaItem): { value: string; raw: number } | null {
   if (typeof imdb === "number") return { value: imdb.toFixed(1), raw: imdb };
   if (typeof tmdb === "number") return { value: tmdb.toFixed(1), raw: tmdb };
   return null;
-}
-
-function displayYear(item: MediaItem): string {
-  // TV: show a start–end range. Catalog rows carry `lastAirYear` precomputed
-  // server-side; detail rows still carry full `seasons` and fall back below.
-  if (item.mediaType === "tv") {
-    const end =
-      item.lastAirYear ||
-      (item.seasons ?? []).reduce<string>((acc, s) => {
-        const y = s.airDate ? s.airDate.slice(0, 4) : "";
-        return y && y > acc ? y : acc;
-      }, "");
-    if (item.year && end && end !== item.year) return `${item.year}–${end}`;
-  }
-  return item.year || "—";
 }
 
 export function MediaCard({
