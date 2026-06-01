@@ -50,7 +50,8 @@ interface Summary {
 }
 
 export function LibraryDeck({ items }: { items: MediaItem[] }) {
-  const { statuses, recordStatus, isAnonymous, justMigrated, clearJustMigrated } = useUserStatus();
+  const { statuses, recordStatus, isAnonymous, justMigrated, clearJustMigrated, ready } =
+    useUserStatus();
   const { user } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
@@ -60,12 +61,18 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   // Build the deck once on mount. Untouched first; previously-skipped items
   // resurface at the back (deprioritized, never hidden). Filed items (like/
   // watched/didn't-watch) are excluded — they've left the deck.
+  // Build the deck once, the first time statuses have loaded (`ready`). statuses is
+  // read at that moment but kept out of the deps on purpose: every swipe mutates
+  // statuses, and we don't want the deck to reshuffle mid-session. Gating on
+  // `ready` fixes the bug where the deck was built against the empty initial
+  // statuses map (it loads async) and so re-showed titles already filed.
   const deck = useMemo(() => {
+    if (!ready) return [];
     const untouched = items.filter((i) => !statuses[i.id]);
     const skipped = items.filter((i) => statuses[i.id]?.status === "skipped");
     return [...untouched, ...skipped];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
+  }, [items, ready]);
 
   const [index, setIndex] = useState(0);
   const [summary, setSummary] = useState<Summary>({
@@ -150,6 +157,16 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [advance, done]);
+
+  if (!ready) {
+    return (
+      <div className="mx-auto flex h-[560px] w-full max-w-md items-center justify-center">
+        <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+          Loading…
+        </span>
+      </div>
+    );
+  }
 
   if (done || !current) {
     return (
