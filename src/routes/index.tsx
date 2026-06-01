@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Filter } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
@@ -10,10 +10,15 @@ import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
-import { mediaItemsQueryOptions, useMediaItems } from "@/hooks/useMediaItems";
+import {
+  useCatalogInfinite,
+  useCatalogFacets,
+  catalogInfiniteOptions,
+  catalogFacetsQueryOptions,
+  filtersToParams,
+} from "@/hooks/useCatalog";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
-import { applyFilters } from "@/lib/filterMedia";
 import { recordForStatus } from "@/lib/userStatus";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import type { MediaItem } from "@/types/media";
@@ -41,7 +46,16 @@ export const Route = createFileRoute("/")({
     ],
     links: [canonicalLink(SITE_ORIGIN + "/")],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(mediaItemsQueryOptions),
+  loader: async ({ context }) => {
+    // Prefetch the first page (default filters) + facet stats so the homepage is
+    // server-rendered and instant on first paint; the client hydrates from cache.
+    await Promise.all([
+      context.queryClient.ensureInfiniteQueryData(
+        catalogInfiniteOptions(filtersToParams(defaultFilterState())),
+      ),
+      context.queryClient.ensureQueryData(catalogFacetsQueryOptions),
+    ]);
+  },
   errorComponent: HomeError,
   component: HomePage,
 });
@@ -80,7 +94,7 @@ function HomePage() {
         {/* Desktop rail */}
         <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 md:block">
           <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-            <RailWithData filters={filters} setFilters={setFilters} seenIds={seenIds} />
+            <RailWithData filters={filters} setFilters={setFilters} />
           </Suspense>
         </aside>
 
@@ -116,7 +130,7 @@ function HomePage() {
           </SheetHeader>
           <div className="mt-3">
             <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-              <RailWithData filters={filters} setFilters={setFilters} seenIds={seenIds} />
+              <RailWithData filters={filters} setFilters={setFilters} />
             </Suspense>
           </div>
         </SheetContent>
@@ -128,14 +142,12 @@ function HomePage() {
 function RailWithData({
   filters,
   setFilters,
-  seenIds,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
-  seenIds: Set<string>;
 }) {
-  const { data } = useMediaItems();
-  return <FilterRail filters={filters} setFilters={setFilters} allItems={data} seenIds={seenIds} />;
+  const { data: facets } = useCatalogFacets();
+  return <FilterRail filters={filters} setFilters={setFilters} facets={facets} />;
 }
 
 function GridWithControls({
@@ -151,9 +163,32 @@ function GridWithControls({
   onOpenMobileFilters: () => void;
   onQuickWatch: (item: MediaItem) => void;
 }) {
-  const { data } = useMediaItems();
-  const filtered = useMemo(() => applyFilters(data, filters, seenIds), [data, filters, seenIds]);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useCatalogInfinite(filters);
+
+  // Flatten loaded pages. "Hide seen" is applied to what's loaded (client-side),
+  // so the headline count stays the catalog total for the active filters.
+  const items = useMemo(() => {
+    const all = data?.pages.flatMap((pg) => pg.items) ?? [];
+    return filters.hideSeen ? all.filter((it) => !seenIds.has(it.id)) : all;
+  }, [data, filters.hideSeen, seenIds]);
+  const total = data?.pages[0]?.total ?? 0;
   const activeCount = countActive(filters);
+
+  // Infinite scroll: load the next page as the sentinel nears the viewport.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+      },
+      { rootMargin: "800px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <>
@@ -174,7 +209,7 @@ function GridWithControls({
         </button>
 
         <span className="font-mono text-[11px] text-text-muted">
-          <span className="text-text-bright">{filtered.length.toLocaleString()}</span> results
+          <span className="text-text-bright">{total.toLocaleString()}</span> results
         </span>
 
         <div className="ml-auto flex items-center gap-3">
@@ -199,9 +234,21 @@ function GridWithControls({
         <ActiveFilters filters={filters} setFilters={setFilters} />
       </div>
 
-      <MediaGrid items={filtered} onQuickWatch={onQuickWatch} watchedIds={seenIds} />
+      {isLoading && items.length === 0 ? (
+        <MediaGridSkeleton />
+      ) : (
+        <>
+          <MediaGrid items={items} onQuickWatch={onQuickWatch} watchedIds={seenIds} />
+          {hasNextPage && <div ref={sentinelRef} className="h-12" />}
+          {isFetchingNextPage && (
+            <div className="py-6 text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">
+              Loading more…
+            </div>
+          )}
+        </>
+      )}
 
-      {filtered.length === 0 && (
+      {!isLoading && total === 0 && (
         <div className="mt-10 flex flex-col items-center rounded-[5px] border border-border bg-panel p-8 text-center">
           <DinoMark className="h-8 w-8 text-primary opacity-80" />
           <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
