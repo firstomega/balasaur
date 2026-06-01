@@ -6,7 +6,7 @@ name: Catalog fill (loop)
 # MAX_ENRICH_PER_RUN titles and is bounded by the ~14.5-min request window, so the
 # loop is how we ingest tens of thousands of titles without a single long request.
 #
-# Reuses the existing repo secret SUPABASE_SERVICE_ROLE_KEY (same gate as the daily
+# Gated by the repo secret SYNC_HOOK_SECRET (same gate as the daily
 # sync). Manual-only — kick it from the Actions tab.
 
 on:
@@ -31,10 +31,10 @@ jobs:
     steps:
       - name: Check secret
         env:
-          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
         run: |
           if [ -z "$APIKEY" ]; then
-            echo "::error::Missing repo secret SUPABASE_SERVICE_ROLE_KEY"
+            echo "::error::Missing repo secret SYNC_HOOK_SECRET"
             exit 1
           fi
 
@@ -42,7 +42,7 @@ jobs:
         if: ${{ inputs.backfill }}
         env:
           BASE_URL: https://balasaur.com
-          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
         run: |
           echo "POST $BASE_URL/api/public/hooks/backfill-media"
           HTTP=$(curl -sS -o /tmp/bf.json -w "%{http_code}" \
@@ -54,7 +54,7 @@ jobs:
       - name: Fill loop
         env:
           BASE_URL: https://balasaur.com
-          APIKEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
           MAX: ${{ inputs.max_iterations }}
         run: |
           total_refreshed=0
