@@ -451,11 +451,15 @@ async function loadCatalogFromCache(limit = CATALOG_LIMIT): Promise<MediaItem[]>
  */
 function slimCatalogItem(item: MediaItem): MediaItem {
   let lastAirYear = item.lastAirYear;
+  let seasonCount = item.seasonCount;
   if (!lastAirYear && item.mediaType === "tv" && item.seasons) {
     for (const s of item.seasons) {
       const y = s?.airDate ? s.airDate.slice(0, 4) : "";
       if (y && (!lastAirYear || y > lastAirYear)) lastAirYear = y;
     }
+  }
+  if (seasonCount === undefined && item.mediaType === "tv" && item.seasons) {
+    seasonCount = item.seasons.length;
   }
   return {
     ...item,
@@ -463,6 +467,7 @@ function slimCatalogItem(item: MediaItem): MediaItem {
     lengthLabel: "",
     seasons: undefined,
     lastAirYear,
+    seasonCount,
   };
 }
 
