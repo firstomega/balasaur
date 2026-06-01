@@ -427,11 +427,40 @@ async function loadCatalogFromCache(limit = CATALOG_LIMIT): Promise<MediaItem[]>
     }
     return rows
       .filter((r) => r.summary_payload)
-      .map((r) => r.summary_payload as unknown as MediaItem);
+      .map((r) => {
+        // Cached payloads were written before the slimmed-catalog change and
+        // may still contain `overview` / `seasons`. Strip them on the way out
+        // so the fail-soft path is just as lean as the live read.
+        const item = r.summary_payload as unknown as MediaItem;
+        return slimCatalogItem(item);
+      });
   } catch (e) {
     console.error("[cache] last-known-good read threw:", e);
     return [];
   }
+}
+
+/**
+ * Strip detail-page fields from a cached MediaItem so the wire payload stays
+ * small even when reading historical summary_payload rows. Precomputes
+ * `lastAirYear` from `seasons` before dropping the array, matching what
+ * `loadCatalogFromDb` returns now.
+ */
+function slimCatalogItem(item: MediaItem): MediaItem {
+  let lastAirYear = item.lastAirYear;
+  if (!lastAirYear && item.mediaType === "tv" && item.seasons) {
+    for (const s of item.seasons) {
+      const y = s?.airDate ? s.airDate.slice(0, 4) : "";
+      if (y && (!lastAirYear || y > lastAirYear)) lastAirYear = y;
+    }
+  }
+  return {
+    ...item,
+    overview: "",
+    lengthLabel: "",
+    seasons: undefined,
+    lastAirYear,
+  };
 }
 
 interface DiscoverResult {
