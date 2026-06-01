@@ -68,6 +68,12 @@ function AccountPage() {
           <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
             Signed in as {user.email}
           </p>
+          <p className="mt-2 font-mono text-[11px] text-text-dim">
+            Private settings — only you can see this.{" "}
+            <Link to="/profile" className="text-primary hover:underline">
+              Manage your public profile →
+            </Link>
+          </p>
         </header>
 
         <div className="space-y-6">
