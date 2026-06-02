@@ -104,6 +104,8 @@ export interface MediaDetail extends MediaItem {
   imagesOriginal?: string[];
   trailer?: { key: string; name: string; site: "YouTube" };
   related?: MediaItem[];
+  /** Cross-category "more like this" — titles of the OTHER media type. */
+  relatedCross?: MediaItem[];
   keywords?: string[];
   providers?: WatchProviders;
   providersAll?: WatchProvidersAllRegions;
