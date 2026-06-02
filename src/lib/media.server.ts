@@ -303,6 +303,38 @@ export function parseAwards(text: string | undefined | null): AwardInfo {
   return info;
 }
 
+// The big-four awards we can reliably pull from OMDb's text, with the name patterns
+// OMDb uses ("Won N Oscars", "Nominated for N BAFTA", etc.).
+const AWARD_KEYS: { key: string; pattern: string }[] = [
+  { key: "oscar", pattern: "Oscars?" },
+  { key: "globe", pattern: "Golden Globes?" },
+  { key: "bafta", pattern: "BAFTA" },
+  { key: "emmy", pattern: "(?:Primetime )?Emmys?" },
+];
+
+/**
+ * Per-award won/nominated lists for the big four, parsed from OMDb's "Awards" text.
+ * `nominated` is a superset of `won` (a winner was, by definition, nominated).
+ */
+export function parseAwardDetail(text: string | undefined | null): {
+  won: string[];
+  nominated: string[];
+} {
+  const won = new Set<string>();
+  const nominated = new Set<string>();
+  if (text && text !== "N/A") {
+    for (const a of AWARD_KEYS) {
+      if (new RegExp(`won\\s+\\d+\\s+${a.pattern}`, "i").test(text)) {
+        won.add(a.key);
+        nominated.add(a.key);
+      } else if (new RegExp(`nominated for\\s+\\d+\\s+${a.pattern}`, "i").test(text)) {
+        nominated.add(a.key);
+      }
+    }
+  }
+  return { won: [...won], nominated: [...nominated] };
+}
+
 async function mapWithLimit<T, R>(
   items: T[],
   limit: number,
@@ -582,6 +614,7 @@ function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
 
 function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown): MediaRow {
   const awards = parseAwards((rawOmdb as OmdbResponse | null)?.Awards);
+  const awardDetail = parseAwardDetail((rawOmdb as OmdbResponse | null)?.Awards);
   return {
     media_id: item.id,
     media_type: item.mediaType,
@@ -609,6 +642,8 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     award_nominee: awards.nominee,
     award_wins: awards.wins ?? null,
     award_nominations: awards.nominations ?? null,
+    awards_won: awardDetail.won,
+    awards_nominated: awardDetail.nominated,
   };
 }
 
@@ -650,7 +685,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
-        "media_id, genres, origins, streaming, award_winner, award_nominee, award_wins, award_nominations, raw_tmdb, raw_omdb",
+        "media_id, genres, origins, streaming, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
       )
       .range(offset, offset + PAGE - 1);
     if (error) {
@@ -679,6 +714,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
 
         const awardsText = (row.raw_omdb as { Awards?: string } | null)?.Awards;
         const awards = parseAwards(awardsText);
+        const awardDetail = parseAwardDetail(awardsText);
 
         const countries = [
           ...(raw?.origin_country ?? []),
@@ -696,12 +732,22 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
           (row.award_nominee ?? false) !== awards.nominee ||
           (row.award_wins ?? null) !== (awards.wins ?? null) ||
           (row.award_nominations ?? null) !== (awards.nominations ?? null);
+        const awardsDetailChanged =
+          JSON.stringify(awardDetail.won) !== JSON.stringify(row.awards_won ?? []) ||
+          JSON.stringify(awardDetail.nominated) !== JSON.stringify(row.awards_nominated ?? []);
 
         // Skip rows that don't actually change. On a large catalog only the rows that
         // need it (co-productions, etc.) get rewritten, so the backfill stays light and
         // won't time out — and re-runs fall straight through already-fixed rows, so it
         // reliably finishes.
-        if (!genresChanged && !originsChanged && !streamingChanged && !awardsChanged) continue;
+        if (
+          !genresChanged &&
+          !originsChanged &&
+          !streamingChanged &&
+          !awardsChanged &&
+          !awardsDetailChanged
+        )
+          continue;
 
         const { error: updErr } = await supabaseAdmin
           .from("media")
@@ -713,6 +759,8 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,
             award_nominations: awards.nominations ?? null,
+            awards_won: awardDetail.won,
+            awards_nominated: awardDetail.nominated,
             updated_at: new Date().toISOString(),
           })
           .eq("media_id", row.media_id);

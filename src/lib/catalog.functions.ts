@@ -26,6 +26,8 @@ export interface CatalogQueryParams {
   people: string[];
   awardWinners: boolean;
   nominated: boolean;
+  awardsWon: string[];
+  awardsNominated: string[];
   sort: string;
   limit: number;
   offset: number;
@@ -154,6 +156,10 @@ export const queryCatalog = createServerFn({ method: "GET" })
 
     if (p.awardWinners) q = q.eq("award_winner", true);
     else if (p.nominated) q = q.or("award_nominee.eq.true,award_winner.eq.true");
+
+    // Specific-award filters (OR within each status group; AND between won + nominated).
+    if (p.awardsWon.length) q = q.overlaps("awards_won", p.awardsWon);
+    if (p.awardsNominated.length) q = q.overlaps("awards_nominated", p.awardsNominated);
 
     // "By person": every selected name must be present in the cast (jsonb contains).
     for (const name of p.people) {

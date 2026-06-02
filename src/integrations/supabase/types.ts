@@ -20,6 +20,8 @@ export type Database = {
           award_nominee: boolean
           award_winner: boolean
           award_wins: number | null
+          awards_nominated: string[]
+          awards_won: string[]
           fetched_at: string
           genres: string[]
           length_label: string | null
@@ -50,6 +52,8 @@ export type Database = {
           award_nominee?: boolean
           award_winner?: boolean
           award_wins?: number | null
+          awards_nominated?: string[]
+          awards_won?: string[]
           fetched_at?: string
           genres?: string[]
           length_label?: string | null
@@ -79,6 +83,8 @@ export type Database = {
           award_nominee?: boolean
           award_winner?: boolean
           award_wins?: number | null
+          awards_nominated?: string[]
+          awards_won?: string[]
           fetched_at?: string
           genres?: string[]
           length_label?: string | null

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import type { FilterState } from "@/types/filters";
 import {
+  AWARD_OPTIONS,
   IMDB_BOUNDS,
   META_BOUNDS,
   RT_BOUNDS,
@@ -130,6 +131,19 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
     });
   };
 
+  // Per-award accolade state: each award is Off ("any"), Nominated, or Won.
+  const setAward = (key: string, status: "any" | "nominated" | "won") => {
+    setFilters((prev) => {
+      const won = new Set(prev.awardsWon);
+      const nom = new Set(prev.awardsNominated);
+      won.delete(key);
+      nom.delete(key);
+      if (status === "won") won.add(key);
+      else if (status === "nominated") nom.add(key);
+      return { ...prev, awardsWon: won, awardsNominated: nom };
+    });
+  };
+
   // Reset a single filter group back to its default, leaving everything else.
   const clearGroup = (group: string) => {
     const d = defaultFilterState();
@@ -158,7 +172,13 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
         case "people":
           return { ...prev, people: d.people };
         case "accolades":
-          return { ...prev, awardWinners: d.awardWinners, nominated: d.nominated };
+          return {
+            ...prev,
+            awardWinners: d.awardWinners,
+            nominated: d.nominated,
+            awardsWon: d.awardsWon,
+            awardsNominated: d.awardsNominated,
+          };
         default:
           return prev;
       }
@@ -183,7 +203,13 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
     )
       s.add("rating");
     if (filters.people.length > 0) s.add("people");
-    if (filters.awardWinners || filters.nominated) s.add("accolades");
+    if (
+      filters.awardWinners ||
+      filters.nominated ||
+      filters.awardsWon.size > 0 ||
+      filters.awardsNominated.size > 0
+    )
+      s.add("accolades");
     return s;
   }, [filters]);
 
@@ -366,6 +392,44 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
                 />
                 <span className="font-mono text-[11.5px] text-text-bright">Nominated</span>
               </label>
+            </div>
+
+            <div className="mt-3 space-y-2 border-t border-border pt-3">
+              <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+                By award
+              </div>
+              {AWARD_OPTIONS.map((a) => {
+                const status = filters.awardsWon.has(a.key)
+                  ? "won"
+                  : filters.awardsNominated.has(a.key)
+                    ? "nominated"
+                    : "any";
+                return (
+                  <div key={a.key} className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] text-text-muted">{a.label}</span>
+                    <div className="inline-flex rounded-[4px] border border-border bg-panel p-[2px]">
+                      {(["any", "nominated", "won"] as const).map((s) => {
+                        const active = status === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setAward(a.key, s)}
+                            className={
+                              "cursor-pointer rounded-[3px] px-2 py-[3px] font-mono text-[9.5px] uppercase tracking-wider transition-colors " +
+                              (active
+                                ? "bg-accent text-text-bright"
+                                : "text-text-muted hover:text-text-bright")
+                            }
+                          >
+                            {s === "any" ? "Any" : s === "nominated" ? "Nom." : "Won"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </AccordionContent>
         </AccordionItem>

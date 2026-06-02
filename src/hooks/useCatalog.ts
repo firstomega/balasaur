@@ -35,6 +35,8 @@ export function filtersToParams(filters: FilterState): CatalogBaseParams {
     people: filters.people,
     awardWinners: filters.awardWinners,
     nominated: filters.nominated,
+    awardsWon: [...filters.awardsWon],
+    awardsNominated: [...filters.awardsNominated],
     sort: filters.sort,
   };
 }
