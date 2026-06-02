@@ -43,6 +43,7 @@ export type Database = {
           release_date: string | null
           seasons: Json | null
           streaming: string[]
+          streaming_regions: string[]
           title: string
           updated_at: string
           year: string | null
@@ -74,6 +75,7 @@ export type Database = {
           release_date?: string | null
           seasons?: Json | null
           streaming?: string[]
+          streaming_regions?: string[]
           title: string
           updated_at?: string
           year?: string | null
@@ -105,6 +107,7 @@ export type Database = {
           release_date?: string | null
           seasons?: Json | null
           streaming?: string[]
+          streaming_regions?: string[]
           title?: string
           updated_at?: string
           year?: string | null

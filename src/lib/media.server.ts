@@ -142,6 +142,32 @@ function deriveStreaming(
   return Array.from(mapped);
 }
 
+/**
+ * Region-aware streaming availability. Scans the flatrate block for EVERY region in
+ * the TMDB watch/providers payload (not just US) and emits "Provider:REGION" tokens
+ * (e.g. "Netflix:GB"). Lets the homepage filter streaming by the viewer's account
+ * region. Shared by live enrichment and the raw backfill so both produce identical
+ * values. Region codes are upper-cased to match TMDB's ISO-3166-1 keys.
+ */
+function deriveStreamingRegions(
+  watchProviders:
+    | { results?: Record<string, { flatrate?: { provider_name: string }[] }> }
+    | undefined,
+): string[] {
+  const results = watchProviders?.results;
+  if (!results) return [];
+  const tokens = new Set<string>();
+  for (const [region, block] of Object.entries(results)) {
+    const flatrate = block?.flatrate;
+    if (!flatrate) continue;
+    for (const p of flatrate) {
+      const name = PROVIDER_NAME_MAP[p.provider_name];
+      if (name) tokens.add(`${name}:${region.toUpperCase()}`);
+    }
+  }
+  return Array.from(tokens);
+}
+
 const PROVIDER_LOGO_BASE = "https://image.tmdb.org/t/p/original";
 let providerLogoCache: { at: number; map: Record<string, string> } | null = null;
 const PROVIDER_LOGO_TTL_MS = 24 * 60 * 60 * 1000;
@@ -615,6 +641,13 @@ function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
 function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown): MediaRow {
   const awards = parseAwards((rawOmdb as OmdbResponse | null)?.Awards);
   const awardDetail = parseAwardDetail((rawOmdb as OmdbResponse | null)?.Awards);
+  const wp = (
+    rawTmdb as {
+      "watch/providers"?: {
+        results?: Record<string, { flatrate?: { provider_name: string }[] }>;
+      };
+    } | null
+  )?.["watch/providers"];
   return {
     media_id: item.id,
     media_type: item.mediaType,
@@ -631,6 +664,7 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     genres: item.genres,
     origins: item.origins ?? [],
     streaming: item.streaming,
+    streaming_regions: deriveStreamingRegions(wp),
     length_label: item.lengthLabel || null,
     people: item.people as unknown as MediaRow["people"],
     seasons: (item.seasons ?? null) as MediaRow["seasons"],
@@ -685,7 +719,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
-        "media_id, genres, origins, streaming, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
+        "media_id, genres, origins, streaming, streaming_regions, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
       )
       .range(offset, offset + PAGE - 1);
     if (error) {
@@ -722,11 +756,13 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
         ];
         const newOrigins = deriveOrigins(raw?.original_language, countries);
         const newStreaming = deriveStreaming(raw?.["watch/providers"]);
+        const newStreamingRegions = deriveStreamingRegions(raw?.["watch/providers"]);
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
         const streamingChanged =
-          JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []);
+          JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []) ||
+          JSON.stringify(newStreamingRegions) !== JSON.stringify(row.streaming_regions ?? []);
         const awardsChanged =
           (row.award_winner ?? false) !== awards.winner ||
           (row.award_nominee ?? false) !== awards.nominee ||
@@ -755,6 +791,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
             genres: newGenres,
             origins: newOrigins,
             streaming: newStreaming,
+            streaming_regions: newStreamingRegions,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,

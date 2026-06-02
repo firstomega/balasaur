@@ -89,6 +89,9 @@ function HomePage() {
   const [authOpen, setAuthOpen] = useState(false);
   const { seenIds, statuses, recordStatus } = useUserStatus();
   const { user } = useAuth();
+  // Per-country streaming: filter availability by the viewer's account region.
+  // Falls back to US for signed-out visitors / accounts with no region set.
+  const region = (user?.user_metadata?.region as string | undefined) || "US";
   const gridRef = useRef<HTMLDivElement>(null);
 
   const scrollToGrid = () => {
@@ -117,7 +120,7 @@ function HomePage() {
         {/* Desktop rail */}
         <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 md:block">
           <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-            <RailWithData filters={filters} setFilters={setFilters} />
+            <RailWithData filters={filters} setFilters={setFilters} region={region} />
           </Suspense>
         </aside>
 
@@ -129,6 +132,7 @@ function HomePage() {
                 filters={filters}
                 setFilters={setFilters}
                 seenIds={seenIds}
+                region={region}
                 onOpenMobileFilters={() => setMobileOpen(true)}
                 onQuickWatch={handleQuickWatch}
               />
@@ -153,7 +157,7 @@ function HomePage() {
           </SheetHeader>
           <div className="mt-3">
             <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-              <RailWithData filters={filters} setFilters={setFilters} />
+              <RailWithData filters={filters} setFilters={setFilters} region={region} />
             </Suspense>
           </div>
         </SheetContent>
@@ -165,11 +169,13 @@ function HomePage() {
 function RailWithData({
   filters,
   setFilters,
+  region,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
+  region: string;
 }) {
-  const { data: facets } = useCatalogFacets(filters);
+  const { data: facets } = useCatalogFacets(filters, region);
   return <FilterRail filters={filters} setFilters={setFilters} facets={facets} />;
 }
 
@@ -177,17 +183,21 @@ function GridWithControls({
   filters,
   setFilters,
   seenIds,
+  region,
   onOpenMobileFilters,
   onQuickWatch,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
   seenIds: Set<string>;
+  region: string;
   onOpenMobileFilters: () => void;
   onQuickWatch: (item: MediaItem) => void;
 }) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useCatalogInfinite(filters);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useCatalogInfinite(
+    filters,
+    region,
+  );
 
   // Flatten loaded pages. "Hide seen" is applied to what's loaded (client-side),
   // so the headline count stays the catalog total for the active filters.
