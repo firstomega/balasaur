@@ -5,6 +5,8 @@ export interface MediaRatings {
   rottenTomatoes?: number;
   metacritic?: number;
   tmdb?: number;
+  /** Balasaur Score: 0–100 blend of the external scores (+ user ratings, later). */
+  balasaur?: number;
 }
 
 export interface MediaPerson {
