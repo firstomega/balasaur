@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Filter } from "lucide-react";
+import { Filter, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
@@ -87,6 +87,24 @@ function HomePage() {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  // Desktop: collapse the whole filter rail to give the grid full width. Persisted
+  // so the choice sticks across visits. (Mobile uses the drawer, unaffected.)
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      setRailCollapsed(localStorage.getItem("balasaur:rail-collapsed") === "1");
+    } catch {
+      // storage unavailable — non-fatal
+    }
+  }, []);
+  const setRail = (v: boolean) => {
+    setRailCollapsed(v);
+    try {
+      localStorage.setItem("balasaur:rail-collapsed", v ? "1" : "0");
+    } catch {
+      // non-fatal
+    }
+  };
   const { seenIds, statuses, recordStatus } = useUserStatus();
   const { user } = useAuth();
   // Per-country streaming: filter availability by the viewer's account region.
@@ -117,12 +135,37 @@ function HomePage() {
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
       <div className="mx-auto flex max-w-[1600px] gap-5 px-4 py-5">
-        {/* Desktop rail */}
-        <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden">
-          <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-            <RailWithData filters={filters} setFilters={setFilters} region={region} />
-          </Suspense>
-        </aside>
+        {/* Desktop rail (collapsible) */}
+        {!railCollapsed ? (
+          <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden">
+            <div className="mb-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setRail(true)}
+                aria-label="Collapse filters"
+                title="Collapse filters"
+                className="cursor-pointer rounded-[4px] p-1 text-text-muted hover:bg-panel hover:text-text-bright"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            </div>
+            <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
+              <RailWithData filters={filters} setFilters={setFilters} region={region} />
+            </Suspense>
+          </aside>
+        ) : (
+          <div className="hidden shrink-0 md:block">
+            <button
+              type="button"
+              onClick={() => setRail(false)}
+              aria-label="Show filters"
+              title="Show filters"
+              className="sticky top-12 flex cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-panel px-2 py-2 font-mono text-[10px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         <main className="min-w-0 flex-1">
           {!user && <LandingHero onBrowse={scrollToGrid} />}

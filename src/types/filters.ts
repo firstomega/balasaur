@@ -2,7 +2,7 @@ import type { MediaType } from "./media";
 
 // "trending" is retired (it sorted identically to "popular"); kept in the union
 // so any persisted/old value still type-checks and falls back to popular sort.
-export type SortKey = "popular" | "newest" | "oldest" | "topRated" | "trending";
+export type SortKey = "popular" | "newest" | "oldest" | "topRated" | "az" | "za" | "trending";
 
 export interface RangeFilter {
   min: number;
