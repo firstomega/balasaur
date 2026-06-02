@@ -1,62 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { mediaItemsQueryOptions } from "@/hooks/useMediaItems";
-import type { MediaItem } from "@/types/media";
-
-interface ResultRow {
-  item: MediaItem;
-  matchedPerson?: { name: string; role: string };
-  score: number;
-}
-
-function normalize(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
-function scoreMatch(haystack: string, q: string): number {
-  if (!haystack) return 0;
-  const h = normalize(haystack);
-  if (h === q) return 100;
-  if (h.startsWith(q)) return 80;
-  const idx = h.indexOf(q);
-  if (idx >= 0) return 60 - Math.min(idx, 30);
-  // light fuzzy: all chars of q appear in order
-  let i = 0;
-  for (const c of h) {
-    if (c === q[i]) i++;
-    if (i === q.length) return 20;
-  }
-  return 0;
-}
-
-function searchCatalog(items: MediaItem[], query: string, limit = 8): ResultRow[] {
-  const q = normalize(query.trim());
-  if (!q) return [];
-  const out: ResultRow[] = [];
-  for (const item of items) {
-    const titleScore = scoreMatch(item.title, q);
-    let bestPerson: { name: string; role: string } | undefined;
-    let personScore = 0;
-    for (const p of item.people) {
-      const s = scoreMatch(p.name, q);
-      if (s > personScore) {
-        personScore = s;
-        bestPerson = { name: p.name, role: p.role };
-      }
-    }
-    const score = Math.max(titleScore, personScore * 0.7);
-    if (score <= 0) continue;
-    out.push({
-      item,
-      matchedPerson: titleScore >= personScore ? undefined : bestPerson,
-      score: score + (item.popularity ?? 0) / 10000,
-    });
-  }
-  out.sort((a, b) => b.score - a.score);
-  return out.slice(0, limit);
-}
+import { useServerFn } from "@tanstack/react-start";
+import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
 
 const TYPE_COLOR: Record<string, string> = {
   movie: "text-media-movie",
@@ -66,21 +12,42 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 export function TopBarSearch() {
-  // Non-suspense — TopBar sits above route Suspense boundaries.
-  const { data: items = [] } = useQuery(mediaItemsQueryOptions);
   const navigate = useNavigate();
+  const search = useServerFn(searchTitles);
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchHit[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = "topbar-search-results";
 
-  const results = useMemo(() => searchCatalog(items, query), [items, query]);
+  // Debounced server-side title search — the header no longer loads the whole
+  // catalog into the browser just to search it.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const hits = await search({ data: { query: q } });
+        if (!cancelled) setResults(hits);
+      } catch {
+        if (!cancelled) setResults([]);
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query, search]);
 
   useEffect(() => {
     setActive(0);
-  }, [query]);
+  }, [results]);
 
   // Outside click closes
   useEffect(() => {
@@ -95,7 +62,11 @@ export function TopBarSearch() {
   // Global "/" focuses search
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
         inputRef.current?.focus();
       }
@@ -104,14 +75,13 @@ export function TopBarSearch() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function go(row: ResultRow) {
-    const { item } = row;
-    if (item.mediaType !== "movie" && item.mediaType !== "tv") return;
-    const rawId = item.id.replace(/^(movie|tv)-/, "");
+  function go(hit: SearchHit) {
+    if (hit.mediaType !== "movie" && hit.mediaType !== "tv") return;
+    const rawId = hit.id.replace(/^(movie|tv)-/, "");
     setOpen(false);
     setQuery("");
     navigate({
-      to: item.mediaType === "movie" ? "/movie/$id" : "/tv/$id",
+      to: hit.mediaType === "movie" ? "/movie/$id" : "/tv/$id",
       params: { id: rawId },
     });
   }
@@ -133,8 +103,8 @@ export function TopBarSearch() {
       setActive((a) => Math.max(a - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const row = results[active];
-      if (row) go(row);
+      const hit = results[active];
+      if (hit) go(hit);
     }
   }
 
@@ -161,7 +131,7 @@ export function TopBarSearch() {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Search titles, people, genres…"
+          placeholder="Search titles…"
           className="h-8 w-full rounded-[5px] border border-border bg-panel pl-8 pr-8 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
         />
         {query && (
@@ -191,20 +161,17 @@ export function TopBarSearch() {
             </div>
           ) : (
             <ul className="py-1">
-              {results.map((row, i) => {
-                const { item, matchedPerson } = row;
+              {results.map((hit, i) => {
                 const isActive = i === active;
-                const rawId = item.id.replace(/^(movie|tv)-/, "");
-                const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
                 return (
                   <li
-                    key={item.id}
+                    key={hit.id}
                     role="option"
                     aria-selected={isActive}
                     onMouseEnter={() => setActive(i)}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      if (isLinkable) go(row);
+                      go(hit);
                     }}
                     className={
                       "flex cursor-pointer items-center gap-3 px-2 py-1.5 " +
@@ -212,9 +179,9 @@ export function TopBarSearch() {
                     }
                   >
                     <div className="h-12 w-8 shrink-0 overflow-hidden rounded-[3px] border border-border bg-background">
-                      {item.posterUrl ? (
+                      {hit.posterUrl ? (
                         <img
-                          src={item.posterUrl}
+                          src={hit.posterUrl}
                           alt=""
                           className="h-full w-full object-cover"
                           loading="lazy"
@@ -224,24 +191,18 @@ export function TopBarSearch() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">
                         <span className="truncate text-[12.5px] font-semibold text-text-bright">
-                          {item.title}
+                          {hit.title}
                         </span>
                         <span className="shrink-0 font-mono text-[10px] text-text-dim">
-                          {item.year || "—"}
+                          {hit.year || "—"}
                         </span>
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 font-mono text-[10px]">
                         <span
-                          className={`uppercase tracking-wider ${TYPE_COLOR[item.mediaType] ?? "text-text-muted"}`}
+                          className={`uppercase tracking-wider ${TYPE_COLOR[hit.mediaType] ?? "text-text-muted"}`}
                         >
-                          {item.mediaType}
+                          {hit.mediaType}
                         </span>
-                        {matchedPerson && (
-                          <span className="truncate text-text-muted">
-                            · with {matchedPerson.name}
-                            {matchedPerson.role ? ` (${matchedPerson.role})` : ""}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </li>

@@ -213,3 +213,45 @@ export const searchCast = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return ((rows ?? []) as { name: string }[]).map((r) => r.name).filter(Boolean);
   });
+
+export interface SearchHit {
+  id: string;
+  mediaType: string;
+  title: string;
+  year: string | null;
+  posterUrl: string | null;
+}
+
+/**
+ * Title search for the top-bar search box. Server-side (uses the title trigram
+ * index) so the header no longer loads the whole catalog into the browser just to
+ * search it. Substring match, most-popular first.
+ */
+export const searchTitles = createServerFn({ method: "GET" })
+  .inputValidator((input: { query: string }) => input)
+  .handler(async ({ data }): Promise<SearchHit[]> => {
+    const q = (data.query ?? "").trim();
+    if (q.length < 1) return [];
+    const { data: rows, error } = await supabaseAdmin
+      .from("media")
+      .select("media_id, media_type, title, year, poster_url")
+      .ilike("title", `%${q}%`)
+      .order("popularity", { ascending: false, nullsFirst: false })
+      .limit(10);
+    if (error) throw new Error(error.message);
+    return (
+      (rows ?? []) as Array<{
+        media_id: string;
+        media_type: string;
+        title: string;
+        year: string | null;
+        poster_url: string | null;
+      }>
+    ).map((r) => ({
+      id: r.media_id,
+      mediaType: r.media_type,
+      title: r.title,
+      year: r.year,
+      posterUrl: r.poster_url,
+    }));
+  });
