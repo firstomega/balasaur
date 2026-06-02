@@ -179,7 +179,12 @@ export const queryCatalog = createServerFn({ method: "GET" })
     }
 
     const { data, error, count } = await ordered.range(p.offset, p.offset + p.limit - 1);
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Fail-soft: never crash the homepage on a DB hiccup or a not-yet-applied
+      // migration — serve an empty page and self-heal once the DB is consistent.
+      console.error("[catalog] query failed:", error.message);
+      return { items: [], total: 0 };
+    }
     const items = ((data ?? []) as unknown as CardRow[]).map(rowToCardItem);
     return { items, total: count ?? 0 };
   });
@@ -195,7 +200,12 @@ export interface CatalogFacets {
 export const getCatalogFacets = createServerFn({ method: "GET" }).handler(
   async (): Promise<CatalogFacets> => {
     const { data, error } = await supabaseAdmin.rpc("catalog_facets");
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Fail-soft: a missing function / DB hiccup shows the rail without counts
+      // instead of taking down the homepage loader.
+      console.error("[facets] query failed:", error.message);
+      return { total: 0, tagged: 0, origins: {}, scored: { imdb: 0, rt: 0, meta: 0 } };
+    }
     const f = (data ?? {}) as Partial<CatalogFacets>;
     return {
       total: f.total ?? 0,
