@@ -57,12 +57,14 @@ export function useCatalogInfinite(filters: FilterState) {
   return useInfiniteQuery(catalogInfiniteOptions(filtersToParams(filters)));
 }
 
-export const catalogFacetsQueryOptions = queryOptions({
-  queryKey: ["catalog-facets"],
-  queryFn: () => getCatalogFacets(),
-  staleTime: 60 * 60 * 1000,
-});
+export function catalogFacetsOptions(base: CatalogBaseParams) {
+  return queryOptions({
+    queryKey: ["catalog-facets", base] as const,
+    queryFn: () => getCatalogFacets({ data: base }),
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
-export function useCatalogFacets() {
-  return useQuery(catalogFacetsQueryOptions);
+export function useCatalogFacets(filters: FilterState) {
+  return useQuery(catalogFacetsOptions(filtersToParams(filters)));
 }

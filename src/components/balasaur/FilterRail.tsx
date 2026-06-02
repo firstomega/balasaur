@@ -109,6 +109,7 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
   // full catalog. Counts let us grey out origins with no data; when origins haven't
   // been populated yet every count is 0 → chips disable, reading as "no origin
   // data" instead of a click landing on a blank grid.
+  const genreCounts = facets?.genres ?? {};
   const originCounts = facets?.origins ?? {};
   const originTagged = facets?.tagged ?? 0;
   const catalogTotal = facets?.total ?? 0;
@@ -239,15 +240,21 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
           <AccordionContent className="pb-3 pt-1">
             <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
             <div className="flex flex-wrap gap-1.5">
-              {UNIFIED_GENRES.map((g) => (
-                <Pill
-                  key={g}
-                  active={filters.genres.has(g)}
-                  onClick={() => toggleSet<string>("genres", g)}
-                >
-                  {g}
-                </Pill>
-              ))}
+              {UNIFIED_GENRES.map((g) => {
+                const count = genreCounts[g] ?? 0;
+                const active = filters.genres.has(g);
+                return (
+                  <Pill
+                    key={g}
+                    active={active}
+                    count={count}
+                    disabled={count === 0 && !active}
+                    onClick={() => toggleSet<string>("genres", g)}
+                  >
+                    {g}
+                  </Pill>
+                );
+              })}
             </div>
           </AccordionContent>
         </AccordionItem>
