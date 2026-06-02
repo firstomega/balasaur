@@ -9,6 +9,7 @@ import type {
 } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { deriveOrigins } from "./origins";
+import { computeBalasaurScore } from "./score";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
 
@@ -1049,6 +1050,11 @@ function crossRowToItem(r: CrossRow): MediaItem {
       rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
       metacritic: r.rating_metacritic ?? undefined,
       tmdb: r.rating_tmdb ?? undefined,
+      balasaur: computeBalasaurScore({
+        imdb: r.rating_imdb,
+        rottenTomatoes: r.rating_rotten_tomatoes,
+        metacritic: r.rating_metacritic,
+      }),
     },
     genres: r.genres ?? [],
     streaming: [],
