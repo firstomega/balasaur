@@ -23,6 +23,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { searchCast, type CatalogFacets } from "@/lib/catalog.functions";
+import { catalogFacetsOptions, filtersToParams } from "@/hooks/useCatalog";
 import { getProviderLogos } from "@/lib/media.functions";
 import { ProviderIcon, type ProviderName } from "./ProviderIcon";
 import { MediaTypeSwitch, modeFromSet, setFromMode } from "./MediaTypeSwitch";
@@ -31,6 +32,20 @@ interface Props {
   filters: FilterState;
   setFilters: (updater: (prev: FilterState) => FilterState) => void;
   facets: CatalogFacets | undefined;
+}
+
+// Order chips by count, descending, with the original list order as a stable
+// tiebreaker. Used to surface the most-populated genres / origins first.
+function sortByCount<T extends string>(
+  options: readonly T[],
+  counts: Record<string, number> | undefined,
+): T[] {
+  const base = [...options];
+  if (!counts) return base;
+  const idx = new Map<T, number>(base.map((o, i) => [o, i]));
+  return base.sort(
+    (a, b) => (counts[b] ?? 0) - (counts[a] ?? 0) || (idx.get(a) ?? 0) - (idx.get(b) ?? 0),
+  );
 }
 
 const groupLabelClass = "font-mono text-[10.5px] uppercase tracking-[0.12em] text-text-bright";
@@ -114,6 +129,23 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
   const originCounts = facets?.origins ?? {};
   const originTagged = facets?.tagged ?? 0;
   const catalogTotal = facets?.total ?? 0;
+
+  // Chip display order: sort genre/origin by OVERALL catalog popularity (the global,
+  // unfiltered counts — already prefetched for the homepage, so a cache hit) rather
+  // than the live faceted counts. The most-populated options sit first, but the order
+  // stays put as you change other filters instead of reshuffling on every count change;
+  // only the numbers on each chip update live.
+  const { data: globalFacets } = useQuery(
+    catalogFacetsOptions(filtersToParams(defaultFilterState())),
+  );
+  const genreOrder = useMemo(
+    () => sortByCount(UNIFIED_GENRES, globalFacets?.genres),
+    [globalFacets?.genres],
+  );
+  const originOrder = useMemo(
+    () => sortByCount(ORIGIN_OPTIONS, globalFacets?.origins),
+    [globalFacets?.origins],
+  );
 
   // Official provider logos (cached a day; empty → ProviderIcon shows its glyph).
   const { data: providerLogos } = useQuery({
@@ -266,7 +298,7 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
           <AccordionContent className="pb-3 pt-1">
             <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
             <div className="flex flex-wrap gap-1.5">
-              {UNIFIED_GENRES.map((g) => {
+              {genreOrder.map((g) => {
                 const count = genreCounts[g] ?? 0;
                 const active = filters.genres.has(g);
                 return (
@@ -321,7 +353,7 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
           <AccordionContent className="pb-3 pt-1">
             <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
             <div className="flex flex-wrap gap-1.5">
-              {ORIGIN_OPTIONS.map((o) => {
+              {originOrder.map((o) => {
                 const count = originCounts[o] ?? 0;
                 const active = filters.origins.has(o);
                 return (
