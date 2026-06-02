@@ -34,7 +34,7 @@ export interface CatalogQueryParams {
 // render them), which is most of the payload savings. `seasons` is read only to
 // derive the TV year range, then dropped before it goes to the client.
 const CARD_COLS =
-  "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,seasons,award_winner,award_nominee";
+  "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,rating_balasaur,genres,origins,streaming,seasons,award_winner,award_nominee";
 
 interface CardRow {
   media_id: string;
@@ -48,6 +48,7 @@ interface CardRow {
   rating_rotten_tomatoes: number | null;
   rating_metacritic: number | null;
   rating_tmdb: number | null;
+  rating_balasaur: number | null;
   genres: string[] | null;
   origins: string[] | null;
   streaming: string[] | null;
@@ -79,6 +80,7 @@ function rowToCardItem(r: CardRow): MediaItem {
       rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
       metacritic: r.rating_metacritic ?? undefined,
       tmdb: r.rating_tmdb ?? undefined,
+      balasaur: r.rating_balasaur ?? undefined,
     },
     genres: r.genres ?? [],
     origins: r.origins ?? [],

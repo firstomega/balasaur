@@ -3,6 +3,7 @@ import { Check, Eye } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
+import { ScoreBadge } from "./ScoreBadge";
 
 const TYPE_LABEL: Record<MediaType, string> = {
   movie: "MOVIE",
@@ -147,11 +148,15 @@ function CardArt({
           {TYPE_LABEL[item.mediaType]}
         </span>
       </div>
-      {rating && (
+      {typeof item.ratings.balasaur === "number" ? (
+        <div className="absolute right-1.5 top-1.5">
+          <ScoreBadge score={item.ratings.balasaur} />
+        </div>
+      ) : rating ? (
         <div className="absolute right-1.5 top-1.5 rounded-[4px] bg-background/85 px-1.5 py-0.5 backdrop-blur-sm">
           <span className="font-mono text-[10px] font-medium text-rating">★ {rating.value}</span>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

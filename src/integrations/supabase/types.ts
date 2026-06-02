@@ -30,10 +30,12 @@ export type Database = {
           people: Json
           popularity: number | null
           poster_url: string | null
+          rating_balasaur: number | null
           rating_imdb: number | null
           rating_metacritic: number | null
           rating_rotten_tomatoes: number | null
           rating_tmdb: number | null
+          rating_user_avg: number | null
           raw_omdb: Json | null
           raw_tmdb: Json | null
           release_date: string | null
@@ -62,6 +64,7 @@ export type Database = {
           rating_metacritic?: number | null
           rating_rotten_tomatoes?: number | null
           rating_tmdb?: number | null
+          rating_user_avg?: number | null
           raw_omdb?: Json | null
           raw_tmdb?: Json | null
           release_date?: string | null
@@ -90,6 +93,7 @@ export type Database = {
           rating_metacritic?: number | null
           rating_rotten_tomatoes?: number | null
           rating_tmdb?: number | null
+          rating_user_avg?: number | null
           raw_omdb?: Json | null
           raw_tmdb?: Json | null
           release_date?: string | null
