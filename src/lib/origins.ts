@@ -24,9 +24,19 @@ const ORIGIN_BUCKETS: OriginBucket[] = [
 export const ORIGIN_OPTIONS = ORIGIN_BUCKETS.map((b) => b.key);
 
 /**
- * Map a title's original language + production countries to origin bucket keys.
- * A title can match several (e.g. a UK/US co-production). Returns [] when nothing
- * recognizable matches — those titles are simply never excluded by the filter.
+ * Map a title to origin bucket key(s), LANGUAGE-FIRST.
+ *
+ * A distinctive original language (Korean, Japanese, Chinese, Indian languages,
+ * Spanish, French) resolves to a single bucket and wins over production country.
+ * This is the fix for co-productions: "Miraculous" is French-language but
+ * co-produced in South Korea, so the old "language OR any country" rule tagged it
+ * both French AND Korean. Language is the honest cultural signal (it's what the
+ * facts table shows), so we trust it and ignore co-pro countries.
+ *
+ * English / non-distinctive languages can't tell US from UK, so they fall back to
+ * production country — but only for the language-agnostic buckets (American /
+ * British), so a co-pro country can never pull in a language bucket. Returns []
+ * when nothing recognizable matches — those titles are simply never excluded.
  */
 export function deriveOrigins(
   originLanguage: string | null | undefined,
@@ -34,9 +44,17 @@ export function deriveOrigins(
 ): string[] {
   const lang = (originLanguage ?? "").toLowerCase();
   const countries = new Set((originCountries ?? []).map((c) => c.toUpperCase()));
+
+  // 1. Distinctive original language → that single bucket, country ignored.
+  for (const b of ORIGIN_BUCKETS) {
+    if (b.langs.length > 0 && b.langs.includes(lang)) return [b.key];
+  }
+
+  // 2. English / undistinctive → production country, but only the language-agnostic
+  //    buckets (American / British) to avoid co-pro mislabeling.
   const out: string[] = [];
   for (const b of ORIGIN_BUCKETS) {
-    if (b.langs.includes(lang) || b.countries.some((c) => countries.has(c))) {
+    if (b.langs.length === 0 && b.countries.some((c) => countries.has(c))) {
       out.push(b.key);
     }
   }
