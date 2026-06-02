@@ -972,6 +972,58 @@ interface TmdbDetailRaw {
   }[];
 }
 
+interface CrossRow {
+  media_id: string;
+  media_type: string;
+  title: string;
+  year: string | null;
+  poster_url: string | null;
+  popularity: number | null;
+  rating_imdb: number | null;
+  rating_rotten_tomatoes: number | null;
+  rating_metacritic: number | null;
+  rating_tmdb: number | null;
+  genres: string[] | null;
+  seasons: unknown;
+  award_winner: boolean | null;
+  award_nominee: boolean | null;
+}
+
+// Map a DB media row to a slim card item for the cross-category "more like this"
+// rail (no people/overview/streaming — the card doesn't render them).
+function crossRowToItem(r: CrossRow): MediaItem {
+  const seasons = r.seasons as MediaSeason[] | null;
+  let lastAirYear: string | undefined;
+  if (r.media_type === "tv" && seasons) {
+    for (const s of seasons) {
+      const y = s?.airDate ? s.airDate.slice(0, 4) : "";
+      if (y && (!lastAirYear || y > lastAirYear)) lastAirYear = y;
+    }
+  }
+  return {
+    id: r.media_id,
+    mediaType: r.media_type as MediaItem["mediaType"],
+    title: r.title,
+    year: r.year ?? "",
+    overview: "",
+    posterUrl: r.poster_url ?? "",
+    ratings: {
+      imdb: r.rating_imdb ?? undefined,
+      rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
+      metacritic: r.rating_metacritic ?? undefined,
+      tmdb: r.rating_tmdb ?? undefined,
+    },
+    genres: r.genres ?? [],
+    streaming: [],
+    lengthLabel: "",
+    people: [],
+    popularity: r.popularity ?? undefined,
+    lastAirYear,
+    awardWinner: r.award_winner ?? false,
+    awardNominee: r.award_nominee ?? false,
+  };
+}
+
 function mapCardRaw(c: TmdbCardRaw, type: "movie" | "tv"): MediaItem {
   const title = (type === "movie" ? c.title : c.name) ?? "Untitled";
   const date = type === "movie" ? c.release_date : c.first_air_date;
@@ -1229,6 +1281,31 @@ function buildDetailFromRaw(
 
 // ---------- Read-through cache (media_cache + trending_cache) ----------
 
+/**
+ * Attach cross-category "more like this": titles of the OTHER media type sharing
+ * genres (genres are unified across movie/tv). Popularity-ranked, cheap + indexed.
+ * Runs in the async build paths (not the sync builder) so the result is cached.
+ */
+async function attachCrossRelated(detail: MediaDetail): Promise<void> {
+  if (!detail.genres || detail.genres.length === 0) return;
+  const otherType = detail.mediaType === "tv" ? "movie" : "tv";
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select(
+      "media_id,media_type,title,year,poster_url,popularity,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,seasons,award_winner,award_nominee",
+    )
+    .eq("media_type", otherType)
+    .overlaps("genres", detail.genres)
+    .order("popularity", { ascending: false, nullsFirst: false })
+    .limit(12);
+  if (error) {
+    console.error("[detail] cross-type related failed:", error.message);
+    return;
+  }
+  const cross = ((data ?? []) as unknown as CrossRow[]).map(crossRowToItem);
+  if (cross.length > 0) detail.relatedCross = cross;
+}
+
 export async function fetchMediaDetail(
   type: "movie" | "tv",
   id: string,
@@ -1270,6 +1347,7 @@ export async function fetchMediaDetail(
           data.raw_tmdb as unknown as TmdbDetailRaw,
           (data.raw_omdb as unknown as OmdbResponse | null) ?? null,
         );
+        await attachCrossRelated(built);
         await writeDetailCache(cacheId, type, id, built);
         return built;
       }
@@ -1279,6 +1357,7 @@ export async function fetchMediaDetail(
   }
 
   const detail = await fetchMediaDetailLive(type, id);
+  await attachCrossRelated(detail);
   await writeDetailCache(cacheId, type, id, detail);
   return detail;
 }

@@ -8,6 +8,7 @@ import type { MediaDetail as MediaDetailType } from "@/types/media";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
+import { ScrollRail } from "./ScrollRail";
 import { displayYear } from "@/lib/mediaFormat";
 import { WhereToWatch } from "./WhereToWatch";
 import {
@@ -296,7 +297,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
           {detail.images && detail.images.length > 0 && (
             <section>
               <MicroLabel>Stills</MicroLabel>
-              <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2">
+              <ScrollRail className="snap-x snap-mandatory gap-2">
                 {detail.images.map((src, i) => (
                   <button
                     key={src}
@@ -314,20 +315,37 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                     />
                   </button>
                 ))}
-              </div>
+              </ScrollRail>
             </section>
           )}
 
           {detail.related && detail.related.length > 0 && (
             <section>
-              <MicroLabel>More like this</MicroLabel>
-              <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+              <MicroLabel>
+                {detail.mediaType === "tv" ? "Shows" : "Movies"} like {detail.title}
+              </MicroLabel>
+              <ScrollRail className="gap-3">
                 {detail.related.map((it) => (
                   <div key={it.id} className="w-[118px] shrink-0 md:w-[132px]">
                     <MediaCard item={it} />
                   </div>
                 ))}
-              </div>
+              </ScrollRail>
+            </section>
+          )}
+
+          {detail.relatedCross && detail.relatedCross.length > 0 && (
+            <section>
+              <MicroLabel>
+                {detail.mediaType === "tv" ? "Movies" : "Shows"} like {detail.title}
+              </MicroLabel>
+              <ScrollRail className="gap-3">
+                {detail.relatedCross.map((it) => (
+                  <div key={it.id} className="w-[118px] shrink-0 md:w-[132px]">
+                    <MediaCard item={it} />
+                  </div>
+                ))}
+              </ScrollRail>
             </section>
           )}
 
