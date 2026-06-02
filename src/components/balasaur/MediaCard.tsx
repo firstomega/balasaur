@@ -3,6 +3,7 @@ import { Check, Eye } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
+import { mediaSlug } from "@/lib/slug";
 import { ScoreBadge } from "./ScoreBadge";
 
 const TYPE_LABEL: Record<MediaType, string> = {
@@ -40,6 +41,7 @@ export function MediaCard({
   const rating = primaryRating(item);
   const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
   const rawId = item.id.replace(/^(movie|tv)-/, "");
+  const slug = mediaSlug(rawId, item.title);
 
   return (
     <article className="group flex flex-col">
@@ -47,7 +49,7 @@ export function MediaCard({
         {isLinkable ? (
           <Link
             to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
-            params={{ id: rawId }}
+            params={{ id: slug }}
             className="block"
           >
             <CardArt item={item} rating={rating} />
@@ -84,7 +86,7 @@ export function MediaCard({
         {isLinkable ? (
           <Link
             to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
-            params={{ id: rawId }}
+            params={{ id: slug }}
             className="block"
           >
             <h3 className="line-clamp-2 text-[12.5px] font-semibold leading-tight text-text-bright hover:text-primary">

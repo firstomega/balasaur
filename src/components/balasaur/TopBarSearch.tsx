@@ -3,6 +3,7 @@ import { Search, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
+import { mediaSlug } from "@/lib/slug";
 
 const TYPE_COLOR: Record<string, string> = {
   movie: "text-media-movie",
@@ -82,7 +83,7 @@ export function TopBarSearch() {
     setQuery("");
     navigate({
       to: hit.mediaType === "movie" ? "/movie/$id" : "/tv/$id",
-      params: { id: rawId },
+      params: { id: mediaSlug(rawId, hit.title) },
     });
   }
 
