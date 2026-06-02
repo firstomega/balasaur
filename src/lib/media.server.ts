@@ -117,6 +117,10 @@ const PROVIDER_NAME_MAP: Record<string, string> = {
   "Amazon Prime Video with Ads": "Prime",
   "Apple TV+": "Apple TV+",
   "Apple TV Plus": "Apple TV+",
+  // Apple rebranded the "Apple TV+" service to just "Apple TV" (2024); TMDB now
+  // reports the subscription under this name. Safe to alias because we only read the
+  // `flatrate` (subscription) block — the rent/buy "Apple TV" store lives elsewhere.
+  "Apple TV": "Apple TV+",
   Hulu: "Hulu",
   "Disney Plus": "Disney+",
   "Disney+": "Disney+",

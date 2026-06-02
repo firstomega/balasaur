@@ -19,13 +19,6 @@ const TYPE_COLOR_CLASS: Record<MediaType, string> = {
   podcast: "text-media-podcast",
 };
 
-const TYPE_CAPTION: Record<MediaType, string> = {
-  movie: "Movie",
-  tv: "TV",
-  book: "Book",
-  podcast: "Podcast",
-};
-
 function primaryRating(item: MediaItem): { value: string; raw: number } | null {
   const { imdb, tmdb } = item.ratings;
   if (typeof imdb === "number") return { value: imdb.toFixed(1), raw: imdb };
@@ -104,10 +97,14 @@ export function MediaCard({
           </h3>
         )}
         <p className="mt-1 font-mono text-[10.5px] text-text-muted">
-          {displayYear(item)} · {TYPE_CAPTION[item.mediaType]}
-          {item.mediaType === "tv" && (item.seasonCount ?? item.seasons?.length ?? 0) > 0
-            ? ` · ${item.seasonCount ?? item.seasons?.length}S`
-            : ""}
+          {displayYear(item)}
+          {(() => {
+            // Media type already shown as the tag on the poster, so the caption only
+            // adds the season count for TV (spelled out, e.g. "2 Seasons").
+            if (item.mediaType !== "tv") return "";
+            const seasons = item.seasonCount ?? item.seasons?.length ?? 0;
+            return seasons > 0 ? ` · ${seasons} Season${seasons === 1 ? "" : "s"}` : "";
+          })()}
         </p>
       </div>
     </article>
