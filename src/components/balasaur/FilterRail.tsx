@@ -221,36 +221,6 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Origin */}
-        <AccordionItem value="origin" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("origin")}>Origin</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
-            <div className="flex flex-wrap gap-1.5">
-              {ORIGIN_OPTIONS.map((o) => {
-                const count = originCounts[o] ?? 0;
-                const active = filters.origins.has(o);
-                return (
-                  <Pill
-                    key={o}
-                    active={active}
-                    count={count}
-                    disabled={count === 0 && !active}
-                    onClick={() => toggleSet<string>("origins", o)}
-                  >
-                    {o}
-                  </Pill>
-                );
-              })}
-            </div>
-            <div className="mt-2 font-mono text-[10px] text-text-dim">
-              {originTagged.toLocaleString()} of {catalogTotal.toLocaleString()} tagged
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
         {/* Genre */}
         <AccordionItem value="genre" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
@@ -296,6 +266,36 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
                   setFilters((prev) => ({ ...prev, yearRange: [v[0], v[1]] as [number, number] }))
                 }
               />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Origin — placed after Released per product preference */}
+        <AccordionItem value="origin" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("origin")}>Origin</TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-3 pt-1">
+            <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
+            <div className="flex flex-wrap gap-1.5">
+              {ORIGIN_OPTIONS.map((o) => {
+                const count = originCounts[o] ?? 0;
+                const active = filters.origins.has(o);
+                return (
+                  <Pill
+                    key={o}
+                    active={active}
+                    count={count}
+                    disabled={count === 0 && !active}
+                    onClick={() => toggleSet<string>("origins", o)}
+                  >
+                    {o}
+                  </Pill>
+                );
+              })}
+            </div>
+            <div className="mt-2 font-mono text-[10px] text-text-dim">
+              {originTagged.toLocaleString()} of {catalogTotal.toLocaleString()} tagged
             </div>
           </AccordionContent>
         </AccordionItem>
