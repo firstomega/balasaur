@@ -690,6 +690,10 @@ export interface BackfillResult {
   updatedAwards: number;
   failed: number;
   durationMs: number;
+  /** Last media_id processed this call — pass back as `after` to resume. */
+  lastId: string | null;
+  /** True once a pass reached the end of the table (nothing left to scan). */
+  done: boolean;
 }
 
 interface TmdbGenreObj {
@@ -698,12 +702,21 @@ interface TmdbGenreObj {
 }
 
 /**
- * Rewrite `genres`, `origins`, `streaming`, `award_winner`, `award_nominee`,
- * `award_wins`, `award_nominations` columns on every existing media row, sourced
+ * Rewrite `genres`, `origins`, `streaming`, `streaming_regions`, and award columns
  * from raw_tmdb / raw_omdb already stored. Makes NO external API calls.
+ *
+ * Resumable: pages by a stable `media_id` cursor (keyset, not offset) and stops at a
+ * wall-clock budget, returning `{ lastId, done }`. On a huge table one HTTP call can't
+ * rewrite everything before the host/statement timeout, so the workflow calls this in
+ * a loop, passing the previous `lastId` as `after` — each call resumes exactly where
+ * the last stopped (no re-reading), and skip-unchanged keeps every pass light.
  */
-export async function backfillFromRaw(): Promise<BackfillResult> {
+export async function backfillFromRaw(opts?: {
+  after?: string | null;
+  timeBudgetMs?: number;
+}): Promise<BackfillResult> {
   const start = Date.now();
+  const timeBudgetMs = opts?.timeBudgetMs ?? 90_000;
   const result: BackfillResult = {
     scanned: 0,
     updatedGenres: 0,
@@ -711,22 +724,31 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
     updatedAwards: 0,
     failed: 0,
     durationMs: 0,
+    lastId: opts?.after ?? null,
+    done: false,
   };
 
   const PAGE = 200;
-  let offset = 0;
+  let cursor = opts?.after ?? "";
   while (true) {
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
         "media_id, genres, origins, streaming, streaming_regions, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
       )
-      .range(offset, offset + PAGE - 1);
+      .gt("media_id", cursor)
+      .order("media_id", { ascending: true })
+      .limit(PAGE);
     if (error) {
+      // A page select can hit a statement timeout on this multi-GB table; we've
+      // already committed progress up to `cursor`, so return and let the loop resume.
       console.error("[backfill] select failed:", error.message);
       break;
     }
-    if (!data || data.length === 0) break;
+    if (!data || data.length === 0) {
+      result.done = true;
+      break;
+    }
 
     for (const row of data) {
       result.scanned++;
@@ -815,8 +837,15 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
       }
     }
 
-    if (data.length < PAGE) break;
-    offset += PAGE;
+    cursor = data[data.length - 1].media_id;
+    result.lastId = cursor;
+    if (data.length < PAGE) {
+      result.done = true;
+      break;
+    }
+    // Stop on the wall-clock budget so the call returns cleanly (well under the host
+    // timeout); the workflow resumes from `lastId` on the next pass.
+    if (Date.now() - start > timeBudgetMs) break;
   }
 
   // Bust the grid cache so rewritten rows show on the next load (not after 24h).

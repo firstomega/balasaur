@@ -41,18 +41,52 @@ jobs:
             exit 1
           fi
 
-      - name: Optional backfill pass
+      - name: Optional backfill loop
         if: ${{ inputs.backfill }}
         env:
           BASE_URL: https://balasaur.com
           APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
         run: |
-          echo "POST $BASE_URL/api/public/hooks/backfill-media"
-          HTTP=$(curl -sS -o /tmp/bf.json -w "%{http_code}" \
-            -X POST "$BASE_URL/api/public/hooks/backfill-media" \
-            -H "apikey: $APIKEY" -H "Content-Type: application/json" \
-            --max-time 870 -d '{}')
-          echo "HTTP $HTTP"; echo "Response:"; cat /tmp/bf.json; echo
+          # The backfill is resumable: each call rewrites rows for ~90s then returns a
+          # `lastId` cursor + `done` flag. We loop, threading lastId back as `after`, so
+          # one workflow run walks the whole catalog via many short calls (no single
+          # call long enough for the host/statement timeout to kill it). Skip-unchanged
+          # keeps every pass light, so re-running the whole thing later is cheap.
+          AFTER=""
+          for i in $(seq 1 80); do
+            echo "──────── backfill pass $i (after='${AFTER}') ────────"
+            BODY=$(jq -nc --arg a "$AFTER" '{after:$a}')
+            HTTP=000
+            for attempt in 1 2 3 4; do
+              HTTP=$(curl -sS -o /tmp/bf.json -w "%{http_code}" \
+                -X POST "$BASE_URL/api/public/hooks/backfill-media" \
+                -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+                --max-time 300 -d "$BODY" || echo 000)
+              [ "$HTTP" = "200" ] && break
+              echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/bf.json 2>/dev/null; echo
+              case "$HTTP" in
+                502 | 503 | 504 | 429 | 000) ;;
+                *) break ;;
+              esac
+              backoff=$((attempt * attempt * 5)); echo "retrying in ${backoff}s…"; sleep "$backoff"
+            done
+            echo "HTTP $HTTP"; echo "Response:"; cat /tmp/bf.json; echo
+            if [ "$HTTP" != "200" ]; then
+              echo "::error::backfill pass $i failed with HTTP $HTTP (after retries)"
+              exit 1
+            fi
+            DONE=$(jq -r '.done // false' /tmp/bf.json 2>/dev/null || echo false)
+            NEXT=$(jq -r '.lastId // empty' /tmp/bf.json 2>/dev/null || true)
+            if [ "$DONE" = "true" ]; then
+              echo "✅ Backfill complete after pass $i."; break
+            fi
+            # No cursor advance → nothing left (or a stuck page); stop rather than spin.
+            if [ -z "$NEXT" ] || [ "$NEXT" = "$AFTER" ]; then
+              echo "No further progress (lastId unchanged) — stopping at pass $i."; break
+            fi
+            AFTER="$NEXT"
+            sleep 3
+          done
 
       - name: Fill loop
         env:
