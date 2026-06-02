@@ -5,6 +5,7 @@ import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import { SITE_ORIGIN, buildMeta, canonicalLink, clampDescription } from "@/lib/seo";
+import { mediaSlug } from "@/lib/slug";
 
 // Public profile page at /@username. Because TanStack's runtime matcher doesn't
 // support a literal prefix glued to a param (and typed params would percent-encode
@@ -70,6 +71,7 @@ function Centered({ title, sub }: { title: string; sub?: string }) {
 function PosterTile({ item }: { item: PublicMediaItem }) {
   const seg = item.mediaType === "tv" ? "tv" : item.mediaType === "movie" ? "movie" : null;
   const rawId = item.mediaId.replace(/^(movie|tv)-/, "");
+  const slug = mediaSlug(rawId, item.title);
   const inner = (
     <>
       <div className="aspect-[2/3] overflow-hidden rounded-[5px] border border-border bg-panel">
@@ -92,13 +94,13 @@ function PosterTile({ item }: { item: PublicMediaItem }) {
   );
   if (seg === "movie")
     return (
-      <Link to="/movie/$id" params={{ id: rawId }} className="group block">
+      <Link to="/movie/$id" params={{ id: slug }} className="group block">
         {inner}
       </Link>
     );
   if (seg === "tv")
     return (
-      <Link to="/tv/$id" params={{ id: rawId }} className="group block">
+      <Link to="/tv/$id" params={{ id: slug }} className="group block">
         {inner}
       </Link>
     );

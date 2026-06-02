@@ -1,16 +1,27 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { buildMeta, canonicalLink, clampDescription, absoluteUrl, jsonLdScript } from "@/lib/seo";
 import { movieJsonLd } from "@/lib/jsonld";
+import { mediaSlug, parseMediaId } from "@/lib/slug";
 
 export const Route = createFileRoute("/movie/$id")({
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(mediaDetailQueryOptions("movie", params.id)),
+  loader: async ({ context, params }) => {
+    const id = parseMediaId(params.id);
+    const data = await context.queryClient.ensureQueryData(mediaDetailQueryOptions("movie", id));
+    // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
+    if (data?.title) {
+      const canonical = mediaSlug(id, data.title);
+      if (canonical !== params.id) {
+        throw redirect({ to: "/movie/$id", params: { id: canonical }, statusCode: 301 });
+      }
+    }
+    return data;
+  },
   head: ({ loaderData, params }) => {
     const d = loaderData;
-    const url = absoluteUrl(`/movie/${params.id}`);
+    const url = absoluteUrl(`/movie/${mediaSlug(parseMediaId(params.id), d?.title)}`);
     const title = d ? `${d.title}${d.year ? ` (${d.year})` : ""} — Balasaur` : "Balasaur";
     const description = d ? clampDescription(d.overview) : "Movie details on Balasaur.";
     const image = d?.backdropUrl || d?.posterUrl;
@@ -26,7 +37,7 @@ export const Route = createFileRoute("/movie/$id")({
 });
 
 function MoviePage() {
-  const { id } = Route.useParams();
+  const id = parseMediaId(Route.useParams().id);
   return <MediaDetail mediaType="movie" id={id} />;
 }
 

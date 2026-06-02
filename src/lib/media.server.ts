@@ -10,6 +10,7 @@ import type {
 import { unifyGenres } from "./genres";
 import { deriveOrigins } from "./origins";
 import { computeBalasaurScore } from "./score";
+import { mediaSlug } from "./slug";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
 
@@ -393,7 +394,7 @@ export async function listSitemapEntries(
 ): Promise<{ path: string; lastmod?: string }[]> {
   const { data, error } = await supabaseAdmin
     .from("media")
-    .select("media_id, media_type, updated_at")
+    .select("media_id, media_type, title, updated_at")
     .order("popularity", { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -403,11 +404,17 @@ export async function listSitemapEntries(
   }
 
   return (data ?? []).map(
-    (r: { media_id: string; media_type: string; updated_at: string | null }) => {
+    (r: {
+      media_id: string;
+      media_type: string;
+      title: string | null;
+      updated_at: string | null;
+    }) => {
       const rawId = r.media_id.replace(/^(movie|tv)-/, "");
       const seg = r.media_type === "tv" ? "tv" : "movie";
+      // Emit the canonical slugged URL so crawlers index it directly (no 301 hop).
       return {
-        path: `/${seg}/${rawId}`,
+        path: `/${seg}/${mediaSlug(rawId, r.title)}`,
         lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
       };
     },
