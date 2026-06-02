@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import type { FilterState } from "@/types/filters";
 import {
+  AWARD_OPTIONS,
   IMDB_BOUNDS,
   META_BOUNDS,
   RT_BOUNDS,
@@ -130,6 +131,32 @@ export function buildChips(
       key: "nominated",
       label: "Nominated",
       onRemove: () => setFilters((p) => ({ ...p, nominated: false })),
+    });
+  }
+
+  const awardLabel = (k: string) => AWARD_OPTIONS.find((a) => a.key === k)?.label ?? k;
+  for (const k of filters.awardsWon) {
+    chips.push({
+      key: `aw-${k}`,
+      label: `${awardLabel(k)}: Won`,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.awardsWon);
+          next.delete(k);
+          return { ...p, awardsWon: next };
+        }),
+    });
+  }
+  for (const k of filters.awardsNominated) {
+    chips.push({
+      key: `an-${k}`,
+      label: `${awardLabel(k)}: Nominated`,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.awardsNominated);
+          next.delete(k);
+          return { ...p, awardsNominated: next };
+        }),
     });
   }
 

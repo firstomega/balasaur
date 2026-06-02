@@ -22,6 +22,8 @@ interface Serialized {
   people: string[];
   awardWinners: boolean;
   nominated: boolean;
+  awardsWon: string[];
+  awardsNominated: string[];
   hideSeen: boolean;
   sort: string;
 }
@@ -44,6 +46,8 @@ export function saveFilters(f: FilterState): void {
       people: f.people,
       awardWinners: f.awardWinners,
       nominated: f.nominated,
+      awardsWon: [...f.awardsWon],
+      awardsNominated: [...f.awardsNominated],
       hideSeen: f.hideSeen,
       sort: f.sort,
     };
@@ -75,6 +79,8 @@ export function loadFilters(): FilterState | null {
       people: s.people ?? [],
       awardWinners: s.awardWinners ?? d.awardWinners,
       nominated: s.nominated ?? d.nominated,
+      awardsWon: new Set<string>(s.awardsWon ?? []),
+      awardsNominated: new Set<string>(s.awardsNominated ?? []),
       hideSeen: s.hideSeen ?? d.hideSeen,
       sort: (s.sort as FilterState["sort"]) ?? d.sort,
     };

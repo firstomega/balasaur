@@ -20,6 +20,8 @@ export type Database = {
           award_nominee: boolean
           award_winner: boolean
           award_wins: number | null
+          awards_nominated: string[]
+          awards_won: string[]
           fetched_at: string
           genres: string[]
           length_label: string | null
@@ -41,6 +43,7 @@ export type Database = {
           release_date: string | null
           seasons: Json | null
           streaming: string[]
+          streaming_regions: string[]
           title: string
           updated_at: string
           year: string | null
@@ -50,6 +53,8 @@ export type Database = {
           award_nominee?: boolean
           award_winner?: boolean
           award_wins?: number | null
+          awards_nominated?: string[]
+          awards_won?: string[]
           fetched_at?: string
           genres?: string[]
           length_label?: string | null
@@ -70,6 +75,7 @@ export type Database = {
           release_date?: string | null
           seasons?: Json | null
           streaming?: string[]
+          streaming_regions?: string[]
           title: string
           updated_at?: string
           year?: string | null
@@ -79,6 +85,8 @@ export type Database = {
           award_nominee?: boolean
           award_winner?: boolean
           award_wins?: number | null
+          awards_nominated?: string[]
+          awards_won?: string[]
           fetched_at?: string
           genres?: string[]
           length_label?: string | null
@@ -99,6 +107,7 @@ export type Database = {
           release_date?: string | null
           seasons?: Json | null
           streaming?: string[]
+          streaming_regions?: string[]
           title?: string
           updated_at?: string
           year?: string | null

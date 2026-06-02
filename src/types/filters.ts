@@ -24,9 +24,20 @@ export interface FilterState {
   people: string[];
   awardWinners: boolean;
   nominated: boolean;
+  /** Big-four award keys filtered as a WIN (e.g. "oscar"). */
+  awardsWon: Set<string>;
+  /** Big-four award keys filtered as a NOMINATION (includes winners). */
+  awardsNominated: Set<string>;
   hideSeen: boolean;
   sort: SortKey;
 }
+
+export const AWARD_OPTIONS = [
+  { key: "oscar", label: "Oscars" },
+  { key: "globe", label: "Golden Globes" },
+  { key: "bafta", label: "BAFTA" },
+  { key: "emmy", label: "Emmys" },
+] as const;
 
 export const STREAMING_OPTIONS = [
   "Netflix",
@@ -58,6 +69,8 @@ export function defaultFilterState(): FilterState {
     people: [],
     awardWinners: false,
     nominated: false,
+    awardsWon: new Set(),
+    awardsNominated: new Set(),
     hideSeen: false,
     sort: "popular",
   };

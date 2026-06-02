@@ -142,6 +142,32 @@ function deriveStreaming(
   return Array.from(mapped);
 }
 
+/**
+ * Region-aware streaming availability. Scans the flatrate block for EVERY region in
+ * the TMDB watch/providers payload (not just US) and emits "Provider:REGION" tokens
+ * (e.g. "Netflix:GB"). Lets the homepage filter streaming by the viewer's account
+ * region. Shared by live enrichment and the raw backfill so both produce identical
+ * values. Region codes are upper-cased to match TMDB's ISO-3166-1 keys.
+ */
+function deriveStreamingRegions(
+  watchProviders:
+    | { results?: Record<string, { flatrate?: { provider_name: string }[] }> }
+    | undefined,
+): string[] {
+  const results = watchProviders?.results;
+  if (!results) return [];
+  const tokens = new Set<string>();
+  for (const [region, block] of Object.entries(results)) {
+    const flatrate = block?.flatrate;
+    if (!flatrate) continue;
+    for (const p of flatrate) {
+      const name = PROVIDER_NAME_MAP[p.provider_name];
+      if (name) tokens.add(`${name}:${region.toUpperCase()}`);
+    }
+  }
+  return Array.from(tokens);
+}
+
 const PROVIDER_LOGO_BASE = "https://image.tmdb.org/t/p/original";
 let providerLogoCache: { at: number; map: Record<string, string> } | null = null;
 const PROVIDER_LOGO_TTL_MS = 24 * 60 * 60 * 1000;
@@ -301,6 +327,38 @@ export function parseAwards(text: string | undefined | null): AwardInfo {
   if (/\bnominated\b/.test(lower) || (info.nominations ?? 0) > 0) info.nominee = true;
 
   return info;
+}
+
+// The big-four awards we can reliably pull from OMDb's text, with the name patterns
+// OMDb uses ("Won N Oscars", "Nominated for N BAFTA", etc.).
+const AWARD_KEYS: { key: string; pattern: string }[] = [
+  { key: "oscar", pattern: "Oscars?" },
+  { key: "globe", pattern: "Golden Globes?" },
+  { key: "bafta", pattern: "BAFTA" },
+  { key: "emmy", pattern: "(?:Primetime )?Emmys?" },
+];
+
+/**
+ * Per-award won/nominated lists for the big four, parsed from OMDb's "Awards" text.
+ * `nominated` is a superset of `won` (a winner was, by definition, nominated).
+ */
+export function parseAwardDetail(text: string | undefined | null): {
+  won: string[];
+  nominated: string[];
+} {
+  const won = new Set<string>();
+  const nominated = new Set<string>();
+  if (text && text !== "N/A") {
+    for (const a of AWARD_KEYS) {
+      if (new RegExp(`won\\s+\\d+\\s+${a.pattern}`, "i").test(text)) {
+        won.add(a.key);
+        nominated.add(a.key);
+      } else if (new RegExp(`nominated for\\s+\\d+\\s+${a.pattern}`, "i").test(text)) {
+        nominated.add(a.key);
+      }
+    }
+  }
+  return { won: [...won], nominated: [...nominated] };
 }
 
 async function mapWithLimit<T, R>(
@@ -582,6 +640,14 @@ function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
 
 function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown): MediaRow {
   const awards = parseAwards((rawOmdb as OmdbResponse | null)?.Awards);
+  const awardDetail = parseAwardDetail((rawOmdb as OmdbResponse | null)?.Awards);
+  const wp = (
+    rawTmdb as {
+      "watch/providers"?: {
+        results?: Record<string, { flatrate?: { provider_name: string }[] }>;
+      };
+    } | null
+  )?.["watch/providers"];
   return {
     media_id: item.id,
     media_type: item.mediaType,
@@ -598,6 +664,7 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     genres: item.genres,
     origins: item.origins ?? [],
     streaming: item.streaming,
+    streaming_regions: deriveStreamingRegions(wp),
     length_label: item.lengthLabel || null,
     people: item.people as unknown as MediaRow["people"],
     seasons: (item.seasons ?? null) as MediaRow["seasons"],
@@ -609,6 +676,8 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     award_nominee: awards.nominee,
     award_wins: awards.wins ?? null,
     award_nominations: awards.nominations ?? null,
+    awards_won: awardDetail.won,
+    awards_nominated: awardDetail.nominated,
   };
 }
 
@@ -650,7 +719,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
-        "media_id, genres, origins, streaming, award_winner, award_nominee, award_wins, award_nominations, raw_tmdb, raw_omdb",
+        "media_id, genres, origins, streaming, streaming_regions, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
       )
       .range(offset, offset + PAGE - 1);
     if (error) {
@@ -679,6 +748,7 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
 
         const awardsText = (row.raw_omdb as { Awards?: string } | null)?.Awards;
         const awards = parseAwards(awardsText);
+        const awardDetail = parseAwardDetail(awardsText);
 
         const countries = [
           ...(raw?.origin_country ?? []),
@@ -686,22 +756,34 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
         ];
         const newOrigins = deriveOrigins(raw?.original_language, countries);
         const newStreaming = deriveStreaming(raw?.["watch/providers"]);
+        const newStreamingRegions = deriveStreamingRegions(raw?.["watch/providers"]);
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
         const streamingChanged =
-          JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []);
+          JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []) ||
+          JSON.stringify(newStreamingRegions) !== JSON.stringify(row.streaming_regions ?? []);
         const awardsChanged =
           (row.award_winner ?? false) !== awards.winner ||
           (row.award_nominee ?? false) !== awards.nominee ||
           (row.award_wins ?? null) !== (awards.wins ?? null) ||
           (row.award_nominations ?? null) !== (awards.nominations ?? null);
+        const awardsDetailChanged =
+          JSON.stringify(awardDetail.won) !== JSON.stringify(row.awards_won ?? []) ||
+          JSON.stringify(awardDetail.nominated) !== JSON.stringify(row.awards_nominated ?? []);
 
         // Skip rows that don't actually change. On a large catalog only the rows that
         // need it (co-productions, etc.) get rewritten, so the backfill stays light and
         // won't time out — and re-runs fall straight through already-fixed rows, so it
         // reliably finishes.
-        if (!genresChanged && !originsChanged && !streamingChanged && !awardsChanged) continue;
+        if (
+          !genresChanged &&
+          !originsChanged &&
+          !streamingChanged &&
+          !awardsChanged &&
+          !awardsDetailChanged
+        )
+          continue;
 
         const { error: updErr } = await supabaseAdmin
           .from("media")
@@ -709,10 +791,13 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
             genres: newGenres,
             origins: newOrigins,
             streaming: newStreaming,
+            streaming_regions: newStreamingRegions,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,
             award_nominations: awards.nominations ?? null,
+            awards_won: awardDetail.won,
+            awards_nominated: awardDetail.nominated,
             updated_at: new Date().toISOString(),
           })
           .eq("media_id", row.media_id);

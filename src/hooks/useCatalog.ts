@@ -12,11 +12,13 @@ export const PAGE_SIZE = 60;
 
 export type CatalogBaseParams = Omit<CatalogQueryParams, "limit" | "offset">;
 
-/** Map the UI's FilterState into the server query params (Sets → arrays, ranges). */
-export function filtersToParams(filters: FilterState): CatalogBaseParams {
+/** Map the UI's FilterState into the server query params (Sets → arrays, ranges).
+ *  `region` is the viewer's account region for the per-country streaming filter. */
+export function filtersToParams(filters: FilterState, region = "US"): CatalogBaseParams {
   const yearFull =
     filters.yearRange[0] === YEAR_BOUNDS[0] && filters.yearRange[1] === YEAR_BOUNDS[1];
   return {
+    region,
     types: [...filters.mediaTypes],
     genres: [...filters.genres],
     origins: [...filters.origins],
@@ -35,6 +37,8 @@ export function filtersToParams(filters: FilterState): CatalogBaseParams {
     people: filters.people,
     awardWinners: filters.awardWinners,
     nominated: filters.nominated,
+    awardsWon: [...filters.awardsWon],
+    awardsNominated: [...filters.awardsNominated],
     sort: filters.sort,
   };
 }
@@ -53,8 +57,8 @@ export function catalogInfiniteOptions(base: CatalogBaseParams) {
   });
 }
 
-export function useCatalogInfinite(filters: FilterState) {
-  return useInfiniteQuery(catalogInfiniteOptions(filtersToParams(filters)));
+export function useCatalogInfinite(filters: FilterState, region = "US") {
+  return useInfiniteQuery(catalogInfiniteOptions(filtersToParams(filters, region)));
 }
 
 export function catalogFacetsOptions(base: CatalogBaseParams) {
@@ -65,6 +69,6 @@ export function catalogFacetsOptions(base: CatalogBaseParams) {
   });
 }
 
-export function useCatalogFacets(filters: FilterState) {
-  return useQuery(catalogFacetsOptions(filtersToParams(filters)));
+export function useCatalogFacets(filters: FilterState, region = "US") {
+  return useQuery(catalogFacetsOptions(filtersToParams(filters, region)));
 }

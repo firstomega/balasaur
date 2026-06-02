@@ -26,6 +26,10 @@ export interface CatalogQueryParams {
   people: string[];
   awardWinners: boolean;
   nominated: boolean;
+  awardsWon: string[];
+  awardsNominated: string[];
+  /** ISO-3166-1 region for the streaming filter (viewer's account region). Default "US". */
+  region?: string;
   sort: string;
   limit: number;
   offset: number;
@@ -111,7 +115,15 @@ export const queryCatalog = createServerFn({ method: "GET" })
     if (p.types.length === 1) q = q.eq("media_type", p.types[0]);
     if (p.genres.length) q = q.overlaps("genres", p.genres);
     if (p.origins.length) q = q.overlaps("origins", p.origins);
-    if (p.streaming.length) q = q.overlaps("streaming", p.streaming);
+    if (p.streaming.length) {
+      // Region-aware: match "Provider:REGION" tokens for the viewer's account region
+      // (defaults to US). A title counts as streamable only where it actually streams.
+      const region = (p.region || "US").toUpperCase();
+      q = q.overlaps(
+        "streaming_regions",
+        p.streaming.map((s) => `${s}:${region}`),
+      );
+    }
 
     if (typeof p.yearMin === "number" && typeof p.yearMax === "number") {
       // `year` is a 4-char text column; lexical compare matches numeric order and
@@ -154,6 +166,10 @@ export const queryCatalog = createServerFn({ method: "GET" })
 
     if (p.awardWinners) q = q.eq("award_winner", true);
     else if (p.nominated) q = q.or("award_nominee.eq.true,award_winner.eq.true");
+
+    // Specific-award filters (OR within each status group; AND between won + nominated).
+    if (p.awardsWon.length) q = q.overlaps("awards_won", p.awardsWon);
+    if (p.awardsNominated.length) q = q.overlaps("awards_nominated", p.awardsNominated);
 
     // "By person": every selected name must be present in the cast (jsonb contains).
     for (const name of p.people) {
@@ -221,6 +237,7 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
         genres: p.genres,
         origins: p.origins,
         streaming: p.streaming,
+        region: p.region ?? "US",
         year_min: p.yearMin ?? null,
         year_max: p.yearMax ?? null,
         imdb_min: p.imdbMin,
