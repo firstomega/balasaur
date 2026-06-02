@@ -118,7 +118,7 @@ function HomePage() {
       <TopBar />
       <div className="mx-auto flex max-w-[1600px] gap-5 px-4 py-5">
         {/* Desktop rail */}
-        <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 md:block">
+        <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden">
           <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
             <RailWithData filters={filters} setFilters={setFilters} region={region} />
           </Suspense>
@@ -149,7 +149,10 @@ function HomePage() {
 
       {/* Mobile drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-[300px] overflow-y-auto bg-background p-4">
+        <SheetContent
+          side="left"
+          className="w-[300px] overflow-y-auto bg-background p-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           <SheetHeader>
             <SheetTitle className="font-mono text-[12px] uppercase tracking-wider">
               Filters
