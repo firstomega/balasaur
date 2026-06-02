@@ -189,6 +189,12 @@ export const queryCatalog = createServerFn({ method: "GET" })
       case "topRated":
         ordered = q.order("rating_imdb", desc).order("popularity", desc);
         break;
+      case "az":
+        ordered = q.order("title", asc);
+        break;
+      case "za":
+        ordered = q.order("title", desc);
+        break;
       default:
         ordered = q.order("popularity", desc);
         break;

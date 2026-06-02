@@ -117,6 +117,12 @@ export function applyFilters(
       // Rating desc, ties broken by popularity.
       sorted.sort((a, b) => rating(b) - rating(a) || pop(b) - pop(a));
       break;
+    case "az":
+      sorted.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case "za":
+      sorted.sort((a, b) => b.title.localeCompare(a.title));
+      break;
     case "popular":
     case "trending": // retired alias → behaves as popular
     default:
