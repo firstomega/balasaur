@@ -183,17 +183,18 @@ export function ProviderIcon({
       style={{
         width: size,
         height: size,
-        backgroundColor: selected && mark ? mark.bg : undefined,
-        color: selected && mark ? mark.fg : "var(--text-muted, #9ca3af)",
+        backgroundColor: selected && mark && !logoUrl ? mark.bg : undefined,
+        color: selected && mark && !logoUrl ? mark.fg : "var(--text-muted, #9ca3af)",
       }}
       aria-hidden="true"
     >
-      {mark ? (
+      {/* Prefer the real (official) logo; fall back to the built-in glyph, then initials. */}
+      {logoUrl ? (
+        <img src={logoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+      ) : mark ? (
         <svg viewBox="0 0 32 32" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
           {mark.glyph}
         </svg>
-      ) : logoUrl ? (
-        <img src={logoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
       ) : (
         <span className="font-mono text-[8px] uppercase tracking-wider">
           {displayLabel.slice(0, 3)}

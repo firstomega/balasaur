@@ -141,6 +141,43 @@ function deriveStreaming(
   return Array.from(mapped);
 }
 
+const PROVIDER_LOGO_BASE = "https://image.tmdb.org/t/p/original";
+let providerLogoCache: { at: number; map: Record<string, string> } | null = null;
+const PROVIDER_LOGO_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Official logos for the featured streaming services, from TMDB's master provider
+ * list (square branded marks). Returns { ourKey: logoUrl } for the providers in
+ * PROVIDER_NAME_MAP. Cached in-process for a day; returns {} on any failure so the
+ * UI falls back to the built-in glyphs (never breaks).
+ */
+export async function fetchProviderLogos(): Promise<Record<string, string>> {
+  if (providerLogoCache && Date.now() - providerLogoCache.at < PROVIDER_LOGO_TTL_MS) {
+    return providerLogoCache.map;
+  }
+  const key = process.env.TMDB_API_KEY;
+  if (!key) return {};
+  try {
+    const data = await tmdb<{ results?: { provider_name: string; logo_path?: string | null }[] }>(
+      "/watch/providers/movie",
+      key,
+      { watch_region: "US" },
+    );
+    const map: Record<string, string> = {};
+    for (const p of data.results ?? []) {
+      const ourKey = PROVIDER_NAME_MAP[p.provider_name];
+      if (ourKey && p.logo_path && !map[ourKey]) {
+        map[ourKey] = `${PROVIDER_LOGO_BASE}${p.logo_path}`;
+      }
+    }
+    providerLogoCache = { at: Date.now(), map };
+    return map;
+  } catch (e) {
+    console.error("[providers] logo fetch failed:", e);
+    return {};
+  }
+}
+
 interface TmdbDetails {
   imdb_id?: string | null;
   external_ids?: { imdb_id?: string | null };

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import type { FilterState } from "@/types/filters";
 import {
   IMDB_BOUNDS,
@@ -21,6 +22,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { searchCast, type CatalogFacets } from "@/lib/catalog.functions";
+import { getProviderLogos } from "@/lib/media.functions";
 import { ProviderIcon, type ProviderName } from "./ProviderIcon";
 import { MediaTypeSwitch, modeFromSet, setFromMode } from "./MediaTypeSwitch";
 
@@ -110,6 +112,13 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
   const originCounts = facets?.origins ?? {};
   const originTagged = facets?.tagged ?? 0;
   const catalogTotal = facets?.total ?? 0;
+
+  // Official provider logos (cached a day; empty → ProviderIcon shows its glyph).
+  const { data: providerLogos } = useQuery({
+    queryKey: ["provider-logos"],
+    queryFn: () => getProviderLogos(),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
   const toggleSet = <T,>(key: keyof FilterState, value: T) => {
     setFilters((prev) => {
@@ -212,6 +221,7 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
                 <ProviderIcon
                   key={s}
                   provider={s as ProviderName}
+                  logoUrl={providerLogos?.[s]}
                   selected={filters.streaming.has(s)}
                   onClick={() => toggleSet<string>("streaming", s)}
                   size={38}

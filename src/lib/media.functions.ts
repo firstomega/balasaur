@@ -2,12 +2,18 @@ import { createServerFn } from "@tanstack/react-start";
 import {
   fetchMediaDetail,
   fetchPersonDetail,
+  fetchProviderLogos,
   fetchTrendingMedia,
 } from "./media.server";
 
 export const getTrendingMedia = createServerFn({ method: "GET" }).handler(async () => {
   return fetchTrendingMedia();
 });
+
+/** Official streaming-service logos for the filter rail (cached; {} if unavailable). */
+export const getProviderLogos = createServerFn({ method: "GET" }).handler(async () =>
+  fetchProviderLogos(),
+);
 
 const ID_RE = /^[1-9]\d{0,9}$/;
 
