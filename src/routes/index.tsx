@@ -20,6 +20,7 @@ import {
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { recordForStatus } from "@/lib/userStatus";
+import { loadFilters, saveFilters } from "@/lib/filterStorage";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import type { MediaItem } from "@/types/media";
 import { toast } from "sonner";
@@ -61,7 +62,25 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+  // Init to default for SSR; restore any persisted filters on the client after
+  // mount (avoids a hydration mismatch) so returning from a detail page — via the
+  // Back button or the logo — keeps your filters instead of resetting them.
   const [filters, setFilters] = useState<FilterState>(() => defaultFilterState());
+  const filtersSaveArmed = useRef(false);
+  useEffect(() => {
+    const saved = loadFilters();
+    if (saved) setFilters(saved);
+  }, []);
+  useEffect(() => {
+    // Skip the initial render so we don't overwrite stored filters with defaults
+    // before the restore above runs.
+    if (!filtersSaveArmed.current) {
+      filtersSaveArmed.current = true;
+      return;
+    }
+    saveFilters(filters);
+  }, [filters]);
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const { seenIds, statuses, recordStatus } = useUserStatus();
