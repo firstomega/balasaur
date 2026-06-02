@@ -292,7 +292,7 @@ function GridWithControls({
         </span>
 
         <div className="ml-auto flex items-center gap-3">
-          <label className="hidden cursor-pointer items-center gap-1.5 sm:flex">
+          <label className="flex cursor-pointer items-center gap-1.5">
             <Switch
               checked={filters.hideSeen}
               onCheckedChange={(v) => setFilters((p) => ({ ...p, hideSeen: !!v }))}
