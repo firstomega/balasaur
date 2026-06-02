@@ -648,7 +648,9 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
   while (true) {
     const { data, error } = await supabaseAdmin
       .from("media")
-      .select("media_id, genres, origins, streaming, raw_tmdb, raw_omdb")
+      .select(
+        "media_id, genres, origins, streaming, award_winner, award_nominee, award_wins, award_nominations, raw_tmdb, raw_omdb",
+      )
       .range(offset, offset + PAGE - 1);
     if (error) {
       console.error("[backfill] select failed:", error.message);
@@ -688,6 +690,17 @@ export async function backfillFromRaw(): Promise<BackfillResult> {
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
         const streamingChanged =
           JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []);
+        const awardsChanged =
+          (row.award_winner ?? false) !== awards.winner ||
+          (row.award_nominee ?? false) !== awards.nominee ||
+          (row.award_wins ?? null) !== (awards.wins ?? null) ||
+          (row.award_nominations ?? null) !== (awards.nominations ?? null);
+
+        // Skip rows that don't actually change. On a large catalog only the rows that
+        // need it (co-productions, etc.) get rewritten, so the backfill stays light and
+        // won't time out — and re-runs fall straight through already-fixed rows, so it
+        // reliably finishes.
+        if (!genresChanged && !originsChanged && !streamingChanged && !awardsChanged) continue;
 
         const { error: updErr } = await supabaseAdmin
           .from("media")
