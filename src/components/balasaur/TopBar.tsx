@@ -32,8 +32,10 @@ export function TopBar() {
           </span>
         </a>
 
-        {/* Center search */}
-        <TopBarSearch />
+        {/* Center search (desktop only; mobile gets a full-width row below) */}
+        <div className="mx-auto hidden w-full max-w-md md:block">
+          <TopBarSearch />
+        </div>
 
         {/* Right nav */}
         <nav className="ml-auto flex items-center gap-1 md:gap-2">
@@ -148,6 +150,11 @@ export function TopBar() {
             </button>
           )}
         </nav>
+      </div>
+
+      {/* Search (mobile) — full-width second row, since it doesn't fit the top bar */}
+      <div className="mx-auto max-w-[1600px] px-4 pb-2 md:hidden">
+        <TopBarSearch />
       </div>
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </header>

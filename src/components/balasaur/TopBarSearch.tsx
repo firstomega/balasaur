@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,7 +21,7 @@ export function TopBarSearch() {
   const [active, setActive] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listId = "topbar-search-results";
+  const listId = useId();
 
   // Debounced server-side title search — the header no longer loads the whole
   // catalog into the browser just to search it.
@@ -112,7 +112,7 @@ export function TopBarSearch() {
   const showDropdown = open && query.trim().length > 0;
 
   return (
-    <div ref={wrapRef} className="relative mx-auto hidden w-full max-w-md md:block">
+    <div ref={wrapRef} className="relative w-full">
       <label className="relative block">
         <Search
           className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim"
