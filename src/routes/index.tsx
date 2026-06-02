@@ -50,7 +50,9 @@ export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
     // Prefetch the first page (default filters) + facet stats so the homepage is
     // server-rendered and instant on first paint; the client hydrates from cache.
-    await Promise.all([
+    // allSettled (not all) so a single prefetch failure can never reject the loader
+    // and take down the page — the server fns also fail-soft to empty results.
+    await Promise.allSettled([
       context.queryClient.ensureInfiniteQueryData(
         catalogInfiniteOptions(filtersToParams(defaultFilterState())),
       ),
