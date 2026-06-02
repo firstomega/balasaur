@@ -192,29 +192,66 @@ export const queryCatalog = createServerFn({ method: "GET" })
 export interface CatalogFacets {
   total: number;
   tagged: number;
+  genres: Record<string, number>;
   origins: Record<string, number>;
   scored: { imdb: number; rt: number; meta: number };
 }
 
-/** Global facet stats for the filter rail (cheap aggregates, cached client-side). */
-export const getCatalogFacets = createServerFn({ method: "GET" }).handler(
-  async (): Promise<CatalogFacets> => {
-    const { data, error } = await supabaseAdmin.rpc("catalog_facets");
+/** Filter params the facets respect (same shape as the grid, minus paging). */
+export type CatalogFacetParams = Omit<CatalogQueryParams, "limit" | "offset">;
+
+/**
+ * Faceted counts for the filter rail, recomputed against the active filters — genre
+ * counts apply every filter except the genre selection, origin counts every filter
+ * except the origin selection (standard faceted search). Fail-soft.
+ */
+export const getCatalogFacets = createServerFn({ method: "GET" })
+  .inputValidator((p: CatalogFacetParams) => p)
+  .handler(async ({ data: p }): Promise<CatalogFacets> => {
+    const empty: CatalogFacets = {
+      total: 0,
+      tagged: 0,
+      genres: {},
+      origins: {},
+      scored: { imdb: 0, rt: 0, meta: 0 },
+    };
+    const { data, error } = await supabaseAdmin.rpc("catalog_facets_filtered", {
+      p: {
+        types: p.types,
+        genres: p.genres,
+        origins: p.origins,
+        streaming: p.streaming,
+        year_min: p.yearMin ?? null,
+        year_max: p.yearMax ?? null,
+        imdb_min: p.imdbMin,
+        imdb_max: p.imdbMax,
+        imdb_unrated: p.imdbUnrated,
+        rt_min: p.rtMin,
+        rt_max: p.rtMax,
+        rt_unrated: p.rtUnrated,
+        meta_min: p.metaMin,
+        meta_max: p.metaMax,
+        meta_unrated: p.metaUnrated,
+        people: p.people,
+        award_winners: p.awardWinners,
+        nominated: p.nominated,
+      },
+    });
     if (error) {
       // Fail-soft: a missing function / DB hiccup shows the rail without counts
       // instead of taking down the homepage loader.
       console.error("[facets] query failed:", error.message);
-      return { total: 0, tagged: 0, origins: {}, scored: { imdb: 0, rt: 0, meta: 0 } };
+      return empty;
     }
     const f = (data ?? {}) as Partial<CatalogFacets>;
     return {
       total: f.total ?? 0,
       tagged: f.tagged ?? 0,
+      genres: f.genres ?? {},
       origins: f.origins ?? {},
       scored: f.scored ?? { imdb: 0, rt: 0, meta: 0 },
     };
-  },
-);
+  });
 
 /** Cast/crew name typeahead for the rail's "By Person" search. */
 export const searchCast = createServerFn({ method: "GET" })

@@ -14,7 +14,7 @@ import {
   useCatalogInfinite,
   useCatalogFacets,
   catalogInfiniteOptions,
-  catalogFacetsQueryOptions,
+  catalogFacetsOptions,
   filtersToParams,
 } from "@/hooks/useCatalog";
 import { useUserStatus } from "@/hooks/useUserStatus";
@@ -56,7 +56,9 @@ export const Route = createFileRoute("/")({
       context.queryClient.ensureInfiniteQueryData(
         catalogInfiniteOptions(filtersToParams(defaultFilterState())),
       ),
-      context.queryClient.ensureQueryData(catalogFacetsQueryOptions),
+      context.queryClient.ensureQueryData(
+        catalogFacetsOptions(filtersToParams(defaultFilterState())),
+      ),
     ]);
   },
   errorComponent: HomeError,
@@ -167,7 +169,7 @@ function RailWithData({
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
 }) {
-  const { data: facets } = useCatalogFacets();
+  const { data: facets } = useCatalogFacets(filters);
   return <FilterRail filters={filters} setFilters={setFilters} facets={facets} />;
 }
 

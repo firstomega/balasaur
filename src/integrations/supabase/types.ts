@@ -276,6 +276,7 @@ export type Database = {
     }
     Functions: {
       catalog_facets: { Args: never; Returns: Json }
+      catalog_facets_filtered: { Args: { p: Json }; Returns: Json }
       search_cast: {
         Args: { p_exclude?: string[]; p_q: string }
         Returns: {
