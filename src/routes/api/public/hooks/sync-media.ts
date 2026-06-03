@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { syncCatalog } from "@/lib/media.server";
+import { syncCatalog, refreshStalest } from "@/lib/media.server";
 
 /**
  * Public hook that triggers a catalog refresh. Auth is the standard
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/api/public/hooks/sync-media")({
         let timeBudgetMs: number | undefined;
         let providerBucket: number | undefined;
         let refreshExisting = false;
+        let mode: string | undefined;
         try {
           const body = (await request.json()) as {
             force?: boolean;
@@ -36,24 +37,31 @@ export const Route = createFileRoute("/api/public/hooks/sync-media")({
             timeBudgetMs?: number;
             bucket?: number;
             refreshExisting?: boolean;
+            mode?: string;
           } | null;
           force = !!body?.force;
           if (typeof body?.limit === "number") limit = body.limit;
           if (typeof body?.timeBudgetMs === "number") timeBudgetMs = body.timeBudgetMs;
           if (typeof body?.bucket === "number") providerBucket = body.bucket;
           refreshExisting = !!body?.refreshExisting;
+          if (typeof body?.mode === "string") mode = body.mode;
         } catch {
           // empty body is fine
         }
 
         try {
-          const result = await syncCatalog({
-            force,
-            limit,
-            timeBudgetMs,
-            providerBucket,
-            refreshExisting,
-          });
+          // `mode: "refresh"` walks the STALEST titles table-wide (the long tail);
+          // otherwise we grow + refresh whatever discovery surfaces this pass.
+          const result =
+            mode === "refresh"
+              ? await refreshStalest({ limit, timeBudgetMs })
+              : await syncCatalog({
+                  force,
+                  limit,
+                  timeBudgetMs,
+                  providerBucket,
+                  refreshExisting,
+                });
           return new Response(JSON.stringify({ ok: true, ...result }), {
             status: 200,
             headers: { "Content-Type": "application/json" },

@@ -117,6 +117,51 @@ function mapItem(
   };
 }
 
+// Build a card-level MediaItem from FULL TMDB details (not a discover row). Used by
+// the long-tail refresh, which re-fetches stale titles by id. Mirrors mapItem but
+// reads genres from the details `genres` objects, and falls back to the stored row's
+// values so a sparse re-fetch can never blank an existing field.
+function cardItemFromDetails(
+  id: string,
+  type: "movie" | "tv",
+  d: TmdbDetails & Record<string, unknown>,
+  existing: {
+    title?: string | null;
+    year?: string | null;
+    poster_url?: string | null;
+    genres?: string[] | null;
+  },
+): MediaItem {
+  const dd = d as {
+    title?: string;
+    name?: string;
+    release_date?: string;
+    first_air_date?: string;
+    poster_path?: string | null;
+    overview?: string | null;
+    vote_average?: number;
+    popularity?: number;
+    genres?: { name?: string }[];
+  };
+  const date = type === "movie" ? dd.release_date : dd.first_air_date;
+  const genreNames = (dd.genres ?? []).map((g) => g?.name).filter((n): n is string => !!n);
+  return {
+    id,
+    mediaType: type,
+    title: (type === "movie" ? dd.title : dd.name) ?? existing.title ?? "Untitled",
+    year: yearOf(date) || existing.year || "",
+    overview: dd.overview ?? "",
+    posterUrl: dd.poster_path ? `${POSTER_BASE}${dd.poster_path}` : (existing.poster_url ?? ""),
+    ratings: { tmdb: dd.vote_average ? Number(dd.vote_average.toFixed(1)) : undefined },
+    genres: genreNames.length ? unifyGenres(genreNames) : (existing.genres ?? []),
+    streaming: [],
+    lengthLabel: "",
+    people: [],
+    popularity: dd.popularity,
+    releaseDate: date,
+  };
+}
+
 const PROVIDER_NAME_MAP: Record<string, string> = {
   Netflix: "Netflix",
   Max: "Max",
@@ -1092,6 +1137,127 @@ export async function syncCatalog(opts?: {
     refreshed,
     skippedFresh: seedItems.length - candidates.length,
     failed,
+    durationMs: Date.now() - start,
+  };
+}
+
+export interface RefreshResult {
+  scanned: number;
+  refreshed: number;
+  failed: number;
+  /** How stale the oldest title in this batch was, in days (visibility metric). */
+  oldestAgeDays: number | null;
+  budgetHit: boolean;
+  durationMs: number;
+}
+
+/**
+ * Long-tail freshness: re-fetch the STALEST titles table-wide (oldest fetched_at
+ * first) and re-ingest them from fresh TMDB + OMDb. Unlike syncCatalog's
+ * `refreshExisting` (which only touches titles that re-appear in discovery), this
+ * reaches the obscure tail discovery never re-surfaces. Every field is re-derived
+ * from the fresh payload — genres fall back to the stored value so a sparse re-fetch
+ * can't blank them, and a now-empty `streaming` correctly reflects a title that left
+ * every service. Time-budgeted + chunked like syncCatalog so each request stays short;
+ * `rowFromEnrichedItem` stamps a new `fetched_at`, so the next pass picks up the next
+ * oldest batch and the whole catalog cycles over the GitHub Actions loop.
+ */
+export async function refreshStalest(opts?: {
+  limit?: number;
+  timeBudgetMs?: number;
+}): Promise<RefreshResult> {
+  const start = Date.now();
+  const limit = Math.min(Math.max(1, opts?.limit ?? MAX_ENRICH_PER_RUN), ENRICH_HARD_CEILING);
+  const timeBudgetMs = opts?.timeBudgetMs ?? ENRICH_TIME_BUDGET_MS;
+  const tmdbKey = process.env.TMDB_API_KEY;
+  const omdbKey = process.env.OMDB_API_KEY;
+  if (!tmdbKey) throw new Error("TMDB_API_KEY is not configured");
+
+  const { data: stale, error: selErr } = await supabaseAdmin
+    .from("media")
+    .select("media_id, media_type, genres, title, year, poster_url, fetched_at")
+    .order("fetched_at", { ascending: true, nullsFirst: true })
+    .limit(limit);
+  if (selErr) throw new Error(`stalest select failed: ${selErr.message}`);
+  if (!stale || stale.length === 0) {
+    return {
+      scanned: 0,
+      refreshed: 0,
+      failed: 0,
+      oldestAgeDays: null,
+      budgetHit: false,
+      durationMs: Date.now() - start,
+    };
+  }
+
+  const oldestTs = stale[0]?.fetched_at ? new Date(stale[0].fetched_at as string).getTime() : null;
+  const oldestAgeDays = oldestTs ? Math.round((Date.now() - oldestTs) / 86_400_000) : null;
+
+  let refreshed = 0;
+  let failed = 0;
+  let omdbCalls = 0;
+  let budgetHit = false;
+  const rows: MediaRow[] = [];
+
+  await mapWithLimit(stale, 6, async (r) => {
+    if (Date.now() - start > timeBudgetMs) {
+      budgetHit = true;
+      return;
+    }
+    try {
+      const mediaId = r.media_id as string;
+      const type = (r.media_type as string) === "tv" ? "tv" : "movie";
+      const rawId = mediaId.split("-")[1];
+      const rawTmdb = await tmdb<TmdbDetails & Record<string, unknown>>(
+        `/${type}/${rawId}`,
+        tmdbKey,
+        {
+          append_to_response: TMDB_APPEND,
+          language: "en-US",
+        },
+      );
+      const item = cardItemFromDetails(mediaId, type, rawTmdb, {
+        title: r.title as string | null,
+        year: r.year as string | null,
+        poster_url: r.poster_url as string | null,
+        genres: r.genres as string[] | null,
+      });
+      const imdbId = enrichFromDetails(item, rawTmdb);
+      let rawOmdb: unknown = null;
+      if (omdbKey && imdbId && omdbCalls < OMDB_BUDGET_PER_RUN) {
+        omdbCalls++;
+        rawOmdb = await fetchOmdbRaw(imdbId, omdbKey);
+        if (rawOmdb) applyOmdbRatings(item, rawOmdb as OmdbResponse);
+      }
+      rows.push(rowFromEnrichedItem(item, rawTmdb, rawOmdb));
+      refreshed++;
+    } catch (e) {
+      failed++;
+      console.error(`[refresh] failed for ${r.media_id}:`, e);
+    }
+  });
+
+  const CHUNK = 25;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await supabaseAdmin
+      .from("media")
+      .upsert(rows.slice(i, i + CHUNK), { onConflict: "media_id" });
+    if (error) console.error("[refresh] upsert chunk failed:", error.message);
+  }
+  if (refreshed > 0) {
+    const { error } = await supabaseAdmin.from("trending_cache").delete().eq("key", "trending");
+    if (error) console.error("[refresh] trending_cache bust failed:", error.message);
+  }
+
+  console.log(
+    `[refresh] re-ingested ${refreshed}/${stale.length} stalest titles (oldest ~${oldestAgeDays}d), failed=${failed}${budgetHit ? " (budget hit)" : ""}`,
+  );
+  return {
+    scanned: stale.length,
+    refreshed,
+    failed,
+    oldestAgeDays,
+    budgetHit,
     durationMs: Date.now() - start,
   };
 }
