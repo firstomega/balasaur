@@ -9,6 +9,7 @@ import type {
 } from "@/types/media";
 import { unifyGenres } from "./genres";
 import { deriveOrigins } from "./origins";
+import { deriveFacets } from "./taxonomy";
 import { computeBalasaurScore } from "./score";
 import { mediaSlug } from "./slug";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -771,6 +772,7 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
       };
     } | null
   )?.["watch/providers"];
+  const facets = deriveFacets(rawTmdb, item.mediaType, item.genres);
   return {
     media_id: item.id,
     media_type: item.mediaType,
@@ -788,6 +790,11 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     origins: item.origins ?? [],
     streaming: item.streaming,
     streaming_regions: deriveStreamingRegions(wp),
+    sub_genres: facets.sub_genres,
+    themes: facets.themes,
+    audience: facets.audience,
+    film_length_minutes: facets.film_length_minutes,
+    completion_status: facets.completion_status,
     length_label: item.lengthLabel || null,
     people: item.people as unknown as MediaRow["people"],
     seasons: (item.seasons ?? null) as MediaRow["seasons"],
@@ -857,7 +864,7 @@ export async function backfillFromRaw(opts?: {
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
-        "media_id, genres, origins, streaming, streaming_regions, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
+        "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
       )
       .gt("media_id", cursor)
       .order("media_id", { ascending: true })
@@ -902,6 +909,7 @@ export async function backfillFromRaw(opts?: {
         const newOrigins = deriveOrigins(raw?.original_language, countries);
         const newStreaming = deriveStreaming(raw?.["watch/providers"]);
         const newStreamingRegions = deriveStreamingRegions(raw?.["watch/providers"]);
+        const facets = deriveFacets(row.raw_tmdb, row.media_type, newGenres);
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
@@ -916,6 +924,12 @@ export async function backfillFromRaw(opts?: {
         const awardsDetailChanged =
           JSON.stringify(awardDetail.won) !== JSON.stringify(row.awards_won ?? []) ||
           JSON.stringify(awardDetail.nominated) !== JSON.stringify(row.awards_nominated ?? []);
+        const facetsChanged =
+          JSON.stringify(facets.sub_genres) !== JSON.stringify(row.sub_genres ?? []) ||
+          JSON.stringify(facets.themes) !== JSON.stringify(row.themes ?? []) ||
+          JSON.stringify(facets.audience) !== JSON.stringify(row.audience ?? []) ||
+          (facets.film_length_minutes ?? null) !== (row.film_length_minutes ?? null) ||
+          (facets.completion_status ?? null) !== (row.completion_status ?? null);
 
         // Skip rows that don't actually change. On a large catalog only the rows that
         // need it (co-productions, etc.) get rewritten, so the backfill stays light and
@@ -926,7 +940,8 @@ export async function backfillFromRaw(opts?: {
           !originsChanged &&
           !streamingChanged &&
           !awardsChanged &&
-          !awardsDetailChanged
+          !awardsDetailChanged &&
+          !facetsChanged
         )
           continue;
 
@@ -937,6 +952,11 @@ export async function backfillFromRaw(opts?: {
             origins: newOrigins,
             streaming: newStreaming,
             streaming_regions: newStreamingRegions,
+            sub_genres: facets.sub_genres,
+            themes: facets.themes,
+            audience: facets.audience,
+            film_length_minutes: facets.film_length_minutes,
+            completion_status: facets.completion_status,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,
