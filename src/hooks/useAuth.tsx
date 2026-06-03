@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -29,12 +30,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const qc = useQueryClient();
 
+  // Track the signed-in user id so we only refetch user-scoped data when the
+  // identity actually changes. Supabase fires onAuthStateChange on a timer for
+  // TOKEN_REFRESHED (autoRefreshToken is on), and invalidating ALL queries there
+  // would re-fetch everything — including the whole catalog — on every refresh.
+  const lastUserId = useRef<string | null>(null);
+
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
-      qc.invalidateQueries();
+      const uid = s?.user?.id ?? null;
+      // Only invalidate when who's signed in actually changes (sign in / out /
+      // switch user) or the user record was updated — not on token refresh.
+      if (uid !== lastUserId.current || event === "USER_UPDATED") {
+        lastUserId.current = uid;
+        void qc.invalidateQueries();
+      }
     });
     supabase.auth.getSession().then(({ data }) => {
+      lastUserId.current = data.session?.user?.id ?? null;
       setSession(data.session);
       setLoading(false);
     });
