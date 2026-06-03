@@ -75,6 +75,40 @@ jobs:
           done
           echo "Daily sync complete. Total titles enriched: $total"
 
+      - name: Long-tail refresh (stalest titles, table-wide)
+        env:
+          BASE_URL: https://balasaur.com
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
+        run: |
+          # After the grow/popular passes above, refresh the STALEST titles table-wide
+          # so the obscure long tail (which discovery never re-surfaces) also stays
+          # current. The grow passes just bumped popular titles to fresh, so the oldest
+          # rows are now the obscure ones — exactly what we want. ~5 passes ≈ 1.5k/day.
+          for i in $(seq 1 5); do
+            echo "──────── refresh pass $i/5 ────────"
+            HTTP=000
+            for attempt in 1 2 3 4; do
+              HTTP=$(curl -sS -o /tmp/refresh.json -w "%{http_code}" \
+                -X POST "$BASE_URL/api/public/hooks/sync-media" \
+                -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+                --max-time 300 -d '{"mode":"refresh"}' || echo 000)
+              [ "$HTTP" = "200" ] && break
+              echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/refresh.json 2>/dev/null; echo
+              case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
+              backoff=$((attempt * attempt * 5)); echo "retrying in ${backoff}s…"; sleep "$backoff"
+            done
+            echo "HTTP $HTTP"; echo "Response:"; cat /tmp/refresh.json; echo
+            if [ "$HTTP" != "200" ]; then
+              echo "::error::Refresh pass $i failed with HTTP $HTTP"
+              exit 1
+            fi
+            refreshed=$(jq -r '.refreshed // 0' /tmp/refresh.json 2>/dev/null || echo 0)
+            case "$refreshed" in '' | *[!0-9]*) refreshed=0 ;; esac
+            echo "refresh pass $i: refreshed=$refreshed"
+            [ "$refreshed" -eq 0 ] && { echo "Nothing left to refresh."; break; }
+            sleep 3
+          done
+
       - name: Trigger backfill (manual runs only, when requested)
         if: github.event_name == 'workflow_dispatch' && inputs.backfill
         env:
