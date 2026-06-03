@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, LogOut, User, Pencil, Settings } from "lucide-react";
+import { Zap, LogOut, User, Pencil, Settings, Library } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { DinoMark } from "./DinoMark";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,9 +48,11 @@ export function TopBar() {
           </Link>
           <Link
             to="/lists"
-            className="hidden rounded-[5px] px-2.5 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:inline-block"
+            aria-label="My lists"
+            className="inline-flex items-center gap-1.5 rounded-[5px] px-2 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:px-2.5"
           >
-            Lists
+            <Library className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Lists</span>
           </Link>
           {user ? (
             <DropdownMenu>
