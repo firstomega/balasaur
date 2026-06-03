@@ -10,6 +10,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
 import { ScrollRail } from "./ScrollRail";
 import { displayYear } from "@/lib/mediaFormat";
+import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
 import {
   recordForStatus,
@@ -162,8 +163,14 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
         <div className="absolute inset-x-0 top-0 h-[300px] overflow-hidden bg-panel md:h-[440px]">
           {detail.backdropUrl && (
             <img
-              src={detail.backdropUrl}
+              src={tmdbImage(detail.backdropUrl, "w1280")}
+              srcSet={tmdbSrcSet(detail.backdropUrl, [
+                { w: 780, size: "w780" },
+                { w: 1280, size: "w1280" },
+              ])}
+              sizes="100vw"
               alt=""
+              decoding="async"
               className="absolute inset-0 h-full w-full object-cover opacity-50"
             />
           )}
@@ -178,8 +185,17 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               <div className="aspect-[2/3] w-full">
                 {detail.posterUrl ? (
                   <img
-                    src={detail.posterUrl}
+                    src={tmdbImage(detail.posterUrl, "w342")}
+                    srcSet={tmdbSrcSet(detail.posterUrl, [
+                      { w: 342, size: "w342" },
+                      { w: 500, size: "w500" },
+                    ])}
+                    sizes="(max-width: 768px) 160px, 220px"
                     alt={detail.title}
+                    width={342}
+                    height={513}
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -307,7 +323,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                     aria-label={`Open still ${i + 1}`}
                   >
                     <img
-                      src={src}
+                      src={tmdbImage(src, "w500")}
                       alt=""
                       loading="lazy"
                       decoding="async"
@@ -440,6 +456,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               <img
                 src={(detail.imagesOriginal ?? detail.images)[lightboxIdx]}
                 alt=""
+                decoding="async"
                 className="h-auto w-full rounded-[6px] object-contain"
               />
             )}

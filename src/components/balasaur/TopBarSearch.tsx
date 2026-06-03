@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
 import { mediaSlug } from "@/lib/slug";
+import { tmdbImage } from "@/lib/tmdbImage";
 
 const TYPE_COLOR: Record<string, string> = {
   movie: "text-media-movie",
@@ -182,10 +183,11 @@ export function TopBarSearch() {
                     <div className="h-12 w-8 shrink-0 overflow-hidden rounded-[3px] border border-border bg-background">
                       {hit.posterUrl ? (
                         <img
-                          src={hit.posterUrl}
+                          src={tmdbImage(hit.posterUrl, "w92")}
                           alt=""
                           className="h-full w-full object-cover"
                           loading="lazy"
+                          decoding="async"
                         />
                       ) : null}
                     </div>

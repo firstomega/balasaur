@@ -7,6 +7,7 @@ import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "./AuthDialog";
 import { recordForStatus, recordForSkip, type StatusKey } from "@/lib/userStatus";
+import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 
 // After this many anonymous picks, nudge the user to sign in to save them.
 const NUDGE_AFTER = 5;
@@ -352,9 +353,15 @@ function CardFace({
     <div className="relative h-full w-full overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]">
       {item.posterUrl ? (
         <img
-          src={item.posterUrl}
+          src={tmdbImage(item.posterUrl, "w780")}
+          srcSet={tmdbSrcSet(item.posterUrl, [
+            { w: 500, size: "w500" },
+            { w: 780, size: "w780" },
+          ])}
+          sizes="(max-width: 768px) 100vw, 420px"
           alt={item.title}
           draggable={false}
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : (

@@ -4,6 +4,7 @@ import { TopBar } from "./TopBar";
 import { MediaCard } from "./MediaCard";
 import { usePersonDetail } from "@/hooks/usePersonDetail";
 import type { PersonDetail as PersonDetailType } from "@/types/media";
+import { tmdbImage } from "@/lib/tmdbImage";
 
 function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -60,8 +61,12 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
           <div className="aspect-[2/3] w-full">
             {detail.profileUrl ? (
               <img
-                src={detail.profileUrl}
+                src={tmdbImage(detail.profileUrl, "w342")}
                 alt={detail.name}
+                width={342}
+                height={513}
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover"
               />
             ) : (

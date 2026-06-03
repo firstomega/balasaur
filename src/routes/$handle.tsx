@@ -6,6 +6,7 @@ import { Avatar } from "@/components/balasaur/Avatar";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import { SITE_ORIGIN, buildMeta, canonicalLink, clampDescription } from "@/lib/seo";
 import { mediaSlug } from "@/lib/slug";
+import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 
 // Public profile page at /@username. Because TanStack's runtime matcher doesn't
 // support a literal prefix glued to a param (and typed params would percent-encode
@@ -77,9 +78,17 @@ function PosterTile({ item }: { item: PublicMediaItem }) {
       <div className="aspect-[2/3] overflow-hidden rounded-[5px] border border-border bg-panel">
         {item.posterUrl ? (
           <img
-            src={item.posterUrl}
+            src={tmdbImage(item.posterUrl, "w342")}
+            srcSet={tmdbSrcSet(item.posterUrl, [
+              { w: 185, size: "w185" },
+              { w: 342, size: "w342" },
+            ])}
+            sizes="(max-width: 640px) 33vw, 180px"
             alt={item.title}
+            width={342}
+            height={513}
             loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (
