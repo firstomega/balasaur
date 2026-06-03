@@ -55,6 +55,22 @@ function clearLocal() {
   }
 }
 
+// Outbox helpers: when a signed-in write can't reach the DB, we stash the record
+// locally so it still renders and the next load can retry the sync.
+function cacheLocally(id: string, rec: UserStatusRecord) {
+  const m = read();
+  m[id] = rec;
+  write(m);
+}
+
+function uncacheLocally(id: string) {
+  const m = read();
+  if (id in m) {
+    delete m[id];
+    write(m);
+  }
+}
+
 interface DbRow {
   media_id: string;
   media_type: string;
@@ -186,6 +202,12 @@ export function useUserStatus() {
         for (const row of data as DbRow[]) {
           map[row.media_id] = rowToRecord(row);
         }
+        // Merge any outbox rows whose sync failed, so they still render (and the
+        // retry above keeps trying) instead of silently disappearing from lists.
+        const local = read();
+        for (const [lid, lrec] of Object.entries(local)) {
+          if (!(lid in map)) map[lid] = lrec;
+        }
         setStatuses(map);
       }
       // Mark ready even if the load failed, so the UI proceeds with what we have
@@ -235,27 +257,54 @@ export function useUserStatus() {
         return next;
       });
 
-      // Persist for signed-in users.
+      // Persist for signed-in users. Writes are resilient: a failed sync — a
+      // transient network error, or a DB missing the (user_id, media_id) unique
+      // constraint the upsert's onConflict targets — falls back to a manual
+      // replace, then to the local outbox, so a pick is never silently dropped.
+      // Previously these were fire-and-forget (`void`), so any reject showed the
+      // success toast but saved nothing and the list came up empty.
       if (user) {
+        const uid = user.id;
         if (record === null) {
+          uncacheLocally(id);
           void supabase
             .from("user_media_status")
             .delete()
-            .eq("user_id", user.id)
-            .eq("media_id", id);
+            .eq("user_id", uid)
+            .eq("media_id", id)
+            .then(({ error }) => {
+              if (error) console.error("[userStatus] delete failed:", error.message);
+            });
         } else {
-          const fallback = item
+          const snap = item
             ? {
                 mediaType: item.mediaType,
                 title: item.title,
                 posterUrl: item.posterUrl,
                 year: item.year,
               }
-            : undefined;
+            : record.snapshot;
+          const recWithSnap: UserStatusRecord = { ...record, snapshot: record.snapshot ?? snap };
+          const row = recordToInsert(uid, id, record, snap);
           void supabase
             .from("user_media_status")
-            .upsert(recordToInsert(user.id, id, record, fallback), {
-              onConflict: "user_id,media_id",
+            .upsert(row, { onConflict: "user_id,media_id" })
+            .then(async ({ error }) => {
+              if (!error) return;
+              console.error("[userStatus] upsert failed, retrying manually:", error.message);
+              // Replace by hand so a missing/altered conflict constraint can't block the save.
+              await supabase
+                .from("user_media_status")
+                .delete()
+                .eq("user_id", uid)
+                .eq("media_id", id);
+              const { error: insErr } = await supabase.from("user_media_status").insert(row);
+              if (insErr) {
+                console.error("[userStatus] save failed, caching locally:", insErr.message);
+                cacheLocally(id, recWithSnap);
+              } else {
+                uncacheLocally(id);
+              }
             });
         }
       }
