@@ -16,6 +16,11 @@ export type Database = {
     Tables: {
       media: {
         Row: {
+          audience: string[]
+          completion_status: string | null
+          film_length_minutes: number | null
+          sub_genres: string[]
+          themes: string[]
           award_nominations: number | null
           award_nominee: boolean
           award_winner: boolean
@@ -49,6 +54,11 @@ export type Database = {
           year: string | null
         }
         Insert: {
+          audience?: string[]
+          completion_status?: string | null
+          film_length_minutes?: number | null
+          sub_genres?: string[]
+          themes?: string[]
           award_nominations?: number | null
           award_nominee?: boolean
           award_winner?: boolean
@@ -81,6 +91,11 @@ export type Database = {
           year?: string | null
         }
         Update: {
+          audience?: string[]
+          completion_status?: string | null
+          film_length_minutes?: number | null
+          sub_genres?: string[]
+          themes?: string[]
           award_nominations?: number | null
           award_nominee?: boolean
           award_winner?: boolean
