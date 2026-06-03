@@ -104,7 +104,7 @@ jobs:
               HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
                 -X POST "$BASE_URL/api/public/hooks/sync-media" \
                 -H "apikey: $APIKEY" -H "Content-Type: application/json" \
-                --max-time 300 -d '{}' || echo 000)
+                --max-time 300 -d "$(printf '{"bucket":%d}' "$i")" || echo 000)
               [ "$HTTP" = "200" ] && break
               echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/sync.json 2>/dev/null; echo
               # Only retry transient failures; fail fast on anything else (e.g. 401).

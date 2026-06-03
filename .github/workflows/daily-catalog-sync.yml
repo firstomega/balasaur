@@ -1,9 +1,10 @@
 name: Daily catalog sync
 
-# Grows + refreshes the Balasaur catalog once a day by POSTing the apikey-gated
-# sync endpoint. Each run enriches up to ~350 stalest-first titles (OMDb-budget
-# capped), so the catalog climbs toward full coverage over several days and
-# streaming availability stays fresh — no manual triggering.
+# Grows + refreshes the Balasaur catalog once a day. It loops the apikey-gated sync
+# endpoint a handful of short passes (each ~300 titles): `bucket` rotates which
+# region's major-provider catalog is pulled (9 regions → 9 passes cover them all),
+# and refreshExisting lets a pass re-pull stale popular titles once new ones run out.
+# So the catalog climbs toward full coverage and streaming availability stays fresh.
 #
 # Verify runs in the repo's Actions tab.
 # Requires a GitHub repository secret named SYNC_HOOK_SECRET (server-
@@ -43,19 +44,36 @@ jobs:
             echo "::error::Missing repo secret SYNC_HOOK_SECRET"
             exit 1
           fi
-          echo "POST $BASE_URL/api/public/hooks/sync-media"
-          HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
-            -X POST "$BASE_URL/api/public/hooks/sync-media" \
-            -H "apikey: $APIKEY" \
-            -H "Content-Type: application/json" \
-            --max-time 870 \
-            -d '{}')
-          echo "HTTP $HTTP"
-          echo "Response:"; cat /tmp/sync.json; echo
-          if [ "$HTTP" != "200" ]; then
-            echo "::error::Sync failed with HTTP $HTTP"
-            exit 1
-          fi
+          # Loop short passes instead of one long call the host would kill. bucket=i
+          # rotates the provider-discovery region (9 passes = all 9 regions); each pass
+          # also refreshes stale popular titles. ~9 × ~300 ≈ ~2.7k titles/day.
+          total=0
+          for i in $(seq 1 9); do
+            echo "──────── sync pass $i/9 (bucket=$i) ────────"
+            BODY=$(printf '{"bucket":%d,"refreshExisting":true}' "$i")
+            HTTP=000
+            for attempt in 1 2 3 4; do
+              HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
+                -X POST "$BASE_URL/api/public/hooks/sync-media" \
+                -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+                --max-time 300 -d "$BODY" || echo 000)
+              [ "$HTTP" = "200" ] && break
+              echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/sync.json 2>/dev/null; echo
+              case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
+              backoff=$((attempt * attempt * 5)); echo "retrying in ${backoff}s…"; sleep "$backoff"
+            done
+            echo "HTTP $HTTP"; echo "Response:"; cat /tmp/sync.json; echo
+            if [ "$HTTP" != "200" ]; then
+              echo "::error::Sync pass $i failed with HTTP $HTTP (after retries)"
+              exit 1
+            fi
+            refreshed=$(jq -r '.refreshed // 0' /tmp/sync.json 2>/dev/null || echo 0)
+            case "$refreshed" in '' | *[!0-9]*) refreshed=0 ;; esac
+            total=$((total + refreshed))
+            echo "pass $i: refreshed=$refreshed (cumulative=$total)"
+            sleep 3
+          done
+          echo "Daily sync complete. Total titles enriched: $total"
 
       - name: Trigger backfill (manual runs only, when requested)
         if: github.event_name == 'workflow_dispatch' && inputs.backfill
