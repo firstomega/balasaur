@@ -28,6 +28,14 @@ export interface FilterState {
   awardsWon: Set<string>;
   /** Big-four award keys filtered as a NOMINATION (includes winners). */
   awardsNominated: Set<string>;
+  // Advanced filters (Phase A).
+  subGenres: Set<string>;
+  themes: Set<string>;
+  audience: Set<string>;
+  /** TV completion status: Ongoing / Ended / Cancelled / Upcoming. */
+  completion: Set<string>;
+  /** Film-length bucket keys (see FILM_LENGTH_BUCKETS). */
+  filmLength: Set<string>;
   hideSeen: boolean;
   sort: SortKey;
 }
@@ -53,6 +61,17 @@ export const IMDB_BOUNDS: [number, number] = [0, 10];
 export const RT_BOUNDS: [number, number] = [0, 100];
 export const META_BOUNDS: [number, number] = [0, 100];
 
+// Film-length buckets (movies). `min`/`max` are inclusive minute bounds — also used to
+// build the server-side range filter and the facet buckets so UI + query + RPC agree.
+export const FILM_LENGTH_BUCKETS = [
+  { key: "short", label: "Short", hint: "< 90m", min: 0, max: 89 },
+  { key: "feature", label: "Feature", hint: "90–119m", min: 90, max: 119 },
+  { key: "long", label: "Long", hint: "120–149m", min: 120, max: 149 },
+  { key: "epic", label: "Epic", hint: "150m+", min: 150, max: 100000 },
+] as const;
+
+export const COMPLETION_OPTIONS = ["Ongoing", "Ended", "Cancelled", "Upcoming"] as const;
+
 export function defaultFilterState(): FilterState {
   return {
     mediaTypes: new Set<MediaType>(["movie", "tv"]),
@@ -71,6 +90,11 @@ export function defaultFilterState(): FilterState {
     nominated: false,
     awardsWon: new Set(),
     awardsNominated: new Set(),
+    subGenres: new Set(),
+    themes: new Set(),
+    audience: new Set(),
+    completion: new Set(),
+    filmLength: new Set(),
     hideSeen: false,
     sort: "popular",
   };

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { IMDB_BOUNDS, RT_BOUNDS, META_BOUNDS } from "@/types/filters";
+import { IMDB_BOUNDS, RT_BOUNDS, META_BOUNDS, FILM_LENGTH_BUCKETS } from "@/types/filters";
 import { computeBalasaurScore } from "@/lib/score";
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 
@@ -28,6 +28,11 @@ export interface CatalogQueryParams {
   nominated: boolean;
   awardsWon: string[];
   awardsNominated: string[];
+  subGenres: string[];
+  themes: string[];
+  audience: string[];
+  completion: string[];
+  filmLength: string[];
   /** ISO-3166-1 region for the streaming filter (viewer's account region). Default "US". */
   region?: string;
   sort: string;
@@ -171,6 +176,21 @@ export const queryCatalog = createServerFn({ method: "GET" })
     if (p.awardsWon.length) q = q.overlaps("awards_won", p.awardsWon);
     if (p.awardsNominated.length) q = q.overlaps("awards_nominated", p.awardsNominated);
 
+    // Advanced facets. Array facets match like genres (OR within the facet).
+    if (p.subGenres.length) q = q.overlaps("sub_genres", p.subGenres);
+    if (p.themes.length) q = q.overlaps("themes", p.themes);
+    if (p.audience.length) q = q.overlaps("audience", p.audience);
+    // Completion is TV-only; let movies pass through so it can't blank a mixed view.
+    if (p.completion.length)
+      q = q.or(`media_type.eq.movie,completion_status.in.(${p.completion.join(",")})`);
+    // Film length is movie-only; let TV pass through in a mixed view.
+    if (p.filmLength.length) {
+      const ranges = FILM_LENGTH_BUCKETS.filter((b) => p.filmLength.includes(b.key)).map(
+        (b) => `and(film_length_minutes.gte.${b.min},film_length_minutes.lte.${b.max})`,
+      );
+      if (ranges.length) q = q.or(`media_type.eq.tv,${ranges.join(",")}`);
+    }
+
     // "By person": every selected name must be present in the cast (jsonb contains).
     for (const name of p.people) {
       q = q.contains("people", JSON.stringify([{ name }]));
@@ -216,6 +236,11 @@ export interface CatalogFacets {
   tagged: number;
   genres: Record<string, number>;
   origins: Record<string, number>;
+  subGenres: Record<string, number>;
+  themes: Record<string, number>;
+  audience: Record<string, number>;
+  completion: Record<string, number>;
+  filmLength: Record<string, number>;
   scored: { imdb: number; rt: number; meta: number };
 }
 
@@ -235,6 +260,11 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
       tagged: 0,
       genres: {},
       origins: {},
+      subGenres: {},
+      themes: {},
+      audience: {},
+      completion: {},
+      filmLength: {},
       scored: { imdb: 0, rt: 0, meta: 0 },
     };
     const { data, error } = await supabaseAdmin.rpc("catalog_facets_filtered", {
@@ -258,6 +288,11 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
         people: p.people,
         award_winners: p.awardWinners,
         nominated: p.nominated,
+        sub_genres: p.subGenres,
+        themes: p.themes,
+        audience: p.audience,
+        completion: p.completion,
+        film_length: p.filmLength,
       },
     });
     if (error) {
@@ -272,6 +307,11 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
       tagged: f.tagged ?? 0,
       genres: f.genres ?? {},
       origins: f.origins ?? {},
+      subGenres: f.subGenres ?? {},
+      themes: f.themes ?? {},
+      audience: f.audience ?? {},
+      completion: f.completion ?? {},
+      filmLength: f.filmLength ?? {},
       scored: f.scored ?? { imdb: 0, rt: 0, meta: 0 },
     };
   });

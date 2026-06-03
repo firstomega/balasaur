@@ -24,6 +24,11 @@ interface Serialized {
   nominated: boolean;
   awardsWon: string[];
   awardsNominated: string[];
+  subGenres: string[];
+  themes: string[];
+  audience: string[];
+  completion: string[];
+  filmLength: string[];
   hideSeen: boolean;
   sort: string;
 }
@@ -48,6 +53,11 @@ export function saveFilters(f: FilterState): void {
       nominated: f.nominated,
       awardsWon: [...f.awardsWon],
       awardsNominated: [...f.awardsNominated],
+      subGenres: [...f.subGenres],
+      themes: [...f.themes],
+      audience: [...f.audience],
+      completion: [...f.completion],
+      filmLength: [...f.filmLength],
       hideSeen: f.hideSeen,
       sort: f.sort,
     };
@@ -81,6 +91,11 @@ export function loadFilters(): FilterState | null {
       nominated: s.nominated ?? d.nominated,
       awardsWon: new Set<string>(s.awardsWon ?? []),
       awardsNominated: new Set<string>(s.awardsNominated ?? []),
+      subGenres: new Set<string>(s.subGenres ?? []),
+      themes: new Set<string>(s.themes ?? []),
+      audience: new Set<string>(s.audience ?? []),
+      completion: new Set<string>(s.completion ?? []),
+      filmLength: new Set<string>(s.filmLength ?? []),
       hideSeen: s.hideSeen ?? d.hideSeen,
       sort: (s.sort as FilterState["sort"]) ?? d.sort,
     };

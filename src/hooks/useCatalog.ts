@@ -39,6 +39,11 @@ export function filtersToParams(filters: FilterState, region = "US"): CatalogBas
     nominated: filters.nominated,
     awardsWon: [...filters.awardsWon],
     awardsNominated: [...filters.awardsNominated],
+    subGenres: [...filters.subGenres],
+    themes: [...filters.themes],
+    audience: [...filters.audience],
+    completion: [...filters.completion],
+    filmLength: [...filters.filmLength],
     sort: filters.sort,
   };
 }
