@@ -227,6 +227,25 @@ const TV_CERT_AUDIENCE: Record<string, string> = {
   "TV-MA": "Mature",
 };
 
+// ---- UI option lists ------------------------------------------------------------
+// Curated vocabularies surfaced by the Advanced-filter panel, derived from the
+// dictionaries above so the panel and the deriver can never drift. The labels here
+// are exactly what deriveFacets() writes to the facet columns, which is what the
+// server filters overlap on.
+
+/** Sub-genre labels with their parent unified-genres. Drives the conditional panel:
+ *  a sub-genre is only offered once one of its parent genres is selected. */
+export const SUBGENRE_OPTIONS: { label: string; parents: string[] }[] = SUBGENRE_RULES.map((r) => ({
+  label: r.label,
+  parents: r.parents,
+}));
+
+/** Every distinct cross-genre theme, alphabetical. */
+export const THEME_OPTIONS: string[] = Array.from(new Set(Object.values(THEME_MAP))).sort();
+
+/** Audience bands, broadest → most mature. */
+export const AUDIENCE_OPTIONS: string[] = ["Kids", "Family", "Teen", "Adult", "Mature"];
+
 export function deriveThemes(keywords: Keyword[]): string[] {
   const out = new Set<string>();
   for (const k of keywords) {
