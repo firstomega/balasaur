@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
 import { mediaSlug } from "@/lib/slug";
 import { ScoreBadge } from "./ScoreBadge";
+import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 
 const TYPE_LABEL: Record<MediaType, string> = {
   movie: "MOVIE",
@@ -125,9 +126,18 @@ function CardArt({
       <div className="aspect-[2/3] w-full">
         {item.posterUrl ? (
           <img
-            src={item.posterUrl}
+            src={tmdbImage(item.posterUrl, "w342")}
+            srcSet={tmdbSrcSet(item.posterUrl, [
+              { w: 185, size: "w185" },
+              { w: 342, size: "w342" },
+              { w: 500, size: "w500" },
+            ])}
+            sizes="(max-width: 640px) 33vw, (max-width: 1024px) 22vw, 160px"
             alt={item.title}
+            width={342}
+            height={513}
             loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { tmdbImage } from "@/lib/tmdbImage";
 
 export type ProviderName = "Netflix" | "Max" | "Prime" | "Apple TV+" | "Hulu" | "Disney+";
 
@@ -176,7 +177,13 @@ export function ProviderIcon({
     >
       {/* Prefer the real (official) logo; fall back to the built-in glyph, then initials. */}
       {logoUrl ? (
-        <img src={logoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+        <img
+          src={tmdbImage(logoUrl, "w92")}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
       ) : mark ? (
         <svg viewBox="0 0 32 32" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
           {mark.glyph}
