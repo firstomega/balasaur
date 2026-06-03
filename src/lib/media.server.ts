@@ -31,11 +31,14 @@ const TOP_RATED_PAGES = 25; // ~500 of each type — classics
 const TRENDING_PAGES = 5; // ~100 of each type — currently hot
 // Provider-targeted discovery: pull the most-popular titles actually streaming on a
 // major service in each market, so the streaming/region filters fill out (general
-// popularity discovery barely tags providers). One region is covered per request,
-// rotated by the caller's `providerBucket` so a loop walks every region.
+// popularity discovery barely tags providers). Each request sweeps ONE
+// (region × provider) combo to full TMDB depth; `providerBucket` rotates through all
+// combos so the loop walks every service in every market over time.
 const STREAMING_REGIONS = ["US", "GB", "CA", "AU", "DE", "FR", "JP", "KR", "IN"] as const;
-const MAJOR_PROVIDER_IDS = "8|9|337|1899|15|350|531|386"; // Netflix, Prime, Disney+, Max, Hulu, Apple TV+, Paramount+, Peacock (TMDB ids; | = OR)
-const PROVIDER_DISCOVER_PAGES = 20; // ~400 most-popular streaming titles per region/type
+// TMDB watch-provider ids for the majors, queried INDIVIDUALLY (not OR'd) so each
+// service's full catalog is captured, not just the headliners shared across all.
+const PROVIDER_IDS = [8, 9, 337, 1899, 15, 350, 531, 386]; // Netflix, Prime, Disney+, Max, Hulu, Apple TV+, Paramount+, Peacock
+const PROVIDER_DISCOVER_PAGES = 500; // TMDB's hard page cap — go as deep as the API allows per combo
 const OMDB_BUDGET_PER_RUN = 1500; // patron tier ~100k/day; ≥ MAX_ENRICH so every enriched title also gets OMDb ratings
 // Keep each request SHORT. Enriching hundreds of titles in one HTTP call holds the
 // request open for many minutes, and the host kills any request that runs that
@@ -676,30 +679,58 @@ async function discoverIds(
 // Like discoverIds, but constrained to titles available on a major streaming service
 // in a given region (popularity-sorted). This is what actually fills the provider
 // filters — plain discover/movie barely overlaps any one service's catalog.
-async function discoverByProviders(
+async function discoverByProvider(
   type: "movie" | "tv",
   key: string,
   region: string,
-  pages: number,
+  providerId: number,
+  maxPages: number,
 ): Promise<DiscoverResult[]> {
-  const pageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
-  const pageResults = await mapWithLimit(pageNumbers, 12, async (page) => {
-    try {
-      const r = await tmdb<{ results: DiscoverResult[] }>(`/discover/${type}`, key, {
-        sort_by: "popularity.desc",
-        include_adult: "false",
-        watch_region: region,
-        with_watch_providers: MAJOR_PROVIDER_IDS,
-        page: String(page),
-        language: "en-US",
-      });
-      return r.results;
-    } catch (e) {
-      console.error(`[sync] provider discover ${type} ${region} page ${page} failed:`, e);
-      return [];
-    }
-  });
-  return pageResults.flat();
+  const params = {
+    sort_by: "popularity.desc",
+    include_adult: "false",
+    watch_region: region,
+    with_watch_providers: String(providerId),
+    language: "en-US",
+  };
+  // Page 1 reports how many pages actually exist, so we only fetch what's there
+  // (TMDB caps at 500) instead of blasting empty requests at a small catalog.
+  let first: { results: DiscoverResult[]; total_pages?: number };
+  try {
+    first = await tmdb<{ results: DiscoverResult[]; total_pages?: number }>(
+      `/discover/${type}`,
+      key,
+      {
+        ...params,
+        page: "1",
+      },
+    );
+  } catch (e) {
+    console.error(`[sync] provider discover ${type} ${region}/${providerId} page 1 failed:`, e);
+    return [];
+  }
+  const total = Math.min(first.total_pages ?? 1, maxPages, 500);
+  if (total <= 1) return first.results;
+  const rest = await mapWithLimit(
+    Array.from({ length: total - 1 }, (_, i) => i + 2),
+    12,
+    async (page) => {
+      try {
+        const r = await tmdb<{ results: DiscoverResult[] }>(`/discover/${type}`, key, {
+          ...params,
+          page: String(page),
+        });
+        return r.results;
+      } catch (e) {
+        console.error(
+          `[sync] provider discover ${type} ${region}/${providerId} page ${page} failed:`,
+          e,
+        );
+        return [];
+      }
+    },
+  );
+  return [...first.results, ...rest.flat()];
 }
 
 async function listFromPath(path: string, key: string, pages: number): Promise<DiscoverResult[]> {
@@ -983,14 +1014,16 @@ export async function syncCatalog(opts?: {
   const genres = await loadGenres(tmdbKey);
 
   // 1. Seed from multiple TMDB sources, then merge + dedupe.
-  // Rotate through one streaming region per call so the major-provider catalogs fill
-  // out over the caller's loop instead of re-pulling every region on every pass.
-  const region =
-    STREAMING_REGIONS[
-      (((opts?.providerBucket ?? 0) % STREAMING_REGIONS.length) + STREAMING_REGIONS.length) %
-        STREAMING_REGIONS.length
-    ];
-  console.log(`[sync] bucket=${opts?.providerBucket ?? 0} provider region=${region}`);
+  // Rotate through one (region × provider) combo per call and sweep it to full TMDB
+  // depth, so over the caller's loop every service's whole catalog in every market is
+  // pulled — not just the headliners. Combo = bucket % (regions × providers).
+  const combos = STREAMING_REGIONS.length * PROVIDER_IDS.length;
+  const bucket = (((opts?.providerBucket ?? 0) % combos) + combos) % combos;
+  const region = STREAMING_REGIONS[bucket % STREAMING_REGIONS.length];
+  const providerId = PROVIDER_IDS[Math.floor(bucket / STREAMING_REGIONS.length)];
+  console.log(
+    `[sync] bucket=${opts?.providerBucket ?? 0} sweeping provider ${providerId} in ${region}`,
+  );
 
   const [
     discoverMovies,
@@ -1008,8 +1041,8 @@ export async function syncCatalog(opts?: {
     listFromPath("/tv/top_rated", tmdbKey, TOP_RATED_PAGES),
     listFromPath("/trending/movie/week", tmdbKey, TRENDING_PAGES),
     listFromPath("/trending/tv/week", tmdbKey, TRENDING_PAGES),
-    discoverByProviders("movie", tmdbKey, region, PROVIDER_DISCOVER_PAGES),
-    discoverByProviders("tv", tmdbKey, region, PROVIDER_DISCOVER_PAGES),
+    discoverByProvider("movie", tmdbKey, region, providerId, PROVIDER_DISCOVER_PAGES),
+    discoverByProvider("tv", tmdbKey, region, providerId, PROVIDER_DISCOVER_PAGES),
   ]);
 
   // Provider titles first so, among never-fetched candidates (equal by staleness),

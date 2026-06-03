@@ -47,10 +47,15 @@ jobs:
           # Loop short passes instead of one long call the host would kill. bucket=i
           # rotates the provider-discovery region (9 passes = all 9 regions); each pass
           # also refreshes stale popular titles. ~9 × ~300 ≈ ~2.7k titles/day.
+          # Derive the bucket from the day number so successive days CONTINUE the
+          # rotation (72 region×provider combos → a full sweep every 8 days) instead
+          # of re-running the same 9 combos every day.
+          BASE=$(( $(date -u +%s) / 86400 * 9 ))
           total=0
           for i in $(seq 1 9); do
-            echo "──────── sync pass $i/9 (bucket=$i) ────────"
-            BODY=$(printf '{"bucket":%d,"refreshExisting":true}' "$i")
+            bucket=$(( BASE + i ))
+            echo "──────── sync pass $i/9 (bucket=$bucket) ────────"
+            BODY=$(printf '{"bucket":%d,"refreshExisting":true}' "$bucket")
             HTTP=000
             for attempt in 1 2 3 4; do
               HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
