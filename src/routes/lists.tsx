@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
+import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
@@ -28,6 +29,12 @@ const BUCKET_HINT: Record<Bucket, string> = {
   favorites: "Titles you liked",
   watchlist: "Saved to watch later",
   history: "Everything you've watched",
+};
+
+const BUCKET_EMPTY: Record<Bucket, string> = {
+  favorites: "No favorites yet — like a title and it lands here.",
+  watchlist: "Nothing saved to watch yet — add titles from the grid or swipe deck.",
+  history: "Nothing watched yet — mark something Watched to start your history.",
 };
 
 function snapToItem(
@@ -63,8 +70,11 @@ function bucketsFor(rec: { status: string; sentiment?: string; intent?: string }
 
 function ListsPage() {
   const { user, loading } = useAuth();
-  const { statuses } = useUserStatus();
+  const { statuses, ready } = useUserStatus();
   const [authOpen, setAuthOpen] = useState(false);
+  // Show skeletons until auth has resolved AND the status load has settled, so the
+  // buckets don't flash "nothing here yet" before the user's saved data arrives.
+  const showSkeleton = loading || !ready;
 
   const grouped = useMemo(() => {
     const out: Record<Bucket, MediaItem[]> = {
@@ -118,11 +128,13 @@ function ListsPage() {
                     </span>
                   </div>
                   <span className="font-mono text-[10.5px] text-text-muted">
-                    {grouped[b].length}
+                    {showSkeleton ? "" : grouped[b].length}
                   </span>
                 </div>
-                {grouped[b].length === 0 ? (
-                  <p className="font-mono text-[10.5px] text-text-dim">Nothing here yet.</p>
+                {showSkeleton ? (
+                  <MediaGridSkeleton count={6} />
+                ) : grouped[b].length === 0 ? (
+                  <p className="font-mono text-[10.5px] text-text-dim">{BUCKET_EMPTY[b]}</p>
                 ) : (
                   <MediaGrid items={grouped[b]} />
                 )}
