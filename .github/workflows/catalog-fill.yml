@@ -95,6 +95,7 @@ jobs:
           MAX: ${{ inputs.max_iterations }}
         run: |
           total_refreshed=0
+          zeros=0  # consecutive passes that added nothing
           for i in $(seq 1 "$MAX"); do
             echo "──────── sync pass $i / $MAX ────────"
             # Each pass is short now (~1-2 min). Retry transient gateway errors a
@@ -126,9 +127,18 @@ jobs:
             case "$refreshed" in '' | *[!0-9]*) refreshed=1 ;; esac
             total_refreshed=$((total_refreshed + refreshed))
             echo "pass $i: refreshed=$refreshed (cumulative=$total_refreshed)"
+            # We rotate through 72 region×provider combos, so a SINGLE empty combo does
+            # not mean the catalog is full — keep going so later providers (Disney+, Max,
+            # Hulu, …) still get swept. Only stop once a full rotation in a row (75 passes)
+            # has added nothing, i.e. genuinely caught up.
             if [ "$refreshed" -eq 0 ]; then
-              echo "✅ Caught up — a pass enriched 0 new titles. Stopping at pass $i."
-              break
+              zeros=$((zeros + 1))
+              if [ "$zeros" -ge 75 ]; then
+                echo "✅ Caught up — 75 passes in a row enriched 0 new titles. Stopping at pass $i."
+                break
+              fi
+            else
+              zeros=0
             fi
             sleep 5
           done
