@@ -129,6 +129,16 @@
     border-color: var(--color-border);
   }
 
+  /* Mobile overflow guard: never let a stray element wider than the screen
+     push the page past the device width — that makes the browser zoom the
+     whole layout out (tiny text, content cut off on the right, only the top
+     bar matching the screen). Intentional horizontal scrollers (ScrollRail)
+     use their own overflow-x-auto and keep working. `clip` rather than
+     `hidden` so the sticky TopBar isn't turned into a scroll container. */
+  html {
+    overflow-x: clip;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
