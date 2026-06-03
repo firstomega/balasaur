@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import type { MediaDetail as MediaDetailType, ProviderRef } from "@/types/media";
 import { ProviderIcon } from "./ProviderIcon";
 
@@ -39,7 +40,15 @@ function MicroLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Group({ label, items }: { label: string; items: ProviderRef[] }) {
+function Group({
+  label,
+  items,
+  link,
+}: {
+  label: string;
+  items: ProviderRef[];
+  link?: string | null;
+}) {
   if (items.length === 0) return null;
   return (
     <div>
@@ -47,16 +56,35 @@ function Group({ label, items }: { label: string; items: ProviderRef[] }) {
         {label}
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {items.map((p) => (
-          <ProviderIcon
-            key={p.name}
-            provider={p.name}
-            logoUrl={p.logoUrl}
-            label={p.name}
-            selected
-            size={32}
-          />
-        ))}
+        {items.map((p) => {
+          const badge = (
+            <ProviderIcon
+              provider={p.name}
+              logoUrl={p.logoUrl}
+              label={p.name}
+              selected
+              size={32}
+              asBadge
+            />
+          );
+          // TMDB/JustWatch exposes a single deep link per title+region (the JustWatch
+          // page listing every option), not per-provider URLs — so each chip opens
+          // that page, where the user picks the service.
+          return link ? (
+            <a
+              key={p.name}
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Watch on ${p.name} — opens JustWatch`}
+              className="rounded-[5px] transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+            >
+              {badge}
+            </a>
+          ) : (
+            <span key={p.name}>{badge}</span>
+          );
+        })}
       </div>
     </div>
   );
@@ -115,15 +143,27 @@ export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
         </p>
       ) : (
         <div className="space-y-3">
-          <Group label="Stream" items={current.stream} />
-          <Group label="Rent" items={current.rent} />
-          <Group label="Buy" items={current.buy} />
+          <Group label="Stream" items={current.stream} link={current.link} />
+          <Group label="Rent" items={current.rent} link={current.link} />
+          <Group label="Buy" items={current.buy} link={current.link} />
         </div>
       )}
 
-      <p className="mt-3 border-t border-border pt-2 font-mono text-[9px] uppercase tracking-wider text-text-dim">
-        Streaming data by JustWatch.
-      </p>
+      {current.link ? (
+        <a
+          href={current.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex items-center gap-1 border-t border-border pt-2 font-mono text-[9px] uppercase tracking-wider text-text-dim hover:text-text-muted"
+        >
+          More options on JustWatch
+          <ExternalLink className="h-2.5 w-2.5" />
+        </a>
+      ) : (
+        <p className="mt-3 border-t border-border pt-2 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+          Streaming data by JustWatch.
+        </p>
+      )}
     </div>
   );
 }
