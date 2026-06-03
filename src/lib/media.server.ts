@@ -29,6 +29,13 @@ const POSTGREST_PAGE = 1000;
 const DISCOVER_PAGES = 500; // TMDB max: ~10,000 of each type — enough headroom to keep adding new titles
 const TOP_RATED_PAGES = 25; // ~500 of each type — classics
 const TRENDING_PAGES = 5; // ~100 of each type — currently hot
+// Provider-targeted discovery: pull the most-popular titles actually streaming on a
+// major service in each market, so the streaming/region filters fill out (general
+// popularity discovery barely tags providers). One region is covered per request,
+// rotated by the caller's `providerBucket` so a loop walks every region.
+const STREAMING_REGIONS = ["US", "GB", "CA", "AU", "DE", "FR", "JP", "KR", "IN"] as const;
+const MAJOR_PROVIDER_IDS = "8|9|337|1899|15|350|531|386"; // Netflix, Prime, Disney+, Max, Hulu, Apple TV+, Paramount+, Peacock (TMDB ids; | = OR)
+const PROVIDER_DISCOVER_PAGES = 20; // ~400 most-popular streaming titles per region/type
 const OMDB_BUDGET_PER_RUN = 1500; // patron tier ~100k/day; ≥ MAX_ENRICH so every enriched title also gets OMDb ratings
 // Keep each request SHORT. Enriching hundreds of titles in one HTTP call holds the
 // request open for many minutes, and the host kills any request that runs that
@@ -621,6 +628,35 @@ async function discoverIds(
   return pageResults.flat();
 }
 
+// Like discoverIds, but constrained to titles available on a major streaming service
+// in a given region (popularity-sorted). This is what actually fills the provider
+// filters — plain discover/movie barely overlaps any one service's catalog.
+async function discoverByProviders(
+  type: "movie" | "tv",
+  key: string,
+  region: string,
+  pages: number,
+): Promise<DiscoverResult[]> {
+  const pageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
+  const pageResults = await mapWithLimit(pageNumbers, 12, async (page) => {
+    try {
+      const r = await tmdb<{ results: DiscoverResult[] }>(`/discover/${type}`, key, {
+        sort_by: "popularity.desc",
+        include_adult: "false",
+        watch_region: region,
+        with_watch_providers: MAJOR_PROVIDER_IDS,
+        page: String(page),
+        language: "en-US",
+      });
+      return r.results;
+    } catch (e) {
+      console.error(`[sync] provider discover ${type} ${region} page ${page} failed:`, e);
+      return [];
+    }
+  });
+  return pageResults.flat();
+}
+
 async function listFromPath(path: string, key: string, pages: number): Promise<DiscoverResult[]> {
   const pageNumbers = Array.from({ length: pages }, (_, i) => i + 1);
   const pageResults = await mapWithLimit(pageNumbers, 12, async (page) => {
@@ -889,6 +925,8 @@ export async function syncCatalog(opts?: {
   limit?: number;
   /** Wall-clock budget (ms) for the enrich phase. Defaults to ENRICH_TIME_BUDGET_MS. */
   timeBudgetMs?: number;
+  /** Rotates which region's major-provider catalog is pulled this call (caller's loop index). */
+  providerBucket?: number;
 }): Promise<SyncResult> {
   const start = Date.now();
   const enrichLimit = Math.min(Math.max(1, opts?.limit ?? MAX_ENRICH_PER_RUN), ENRICH_HARD_CEILING);
@@ -900,18 +938,44 @@ export async function syncCatalog(opts?: {
   const genres = await loadGenres(tmdbKey);
 
   // 1. Seed from multiple TMDB sources, then merge + dedupe.
-  const [discoverMovies, discoverTv, topMovies, topTv, trendingMovies, trendingTv] =
-    await Promise.all([
-      discoverIds("movie", tmdbKey, DISCOVER_PAGES),
-      discoverIds("tv", tmdbKey, DISCOVER_PAGES),
-      listFromPath("/movie/top_rated", tmdbKey, TOP_RATED_PAGES),
-      listFromPath("/tv/top_rated", tmdbKey, TOP_RATED_PAGES),
-      listFromPath("/trending/movie/week", tmdbKey, TRENDING_PAGES),
-      listFromPath("/trending/tv/week", tmdbKey, TRENDING_PAGES),
-    ]);
+  // Rotate through one streaming region per call so the major-provider catalogs fill
+  // out over the caller's loop instead of re-pulling every region on every pass.
+  const region =
+    STREAMING_REGIONS[
+      (((opts?.providerBucket ?? 0) % STREAMING_REGIONS.length) + STREAMING_REGIONS.length) %
+        STREAMING_REGIONS.length
+    ];
+  console.log(`[sync] bucket=${opts?.providerBucket ?? 0} provider region=${region}`);
 
-  const movies = dedupeById([...discoverMovies, ...topMovies, ...trendingMovies]);
-  const tv = dedupeById([...discoverTv, ...topTv, ...trendingTv]);
+  const [
+    discoverMovies,
+    discoverTv,
+    topMovies,
+    topTv,
+    trendingMovies,
+    trendingTv,
+    providerMovies,
+    providerTv,
+  ] = await Promise.all([
+    discoverIds("movie", tmdbKey, DISCOVER_PAGES),
+    discoverIds("tv", tmdbKey, DISCOVER_PAGES),
+    listFromPath("/movie/top_rated", tmdbKey, TOP_RATED_PAGES),
+    listFromPath("/tv/top_rated", tmdbKey, TOP_RATED_PAGES),
+    listFromPath("/trending/movie/week", tmdbKey, TRENDING_PAGES),
+    listFromPath("/trending/tv/week", tmdbKey, TRENDING_PAGES),
+    discoverByProviders("movie", tmdbKey, region, PROVIDER_DISCOVER_PAGES),
+    discoverByProviders("tv", tmdbKey, region, PROVIDER_DISCOVER_PAGES),
+  ]);
+
+  // Provider titles first so, among never-fetched candidates (equal by staleness),
+  // the mainstream streaming catalog is enriched ahead of the long tail.
+  const movies = dedupeById([
+    ...providerMovies,
+    ...discoverMovies,
+    ...topMovies,
+    ...trendingMovies,
+  ]);
+  const tv = dedupeById([...providerTv, ...discoverTv, ...topTv, ...trendingTv]);
 
   const seedItems: MediaItem[] = [
     ...movies.map((r) => mapItem(r as TmdbTrendingItem, "movie", genres.movie)),

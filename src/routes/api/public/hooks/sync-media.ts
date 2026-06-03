@@ -27,21 +27,33 @@ export const Route = createFileRoute("/api/public/hooks/sync-media")({
         let force = false;
         let limit: number | undefined;
         let timeBudgetMs: number | undefined;
+        let providerBucket: number | undefined;
+        let refreshExisting = false;
         try {
           const body = (await request.json()) as {
             force?: boolean;
             limit?: number;
             timeBudgetMs?: number;
+            bucket?: number;
+            refreshExisting?: boolean;
           } | null;
           force = !!body?.force;
           if (typeof body?.limit === "number") limit = body.limit;
           if (typeof body?.timeBudgetMs === "number") timeBudgetMs = body.timeBudgetMs;
+          if (typeof body?.bucket === "number") providerBucket = body.bucket;
+          refreshExisting = !!body?.refreshExisting;
         } catch {
           // empty body is fine
         }
 
         try {
-          const result = await syncCatalog({ force, limit, timeBudgetMs });
+          const result = await syncCatalog({
+            force,
+            limit,
+            timeBudgetMs,
+            providerBucket,
+            refreshExisting,
+          });
           return new Response(JSON.stringify({ ok: true, ...result }), {
             status: 200,
             headers: { "Content-Type": "application/json" },
