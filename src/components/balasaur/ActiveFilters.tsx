@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import type { FilterState } from "@/types/filters";
 import {
   AWARD_OPTIONS,
+  FILM_LENGTH_BUCKETS,
   IMDB_BOUNDS,
   META_BOUNDS,
   RT_BOUNDS,
@@ -50,6 +51,71 @@ export function buildChips(
           const next = new Set(p.genres);
           next.delete(g);
           return { ...p, genres: next };
+        }),
+    });
+  }
+
+  for (const sg of filters.subGenres) {
+    chips.push({
+      key: `sg-${sg}`,
+      label: sg,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.subGenres);
+          next.delete(sg);
+          return { ...p, subGenres: next };
+        }),
+    });
+  }
+
+  for (const th of filters.themes) {
+    chips.push({
+      key: `th-${th}`,
+      label: th,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.themes);
+          next.delete(th);
+          return { ...p, themes: next };
+        }),
+    });
+  }
+
+  for (const au of filters.audience) {
+    chips.push({
+      key: `au-${au}`,
+      label: au,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.audience);
+          next.delete(au);
+          return { ...p, audience: next };
+        }),
+    });
+  }
+
+  for (const fl of filters.filmLength) {
+    chips.push({
+      key: `fl-${fl}`,
+      label: FILM_LENGTH_BUCKETS.find((b) => b.key === fl)?.label ?? fl,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.filmLength);
+          next.delete(fl);
+          return { ...p, filmLength: next };
+        }),
+    });
+  }
+
+  for (const cs of filters.completion) {
+    chips.push({
+      key: `cs-${cs}`,
+      label: cs,
+      onRemove: () =>
+        setFilters((p) => {
+          const next = new Set(p.completion);
+          next.delete(cs);
+          return { ...p, completion: next };
         }),
     });
   }

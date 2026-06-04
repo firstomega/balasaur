@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { FilterState } from "@/types/filters";
 import {
   AWARD_OPTIONS,
+  COMPLETION_OPTIONS,
+  FILM_LENGTH_BUCKETS,
   IMDB_BOUNDS,
   META_BOUNDS,
   RT_BOUNDS,
@@ -14,6 +16,7 @@ import {
 } from "@/types/filters";
 import { UNIFIED_GENRES } from "@/lib/genres";
 import { ORIGIN_OPTIONS } from "@/lib/origins";
+import { AUDIENCE_OPTIONS, SUBGENRE_OPTIONS, THEME_OPTIONS } from "@/lib/taxonomy";
 import {
   Accordion,
   AccordionContent,
@@ -127,8 +130,19 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
   // data" instead of a click landing on a blank grid.
   const genreCounts = facets?.genres ?? {};
   const originCounts = facets?.origins ?? {};
+  const audienceCounts = facets?.audience ?? {};
+  const filmLengthCounts = facets?.filmLength ?? {};
+  const completionCounts = facets?.completion ?? {};
+  // These two feed useMemos below, so keep a stable reference (a bare `?? {}` makes a
+  // fresh object every render and would re-run those memos needlessly).
+  const subGenreCounts = useMemo(() => facets?.subGenres ?? {}, [facets?.subGenres]);
+  const themeCounts = useMemo(() => facets?.themes ?? {}, [facets?.themes]);
   const originTagged = facets?.tagged ?? 0;
   const catalogTotal = facets?.total ?? 0;
+
+  // Which advanced facets apply to the current media-type selection.
+  const showFilmLength = filters.mediaTypes.has("movie"); // movie runtime only
+  const showCompletion = filters.mediaTypes.has("tv"); // series status only
 
   // Chip display order: sort genre/origin by OVERALL catalog popularity (the global,
   // unfiltered counts — already prefetched for the homepage, so a cache hit) rather
@@ -146,6 +160,35 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
     () => sortByCount(ORIGIN_OPTIONS, globalFacets?.origins),
     [globalFacets?.origins],
   );
+  const themeOrder = useMemo(
+    () => sortByCount(THEME_OPTIONS, globalFacets?.themes),
+    [globalFacets?.themes],
+  );
+
+  // Sub-genres are conditional on genre: only the ones whose parent genre is selected
+  // are offered. Among those, hide ones with no results under the current filters — the
+  // curated vocab is large and discovery-oriented, so (unlike the closed genre list) a
+  // wall of greyed pills would be noise. Order stays stable (global popularity); only
+  // the live counts and membership shift as other filters change.
+  const subGenreParents = useMemo(
+    () => new Map(SUBGENRE_OPTIONS.map((s) => [s.label, s.parents])),
+    [],
+  );
+  const visibleSubGenres = useMemo(() => {
+    if (filters.genres.size === 0) return [];
+    const inScope = SUBGENRE_OPTIONS.filter((s) =>
+      s.parents.some((p) => filters.genres.has(p)),
+    ).map((s) => s.label);
+    return sortByCount(inScope, globalFacets?.subGenres).filter(
+      (sg) => (subGenreCounts[sg] ?? 0) > 0 || filters.subGenres.has(sg),
+    );
+  }, [filters.genres, filters.subGenres, subGenreCounts, globalFacets?.subGenres]);
+
+  // Themes use the same "hide empty under current filters" rule as sub-genres.
+  const visibleThemes = useMemo(
+    () => themeOrder.filter((t) => (themeCounts[t] ?? 0) > 0 || filters.themes.has(t)),
+    [themeOrder, themeCounts, filters.themes],
+  );
 
   // Official provider logos (cached a day; empty → ProviderIcon shows its glyph).
   const { data: providerLogos } = useQuery({
@@ -160,6 +203,27 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
       if (set.has(value)) set.delete(value);
       else set.add(value);
       return { ...prev, [key]: set };
+    });
+  };
+
+  // Genre toggle, plus prune: when a genre is removed, drop any selected sub-genre that
+  // no longer has a parent genre in the set, so the conditional Sub-Genre section and
+  // its chips never leave an orphaned, invisible filter behind.
+  const toggleGenre = (g: string) => {
+    setFilters((prev) => {
+      const genres = new Set(prev.genres);
+      if (genres.has(g)) genres.delete(g);
+      else genres.add(g);
+      let subGenres = prev.subGenres;
+      if (subGenres.size > 0) {
+        const next = new Set(subGenres);
+        for (const sg of next) {
+          const parents = subGenreParents.get(sg);
+          if (parents && !parents.some((p) => genres.has(p))) next.delete(sg);
+        }
+        if (next.size !== subGenres.size) subGenres = next;
+      }
+      return { ...prev, genres, subGenres };
     });
   };
 
@@ -184,7 +248,18 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
         case "media-type":
           return { ...prev, mediaTypes: d.mediaTypes };
         case "genre":
-          return { ...prev, genres: d.genres };
+          // Clearing the genre also clears sub-genres (they hang off it).
+          return { ...prev, genres: d.genres, subGenres: d.subGenres };
+        case "sub-genre":
+          return { ...prev, subGenres: d.subGenres };
+        case "themes":
+          return { ...prev, themes: d.themes };
+        case "audience":
+          return { ...prev, audience: d.audience };
+        case "film-length":
+          return { ...prev, filmLength: d.filmLength };
+        case "completion":
+          return { ...prev, completion: d.completion };
         case "origin":
           return { ...prev, origins: d.origins };
         case "streaming":
@@ -221,6 +296,11 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
     const s = new Set<string>();
     if (filters.mediaTypes.size !== 2) s.add("media-type");
     if (filters.genres.size > 0) s.add("genre");
+    if (filters.subGenres.size > 0) s.add("sub-genre");
+    if (filters.themes.size > 0) s.add("themes");
+    if (filters.audience.size > 0) s.add("audience");
+    if (filters.filmLength.size > 0) s.add("film-length");
+    if (filters.completion.size > 0) s.add("completion");
     if (filters.origins.size > 0) s.add("origin");
     if (filters.streaming.size > 0) s.add("streaming");
     if (filters.yearRange[0] !== YEAR_BOUNDS[0] || filters.yearRange[1] !== YEAR_BOUNDS[1])
@@ -307,7 +387,7 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
                     active={active}
                     count={count}
                     disabled={count === 0 && !active}
-                    onClick={() => toggleSet<string>("genres", g)}
+                    onClick={() => toggleGenre(g)}
                   >
                     {g}
                   </Pill>
@@ -316,6 +396,168 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
             </div>
           </AccordionContent>
         </AccordionItem>
+
+        {/* Sub-Genre — only shown once a parent genre is selected */}
+        {filters.genres.size > 0 && (
+          <AccordionItem value="sub-genre" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("sub-genre")}>Sub-Genre</TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear
+                show={activeGroups.has("sub-genre")}
+                onClear={() => clearGroup("sub-genre")}
+              />
+              {visibleSubGenres.length === 0 ? (
+                <div className="font-mono text-[10px] text-text-dim">
+                  No sub-genres for this selection.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {visibleSubGenres.map((sg) => {
+                    const active = filters.subGenres.has(sg);
+                    return (
+                      <Pill
+                        key={sg}
+                        active={active}
+                        count={subGenreCounts[sg] ?? 0}
+                        onClick={() => toggleSet<string>("subGenres", sg)}
+                      >
+                        {sg}
+                      </Pill>
+                    );
+                  })}
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Themes */}
+        <AccordionItem value="themes" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("themes")}>Themes</TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-3 pt-1">
+            <GroupClear show={activeGroups.has("themes")} onClear={() => clearGroup("themes")} />
+            {visibleThemes.length === 0 ? (
+              <div className="font-mono text-[10px] text-text-dim">
+                No themes for this selection.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {visibleThemes.map((t) => {
+                  const active = filters.themes.has(t);
+                  return (
+                    <Pill
+                      key={t}
+                      active={active}
+                      count={themeCounts[t] ?? 0}
+                      onClick={() => toggleSet<string>("themes", t)}
+                    >
+                      {t}
+                    </Pill>
+                  );
+                })}
+              </div>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Audience */}
+        <AccordionItem value="audience" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("audience")}>Audience</TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-3 pt-1">
+            <GroupClear
+              show={activeGroups.has("audience")}
+              onClear={() => clearGroup("audience")}
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {AUDIENCE_OPTIONS.map((a) => {
+                const count = audienceCounts[a] ?? 0;
+                const active = filters.audience.has(a);
+                return (
+                  <Pill
+                    key={a}
+                    active={active}
+                    count={count}
+                    disabled={count === 0 && !active}
+                    onClick={() => toggleSet<string>("audience", a)}
+                  >
+                    {a}
+                  </Pill>
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Film Length — movies only (runtime) */}
+        {showFilmLength && (
+          <AccordionItem value="film-length" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("film-length")}>Film Length</TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear
+                show={activeGroups.has("film-length")}
+                onClear={() => clearGroup("film-length")}
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {FILM_LENGTH_BUCKETS.map((b) => {
+                  const count = filmLengthCounts[b.key] ?? 0;
+                  const active = filters.filmLength.has(b.key);
+                  return (
+                    <Pill
+                      key={b.key}
+                      active={active}
+                      count={count}
+                      disabled={count === 0 && !active}
+                      onClick={() => toggleSet<string>("filmLength", b.key)}
+                    >
+                      {b.label}
+                      <span className="ml-1 normal-case text-text-dim">{b.hint}</span>
+                    </Pill>
+                  );
+                })}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Status — series only (completion) */}
+        {showCompletion && (
+          <AccordionItem value="completion" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("completion")}>Series Status</TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear
+                show={activeGroups.has("completion")}
+                onClear={() => clearGroup("completion")}
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {COMPLETION_OPTIONS.map((c) => {
+                  const count = completionCounts[c] ?? 0;
+                  const active = filters.completion.has(c);
+                  return (
+                    <Pill
+                      key={c}
+                      active={active}
+                      count={count}
+                      disabled={count === 0 && !active}
+                      onClick={() => toggleSet<string>("completion", c)}
+                    >
+                      {c}
+                    </Pill>
+                  );
+                })}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* Released */}
         <AccordionItem value="released" className="border-border">
