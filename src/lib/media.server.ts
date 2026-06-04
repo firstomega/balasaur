@@ -858,7 +858,13 @@ export async function backfillFromRaw(opts?: {
     done: false,
   };
 
-  const PAGE = 200;
+  // Page through by media_id. Rows with very large raw_tmdb/raw_omdb payloads can push a
+  // fixed-size page past the statement timeout, so the page size is adaptive: it shrinks
+  // when a select fails (to inch through the heavy region) and recovers on success. This
+  // keeps one stalled page from stranding every row past it.
+  const MAX_PAGE = 200;
+  const MIN_PAGE = 10;
+  let pageSize = MAX_PAGE;
   let cursor = opts?.after ?? "";
   while (true) {
     const { data, error } = await supabaseAdmin
@@ -868,12 +874,38 @@ export async function backfillFromRaw(opts?: {
       )
       .gt("media_id", cursor)
       .order("media_id", { ascending: true })
-      .limit(PAGE);
+      .limit(pageSize);
     if (error) {
-      // A page select can hit a statement timeout on this multi-GB table; we've
-      // already committed progress up to `cursor`, so return and let the loop resume.
-      console.error("[backfill] select failed:", error.message);
-      break;
+      // Most likely a statement timeout on a page of fat JSONB rows. Shrink and retry so
+      // the backfill can squeeze through instead of aborting (which would strand every
+      // remaining row). Only once even the smallest page fails do we step the cursor past
+      // a single row by id alone, so one pathological row can't wedge the whole catalog.
+      if (pageSize > MIN_PAGE) {
+        pageSize = Math.max(MIN_PAGE, Math.floor(pageSize / 4));
+        console.warn(
+          `[backfill] page select failed (${error.message}); retrying with pageSize=${pageSize}`,
+        );
+        continue;
+      }
+      const { data: step, error: stepErr } = await supabaseAdmin
+        .from("media")
+        .select("media_id")
+        .gt("media_id", cursor)
+        .order("media_id", { ascending: true })
+        .limit(1);
+      if (stepErr || !step || step.length === 0) {
+        if (stepErr) console.error("[backfill] cursor-step select failed:", stepErr.message);
+        else result.done = true;
+        break;
+      }
+      console.error(
+        `[backfill] skipping ${step[0].media_id}: select fails even at id granularity (${error.message})`,
+      );
+      result.failed++;
+      cursor = step[0].media_id;
+      result.lastId = cursor;
+      if (Date.now() - start > timeBudgetMs) break;
+      continue;
     }
     if (!data || data.length === 0) {
       result.done = true;
@@ -982,10 +1014,13 @@ export async function backfillFromRaw(opts?: {
 
     cursor = data[data.length - 1].media_id;
     result.lastId = cursor;
-    if (data.length < PAGE) {
+    if (data.length < pageSize) {
       result.done = true;
       break;
     }
+    // Recover the page size after clearing a heavy region so the rest of the catalog
+    // isn't crawled one small page at a time.
+    if (pageSize < MAX_PAGE) pageSize = Math.min(MAX_PAGE, pageSize * 2);
     // Stop on the wall-clock budget so the call returns cleanly (well under the host
     // timeout); the workflow resumes from `lastId` on the next pass.
     if (Date.now() - start > timeBudgetMs) break;
