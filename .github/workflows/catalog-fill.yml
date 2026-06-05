@@ -22,6 +22,10 @@ on:
         description: "Run one backfill pass first (re-derive genres/origins/streaming/awards from stored raw)"
         type: boolean
         default: false
+      backfill_only:
+        description: "Only run the backfill — skip the fill loop entirely (no new-title sync, no HTTP 000)"
+        type: boolean
+        default: false
 
 concurrency:
   group: catalog-fill
@@ -42,7 +46,7 @@ jobs:
           fi
 
       - name: Optional backfill loop
-        if: ${{ inputs.backfill }}
+        if: ${{ inputs.backfill || inputs.backfill_only }}
         env:
           BASE_URL: https://balasaur.com
           APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
@@ -53,7 +57,8 @@ jobs:
           # call long enough for the host/statement timeout to kill it). Skip-unchanged
           # keeps every pass light, so re-running the whole thing later is cheap.
           AFTER=""
-          for i in $(seq 1 80); do
+          stuck=0  # consecutive passes where the cursor didn't advance (usually a transient DB blip)
+          for i in $(seq 1 200); do
             echo "──────── backfill pass $i (after='${AFTER}') ────────"
             BODY=$(jq -nc --arg a "$AFTER" '{after:$a}')
             HTTP=000
@@ -80,15 +85,28 @@ jobs:
             if [ "$DONE" = "true" ]; then
               echo "✅ Backfill complete after pass $i."; break
             fi
-            # No cursor advance → nothing left (or a stuck page); stop rather than spin.
-            if [ -z "$NEXT" ] || [ "$NEXT" = "$AFTER" ]; then
-              echo "No further progress (lastId unchanged) — stopping at pass $i."; break
+            if [ -z "$NEXT" ]; then
+              echo "No cursor returned — stopping at pass $i."; break
             fi
+            # Cursor didn't advance: almost always a transient timeout on one page (even the
+            # endpoint's id-only step read can blip under DB load). Don't abort the whole run —
+            # retry the SAME cursor with backoff; only give up after many stuck passes in a row.
+            if [ "$NEXT" = "$AFTER" ]; then
+              stuck=$((stuck + 1))
+              if [ "$stuck" -ge 10 ]; then
+                echo "::warning::Stuck at '${AFTER}' for $stuck passes — stopping at pass $i."; break
+              fi
+              echo "No advance (stuck $stuck/10) at '${AFTER}' — retrying same cursor…"
+              sleep $((stuck * 5))
+              continue
+            fi
+            stuck=0
             AFTER="$NEXT"
             sleep 3
           done
 
       - name: Fill loop
+        if: ${{ !inputs.backfill_only }}
         env:
           BASE_URL: https://balasaur.com
           APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
