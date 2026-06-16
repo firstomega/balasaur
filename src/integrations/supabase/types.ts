@@ -17,17 +17,15 @@ export type Database = {
       media: {
         Row: {
           audience: string[]
-          completion_status: string | null
-          film_length_minutes: number | null
-          sub_genres: string[]
-          themes: string[]
           award_nominations: number | null
           award_nominee: boolean
           award_winner: boolean
           award_wins: number | null
           awards_nominated: string[]
           awards_won: string[]
+          completion_status: string | null
           fetched_at: string
+          film_length_minutes: number | null
           genres: string[]
           length_label: string | null
           media_id: string
@@ -49,23 +47,23 @@ export type Database = {
           seasons: Json | null
           streaming: string[]
           streaming_regions: string[]
+          sub_genres: string[]
+          themes: string[]
           title: string
           updated_at: string
           year: string | null
         }
         Insert: {
           audience?: string[]
-          completion_status?: string | null
-          film_length_minutes?: number | null
-          sub_genres?: string[]
-          themes?: string[]
           award_nominations?: number | null
           award_nominee?: boolean
           award_winner?: boolean
           award_wins?: number | null
           awards_nominated?: string[]
           awards_won?: string[]
+          completion_status?: string | null
           fetched_at?: string
+          film_length_minutes?: number | null
           genres?: string[]
           length_label?: string | null
           media_id: string
@@ -75,6 +73,7 @@ export type Database = {
           people?: Json
           popularity?: number | null
           poster_url?: string | null
+          rating_balasaur?: number | null
           rating_imdb?: number | null
           rating_metacritic?: number | null
           rating_rotten_tomatoes?: number | null
@@ -86,23 +85,23 @@ export type Database = {
           seasons?: Json | null
           streaming?: string[]
           streaming_regions?: string[]
+          sub_genres?: string[]
+          themes?: string[]
           title: string
           updated_at?: string
           year?: string | null
         }
         Update: {
           audience?: string[]
-          completion_status?: string | null
-          film_length_minutes?: number | null
-          sub_genres?: string[]
-          themes?: string[]
           award_nominations?: number | null
           award_nominee?: boolean
           award_winner?: boolean
           award_wins?: number | null
           awards_nominated?: string[]
           awards_won?: string[]
+          completion_status?: string | null
           fetched_at?: string
+          film_length_minutes?: number | null
           genres?: string[]
           length_label?: string | null
           media_id?: string
@@ -112,6 +111,7 @@ export type Database = {
           people?: Json
           popularity?: number | null
           poster_url?: string | null
+          rating_balasaur?: number | null
           rating_imdb?: number | null
           rating_metacritic?: number | null
           rating_rotten_tomatoes?: number | null
@@ -123,6 +123,8 @@ export type Database = {
           seasons?: Json | null
           streaming?: string[]
           streaming_regions?: string[]
+          sub_genres?: string[]
+          themes?: string[]
           title?: string
           updated_at?: string
           year?: string | null
