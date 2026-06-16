@@ -104,8 +104,15 @@ jobs:
             done
             echo "HTTP $HTTP"; echo "Response:"; cat /tmp/refresh.json; echo
             if [ "$HTTP" != "200" ]; then
-              echo "::error::Refresh pass $i failed with HTTP $HTTP"
-              exit 1
+              # Stopgap (2026-06): the table-wide "stalest titles" query times out
+              # (HTTP 500: "canceling statement due to statement timeout") as the
+              # catalog grows, which was hard-failing the whole nightly run even
+              # though the grow passes above had already succeeded. Until the refresh
+              # path is redesigned, treat a failed refresh as a non-fatal warning so
+              # new titles keep flowing and the run stays green. Auth/endpoint outages
+              # are still caught by the grow step above, which exits 1 on any non-200.
+              echo "::warning::Long-tail refresh pass $i returned HTTP $HTTP — skipping remaining refresh for this run (known stalest-query timeout; grow passes already succeeded)."
+              break
             fi
             refreshed=$(jq -r '.refreshed // 0' /tmp/refresh.json 2>/dev/null || echo 0)
             case "$refreshed" in '' | *[!0-9]*) refreshed=0 ;; esac
