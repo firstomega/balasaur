@@ -54,11 +54,24 @@ const TMDB_APPEND =
 
 let genreCache: { movie: Map<number, string>; tv: Map<number, string> } | null = null;
 
+/** fetch with a hard timeout. A bare fetch() has no upper bound, so one hung TMDB/OMDb
+ *  request can stall an enrichment pass past the host gateway limit — the classic
+ *  "HTTP 000 / 0 bytes received" failure. AbortController caps every request. */
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function tmdb<T>(path: string, key: string, params: Record<string, string> = {}): Promise<T> {
   const url = new URL(`${TMDB_BASE}${path}`);
   url.searchParams.set("api_key", key);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url.toString());
+  const res = await fetchWithTimeout(url.toString(), 12_000);
   if (!res.ok) throw new Error(`TMDB ${path} failed: ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -1352,7 +1365,7 @@ export async function refreshStalest(opts?: {
 
 async function fetchOmdbRaw(imdbId: string, key: string): Promise<unknown | null> {
   try {
-    const res = await fetch(`${OMDB_BASE}/?i=${imdbId}&apikey=${key}`);
+    const res = await fetchWithTimeout(`${OMDB_BASE}/?i=${imdbId}&apikey=${key}`, 8_000);
     if (!res.ok) return null;
     const data = await res.json();
     if (data?.Response !== "True") return null;

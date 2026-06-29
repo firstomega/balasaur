@@ -16,12 +16,8 @@ on:
     # 08:00 UTC daily (low traffic). Cron is UTC.
     - cron: "0 8 * * *"
   workflow_dispatch:
-    # Manual "Run workflow" button, for on-demand top-ups.
-    inputs:
-      backfill:
-        description: "Also run backfill (re-derive genres/awards from stored raw data)"
-        type: boolean
-        default: false
+    # Manual "Run workflow" button, for on-demand top-ups. The backfill now runs on
+    # every run automatically (see the Backfill step), so there's no input to tick.
 
 # Don't let a slow run overlap the next day's run.
 concurrency:
@@ -31,6 +27,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 350 # grow + refresh + full backfill catch-up can run long; under GitHub's 360 ceiling
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -121,22 +118,56 @@ jobs:
             sleep 3
           done
 
-      - name: Trigger backfill (manual runs only, when requested)
-        if: github.event_name == 'workflow_dispatch' && inputs.backfill
+      - name: Backfill facets + derivations (automatic, resumable)
         env:
           BASE_URL: https://balasaur.com
           APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
         run: |
-          echo "POST $BASE_URL/api/public/hooks/backfill-media"
-          HTTP=$(curl -sS -o /tmp/backfill.json -w "%{http_code}" \
-            -X POST "$BASE_URL/api/public/hooks/backfill-media" \
-            -H "apikey: $APIKEY" \
-            -H "Content-Type: application/json" \
-            --max-time 870 \
-            -d '{}')
-          echo "HTTP $HTTP"
-          echo "Response:"; cat /tmp/backfill.json; echo
-          if [ "$HTTP" != "200" ]; then
-            echo "::error::Backfill failed with HTTP $HTTP"
-            exit 1
-          fi
+          # Re-derive genres/origins/streaming/awards + the advanced-filter facets
+          # (sub-genres, themes, audience, film length, series status) from already-stored
+          # raw_tmdb/raw_omdb — NO external API calls. Runs on EVERY nightly run so facet
+          # coverage tops up with zero manual clicks (new titles are tagged at ingest; this
+          # catches the historical long tail and re-derives when the taxonomy changes).
+          #
+          # Resumable: each call rewrites rows for ~90s then returns a lastId cursor + done
+          # flag; we thread lastId back as `after`, so one run walks the whole catalog via
+          # many short calls (none long enough to hit a host/statement timeout). skip-unchanged
+          # makes converged runs cheap (no rewrites). A stuck page (transient read timeout) is
+          # retried, and any failure is a non-fatal warning — it resumes next run, and the
+          # grow passes above already succeeded.
+          AFTER=""
+          stuck=0
+          for i in $(seq 1 200); do
+            echo "──────── backfill pass $i (after='${AFTER}') ────────"
+            BODY=$(jq -nc --arg a "$AFTER" '{after:$a}')
+            HTTP=000
+            for attempt in 1 2 3 4; do
+              HTTP=$(curl -sS -o /tmp/bf.json -w "%{http_code}" \
+                -X POST "$BASE_URL/api/public/hooks/backfill-media" \
+                -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+                --max-time 150 -d "$BODY" || echo 000)
+              [ "$HTTP" = "200" ] && break
+              echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/bf.json 2>/dev/null; echo
+              case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
+              backoff=$((attempt * attempt * 5)); echo "retrying in ${backoff}s…"; sleep "$backoff"
+            done
+            if [ "$HTTP" != "200" ]; then
+              echo "::warning::Backfill pass $i returned HTTP $HTTP — stopping backfill for this run (non-fatal; resumes next run)."
+              break
+            fi
+            echo "$(jq -c '{scanned,updatedGenres,updatedStreaming,updatedAwards,failed,done,lastId}' /tmp/bf.json 2>/dev/null || cat /tmp/bf.json)"
+            DONE=$(jq -r '.done // false' /tmp/bf.json 2>/dev/null || echo false)
+            NEXT=$(jq -r '.lastId // empty' /tmp/bf.json 2>/dev/null || true)
+            if [ "$DONE" = "true" ]; then echo "✅ Backfill complete after pass $i."; break; fi
+            if [ -z "$NEXT" ]; then echo "No cursor returned — stopping at pass $i."; break; fi
+            # Cursor didn't advance: usually a transient blip. Retry the SAME cursor a few
+            # times before giving up, so one hiccup can't end the whole run.
+            if [ "$NEXT" = "$AFTER" ]; then
+              stuck=$((stuck + 1))
+              if [ "$stuck" -ge 10 ]; then
+                echo "::warning::Stuck at '${AFTER}' for $stuck passes — stopping backfill."; break
+              fi
+              echo "No advance (stuck $stuck/10) — retrying same cursor…"; sleep $((stuck * 5)); continue
+            fi
+            stuck=0; AFTER="$NEXT"; sleep 2
+          done
