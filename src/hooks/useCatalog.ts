@@ -3,10 +3,11 @@ import {
   queryOptions,
   useInfiniteQuery,
   useQuery,
+  useSuspenseQuery,
 } from "@tanstack/react-query";
 import { queryCatalog, getCatalogFacets, type CatalogQueryParams } from "@/lib/catalog.functions";
 import type { FilterState } from "@/types/filters";
-import { YEAR_BOUNDS } from "@/types/filters";
+import { YEAR_BOUNDS, defaultFilterState } from "@/types/filters";
 
 export const PAGE_SIZE = 60;
 
@@ -76,4 +77,25 @@ export function catalogFacetsOptions(base: CatalogBaseParams) {
 
 export function useCatalogFacets(filters: FilterState, region = "US") {
   return useQuery(catalogFacetsOptions(filtersToParams(filters, region)));
+}
+
+/** Bounded, popularity-ordered deck for the "Rate" (swipe) page. Loads a few hundred
+ *  mainstream titles instead of the whole ~10k catalog the page used to pull (which made
+ *  it slow to load / unresponsive). Popular-first also means people see titles they've
+ *  most likely already watched, so they build their history faster. Already-rated titles
+ *  are filtered out client-side by the deck. */
+export const DECK_SIZE = 500;
+
+export function deckMediaOptions(region = "US") {
+  const base = filtersToParams(defaultFilterState(), region);
+  return queryOptions({
+    queryKey: ["catalog-deck", region, DECK_SIZE] as const,
+    queryFn: async () =>
+      (await queryCatalog({ data: { ...base, limit: DECK_SIZE, offset: 0 } })).items,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useDeckMedia(region = "US") {
+  return useSuspenseQuery(deckMediaOptions(region));
 }

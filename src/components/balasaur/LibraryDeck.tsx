@@ -538,7 +538,7 @@ export function LibraryHeader() {
   return (
     <header className="flex h-12 items-center justify-between border-b border-border px-4">
       <div className="font-mono text-[12px] uppercase tracking-[0.18em] text-text-bright">
-        Build Your Library
+        Rate Titles
       </div>
       <Link
         to="/"
