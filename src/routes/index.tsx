@@ -324,7 +324,7 @@ function GridWithControls({
           <AnimatedCount value={total} className="text-text-bright" /> results
         </span>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex items-center gap-3 sm:ml-2">
           <label className="flex cursor-pointer items-center gap-1.5">
             <Switch
               checked={filters.hideSeen}
