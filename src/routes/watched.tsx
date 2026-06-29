@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { mediaItemsQueryOptions, useMediaItems } from "@/hooks/useMediaItems";
+import { deckMediaOptions, useDeckMedia } from "@/hooks/useCatalog";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { LibraryDeck, LibraryHeader } from "@/components/balasaur/LibraryDeck";
 import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
@@ -8,7 +8,7 @@ import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
 export const Route = createFileRoute("/watched")({
   head: () => ({
     meta: [
-      { title: "Build Your Library — Balasaur" },
+      { title: "Rate Titles — Balasaur" },
       {
         name: "description",
         content:
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/watched")({
     ],
     links: [canonicalLink(SITE_ORIGIN + "/watched")],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(mediaItemsQueryOptions),
+  loader: ({ context }) => context.queryClient.ensureQueryData(deckMediaOptions()),
   component: WatchedPage,
 });
 
@@ -42,6 +42,6 @@ function WatchedPage() {
 }
 
 function Deck() {
-  const { data } = useMediaItems();
+  const { data } = useDeckMedia();
   return <LibraryDeck items={data} />;
 }
