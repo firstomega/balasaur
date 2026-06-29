@@ -39,6 +39,12 @@ export function recordForSkip(): UserStatusRecord {
   return { status: "skipped", ts: Date.now() };
 }
 
+/** Not interested: a hard "won't watch" — files into NO list, and (unlike Skip) never
+ *  resurfaces in the deck. Distinct from "Didn't watch yet", which is a Watchlist want. */
+export function recordForNotInterested(): UserStatusRecord {
+  return { status: "unseen", intent: "not_interested", ts: Date.now() };
+}
+
 export function statusKeyOf(rec: UserStatusRecord | undefined): StatusKey | null {
   if (!rec) return null;
   if (rec.status === "seen") return rec.sentiment === "liked" ? "like" : "watched";

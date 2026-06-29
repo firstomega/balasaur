@@ -6,7 +6,12 @@ import type { MediaItem } from "@/types/media";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "./AuthDialog";
-import { recordForStatus, recordForSkip, type StatusKey } from "@/lib/userStatus";
+import {
+  recordForStatus,
+  recordForSkip,
+  recordForNotInterested,
+  type StatusKey,
+} from "@/lib/userStatus";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 
 // After this many anonymous picks, nudge the user to sign in to save them.
@@ -48,6 +53,7 @@ interface Summary {
   watched: number;
   didntWatch: number;
   skip: number;
+  notInterested: number;
 }
 
 export function LibraryDeck({ items }: { items: MediaItem[] }) {
@@ -82,6 +88,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
     watched: 0,
     didntWatch: 0,
     skip: 0,
+    notInterested: 0,
   });
   const [exit, setExit] = useState<Dir | null>(null);
   const [done, setDone] = useState(false);
@@ -132,6 +139,25 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
     [current, deck.length, recordStatus, user],
   );
 
+  // Not interested: a hard reject (won't watch). Files into no list and — unlike Skip —
+  // never comes back in the deck. Reuses the downward dismiss animation.
+  const markNotInterested = useCallback(() => {
+    if (!current) return;
+    recordStatus(current.id, recordForNotInterested(), current);
+    setSummary((s) => ({ ...s, total: s.total + 1, notInterested: s.notInterested + 1 }));
+    if (user) toast(`Not interested · hidden`, { duration: 1400 });
+    setSessionPicks((n) => n + 1);
+    setExit("down");
+    window.setTimeout(() => {
+      setExit(null);
+      setIndex((i) => {
+        const ni = i + 1;
+        if (ni >= deck.length) setDone(true);
+        return ni;
+      });
+    }, 220);
+  }, [current, deck.length, recordStatus, user]);
+
   const showNudge = isAnonymous && !nudgeDismissed && sessionPicks >= NUDGE_AFTER;
 
   // Keyboard
@@ -153,11 +179,14 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
       } else if (e.key === " " || e.key.toLowerCase() === "s") {
         e.preventDefault();
         advance("down");
+      } else if (e.key.toLowerCase() === "x") {
+        e.preventDefault();
+        markNotInterested();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [advance, done]);
+  }, [advance, markNotInterested, done]);
 
   if (!ready) {
     return (
@@ -237,6 +266,15 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         >
           <SkipForward className="h-3.5 w-3.5" />
           Skip
+        </button>
+        <button
+          type="button"
+          onClick={markNotInterested}
+          title="Won't watch — hide for good (key: X)"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+        >
+          <X className="h-3.5 w-3.5" />
+          Not interested
         </button>
       </div>
 
@@ -469,6 +507,7 @@ function LibrarySummary({
     { label: "Watched", value: summary.watched, color: ACTION_HEX.right },
     { label: "Didn't watch yet", value: summary.didntWatch, color: ACTION_HEX.left },
     { label: "Skipped", value: summary.skip, color: ACTION_HEX.down },
+    { label: "Not interested", value: summary.notInterested, color: "#c75d6e" },
   ];
 
   return (
