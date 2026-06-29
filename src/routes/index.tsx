@@ -7,6 +7,7 @@ import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { FilterRail } from "@/components/balasaur/FilterRail";
 import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters";
+import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
@@ -320,7 +321,7 @@ function GridWithControls({
         </button>
 
         <span className="font-mono text-[11px] text-text-muted">
-          <span className="text-text-bright">{total.toLocaleString()}</span> results
+          <AnimatedCount value={total} className="text-text-bright" /> results
         </span>
 
         <div className="ml-auto flex items-center gap-3">
