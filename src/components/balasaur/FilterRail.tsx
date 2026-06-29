@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import type { FilterState } from "@/types/filters";
@@ -30,11 +30,15 @@ import { catalogFacetsOptions, filtersToParams } from "@/hooks/useCatalog";
 import { getProviderLogos } from "@/lib/media.functions";
 import { ProviderIcon, type ProviderName } from "./ProviderIcon";
 import { MediaTypeSwitch, modeFromSet, setFromMode } from "./MediaTypeSwitch";
+import { useAuth } from "@/hooks/useAuth";
+import { useSavedFilters } from "@/hooks/useSavedFilters";
+import { countActive } from "./ActiveFilters";
 
 interface Props {
   filters: FilterState;
   setFilters: (updater: (prev: FilterState) => FilterState) => void;
   facets: CatalogFacets | undefined;
+  onRequireAuth?: () => void;
 }
 
 // Order chips by count, descending, with the original list order as a stable
@@ -123,7 +127,109 @@ function GroupClear({ show, onClear }: { show: boolean; onClear: () => void }) {
   );
 }
 
-export function FilterRail({ filters, setFilters, facets }: Props) {
+// "Saved" rail section: list a user's saved filter views (click to apply, × to delete)
+// plus a "Save filter" CTA that appears whenever filters are active. Signed-out users
+// are prompted to sign in. Fails soft via useSavedFilters (never crashes the rail).
+function SavedFilters({
+  filters,
+  onApply,
+  onRequireAuth,
+}: {
+  filters: FilterState;
+  onApply: (f: FilterState) => void;
+  onRequireAuth?: () => void;
+}) {
+  const { user } = useAuth();
+  const { items, save, remove } = useSavedFilters();
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState("");
+  const dirty = countActive(filters) > 0;
+
+  const startSave = () => {
+    if (!user) {
+      onRequireAuth?.();
+      return;
+    }
+    setName("");
+    setNaming(true);
+  };
+  const confirmSave = async () => {
+    const n = name.trim();
+    if (!n) return;
+    await save(n, filters);
+    setName("");
+    setNaming(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.length > 0 ? (
+        <div className="space-y-1">
+          {items.map((s) => (
+            <div key={s.id} className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onApply(s.filters)}
+                title={s.name}
+                className="min-w-0 flex-1 truncate rounded-[4px] border border-border bg-panel px-2 py-1 text-left font-mono text-[10.5px] text-text-bright hover:border-primary hover:text-primary"
+              >
+                {s.name}
+              </button>
+              <button
+                type="button"
+                onClick={() => remove(s.id)}
+                aria-label={`Delete ${s.name}`}
+                className="shrink-0 cursor-pointer p-1 text-text-dim hover:text-text-bright"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+          {user ? "No saved filters yet" : "Sign in to save filters"}
+        </p>
+      )}
+
+      {naming ? (
+        <div className="flex items-center gap-1">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void confirmSave();
+              else if (e.key === "Escape") setNaming(false);
+            }}
+            placeholder="Name this view…"
+            className="min-w-0 flex-1 rounded-[4px] border border-border bg-background px-2 py-1 font-mono text-[10.5px] text-text-bright outline-none focus:border-primary"
+          />
+          <button
+            type="button"
+            onClick={() => void confirmSave()}
+            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+          >
+            Save
+          </button>
+        </div>
+      ) : (
+        dirty && (
+          <button
+            type="button"
+            onClick={startSave}
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border border-primary/50 bg-primary/10 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider text-primary hover:bg-primary/20"
+          >
+            <Save className="h-3 w-3" />
+            Save filter
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props) {
   // Origin facet stats come from a cheap cached global aggregate rather than the
   // full catalog. Counts let us grey out origins with no data; when origins haven't
   // been populated yet every count is 0 → chips disable, reading as "no origin
@@ -329,9 +435,23 @@ export function FilterRail({ filters, setFilters, facets }: Props) {
     <div className="space-y-1">
       <Accordion
         type="multiple"
-        defaultValue={["media-type", "streaming", "genre"]}
+        defaultValue={["saved", "media-type", "streaming", "genre"]}
         className="w-full"
       >
+        {/* Saved filters — above Media Type */}
+        <AccordionItem value="saved" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={false}>Saved</TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-3 pt-1">
+            <SavedFilters
+              filters={filters}
+              onApply={(f) => setFilters(() => f)}
+              onRequireAuth={onRequireAuth}
+            />
+          </AccordionContent>
+        </AccordionItem>
+
         {/* Media Type */}
         <AccordionItem value="media-type" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>

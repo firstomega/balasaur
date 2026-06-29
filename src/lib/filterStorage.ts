@@ -7,7 +7,7 @@ import type { MediaType } from "@/types/media";
 // to/from arrays. sessionStorage (not local) → fresh tabs start clean.
 const KEY = "balasaur:filters";
 
-interface Serialized {
+export interface Serialized {
   mediaTypes: string[];
   genres: string[];
   origins: string[];
@@ -33,35 +33,70 @@ interface Serialized {
   sort: string;
 }
 
+/** FilterState → plain JSON (Sets/ranges flattened). Shared by sessionStorage
+ *  persistence and saved filters (stored as jsonb). */
+export function serializeFilters(f: FilterState): Serialized {
+  return {
+    mediaTypes: [...f.mediaTypes],
+    genres: [...f.genres],
+    origins: [...f.origins],
+    streaming: [...f.streaming],
+    yearRange: f.yearRange,
+    imdbRange: f.imdbRange,
+    rtRange: f.rtRange,
+    metaRange: f.metaRange,
+    includeUnratedImdb: f.includeUnratedImdb,
+    includeUnratedRt: f.includeUnratedRt,
+    includeUnratedMeta: f.includeUnratedMeta,
+    people: f.people,
+    awardWinners: f.awardWinners,
+    nominated: f.nominated,
+    awardsWon: [...f.awardsWon],
+    awardsNominated: [...f.awardsNominated],
+    subGenres: [...f.subGenres],
+    themes: [...f.themes],
+    audience: [...f.audience],
+    completion: [...f.completion],
+    filmLength: [...f.filmLength],
+    hideSeen: f.hideSeen,
+    sort: f.sort,
+  };
+}
+
+/** Plain JSON → FilterState, tolerant of missing keys (falls back to defaults). */
+export function deserializeFilters(s: Partial<Serialized>): FilterState {
+  const d = defaultFilterState();
+  return {
+    mediaTypes: new Set<MediaType>((s.mediaTypes as MediaType[]) ?? [...d.mediaTypes]),
+    genres: new Set<string>(s.genres ?? []),
+    origins: new Set<string>(s.origins ?? []),
+    streaming: new Set<string>(s.streaming ?? []),
+    yearRange: s.yearRange ?? d.yearRange,
+    imdbRange: s.imdbRange ?? d.imdbRange,
+    rtRange: s.rtRange ?? d.rtRange,
+    metaRange: s.metaRange ?? d.metaRange,
+    includeUnratedImdb: s.includeUnratedImdb ?? d.includeUnratedImdb,
+    includeUnratedRt: s.includeUnratedRt ?? d.includeUnratedRt,
+    includeUnratedMeta: s.includeUnratedMeta ?? d.includeUnratedMeta,
+    people: s.people ?? [],
+    awardWinners: s.awardWinners ?? d.awardWinners,
+    nominated: s.nominated ?? d.nominated,
+    awardsWon: new Set<string>(s.awardsWon ?? []),
+    awardsNominated: new Set<string>(s.awardsNominated ?? []),
+    subGenres: new Set<string>(s.subGenres ?? []),
+    themes: new Set<string>(s.themes ?? []),
+    audience: new Set<string>(s.audience ?? []),
+    completion: new Set<string>(s.completion ?? []),
+    filmLength: new Set<string>(s.filmLength ?? []),
+    hideSeen: s.hideSeen ?? d.hideSeen,
+    sort: (s.sort as FilterState["sort"]) ?? d.sort,
+  };
+}
+
 export function saveFilters(f: FilterState): void {
   if (typeof window === "undefined") return;
   try {
-    const s: Serialized = {
-      mediaTypes: [...f.mediaTypes],
-      genres: [...f.genres],
-      origins: [...f.origins],
-      streaming: [...f.streaming],
-      yearRange: f.yearRange,
-      imdbRange: f.imdbRange,
-      rtRange: f.rtRange,
-      metaRange: f.metaRange,
-      includeUnratedImdb: f.includeUnratedImdb,
-      includeUnratedRt: f.includeUnratedRt,
-      includeUnratedMeta: f.includeUnratedMeta,
-      people: f.people,
-      awardWinners: f.awardWinners,
-      nominated: f.nominated,
-      awardsWon: [...f.awardsWon],
-      awardsNominated: [...f.awardsNominated],
-      subGenres: [...f.subGenres],
-      themes: [...f.themes],
-      audience: [...f.audience],
-      completion: [...f.completion],
-      filmLength: [...f.filmLength],
-      hideSeen: f.hideSeen,
-      sort: f.sort,
-    };
-    window.sessionStorage.setItem(KEY, JSON.stringify(s));
+    window.sessionStorage.setItem(KEY, JSON.stringify(serializeFilters(f)));
   } catch {
     // storage unavailable / quota — non-fatal
   }
@@ -72,33 +107,7 @@ export function loadFilters(): FilterState | null {
   try {
     const raw = window.sessionStorage.getItem(KEY);
     if (!raw) return null;
-    const s = JSON.parse(raw) as Partial<Serialized>;
-    const d = defaultFilterState();
-    return {
-      mediaTypes: new Set<MediaType>((s.mediaTypes as MediaType[]) ?? [...d.mediaTypes]),
-      genres: new Set<string>(s.genres ?? []),
-      origins: new Set<string>(s.origins ?? []),
-      streaming: new Set<string>(s.streaming ?? []),
-      yearRange: s.yearRange ?? d.yearRange,
-      imdbRange: s.imdbRange ?? d.imdbRange,
-      rtRange: s.rtRange ?? d.rtRange,
-      metaRange: s.metaRange ?? d.metaRange,
-      includeUnratedImdb: s.includeUnratedImdb ?? d.includeUnratedImdb,
-      includeUnratedRt: s.includeUnratedRt ?? d.includeUnratedRt,
-      includeUnratedMeta: s.includeUnratedMeta ?? d.includeUnratedMeta,
-      people: s.people ?? [],
-      awardWinners: s.awardWinners ?? d.awardWinners,
-      nominated: s.nominated ?? d.nominated,
-      awardsWon: new Set<string>(s.awardsWon ?? []),
-      awardsNominated: new Set<string>(s.awardsNominated ?? []),
-      subGenres: new Set<string>(s.subGenres ?? []),
-      themes: new Set<string>(s.themes ?? []),
-      audience: new Set<string>(s.audience ?? []),
-      completion: new Set<string>(s.completion ?? []),
-      filmLength: new Set<string>(s.filmLength ?? []),
-      hideSeen: s.hideSeen ?? d.hideSeen,
-      sort: (s.sort as FilterState["sort"]) ?? d.sort,
-    };
+    return deserializeFilters(JSON.parse(raw) as Partial<Serialized>);
   } catch {
     return null;
   }
