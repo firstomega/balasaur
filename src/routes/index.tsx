@@ -153,7 +153,12 @@ function HomePage() {
               </button>
             </div>
             <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-              <RailWithData filters={filters} setFilters={setFilters} region={region} />
+              <RailWithData
+                filters={filters}
+                setFilters={setFilters}
+                region={region}
+                onRequireAuth={() => setAuthOpen(true)}
+              />
             </Suspense>
           </aside>
         ) : (
@@ -217,7 +222,12 @@ function HomePage() {
           </SheetHeader>
           <div className="mt-3">
             <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
-              <RailWithData filters={filters} setFilters={setFilters} region={region} />
+              <RailWithData
+                filters={filters}
+                setFilters={setFilters}
+                region={region}
+                onRequireAuth={() => setAuthOpen(true)}
+              />
             </Suspense>
           </div>
         </SheetContent>
@@ -230,13 +240,22 @@ function RailWithData({
   filters,
   setFilters,
   region,
+  onRequireAuth,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
   region: string;
+  onRequireAuth?: () => void;
 }) {
   const { data: facets } = useCatalogFacets(filters, region);
-  return <FilterRail filters={filters} setFilters={setFilters} facets={facets} />;
+  return (
+    <FilterRail
+      filters={filters}
+      setFilters={setFilters}
+      facets={facets}
+      onRequireAuth={onRequireAuth}
+    />
+  );
 }
 
 function GridWithControls({
