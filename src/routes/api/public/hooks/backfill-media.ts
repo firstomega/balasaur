@@ -24,13 +24,15 @@ export const Route = createFileRoute("/api/public/hooks/backfill-media")({
           // Optional `{ after: <media_id> }` resumes a previous pass via keyset cursor.
           // The workflow loops this endpoint, threading back the prior `lastId`.
           let after: string | null = null;
+          let onlyMissing = false;
           try {
-            const body = (await request.json()) as { after?: unknown };
+            const body = (await request.json()) as { after?: unknown; onlyMissing?: unknown };
             if (typeof body?.after === "string" && body.after) after = body.after;
+            if (body?.onlyMissing === true) onlyMissing = true;
           } catch {
             // empty / non-JSON body → start from the beginning
           }
-          const result = await backfillFromRaw({ after });
+          const result = await backfillFromRaw({ after, onlyMissing });
           return new Response(JSON.stringify({ ok: true, ...result }), {
             status: 200,
             headers: { "Content-Type": "application/json" },

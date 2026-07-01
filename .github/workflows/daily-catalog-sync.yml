@@ -139,7 +139,7 @@ jobs:
           stuck=0
           for i in $(seq 1 200); do
             echo "──────── backfill pass $i (after='${AFTER}') ────────"
-            BODY=$(jq -nc --arg a "$AFTER" '{after:$a}')
+            BODY=$(jq -nc --arg a "$AFTER" '{after:$a, onlyMissing:true}')
             HTTP=000
             for attempt in 1 2 3 4; do
               HTTP=$(curl -sS -o /tmp/bf.json -w "%{http_code}" \
@@ -155,7 +155,7 @@ jobs:
               echo "::warning::Backfill pass $i returned HTTP $HTTP — stopping backfill for this run (non-fatal; resumes next run)."
               break
             fi
-            echo "$(jq -c '{scanned,updatedGenres,updatedStreaming,updatedAwards,failed,done,lastId}' /tmp/bf.json 2>/dev/null || cat /tmp/bf.json)"
+            echo "$(jq -c '{scanned,stamped,updatedFacets,updatedGenres,updatedStreaming,updatedAwards,failed,done,lastId}' /tmp/bf.json 2>/dev/null || cat /tmp/bf.json)"
             DONE=$(jq -r '.done // false' /tmp/bf.json 2>/dev/null || echo false)
             NEXT=$(jq -r '.lastId // empty' /tmp/bf.json 2>/dev/null || true)
             if [ "$DONE" = "true" ]; then echo "✅ Backfill complete after pass $i."; break; fi

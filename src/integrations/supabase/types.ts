@@ -24,6 +24,7 @@ export type Database = {
           awards_nominated: string[]
           awards_won: string[]
           completion_status: string | null
+          facets_derived_at: string | null
           fetched_at: string
           film_length_minutes: number | null
           genres: string[]
@@ -62,6 +63,7 @@ export type Database = {
           awards_nominated?: string[]
           awards_won?: string[]
           completion_status?: string | null
+          facets_derived_at?: string | null
           fetched_at?: string
           film_length_minutes?: number | null
           genres?: string[]
@@ -100,6 +102,7 @@ export type Database = {
           awards_nominated?: string[]
           awards_won?: string[]
           completion_status?: string | null
+          facets_derived_at?: string | null
           fetched_at?: string
           film_length_minutes?: number | null
           genres?: string[]
