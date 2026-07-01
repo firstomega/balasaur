@@ -831,6 +831,9 @@ export interface BackfillResult {
   updatedGenres: number;
   updatedStreaming: number;
   updatedAwards: number;
+  updatedFacets: number;
+  /** Rows already correct that were marked derived (incremental mode). */
+  stamped: number;
   failed: number;
   durationMs: number;
   /** Last media_id processed this call — pass back as `after` to resume. */
@@ -857,14 +860,21 @@ interface TmdbGenreObj {
 export async function backfillFromRaw(opts?: {
   after?: string | null;
   timeBudgetMs?: number;
+  onlyMissing?: boolean;
 }): Promise<BackfillResult> {
   const start = Date.now();
   const timeBudgetMs = opts?.timeBudgetMs ?? 90_000;
+  // Incremental mode: scan only rows not yet facet-stamped, and stamp each as it's
+  // processed so it drops out of future runs — the whole catalog converges once, then
+  // nightly runs are near-instant. Falls back to a full scan if the column is absent.
+  let useMissingFilter = opts?.onlyMissing ?? false;
   const result: BackfillResult = {
     scanned: 0,
     updatedGenres: 0,
     updatedStreaming: 0,
     updatedAwards: 0,
+    updatedFacets: 0,
+    stamped: 0,
     failed: 0,
     durationMs: 0,
     lastId: opts?.after ?? null,
@@ -880,15 +890,22 @@ export async function backfillFromRaw(opts?: {
   let pageSize = MAX_PAGE;
   let cursor = opts?.after ?? "";
   while (true) {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("media")
       .select(
         "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
       )
-      .gt("media_id", cursor)
-      .order("media_id", { ascending: true })
-      .limit(pageSize);
+      .gt("media_id", cursor);
+    if (useMissingFilter) query = query.is("facets_derived_at", null);
+    const { data, error } = await query.order("media_id", { ascending: true }).limit(pageSize);
     if (error) {
+      // Incremental mode but the column isn't applied yet → drop the filter and full-scan,
+      // so the backfill never breaks just because the optimization column is missing.
+      if (useMissingFilter && error.message.includes("facets_derived_at")) {
+        console.warn("[backfill] facets_derived_at absent — falling back to full scan");
+        useMissingFilter = false;
+        continue;
+      }
       // Most likely a statement timeout on a page of fat JSONB rows. Shrink and retry so
       // the backfill can squeeze through instead of aborting (which would strand every
       // remaining row). Only once even the smallest page fails do we step the cursor past
@@ -980,15 +997,31 @@ export async function backfillFromRaw(opts?: {
         // need it (co-productions, etc.) get rewritten, so the backfill stays light and
         // won't time out — and re-runs fall straight through already-fixed rows, so it
         // reliably finishes.
-        if (
-          !genresChanged &&
-          !originsChanged &&
-          !streamingChanged &&
-          !awardsChanged &&
-          !awardsDetailChanged &&
-          !facetsChanged
-        )
+        const changed =
+          genresChanged ||
+          originsChanged ||
+          streamingChanged ||
+          awardsChanged ||
+          awardsDetailChanged ||
+          facetsChanged;
+
+        // Nothing to rewrite. In incremental mode still stamp the row so it drops out of
+        // future scans; otherwise just skip (classic full-scan behavior).
+        if (!changed) {
+          if (useMissingFilter) {
+            const { error: stampErr } = await supabaseAdmin
+              .from("media")
+              .update({ facets_derived_at: new Date().toISOString() })
+              .eq("media_id", row.media_id);
+            if (stampErr) {
+              result.failed++;
+              console.error(`[backfill] stamp ${row.media_id} failed:`, stampErr.message);
+            } else {
+              result.stamped++;
+            }
+          }
           continue;
+        }
 
         const { error: updErr } = await supabaseAdmin
           .from("media")
@@ -1009,6 +1042,7 @@ export async function backfillFromRaw(opts?: {
             awards_won: awardDetail.won,
             awards_nominated: awardDetail.nominated,
             updated_at: new Date().toISOString(),
+            ...(useMissingFilter ? { facets_derived_at: new Date().toISOString() } : {}),
           })
           .eq("media_id", row.media_id);
         if (updErr) {
@@ -1019,6 +1053,7 @@ export async function backfillFromRaw(opts?: {
         if (genresChanged || originsChanged) result.updatedGenres++;
         if (streamingChanged) result.updatedStreaming++;
         if (awards.winner || awards.nominee) result.updatedAwards++;
+        if (facetsChanged) result.updatedFacets++;
       } catch (e) {
         result.failed++;
         console.error("[backfill] row failed:", e);
