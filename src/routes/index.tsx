@@ -16,10 +16,14 @@ import { AuthDialog } from "@/components/balasaur/AuthDialog";
 import {
   useCatalogInfinite,
   useCatalogFacets,
+  useViewerCountry,
+  viewerCountryOptions,
   catalogInfiniteOptions,
   catalogFacetsOptions,
   filtersToParams,
+  withBoost,
 } from "@/hooks/useCatalog";
+import { boostBucketsForCountry, localFirstLabel, LOCAL_FIRST_KEY } from "@/lib/localFirst";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { recordForStatus } from "@/lib/userStatus";
@@ -67,12 +71,22 @@ export const Route = createFileRoute("/")({
     links: [canonicalLink(SITE_ORIGIN + "/")],
   }),
   loader: async ({ context, deps }) => {
+    // Detect the viewer's country (edge geo header) so the default view can be
+    // server-rendered local-first — same value the client reads, so no hydration flip.
+    // Guarded: a geo lookup hiccup must never take down the loader — just skip the boost.
+    let country = "";
+    try {
+      country = await context.queryClient.ensureQueryData(viewerCountryOptions());
+    } catch {
+      country = "";
+    }
+    const boost = boostBucketsForCountry(country).length > 0 ? country : "";
     // Prefetch the URL's filters (so a shared/filtered link is server-rendered, not just
     // the default grid) + facet stats. allSettled so a prefetch failure can never reject
     // the loader and take down the page — the server fns also fail-soft to empty results.
     const params = filtersToParams(searchToFilters(deps));
     await Promise.allSettled([
-      context.queryClient.ensureInfiniteQueryData(catalogInfiniteOptions(params)),
+      context.queryClient.ensureInfiniteQueryData(catalogInfiniteOptions(withBoost(params, boost))),
       context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
     ]);
   },
@@ -138,6 +152,33 @@ function HomePage() {
   // Per-country streaming: filter availability by the viewer's account region.
   // Falls back to US for signed-out visitors / accounts with no region set.
   const region = (user?.user_metadata?.region as string | undefined) || "US";
+
+  // Local-first: on the default view, rank the viewer's home-country titles first
+  // (nothing hidden). Country comes from their account region, else IP geo. Default ON;
+  // "weight all regions equally" turns it off (persisted). Init true on both server and
+  // client so SSR hydration stays stable; the stored preference is applied post-mount.
+  const ipCountry = useViewerCountry();
+  const homeCountry = (user?.user_metadata?.region as string | undefined) || ipCountry || "";
+  const [localFirst, setLocalFirst] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(LOCAL_FIRST_KEY) === "0") setLocalFirst(false);
+    } catch {
+      // storage unavailable — non-fatal, stays on
+    }
+  }, []);
+  const boostLabel = localFirstLabel(homeCountry);
+  const boostActive = localFirst && !!boostLabel;
+  const boostCountry = boostActive ? homeCountry : "";
+  const setLocalFirstPref = (on: boolean) => {
+    setLocalFirst(on);
+    try {
+      localStorage.setItem(LOCAL_FIRST_KEY, on ? "1" : "0");
+    } catch {
+      // non-fatal
+    }
+  };
+
   const gridRef = useRef<HTMLDivElement>(null);
 
   const scrollToGrid = () => {
@@ -209,6 +250,10 @@ function HomePage() {
                 setFilters={setFilters}
                 seenIds={seenIds}
                 region={region}
+                boostCountry={boostCountry}
+                boostLabel={boostLabel}
+                localFirst={localFirst}
+                onSetLocalFirst={setLocalFirstPref}
                 onOpenMobileFilters={() => setMobileOpen(true)}
                 onQuickWatch={handleQuickWatch}
               />
@@ -288,6 +333,10 @@ function GridWithControls({
   setFilters,
   seenIds,
   region,
+  boostCountry,
+  boostLabel,
+  localFirst,
+  onSetLocalFirst,
   onOpenMobileFilters,
   onQuickWatch,
 }: {
@@ -295,13 +344,26 @@ function GridWithControls({
   setFilters: (u: (p: FilterState) => FilterState) => void;
   seenIds: Set<string>;
   region: string;
+  boostCountry: string;
+  boostLabel: string | null;
+  localFirst: boolean;
+  onSetLocalFirst: (on: boolean) => void;
   onOpenMobileFilters: () => void;
   onQuickWatch: (item: MediaItem) => void;
 }) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useCatalogInfinite(
     filters,
     region,
+    boostCountry,
   );
+
+  // The location boost only takes effect on the default popularity sort with no explicit
+  // Origin filter (mirrors the server), so only surface the banner when it's really doing
+  // something. A dismissed/off state still offers a one-click way to switch it back on.
+  const boostApplies =
+    !!boostLabel &&
+    (filters.sort === "popular" || filters.sort === "trending") &&
+    filters.origins.size === 0;
 
   // Flatten loaded pages. "Hide seen" is applied to what's loaded (client-side),
   // so the headline count stays the catalog total for the active filters.
@@ -351,6 +413,34 @@ function GridWithControls({
 
   return (
     <>
+      {/* Local-first banner: transparent + reversible. Only shown when the boost is
+          actually in effect (default sort, no Origin filter). */}
+      {boostApplies && localFirst && (
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+          <span>
+            Showing <span className="text-text-bright">{boostLabel}</span> titles first
+          </span>
+          <button
+            type="button"
+            onClick={() => onSetLocalFirst(false)}
+            className="cursor-pointer text-text-dim underline hover:text-text-bright"
+          >
+            Weight all regions equally
+          </button>
+        </div>
+      )}
+      {boostApplies && !localFirst && (
+        <div className="mb-2 font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+          <button
+            type="button"
+            onClick={() => onSetLocalFirst(true)}
+            className="cursor-pointer underline hover:text-text-bright"
+          >
+            Show {boostLabel} titles first
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-2">
         <button

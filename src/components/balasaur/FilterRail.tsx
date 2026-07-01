@@ -296,6 +296,16 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
     [themeOrder, themeCounts, filters.themes],
   );
 
+  // Progressive disclosure: only surface a discovery section when it can actually do
+  // something under the current filters. An active selection always keeps its section
+  // visible (so a live filter is never stranded off-screen), otherwise a section with no
+  // non-zero options is hidden instead of rendering an empty "nothing here" shell.
+  const showSubGenre = visibleSubGenres.length > 0 || filters.subGenres.size > 0;
+  const showThemes = visibleThemes.length > 0;
+  const showAudience = AUDIENCE_OPTIONS.some(
+    (a) => (audienceCounts[a] ?? 0) > 0 || filters.audience.has(a),
+  );
+
   // Official provider logos (cached a day; empty → ProviderIcon shows its glyph).
   const { data: providerLogos } = useQuery({
     queryKey: ["provider-logos"],
@@ -517,8 +527,9 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
           </AccordionContent>
         </AccordionItem>
 
-        {/* Sub-Genre — only shown once a parent genre is selected */}
-        {filters.genres.size > 0 && (
+        {/* Sub-Genre — only once a parent genre is selected AND it has options to offer
+            (or a live selection to keep visible), so it never renders an empty shell. */}
+        {showSubGenre && (
           <AccordionItem value="sub-genre" className="border-border">
             <AccordionTrigger className={groupLabelClass + " py-2.5"}>
               <TriggerLabel active={activeGroups.has("sub-genre")}>Sub-Genre</TriggerLabel>
@@ -528,43 +539,33 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                 show={activeGroups.has("sub-genre")}
                 onClear={() => clearGroup("sub-genre")}
               />
-              {visibleSubGenres.length === 0 ? (
-                <div className="font-mono text-[10px] text-text-dim">
-                  No sub-genres for this selection.
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {visibleSubGenres.map((sg) => {
-                    const active = filters.subGenres.has(sg);
-                    return (
-                      <Pill
-                        key={sg}
-                        active={active}
-                        count={subGenreCounts[sg] ?? 0}
-                        onClick={() => toggleSet<string>("subGenres", sg)}
-                      >
-                        {sg}
-                      </Pill>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="flex flex-wrap gap-1.5">
+                {visibleSubGenres.map((sg) => {
+                  const active = filters.subGenres.has(sg);
+                  return (
+                    <Pill
+                      key={sg}
+                      active={active}
+                      count={subGenreCounts[sg] ?? 0}
+                      onClick={() => toggleSet<string>("subGenres", sg)}
+                    >
+                      {sg}
+                    </Pill>
+                  );
+                })}
+              </div>
             </AccordionContent>
           </AccordionItem>
         )}
 
-        {/* Themes */}
-        <AccordionItem value="themes" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("themes")}>Themes</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear show={activeGroups.has("themes")} onClear={() => clearGroup("themes")} />
-            {visibleThemes.length === 0 ? (
-              <div className="font-mono text-[10px] text-text-dim">
-                No themes for this selection.
-              </div>
-            ) : (
+        {/* Themes — hidden entirely when no theme has results under the current filters. */}
+        {showThemes && (
+          <AccordionItem value="themes" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("themes")}>Themes</TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear show={activeGroups.has("themes")} onClear={() => clearGroup("themes")} />
               <div className="flex flex-wrap gap-1.5">
                 {visibleThemes.map((t) => {
                   const active = filters.themes.has(t);
@@ -580,39 +581,41 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                   );
                 })}
               </div>
-            )}
-          </AccordionContent>
-        </AccordionItem>
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-        {/* Audience */}
-        <AccordionItem value="audience" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("audience")}>Audience</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear
-              show={activeGroups.has("audience")}
-              onClear={() => clearGroup("audience")}
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {AUDIENCE_OPTIONS.map((a) => {
-                const count = audienceCounts[a] ?? 0;
-                const active = filters.audience.has(a);
-                return (
-                  <Pill
-                    key={a}
-                    active={active}
-                    count={count}
-                    disabled={count === 0 && !active}
-                    onClick={() => toggleSet<string>("audience", a)}
-                  >
-                    {a}
-                  </Pill>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+        {/* Audience — hidden when no audience bucket applies under the current filters. */}
+        {showAudience && (
+          <AccordionItem value="audience" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("audience")}>Audience</TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear
+                show={activeGroups.has("audience")}
+                onClear={() => clearGroup("audience")}
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {AUDIENCE_OPTIONS.map((a) => {
+                  const count = audienceCounts[a] ?? 0;
+                  const active = filters.audience.has(a);
+                  return (
+                    <Pill
+                      key={a}
+                      active={active}
+                      count={count}
+                      disabled={count === 0 && !active}
+                      onClick={() => toggleSet<string>("audience", a)}
+                    >
+                      {a}
+                    </Pill>
+                  );
+                })}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* Film Length — movies only (runtime) */}
         {showFilmLength && (

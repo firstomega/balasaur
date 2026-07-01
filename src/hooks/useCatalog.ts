@@ -5,7 +5,12 @@ import {
   useQuery,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { queryCatalog, getCatalogFacets, type CatalogQueryParams } from "@/lib/catalog.functions";
+import {
+  queryCatalog,
+  getCatalogFacets,
+  getViewerCountry,
+  type CatalogQueryParams,
+} from "@/lib/catalog.functions";
 import type { FilterState } from "@/types/filters";
 import { YEAR_BOUNDS, defaultFilterState } from "@/types/filters";
 
@@ -49,6 +54,12 @@ export function filtersToParams(filters: FilterState, region = "US"): CatalogBas
   };
 }
 
+/** Merge the location-boost country into base params (dropping it when empty so the
+ *  query key matches the un-boosted case). Keeps facet/deck params boost-free. */
+export function withBoost(base: CatalogBaseParams, boostCountry?: string): CatalogBaseParams {
+  return { ...base, boostCountry: boostCountry || undefined };
+}
+
 export function catalogInfiniteOptions(base: CatalogBaseParams) {
   return infiniteQueryOptions({
     queryKey: ["catalog", base] as const,
@@ -63,8 +74,23 @@ export function catalogInfiniteOptions(base: CatalogBaseParams) {
   });
 }
 
-export function useCatalogInfinite(filters: FilterState, region = "US") {
-  return useInfiniteQuery(catalogInfiniteOptions(filtersToParams(filters, region)));
+export function useCatalogInfinite(filters: FilterState, region = "US", boostCountry = "") {
+  return useInfiniteQuery(
+    catalogInfiniteOptions(withBoost(filtersToParams(filters, region), boostCountry)),
+  );
+}
+
+/** Session-stable geo lookup for the viewer's country (from the edge geo header). */
+export function viewerCountryOptions() {
+  return queryOptions({
+    queryKey: ["viewer-country"] as const,
+    queryFn: () => getViewerCountry(),
+    staleTime: Infinity,
+  });
+}
+
+export function useViewerCountry() {
+  return useQuery(viewerCountryOptions()).data ?? "";
 }
 
 export function catalogFacetsOptions(base: CatalogBaseParams) {
@@ -86,16 +112,16 @@ export function useCatalogFacets(filters: FilterState, region = "US") {
  *  are filtered out client-side by the deck. */
 export const DECK_SIZE = 500;
 
-export function deckMediaOptions(region = "US") {
-  const base = filtersToParams(defaultFilterState(), region);
+export function deckMediaOptions(region = "US", boostCountry = "") {
+  const base = withBoost(filtersToParams(defaultFilterState(), region), boostCountry);
   return queryOptions({
-    queryKey: ["catalog-deck", region, DECK_SIZE] as const,
+    queryKey: ["catalog-deck", region, boostCountry || "", DECK_SIZE] as const,
     queryFn: async () =>
       (await queryCatalog({ data: { ...base, limit: DECK_SIZE, offset: 0 } })).items,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useDeckMedia(region = "US") {
-  return useSuspenseQuery(deckMediaOptions(region));
+export function useDeckMedia(region = "US", boostCountry = "") {
+  return useSuspenseQuery(deckMediaOptions(region, boostCountry));
 }

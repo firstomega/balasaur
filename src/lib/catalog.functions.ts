@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { IMDB_BOUNDS, RT_BOUNDS, META_BOUNDS, FILM_LENGTH_BUCKETS } from "@/types/filters";
 import { computeBalasaurScore } from "@/lib/score";
+import { originsForCountry } from "@/lib/origins";
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 
 // Server-side catalog browsing. Replaces shipping the entire catalog to the
@@ -35,6 +37,9 @@ export interface CatalogQueryParams {
   filmLength: string[];
   /** ISO-3166-1 region for the streaming filter (viewer's account region). Default "US". */
   region?: string;
+  /** ISO-3166-1 country of the viewer (IP geo / account region) used to rank
+   *  home-country titles first on the default view. Empty/unbucketed → no boost. */
+  boostCountry?: string;
   sort: string;
   limit: number;
   offset: number;
@@ -109,117 +114,145 @@ function rowToCardItem(r: CardRow): MediaItem {
   };
 }
 
+function buildBase() {
+  return supabaseAdmin.from("media").select(CARD_COLS, { count: "exact" });
+}
+type MediaQuery = ReturnType<typeof buildBase>;
+
+/** Apply every WHERE clause for a catalog query. Kept separate from ordering so the
+ *  local-first path can build two identically-filtered queries (home-country vs. the
+ *  rest) from one source of truth. `origins` is included but is a no-op on the boost
+ *  path, which only runs when no Origin filter is set. */
+function applyCatalogFilters(q: MediaQuery, p: CatalogQueryParams): MediaQuery {
+  if (p.types.length === 1) q = q.eq("media_type", p.types[0]);
+  if (p.genres.length) q = q.overlaps("genres", p.genres);
+  if (p.origins.length) q = q.overlaps("origins", p.origins);
+  if (p.streaming.length) {
+    // Region-aware: match "Provider:REGION" tokens for the viewer's account region
+    // (defaults to US). A title counts as streamable only where it actually streams.
+    const region = (p.region || "US").toUpperCase();
+    q = q.overlaps(
+      "streaming_regions",
+      p.streaming.map((s) => `${s}:${region}`),
+    );
+  }
+
+  if (typeof p.yearMin === "number" && typeof p.yearMax === "number") {
+    // `year` is a 4-char text column; lexical compare matches numeric order and
+    // excludes null/empty (which is what we want when a year range is set).
+    q = q.gte("year", String(p.yearMin)).lte("year", String(p.yearMax));
+  }
+
+  // Ratings: only constrain when it isn't "full range AND include unrated".
+  // include-unrated keeps nulls; strict mode drops them.
+  {
+    const full = p.imdbMin <= IMDB_BOUNDS[0] && p.imdbMax >= IMDB_BOUNDS[1];
+    if (!(full && p.imdbUnrated)) {
+      if (p.imdbUnrated)
+        q = q.or(
+          `rating_imdb.is.null,and(rating_imdb.gte.${p.imdbMin},rating_imdb.lte.${p.imdbMax})`,
+        );
+      else q = q.gte("rating_imdb", p.imdbMin).lte("rating_imdb", p.imdbMax);
+    }
+  }
+  {
+    const full = p.rtMin <= RT_BOUNDS[0] && p.rtMax >= RT_BOUNDS[1];
+    if (!(full && p.rtUnrated)) {
+      if (p.rtUnrated)
+        q = q.or(
+          `rating_rotten_tomatoes.is.null,and(rating_rotten_tomatoes.gte.${p.rtMin},rating_rotten_tomatoes.lte.${p.rtMax})`,
+        );
+      else q = q.gte("rating_rotten_tomatoes", p.rtMin).lte("rating_rotten_tomatoes", p.rtMax);
+    }
+  }
+  {
+    const full = p.metaMin <= META_BOUNDS[0] && p.metaMax >= META_BOUNDS[1];
+    if (!(full && p.metaUnrated)) {
+      if (p.metaUnrated)
+        q = q.or(
+          `rating_metacritic.is.null,and(rating_metacritic.gte.${p.metaMin},rating_metacritic.lte.${p.metaMax})`,
+        );
+      else q = q.gte("rating_metacritic", p.metaMin).lte("rating_metacritic", p.metaMax);
+    }
+  }
+
+  if (p.awardWinners) q = q.eq("award_winner", true);
+  else if (p.nominated) q = q.or("award_nominee.eq.true,award_winner.eq.true");
+
+  // Specific-award filters (OR within each status group; AND between won + nominated).
+  if (p.awardsWon.length) q = q.overlaps("awards_won", p.awardsWon);
+  if (p.awardsNominated.length) q = q.overlaps("awards_nominated", p.awardsNominated);
+
+  // Advanced facets. Array facets match like genres (OR within the facet).
+  if (p.subGenres.length) q = q.overlaps("sub_genres", p.subGenres);
+  if (p.themes.length) q = q.overlaps("themes", p.themes);
+  if (p.audience.length) q = q.overlaps("audience", p.audience);
+  // Completion is TV-only; let movies pass through so it can't blank a mixed view.
+  if (p.completion.length)
+    q = q.or(`media_type.eq.movie,completion_status.in.(${p.completion.join(",")})`);
+  // Film length is movie-only; let TV pass through in a mixed view.
+  if (p.filmLength.length) {
+    const ranges = FILM_LENGTH_BUCKETS.filter((b) => p.filmLength.includes(b.key)).map(
+      (b) => `and(film_length_minutes.gte.${b.min},film_length_minutes.lte.${b.max})`,
+    );
+    if (ranges.length) q = q.or(`media_type.eq.tv,${ranges.join(",")}`);
+  }
+
+  // "By person": every selected name must be present in the cast (jsonb contains).
+  for (const name of p.people) {
+    q = q.contains("people", JSON.stringify([{ name }]));
+  }
+
+  return q;
+}
+
+const ASC = { ascending: true, nullsFirst: false } as const;
+const DESC = { ascending: false, nullsFirst: false } as const;
+
+function applyOrder(q: MediaQuery, sort: string) {
+  switch (sort) {
+    case "newest":
+      return q.order("year", DESC).order("popularity", DESC);
+    case "oldest":
+      return q.order("year", ASC).order("popularity", DESC);
+    case "topRated":
+      return q.order("rating_imdb", DESC).order("popularity", DESC);
+    case "az":
+      return q.order("title", ASC);
+    case "za":
+      return q.order("title", DESC);
+    default:
+      return q.order("popularity", DESC);
+  }
+}
+
+/** A Postgres array literal for an `ov`/`not.ov` value, e.g. ["American"] → "{American}".
+ *  Bucket keys have no spaces/commas so no quoting is needed. */
+function arrayLiteral(values: string[]): string {
+  return `{${values.join(",")}}`;
+}
+
 export const queryCatalog = createServerFn({ method: "GET" })
   .inputValidator((p: CatalogQueryParams) => p)
   .handler(async ({ data: p }): Promise<{ items: MediaItem[]; total: number }> => {
     // No media types selected → nothing matches.
     if (p.types.length === 0) return { items: [], total: 0 };
 
-    let q = supabaseAdmin.from("media").select(CARD_COLS, { count: "exact" });
+    // Local-first: on the default popularity view with no explicit Origin filter, rank
+    // the viewer's home-country titles above everyone else's — without hiding anything.
+    // Any explicit sort or Origin choice turns this off (their intent wins).
+    const boostBuckets =
+      (p.sort === "popular" || p.sort === "trending") && p.origins.length === 0
+        ? originsForCountry(p.boostCountry)
+        : [];
 
-    if (p.types.length === 1) q = q.eq("media_type", p.types[0]);
-    if (p.genres.length) q = q.overlaps("genres", p.genres);
-    if (p.origins.length) q = q.overlaps("origins", p.origins);
-    if (p.streaming.length) {
-      // Region-aware: match "Provider:REGION" tokens for the viewer's account region
-      // (defaults to US). A title counts as streamable only where it actually streams.
-      const region = (p.region || "US").toUpperCase();
-      q = q.overlaps(
-        "streaming_regions",
-        p.streaming.map((s) => `${s}:${region}`),
-      );
+    if (boostBuckets.length > 0) {
+      const boosted = await queryLocalFirst(p, boostBuckets);
+      if (boosted) return boosted;
+      // else fall through to the plain query (fail-soft).
     }
 
-    if (typeof p.yearMin === "number" && typeof p.yearMax === "number") {
-      // `year` is a 4-char text column; lexical compare matches numeric order and
-      // excludes null/empty (which is what we want when a year range is set).
-      q = q.gte("year", String(p.yearMin)).lte("year", String(p.yearMax));
-    }
-
-    // Ratings: only constrain when it isn't "full range AND include unrated".
-    // include-unrated keeps nulls; strict mode drops them.
-    {
-      const full = p.imdbMin <= IMDB_BOUNDS[0] && p.imdbMax >= IMDB_BOUNDS[1];
-      if (!(full && p.imdbUnrated)) {
-        if (p.imdbUnrated)
-          q = q.or(
-            `rating_imdb.is.null,and(rating_imdb.gte.${p.imdbMin},rating_imdb.lte.${p.imdbMax})`,
-          );
-        else q = q.gte("rating_imdb", p.imdbMin).lte("rating_imdb", p.imdbMax);
-      }
-    }
-    {
-      const full = p.rtMin <= RT_BOUNDS[0] && p.rtMax >= RT_BOUNDS[1];
-      if (!(full && p.rtUnrated)) {
-        if (p.rtUnrated)
-          q = q.or(
-            `rating_rotten_tomatoes.is.null,and(rating_rotten_tomatoes.gte.${p.rtMin},rating_rotten_tomatoes.lte.${p.rtMax})`,
-          );
-        else q = q.gte("rating_rotten_tomatoes", p.rtMin).lte("rating_rotten_tomatoes", p.rtMax);
-      }
-    }
-    {
-      const full = p.metaMin <= META_BOUNDS[0] && p.metaMax >= META_BOUNDS[1];
-      if (!(full && p.metaUnrated)) {
-        if (p.metaUnrated)
-          q = q.or(
-            `rating_metacritic.is.null,and(rating_metacritic.gte.${p.metaMin},rating_metacritic.lte.${p.metaMax})`,
-          );
-        else q = q.gte("rating_metacritic", p.metaMin).lte("rating_metacritic", p.metaMax);
-      }
-    }
-
-    if (p.awardWinners) q = q.eq("award_winner", true);
-    else if (p.nominated) q = q.or("award_nominee.eq.true,award_winner.eq.true");
-
-    // Specific-award filters (OR within each status group; AND between won + nominated).
-    if (p.awardsWon.length) q = q.overlaps("awards_won", p.awardsWon);
-    if (p.awardsNominated.length) q = q.overlaps("awards_nominated", p.awardsNominated);
-
-    // Advanced facets. Array facets match like genres (OR within the facet).
-    if (p.subGenres.length) q = q.overlaps("sub_genres", p.subGenres);
-    if (p.themes.length) q = q.overlaps("themes", p.themes);
-    if (p.audience.length) q = q.overlaps("audience", p.audience);
-    // Completion is TV-only; let movies pass through so it can't blank a mixed view.
-    if (p.completion.length)
-      q = q.or(`media_type.eq.movie,completion_status.in.(${p.completion.join(",")})`);
-    // Film length is movie-only; let TV pass through in a mixed view.
-    if (p.filmLength.length) {
-      const ranges = FILM_LENGTH_BUCKETS.filter((b) => p.filmLength.includes(b.key)).map(
-        (b) => `and(film_length_minutes.gte.${b.min},film_length_minutes.lte.${b.max})`,
-      );
-      if (ranges.length) q = q.or(`media_type.eq.tv,${ranges.join(",")}`);
-    }
-
-    // "By person": every selected name must be present in the cast (jsonb contains).
-    for (const name of p.people) {
-      q = q.contains("people", JSON.stringify([{ name }]));
-    }
-
-    const asc = { ascending: true, nullsFirst: false } as const;
-    const desc = { ascending: false, nullsFirst: false } as const;
-    let ordered;
-    switch (p.sort) {
-      case "newest":
-        ordered = q.order("year", desc).order("popularity", desc);
-        break;
-      case "oldest":
-        ordered = q.order("year", asc).order("popularity", desc);
-        break;
-      case "topRated":
-        ordered = q.order("rating_imdb", desc).order("popularity", desc);
-        break;
-      case "az":
-        ordered = q.order("title", asc);
-        break;
-      case "za":
-        ordered = q.order("title", desc);
-        break;
-      default:
-        ordered = q.order("popularity", desc);
-        break;
-    }
-
+    const ordered = applyOrder(applyCatalogFilters(buildBase(), p), p.sort);
     const { data, error, count } = await ordered.range(p.offset, p.offset + p.limit - 1);
     if (error) {
       // Fail-soft: never crash the homepage on a DB hiccup or a not-yet-applied
@@ -230,6 +263,85 @@ export const queryCatalog = createServerFn({ method: "GET" })
     const items = ((data ?? []) as unknown as CardRow[]).map(rowToCardItem);
     return { items, total: count ?? 0 };
   });
+
+/**
+ * The local-first page: home-country titles (popularity-ordered) come first, then
+ * everyone else (also popularity-ordered), as one continuous, paginated list. We run
+ * two identically-filtered queries — one for titles whose origins overlap the viewer's
+ * bucket(s), one for the rest — and stitch the requested page window across the seam.
+ * Returns null on error so the caller can fall back to the plain query.
+ */
+async function queryLocalFirst(
+  p: CatalogQueryParams,
+  buckets: string[],
+): Promise<{ items: MediaItem[]; total: number } | null> {
+  const literal = arrayLiteral(buckets);
+  const localQ = applyCatalogFilters(buildBase(), p)
+    .overlaps("origins", buckets)
+    .order("popularity", DESC);
+  const globalQ = applyCatalogFilters(buildBase(), p)
+    .not("origins", "ov", literal)
+    .order("popularity", DESC);
+
+  // Fetch this page's slice of the local set first.
+  const localRes = await localQ.range(p.offset, p.offset + p.limit - 1);
+  if (localRes.error) {
+    console.error("[catalog] local-first (local) query failed:", localRes.error.message);
+    return null;
+  }
+  const localCount = localRes.count ?? 0;
+  const localRows = (localRes.data ?? []) as unknown as CardRow[];
+
+  // The global set continues where the local set ended. Global titles already shown on
+  // earlier pages = offset − localCount (clamped at 0); the rest fill this page.
+  const consumedGlobal = Math.max(0, p.offset - localCount);
+  const needGlobal = p.limit - localRows.length;
+  const gStart = consumedGlobal;
+  const gEnd = needGlobal > 0 ? consumedGlobal + needGlobal - 1 : consumedGlobal;
+  const globalRes = await globalQ.range(gStart, gEnd);
+  if (globalRes.error) {
+    console.error("[catalog] local-first (global) query failed:", globalRes.error.message);
+    return null;
+  }
+  const globalCount = globalRes.count ?? 0;
+  const globalRows = needGlobal > 0 ? ((globalRes.data ?? []) as unknown as CardRow[]) : [];
+
+  const items = [...localRows, ...globalRows].map(rowToCardItem);
+  return { items, total: localCount + globalCount };
+}
+
+// Edge/CDN geo headers, in rough order of specificity. The value is a 2-letter
+// ISO-3166-1 country code. Different hosts set different headers, so we probe several.
+const GEO_HEADERS = [
+  "cf-ipcountry", // Cloudflare
+  "x-vercel-ip-country", // Vercel
+  "x-geo-country",
+  "x-country-code",
+  "x-country",
+  "fastly-geo-country", // Fastly
+];
+
+/**
+ * Best-effort country of the current viewer, read from the edge geo header the CDN
+ * stamps on the request (works for both the SSR document request and client→server-fn
+ * calls, since both traverse the same edge). Returns "" when unknown — callers then
+ * fall back to no location boost. Never throws.
+ */
+export const getViewerCountry = createServerFn({ method: "GET" }).handler(
+  async (): Promise<string> => {
+    try {
+      const headers = getRequest()?.headers;
+      if (!headers) return "";
+      for (const key of GEO_HEADERS) {
+        const v = headers.get(key)?.trim().toUpperCase();
+        if (v && v.length === 2 && v !== "XX") return v;
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  },
+);
 
 export interface CatalogFacets {
   total: number;
