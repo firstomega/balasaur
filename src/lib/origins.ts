@@ -24,6 +24,20 @@ const ORIGIN_BUCKETS: OriginBucket[] = [
 export const ORIGIN_OPTIONS = ORIGIN_BUCKETS.map((b) => b.key);
 
 /**
+ * Map a *viewer's* ISO-3166-1 country code (from IP geo or their account region) to
+ * the origin bucket(s) that represent "titles from their country", used to rank
+ * home-country titles first on the default homepage. Returns [] for countries we
+ * don't bucket (e.g. DE, BR) — those viewers just get the normal popularity order.
+ * This is intentionally the same bucket vocabulary the Origin filter uses, so a US
+ * viewer's boost ("American") lines up exactly with what the filter would select.
+ */
+export function originsForCountry(country: string | null | undefined): string[] {
+  const cc = (country ?? "").toUpperCase();
+  if (!cc) return [];
+  return ORIGIN_BUCKETS.filter((b) => b.countries.includes(cc)).map((b) => b.key);
+}
+
+/**
  * Map a title to origin bucket key(s), LANGUAGE-FIRST.
  *
  * A distinctive original language (Korean, Japanese, Chinese, Indian languages,
