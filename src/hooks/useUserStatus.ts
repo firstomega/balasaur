@@ -100,6 +100,23 @@ function rowToRecord(r: DbRow): UserStatusRecord {
   };
 }
 
+// The DB CHECK constraints only accept a fixed vocabulary; a stale/corrupt
+// localStorage record with an out-of-range value would make the whole batch
+// upsert fail (400), so we coerce to valid values (or drop the field) here.
+const VALID_STATUS: readonly SeenStatus[] = ["seen", "unseen", "skipped"];
+const VALID_SENTIMENT: readonly Sentiment[] = ["liked", "disliked"];
+const VALID_INTENT: readonly Intent[] = ["want", "not_interested"];
+
+function saneStatus(s: unknown): SeenStatus | null {
+  return VALID_STATUS.includes(s as SeenStatus) ? (s as SeenStatus) : null;
+}
+function saneSentiment(s: unknown): Sentiment | null {
+  return VALID_SENTIMENT.includes(s as Sentiment) ? (s as Sentiment) : null;
+}
+function saneIntent(s: unknown): Intent | null {
+  return VALID_INTENT.includes(s as Intent) ? (s as Intent) : null;
+}
+
 function recordToInsert(
   userId: string,
   mediaId: string,
@@ -114,9 +131,11 @@ function recordToInsert(
     title: snap?.title ?? mediaId,
     poster_url: snap?.posterUrl ?? null,
     year: snap?.year ?? null,
-    status: rec.status,
-    sentiment: rec.sentiment ?? null,
-    intent: rec.intent ?? null,
+    // Fall back to "unseen" if a record somehow carries an invalid status so a
+    // single bad row can't sink the whole batch (the field is NOT NULL).
+    status: saneStatus(rec.status) ?? "unseen",
+    sentiment: saneSentiment(rec.sentiment),
+    intent: saneIntent(rec.intent),
     rewatch_ok: rec.rewatchOk ?? null,
     updated_at: new Date(rec.ts).toISOString(),
   };
@@ -166,7 +185,11 @@ export function useUserStatus() {
       // 1. Migrate any localStorage entries the user accumulated while anon.
       if (migratedRef.current !== user.id) {
         const local = read();
-        const entries = Object.entries(local);
+        // Skip malformed entries (missing record / unusable timestamp) so one
+        // corrupt localStorage row can't fail the whole batch upsert.
+        const entries = Object.entries(local).filter(
+          ([, rec]) => rec && typeof rec === "object" && Number.isFinite(rec.ts),
+        );
         if (entries.length > 0) {
           const rows = entries.map(([id, rec]) => recordToInsert(user.id, id, rec));
           // onConflict ignore so we don't stomp newer server state.
