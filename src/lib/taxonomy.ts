@@ -246,6 +246,14 @@ export const THEME_OPTIONS: string[] = Array.from(new Set(Object.values(THEME_MA
 /** Audience bands, broadest → most mature. */
 export const AUDIENCE_OPTIONS: string[] = ["Kids", "Family", "Teen", "Adult", "Mature"];
 
+/** The normalized theme a raw TMDB keyword name maps to, if any (else undefined).
+ *  Lets UI decide whether a keyword chip corresponds to a real, clickable theme
+ *  filter value (only recognized keywords do — unrecognized ones render as plain
+ *  text since there's nothing for them to filter into). */
+export function themeForKeyword(name: string): string | undefined {
+  return THEME_MAP[norm(name)];
+}
+
 export function deriveThemes(keywords: Keyword[]): string[] {
   const out = new Set<string>();
   for (const k of keywords) {

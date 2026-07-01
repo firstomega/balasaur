@@ -12,6 +12,8 @@ import { ScrollRail } from "./ScrollRail";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
+import { themeForKeyword } from "@/lib/taxonomy";
+import { deriveOrigins } from "@/lib/origins";
 import {
   recordForStatus,
   STATUS_HEX,
@@ -64,6 +66,26 @@ function PersonName({ name, personId }: { name: string; personId?: number }) {
     );
   }
   return <span className="truncate text-text-bright">{name}</span>;
+}
+
+// A metadata chip that links straight into the homepage grid filtered by that single
+// facet — one tap opens "more like this" along that axis (genre / theme / origin).
+function FacetLink({
+  search,
+  children,
+}: {
+  search: Record<string, string>;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      to="/"
+      search={search}
+      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+    >
+      {children}
+    </Link>
+  );
 }
 
 function MicroLabel({ children }: { children: React.ReactNode }) {
@@ -155,6 +177,10 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
         : undefined;
 
   const meta = [displayYear(detail), typeLabel, length, detail.certification].filter(Boolean);
+  // Derived from language alone (no ISO country codes available on the client-fetched
+  // detail payload) — covers the distinctive, language-first buckets (Korean, Japanese,
+  // Chinese, Indian, Spanish, French); English-language titles resolve to no bucket here.
+  const origin = deriveOrigins(facts.originalLanguage, undefined)[0];
 
   return (
     <article>
@@ -217,12 +243,9 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               {detail.genres.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {detail.genres.map((g) => (
-                    <span
-                      key={g}
-                      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-muted"
-                    >
+                    <FacetLink key={g} search={{ genres: g }}>
                       {g}
-                    </span>
+                    </FacetLink>
                   ))}
                 </div>
               )}
@@ -369,14 +392,23 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
             <section>
               <MicroLabel>Themes</MicroLabel>
               <div className="flex flex-wrap gap-1.5">
-                {detail.keywords.map((k) => (
-                  <span
-                    key={k}
-                    className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-muted"
-                  >
-                    {k}
-                  </span>
-                ))}
+                {detail.keywords.map((k) => {
+                  const theme = themeForKeyword(k);
+                  // Only keywords that map to a real theme facet are clickable — an
+                  // unrecognized raw keyword has nothing to filter into, so it stays plain.
+                  return theme ? (
+                    <FacetLink key={k} search={{ themes: theme }}>
+                      {k}
+                    </FacetLink>
+                  ) : (
+                    <span
+                      key={k}
+                      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-dim"
+                    >
+                      {k}
+                    </span>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -395,6 +427,14 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               {fmtMoney(facts.revenue) && <FactRow k="Box office" v={fmtMoney(facts.revenue)!} />}
               {facts.originalLanguage && (
                 <FactRow k="Language" v={languageName(facts.originalLanguage)} />
+              )}
+              {origin && (
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="uppercase tracking-wider text-text-dim">Origin</dt>
+                  <dd>
+                    <FacetLink search={{ origins: origin }}>{origin}</FacetLink>
+                  </dd>
+                </div>
               )}
               {facts.productionCountries && facts.productionCountries.length > 0 && (
                 <FactRow k="Countries" v={facts.productionCountries.slice(0, 3).join(", ")} />

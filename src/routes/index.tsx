@@ -8,6 +8,7 @@ import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { FilterRail } from "@/components/balasaur/FilterRail";
 import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters";
 import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
+import { Breadcrumbs } from "@/components/balasaur/Breadcrumbs";
 import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
@@ -30,6 +31,12 @@ import {
   hasFilterSearch,
   type FilterSearch,
 } from "@/lib/filterSearch";
+import {
+  labelForFilters,
+  recordView,
+  clearTrail,
+  type BreadcrumbEntry,
+} from "@/lib/breadcrumbTrail";
 import { rescueCandidates } from "@/lib/filterRescue";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import type { MediaItem } from "@/types/media";
@@ -305,6 +312,13 @@ function GridWithControls({
   const total = data?.pages[0]?.total ?? 0;
   const activeCount = countActive(filters);
 
+  // Breadcrumb trail: record each distinct view (session-persisted) so wandering from
+  // detail-page links (or filter changes) can be jumped back to instead of hammering Back.
+  const [trail, setTrail] = useState<BreadcrumbEntry[]>([]);
+  useEffect(() => {
+    setTrail(recordView({ label: labelForFilters(filters), search: filtersToSearch(filters) }));
+  }, [filters]);
+
   // Empty-state rescue: when nothing matches, price each "remove one filter group"
   // option by its own result count, so we can suggest the biggest unlockers.
   const rescue = useMemo(
@@ -377,6 +391,8 @@ function GridWithControls({
           />
         </div>
       </div>
+
+      <Breadcrumbs trail={trail} onClear={() => setTrail(clearTrail())} />
 
       {/* Active chips */}
       <div className="mb-3">
