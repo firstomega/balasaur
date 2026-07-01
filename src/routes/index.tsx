@@ -23,6 +23,13 @@ import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { recordForStatus } from "@/lib/userStatus";
 import { loadFilters, saveFilters } from "@/lib/filterStorage";
+import {
+  filtersToSearch,
+  searchToFilters,
+  parseFilterSearch,
+  hasFilterSearch,
+  type FilterSearch,
+} from "@/lib/filterSearch";
 import { rescueCandidates } from "@/lib/filterRescue";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import type { MediaItem } from "@/types/media";
@@ -32,6 +39,8 @@ import { Switch } from "@/components/ui/switch";
 import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): FilterSearch => parseFilterSearch(search),
+  loaderDeps: ({ search }) => search,
   head: () => ({
     meta: [
       { title: "Balasaur — Your personal entertainment database" },
@@ -50,18 +59,14 @@ export const Route = createFileRoute("/")({
     ],
     links: [canonicalLink(SITE_ORIGIN + "/")],
   }),
-  loader: async ({ context }) => {
-    // Prefetch the first page (default filters) + facet stats so the homepage is
-    // server-rendered and instant on first paint; the client hydrates from cache.
-    // allSettled (not all) so a single prefetch failure can never reject the loader
-    // and take down the page — the server fns also fail-soft to empty results.
+  loader: async ({ context, deps }) => {
+    // Prefetch the URL's filters (so a shared/filtered link is server-rendered, not just
+    // the default grid) + facet stats. allSettled so a prefetch failure can never reject
+    // the loader and take down the page — the server fns also fail-soft to empty results.
+    const params = filtersToParams(searchToFilters(deps));
     await Promise.allSettled([
-      context.queryClient.ensureInfiniteQueryData(
-        catalogInfiniteOptions(filtersToParams(defaultFilterState())),
-      ),
-      context.queryClient.ensureQueryData(
-        catalogFacetsOptions(filtersToParams(defaultFilterState())),
-      ),
+      context.queryClient.ensureInfiniteQueryData(catalogInfiniteOptions(params)),
+      context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
     ]);
   },
   errorComponent: HomeError,
@@ -72,21 +77,34 @@ function HomePage() {
   // Init to default for SSR; restore any persisted filters on the client after
   // mount (avoids a hydration mismatch) so returning from a detail page — via the
   // Back button or the logo — keeps your filters instead of resetting them.
-  const [filters, setFilters] = useState<FilterState>(() => defaultFilterState());
+  // Filters come from the URL when present (shareable / bookmarkable / linkable), else
+  // from the last session. Reading the URL in the initializer on both server and client
+  // keeps SSR hydration-safe (same URL → same initial state).
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [filters, setFilters] = useState<FilterState>(() =>
+    hasFilterSearch(search) ? searchToFilters(search) : defaultFilterState(),
+  );
   const filtersSaveArmed = useRef(false);
   useEffect(() => {
-    const saved = loadFilters();
-    if (saved) setFilters(saved);
+    // No URL filters → restore the last session's filters (returning via Back / the logo).
+    if (!hasFilterSearch(search)) {
+      const saved = loadFilters();
+      if (saved) setFilters(saved);
+    }
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    // Skip the initial render so we don't overwrite stored filters with defaults
-    // before the restore above runs.
+    // Skip the first run so we don't clobber the incoming URL / stored filters, then keep
+    // sessionStorage and the URL in sync as filters change.
     if (!filtersSaveArmed.current) {
       filtersSaveArmed.current = true;
       return;
     }
     saveFilters(filters);
-  }, [filters]);
+    navigate({ search: filtersToSearch(filters), replace: true });
+  }, [filters, navigate]);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
