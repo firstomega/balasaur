@@ -135,10 +135,22 @@ jobs:
           # makes converged runs cheap (no rewrites). A stuck page (transient read timeout) is
           # retried, and any failure is a non-fatal warning — it resumes next run, and the
           # grow passes above already succeeded.
+          # Wall-clock budget (2026-07-02 incident): an unbounded converge run once made
+          # 58 back-to-back passes (~97 min of sustained reads + ~60k row updates) and
+          # took the Cloud DB down with it — the site was dark for hours. Cap the nightly
+          # backfill work instead: it's resumable, so a capped run just continues the next
+          # night. A longer inter-pass sleep gives the DB recovery windows in between.
+          BUDGET_SECONDS=1200
+          START=$(date +%s)
           AFTER=""
           stuck=0
           for i in $(seq 1 200); do
-            echo "──────── backfill pass $i (after='${AFTER}') ────────"
+            ELAPSED=$(( $(date +%s) - START ))
+            if [ "$ELAPSED" -ge "$BUDGET_SECONDS" ]; then
+              echo "::warning::Backfill time budget (${BUDGET_SECONDS}s) reached after $((i-1)) passes — stopping for tonight; resumes next run."
+              break
+            fi
+            echo "──────── backfill pass $i (after='${AFTER}', elapsed=${ELAPSED}s) ────────"
             BODY=$(jq -nc --arg a "$AFTER" '{after:$a, onlyMissing:true}')
             HTTP=000
             for attempt in 1 2 3 4; do
@@ -169,5 +181,5 @@ jobs:
               fi
               echo "No advance (stuck $stuck/10) — retrying same cursor…"; sleep $((stuck * 5)); continue
             fi
-            stuck=0; AFTER="$NEXT"; sleep 2
+            stuck=0; AFTER="$NEXT"; sleep 10
           done
