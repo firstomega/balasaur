@@ -2,6 +2,7 @@ import { Suspense, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ExternalLink, Play } from "lucide-react";
 import { TopBar } from "./TopBar";
+import { ShareButton } from "./ShareButton";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import type { MediaDetail as MediaDetailType } from "@/types/media";
@@ -232,9 +233,14 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-[28px] font-semibold leading-tight text-text-bright md:text-[40px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
-                {detail.title}
-              </h1>
+              <div className="flex items-start justify-between gap-3">
+                <h1 className="text-[28px] font-semibold leading-tight text-text-bright md:text-[40px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
+                  {detail.title}
+                </h1>
+                <div className="mt-1 shrink-0">
+                  <ShareButton title={detail.title} />
+                </div>
+              </div>
               {meta.length > 0 && (
                 <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-text-muted">
                   {meta.join(" · ")}
