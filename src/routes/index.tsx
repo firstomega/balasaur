@@ -24,6 +24,7 @@ import {
   withBoost,
 } from "@/hooks/useCatalog";
 import { boostBucketsForCountry } from "@/lib/localFirst";
+import { ssrBudget } from "@/lib/ssrBudget";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { recordForStatus } from "@/lib/userStatus";
@@ -73,22 +74,24 @@ export const Route = createFileRoute("/")({
   loader: async ({ context, deps }) => {
     // Detect the viewer's country (edge geo header) so the default view can be
     // server-rendered local-first — same value the client reads, so no hydration flip.
-    // Guarded: a geo lookup hiccup must never take down the loader — just skip the boost.
-    let country = "";
-    try {
-      country = await context.queryClient.ensureQueryData(viewerCountryOptions());
-    } catch {
-      country = "";
-    }
+    // Guarded + budgeted: a geo hiccup or hang must never take down the loader.
+    const country =
+      (await ssrBudget(context.queryClient.ensureQueryData(viewerCountryOptions()), 2000)) ?? "";
     const boost = boostBucketsForCountry(country).length > 0 ? country : "";
     // Prefetch the URL's filters (so a shared/filtered link is server-rendered, not just
     // the default grid) + facet stats. allSettled so a prefetch failure can never reject
-    // the loader and take down the page — the server fns also fail-soft to empty results.
+    // the loader, and ssrBudget so a HANGING backend can't stop the document from
+    // streaming — the client refetches whatever the prefetch didn't finish.
     const params = filtersToParams(searchToFilters(deps));
-    await Promise.allSettled([
-      context.queryClient.ensureInfiniteQueryData(catalogInfiniteOptions(withBoost(params, boost))),
-      context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
-    ]);
+    await ssrBudget(
+      Promise.allSettled([
+        context.queryClient.ensureInfiniteQueryData(
+          catalogInfiniteOptions(withBoost(params, boost)),
+        ),
+        context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
+      ]),
+      5000,
+    );
   },
   errorComponent: HomeError,
   component: HomePage,
