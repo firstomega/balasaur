@@ -114,8 +114,22 @@ function rowToCardItem(r: CardRow): MediaItem {
   };
 }
 
+// Rows-only base: NO count. During the 2026-07-02/03 recovery, page rows (index-backed,
+// LIMIT'd) answered instantly while count(*) over the bloated table blew every timeout —
+// and because both rode one request, a slow count blanked the whole grid. Rows and counts
+// are now separate requests with separate fates.
 function buildBase() {
+  return supabaseAdmin.from("media").select(CARD_COLS);
+}
+// Exact-counted variant — used only by the local-first stitch, which needs true set
+// sizes for its pagination seam (it falls back to the plain path if this is slow).
+function buildCounted() {
   return supabaseAdmin.from("media").select(CARD_COLS, { count: "exact" });
+}
+// Head-only "estimated" count for the results total: exact while the set is small,
+// planner-estimate when large — fast either way, never drags the rows down.
+function buildCountHead() {
+  return supabaseAdmin.from("media").select("media_id", { count: "estimated", head: true });
 }
 type MediaQuery = ReturnType<typeof buildBase>;
 
@@ -252,16 +266,44 @@ export const queryCatalog = createServerFn({ method: "GET" })
       // else fall through to the plain query (fail-soft).
     }
 
-    const ordered = applyOrder(applyCatalogFilters(buildBase(), p), p.sort);
-    const { data, error, count } = await ordered.range(p.offset, p.offset + p.limit - 1);
-    if (error) {
-      // Fail-soft: never crash the homepage on a DB hiccup or a not-yet-applied
-      // migration — serve an empty page and self-heal once the DB is consistent.
-      console.error("[catalog] query failed:", error.message);
-      return { items: [], total: 0 };
+    // Rows and total run as SEPARATE, parallel requests. Rows are index-backed and fast;
+    // counting can be slow on a cold/bloated table — a slow count must never blank the
+    // grid, and a failed count degrades to a scroll-friendly floor instead.
+    const rowsQ = applyOrder(applyCatalogFilters(buildBase(), p), p.sort).range(
+      p.offset,
+      p.offset + p.limit - 1,
+    );
+    const countQ = applyCatalogFilters(buildCountHead() as unknown as MediaQuery, p);
+    const [rowsRes, countRes] = await Promise.all([
+      rowsQ,
+      // A count failure is absorbed here; only the rows result decides success.
+      countQ.then(
+        (r) => r,
+        () => null,
+      ),
+    ]);
+
+    if (rowsRes.error) {
+      // Throw (rather than serving a cached-able empty page): React Query retries the
+      // request, and the route loaders are already shielded (allSettled + ssrBudget).
+      console.error("[catalog] rows query failed:", rowsRes.error.message);
+      throw new Error("catalog query failed");
     }
-    const items = ((data ?? []) as unknown as CardRow[]).map(rowToCardItem);
-    return { items, total: count ?? 0 };
+    const items = ((rowsRes.data ?? []) as unknown as CardRow[]).map(rowToCardItem);
+
+    // A short page proves we've hit the end — that total is exact. Otherwise take the
+    // estimated count, clamped so it can never undercut what's already on screen (a
+    // low estimate would freeze infinite scroll / show "13 results" under 60 cards).
+    const loaded = p.offset + items.length;
+    let total: number;
+    if (items.length < p.limit) {
+      total = loaded;
+    } else {
+      const estimated =
+        countRes && !countRes.error && typeof countRes.count === "number" ? countRes.count : 0;
+      total = Math.max(estimated, loaded + 1);
+    }
+    return { items, total };
   });
 
 /**
@@ -275,11 +317,15 @@ async function queryLocalFirst(
   p: CatalogQueryParams,
   buckets: string[],
 ): Promise<{ items: MediaItem[]; total: number } | null> {
+  // buildCounted (exact counts): the seam math below needs true set sizes. On a cold or
+  // struggling DB the counts are the slow part — then this whole path errors, returns
+  // null, and the caller serves the plain rows-first view instead. Self-healing: the
+  // boost turns back on as soon as counts are fast again.
   const literal = arrayLiteral(buckets);
-  const localQ = applyCatalogFilters(buildBase(), p)
+  const localQ = applyCatalogFilters(buildCounted() as MediaQuery, p)
     .overlaps("origins", buckets)
     .order("popularity", DESC);
-  const globalQ = applyCatalogFilters(buildBase(), p)
+  const globalQ = applyCatalogFilters(buildCounted() as MediaQuery, p)
     .not("origins", "ov", literal)
     .order("popularity", DESC);
 
