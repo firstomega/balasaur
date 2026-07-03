@@ -13,6 +13,7 @@ import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
+import { ShareButton } from "@/components/balasaur/ShareButton";
 import {
   useCatalogInfinite,
   useCatalogFacets,
@@ -418,6 +419,8 @@ function GridWithControls({
             value={filters.sort}
             onChange={(v) => setFilters((p) => ({ ...p, sort: v }))}
           />
+          {/* Filters live in the URL, so sharing the page shares this exact view. */}
+          <ShareButton title="Balasaur" />
         </div>
       </div>
 
