@@ -9,6 +9,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
+// Google sign-in rides Lovable's OAuth app, which doesn't exist on the owner-managed
+// Supabase project. When the app points at the own project (VITE_APP_SUPABASE_URL set),
+// hide the button until Google credentials are configured there (then flip this on via
+// VITE_APP_AUTH_GOOGLE=1). Email/password works on both.
+const GOOGLE_AUTH_AVAILABLE =
+  !import.meta.env.VITE_APP_SUPABASE_URL || import.meta.env.VITE_APP_AUTH_GOOGLE === "1";
+
 export function AuthDialog({
   open,
   onOpenChange,
@@ -69,19 +76,23 @@ export function AuthDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <button
-          type="button"
-          onClick={google}
-          className="w-full cursor-pointer rounded-[5px] border border-border bg-background px-3 py-2 font-mono text-[12px] uppercase tracking-wider text-text-bright hover:border-border-strong"
-        >
-          Continue with Google
-        </button>
+        {GOOGLE_AUTH_AVAILABLE && (
+          <>
+            <button
+              type="button"
+              onClick={google}
+              className="w-full cursor-pointer rounded-[5px] border border-border bg-background px-3 py-2 font-mono text-[12px] uppercase tracking-wider text-text-bright hover:border-border-strong"
+            >
+              Continue with Google
+            </button>
 
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-dim">
-          <span className="h-px flex-1 bg-border" />
-          or
-          <span className="h-px flex-1 bg-border" />
-        </div>
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+              <span className="h-px flex-1 bg-border" />
+              or
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          </>
+        )}
 
         <form onSubmit={submit} className="space-y-2">
           <input

@@ -6,8 +6,11 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // APP_* variants take precedence: the owner-managed Supabase project (2026-07
+  // migration off Lovable Cloud). Unset → falls back to Lovable's managed vars.
+  const SUPABASE_URL = process.env.APP_SUPABASE_URL || process.env.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY =
+    process.env.APP_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [
