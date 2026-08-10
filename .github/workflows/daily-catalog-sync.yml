@@ -77,6 +77,29 @@ jobs:
           done
           echo "Daily sync complete. Total titles enriched: $total"
 
+      - name: Freshness canary (fail red if the catalog is stale)
+        env:
+          BASE_URL: https://balasaur.com
+        run: |
+          # The sync endpoint reports the newest media.updated_at AFTER its writes
+          # (`catalogMaxUpdatedAt`). If it's missing (old deploy without the field)
+          # or older than 48h, the writes aren't landing — fail the run LOUDLY.
+          # 2026-07/08 incident: upserts failed for five weeks while every nightly
+          # run stayed green because per-chunk errors were only console.logged.
+          MAXUPD=$(jq -r '.catalogMaxUpdatedAt // empty' /tmp/sync.json 2>/dev/null)
+          if [ -z "$MAXUPD" ]; then
+            echo "::error::Sync response has no catalogMaxUpdatedAt — the deployed app predates the freshness canary (or writes are failing). Redeploy from main and verify."
+            exit 1
+          fi
+          NOW=$(date -u +%s)
+          THEN=$(date -u -d "$MAXUPD" +%s 2>/dev/null || echo 0)
+          AGE_H=$(( (NOW - THEN) / 3600 ))
+          echo "Newest media.updated_at: $MAXUPD (~${AGE_H}h ago)"
+          if [ "$THEN" -eq 0 ] || [ "$AGE_H" -gt 48 ]; then
+            echo "::error::Catalog is stale: newest media.updated_at is ${MAXUPD} (~${AGE_H}h old). Writes are not persisting — check server env (APP_SUPABASE_*) and DB grants."
+            exit 1
+          fi
+
       - name: Long-tail refresh (stalest titles, table-wide)
         env:
           BASE_URL: https://balasaur.com

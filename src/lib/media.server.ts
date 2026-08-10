@@ -1084,12 +1084,76 @@ export async function backfillFromRaw(opts?: {
   return result;
 }
 
+/**
+ * Upsert enriched media rows in chunks and REFUSE to fail silently: any chunk
+ * error, or a write that reports success without persisting, throws — bubbling
+ * up through the sync hooks as a non-200 so the nightly Action goes red instead
+ * of green-but-frozen. (2026-07/08 incident: every upsert failed for five weeks
+ * while the endpoint kept reporting `refreshed: 292` nightly.)
+ */
+async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<void> {
+  if (rows.length === 0) return;
+  const CHUNK = 25;
+  const totalChunks = Math.ceil(rows.length / CHUNK);
+  let failedChunks = 0;
+  let firstError: string | null = null;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await supabaseAdmin
+      .from("media")
+      .upsert(rows.slice(i, i + CHUNK), { onConflict: "media_id" });
+    if (error) {
+      failedChunks++;
+      firstError ??= error.message;
+      console.error(`[${tag}] upsert chunk failed:`, error.message);
+    }
+  }
+  if (failedChunks > 0) {
+    throw new Error(
+      `${failedChunks}/${totalChunks} media upsert chunks failed — first error: ${firstError}`,
+    );
+  }
+  // Belt-and-braces: a write can "succeed" without landing (wrong project in a
+  // mixed-env deploy, or an RLS policy silently dropping rows under a non-service
+  // key). Every row was just stamped with a fresh fetched_at, so re-read one and
+  // require it to be recent.
+  const probeId = rows[0].media_id;
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select("media_id, fetched_at")
+    .eq("media_id", probeId)
+    .maybeSingle();
+  if (error) throw new Error(`post-write verification read failed: ${error.message}`);
+  const persistedAt = data?.fetched_at ? new Date(data.fetched_at).getTime() : 0;
+  if (Date.now() - persistedAt > 60 * 60_000) {
+    throw new Error(
+      `write did not persist: ${probeId} has fetched_at=${data?.fetched_at ?? "null"} after upsert`,
+    );
+  }
+}
+
+/** Newest `updated_at` in `media` — the freshness signal the nightly canary asserts on. */
+async function catalogMaxUpdatedAt(): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select("updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[sync] catalogMaxUpdatedAt failed:", error.message);
+    return null;
+  }
+  return data?.updated_at ?? null;
+}
+
 export interface SyncResult {
   discovered: number;
   refreshed: number;
   skippedFresh: number;
   failed: number;
   durationMs: number;
+  /** Newest media.updated_at AFTER this pass's writes (nightly freshness canary). */
+  catalogMaxUpdatedAt: string | null;
 }
 
 /**
@@ -1244,15 +1308,9 @@ export async function syncCatalog(opts?: {
     }
   });
 
-  // 3. Upsert in chunks (rows can be large).
-  const CHUNK = 25;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK);
-    const { error } = await supabaseAdmin.from("media").upsert(chunk, { onConflict: "media_id" });
-    if (error) {
-      console.error(`[sync] upsert chunk failed:`, error.message);
-    }
-  }
+  // 3. Upsert in chunks (rows can be large). Throws on any failed/unpersisted
+  //    write so the caller (and the nightly Action) sees red, never green-but-frozen.
+  await upsertMediaRowsStrict(rows, "sync");
 
   // 4. Bust the grid's trending cache when the catalog actually changed, so new
   //    titles appear on the next page load instead of waiting out the 24h TTL.
@@ -1274,6 +1332,7 @@ export async function syncCatalog(opts?: {
     skippedFresh: seedItems.length - candidates.length,
     failed,
     durationMs: Date.now() - start,
+    catalogMaxUpdatedAt: await catalogMaxUpdatedAt(),
   };
 }
 
@@ -1285,6 +1344,8 @@ export interface RefreshResult {
   oldestAgeDays: number | null;
   budgetHit: boolean;
   durationMs: number;
+  /** Newest media.updated_at AFTER this pass's writes (nightly freshness canary). */
+  catalogMaxUpdatedAt: string | null;
 }
 
 /**
@@ -1323,6 +1384,7 @@ export async function refreshStalest(opts?: {
       oldestAgeDays: null,
       budgetHit: false,
       durationMs: Date.now() - start,
+      catalogMaxUpdatedAt: await catalogMaxUpdatedAt(),
     };
   }
 
@@ -1373,13 +1435,8 @@ export async function refreshStalest(opts?: {
     }
   });
 
-  const CHUNK = 25;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const { error } = await supabaseAdmin
-      .from("media")
-      .upsert(rows.slice(i, i + CHUNK), { onConflict: "media_id" });
-    if (error) console.error("[refresh] upsert chunk failed:", error.message);
-  }
+  // Throws on any failed/unpersisted write — see upsertMediaRowsStrict.
+  await upsertMediaRowsStrict(rows, "refresh");
   if (refreshed > 0) {
     const { error } = await supabaseAdmin.from("trending_cache").delete().eq("key", "trending");
     if (error) console.error("[refresh] trending_cache bust failed:", error.message);
@@ -1395,6 +1452,7 @@ export async function refreshStalest(opts?: {
     oldestAgeDays,
     budgetHit,
     durationMs: Date.now() - start,
+    catalogMaxUpdatedAt: await catalogMaxUpdatedAt(),
   };
 }
 
