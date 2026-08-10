@@ -7,10 +7,14 @@ import type { Database } from "./types";
 
 function createSupabaseAdminClient() {
   // APP_* variants take precedence: the owner-managed Supabase project (2026-07
-  // migration off Lovable Cloud). Unset → falls back to Lovable's managed vars.
-  const SUPABASE_URL = process.env.APP_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY =
-    process.env.APP_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // migration off Lovable Cloud). The override is all-or-nothing — a URL from one
+  // project paired with a key from another would authenticate nothing (or worse,
+  // half-work: reads pass via public RLS policies while every write dies).
+  const useOverride = !!(process.env.APP_SUPABASE_URL && process.env.APP_SUPABASE_SERVICE_ROLE_KEY);
+  const SUPABASE_URL = useOverride ? process.env.APP_SUPABASE_URL : process.env.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = useOverride
+    ? process.env.APP_SUPABASE_SERVICE_ROLE_KEY
+    : process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [

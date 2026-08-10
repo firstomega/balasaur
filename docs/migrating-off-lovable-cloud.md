@@ -2,6 +2,18 @@
 
 **Status:** runbook for review. Nothing here is executed automatically.
 
+> **2026-08-10 status update.** The cutover stalled halfway on 2026-07-03 and the
+> catalog has been frozen since (both DBs' newest `media.updated_at` =
+> `2026-07-03 10:53:13Z`) while the nightly Action stayed green — sync upsert
+> errors were swallowed (fixed; they now fail the run, plus a freshness canary).
+> Done so far: new project `rqghkusdnfcydgfygvsr` created + data copied; browser
+> env (`VITE_APP_SUPABASE_*`) points at it. **Remaining:** set the server pair in
+> the Lovable deploy env — `APP_SUPABASE_URL` + `APP_SUPABASE_SERVICE_ROLE_KEY`
+> (URL + publishable key are committed in `.env`; the service-role key is the one
+> secret, Lovable env only) — republish, run the sync workflow, and verify
+> `media.updated_at` advances. The override activates only when the full pair is
+> set (see `client.server.ts`), so committing the URL alone changes nothing.
+
 ## Why (and why now)
 
 Lovable Cloud is a Supabase project that **Lovable owns and manages** — it exposes no

@@ -7,10 +7,15 @@ import type { Database } from "./types";
 export const requireSupabaseAuth = createMiddleware({ type: "function" }).server(
   async ({ next }) => {
     // APP_* variants take precedence: the owner-managed Supabase project (2026-07
-    // migration off Lovable Cloud). Unset → falls back to Lovable's managed vars.
-    const SUPABASE_URL = process.env.APP_SUPABASE_URL || process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY =
-      process.env.APP_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+    // migration off Lovable Cloud). All-or-nothing: only use the override when the
+    // full URL+key pair is present, so a partially-set env can't mix projects.
+    const useOverride = !!(
+      process.env.APP_SUPABASE_URL && process.env.APP_SUPABASE_PUBLISHABLE_KEY
+    );
+    const SUPABASE_URL = useOverride ? process.env.APP_SUPABASE_URL : process.env.SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = useOverride
+      ? process.env.APP_SUPABASE_PUBLISHABLE_KEY
+      : process.env.SUPABASE_PUBLISHABLE_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       const missing = [
