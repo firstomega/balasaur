@@ -106,18 +106,19 @@ export function useCatalogFacets(filters: FilterState, region = "US") {
   return useQuery(catalogFacetsOptions(filtersToParams(filters, region)));
 }
 
-/** Curated homepage rails (Trending / New & Noteworthy / Hidden Gems). One
- *  cache entry for everyone — the rails are editorial, not filter-dependent. */
-export function homeRailsOptions() {
+/** Curated homepage rails (Trending / New & Noteworthy / Coming Soon / Hidden
+ *  Gems). Cached per boost country — rails are geo-scoped (home-country titles
+ *  plus proven global crossovers) but not filter-dependent. */
+export function homeRailsOptions(boostCountry = "") {
   return queryOptions({
-    queryKey: ["home-rails"] as const,
-    queryFn: () => getHomeRails(),
+    queryKey: ["home-rails", boostCountry] as const,
+    queryFn: () => getHomeRails({ data: { boostCountry: boostCountry || undefined } }),
     staleTime: 15 * 60 * 1000,
   });
 }
 
-export function useHomeRails() {
-  return useQuery(homeRailsOptions());
+export function useHomeRails(boostCountry = "") {
+  return useQuery(homeRailsOptions(boostCountry));
 }
 
 /** Bounded, popularity-ordered deck for the "Rate" (swipe) page. Loads a few hundred

@@ -506,33 +506,60 @@ export const searchCast = createServerFn({ method: "GET" })
 export interface HomeRails {
   trending: MediaItem[];
   newAndNoteworthy: MediaItem[];
+  comingSoon: MediaItem[];
   hiddenGems: MediaItem[];
 }
 
 const RAIL_SIZE = 24;
 const NOTEWORTHY_WINDOW_DAYS = 75;
+const COMING_SOON_WINDOW_DAYS = 120;
+/** TMDB votes at which a foreign title counts as a mainstream crossover
+ *  (Squid Game-class) and appears in geo-scoped rails everywhere. */
+const CROSSOVER_VOTES = 2000;
 
 /**
  * Curated homepage rails, shown above the grid on the unfiltered view:
- *  - Trending This Week: the blended-rank top (buzz + quality + recency).
+ *  - Trending This Week: the blended-rank top (buzz + quality + recency),
+ *    released titles only — hype for the unreleased belongs in Coming Soon.
  *  - New & Noteworthy: released in the last ~2.5 months with real traction,
  *    minus anything already in Trending.
+ *  - Coming Soon: unreleased titles with real pre-release buzz, soonest first.
  *  - Hidden Gems: little buzz, external-critic-validated high scores (an IMDb
  *    rating is required so a handful of TMDB self-votes can't mint a "gem").
+ *
+ * Geo scoping: when the viewer's country maps to an origin bucket, each rail
+ * keeps home-country titles plus PROVEN global crossovers (vote_count ≥
+ * CROSSOVER_VOTES) — so a US visitor sees American titles and Squid Game, not
+ * every regionally-hyped release worldwide. Unknown geo → global rails,
+ * unchanged. Rails are discovery, not inventory: the full catalog is always one
+ * scroll away in the grid, so scoping here hides nothing permanently.
+ *
  * All rails respect the content-safety flag and need a poster (a rail of "No
  * art" cards sells nothing). Fail-soft per rail: a failed query renders as an
  * absent rail, never an error page.
  */
-export const getHomeRails = createServerFn({ method: "GET" }).handler(
-  async (): Promise<HomeRails> => {
+export const getHomeRails = createServerFn({ method: "GET" })
+  .inputValidator((p: { boostCountry?: string }) => p)
+  .handler(async ({ data: p }): Promise<HomeRails> => {
     const today = new Date().toISOString().slice(0, 10);
     const since = new Date(Date.now() - NOTEWORTHY_WINDOW_DAYS * 86_400_000)
       .toISOString()
       .slice(0, 10);
-    const base = () => buildBase().eq("sensitive", false).not("poster_url", "is", null);
+    const horizon = new Date(Date.now() + COMING_SOON_WINDOW_DAYS * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const buckets = originsForCountry(p.boostCountry);
+    const base = () => {
+      let q = buildBase().eq("sensitive", false).not("poster_url", "is", null);
+      if (buckets.length > 0) {
+        q = q.or(`origins.ov.${arrayLiteral(buckets)},vote_count.gte.${CROSSOVER_VOTES}`);
+      }
+      return q;
+    };
 
-    const [trendingRes, newRes, gemsRes] = await Promise.all([
+    const [trendingRes, newRes, soonRes, gemsRes] = await Promise.all([
       base()
+        .lte("release_date", today)
         .order("rank_score", DESC)
         .order("popularity", DESC)
         .limit(RAIL_SIZE)
@@ -546,6 +573,17 @@ export const getHomeRails = createServerFn({ method: "GET" }).handler(
         .gte("popularity", 3)
         .order("rank_score", DESC)
         .limit(RAIL_SIZE * 2) // over-fetch: some of these are also in Trending
+        .then(
+          (r) => r,
+          () => null,
+        ),
+      base()
+        .gt("release_date", today)
+        .lte("release_date", horizon)
+        .gte("popularity", 5)
+        .order("release_date", ASC)
+        .order("rank_score", DESC)
+        .limit(RAIL_SIZE)
         .then(
           (r) => r,
           () => null,
@@ -579,9 +617,8 @@ export const getHomeRails = createServerFn({ method: "GET" }).handler(
     const shownIds = new Set([...trendingIds, ...newAndNoteworthy.map((i) => i.id)]);
     const hiddenGems = toItems(gemsRes).filter((i) => !shownIds.has(i.id));
 
-    return { trending, newAndNoteworthy, hiddenGems };
-  },
-);
+    return { trending, newAndNoteworthy, comingSoon: toItems(soonRes), hiddenGems };
+  });
 
 export interface SearchHit {
   id: string;
@@ -589,38 +626,64 @@ export interface SearchHit {
   title: string;
   year: string | null;
   posterUrl: string | null;
+  /** Unified Balasaur Score for the dropdown badge (absent → no data). */
+  balasaur?: number;
+}
+
+interface SearchRow {
+  media_id: string;
+  media_type: string;
+  title: string;
+  year: string | null;
+  poster_url: string | null;
+  rating_imdb: number | null;
+  rating_rotten_tomatoes: number | null;
+  rating_metacritic: number | null;
+  rating_tmdb: number | null;
+}
+
+function searchRowToHit(r: SearchRow): SearchHit {
+  return {
+    id: r.media_id,
+    mediaType: r.media_type,
+    title: r.title,
+    year: r.year,
+    posterUrl: r.poster_url,
+    balasaur: computeBalasaurScore({
+      imdb: r.rating_imdb,
+      rottenTomatoes: r.rating_rotten_tomatoes,
+      metacritic: r.rating_metacritic,
+      tmdb: r.rating_tmdb,
+    }),
+  };
 }
 
 /**
- * Title search for the top-bar search box. Server-side (uses the title trigram
- * index) so the header no longer loads the whole catalog into the browser just to
- * search it. Substring match, most-popular first.
+ * Title search for the top-bar search box. Server-side, via the search_titles
+ * RPC: trigram similarity gives typo tolerance ("Severence" finds Severance),
+ * substring matches rank first, `sensitive` titles are DEMOTED below clean ones
+ * (never hidden — search is the deliberate lookup path), and ties break on the
+ * blended rank rather than raw popularity. Falls back to the plain ilike query
+ * if the RPC isn't applied yet (same fail-soft pattern as the facets RPC).
  */
 export const searchTitles = createServerFn({ method: "GET" })
   .inputValidator((input: { query: string }) => input)
   .handler(async ({ data }): Promise<SearchHit[]> => {
     const q = (data.query ?? "").trim();
     if (q.length < 1) return [];
+
+    const rpc = await supabaseAdmin.rpc("search_titles", { p_q: q });
+    if (!rpc.error) return ((rpc.data ?? []) as SearchRow[]).map(searchRowToHit);
+    console.error("[search] search_titles RPC failed, using ilike fallback:", rpc.error.message);
+
     const { data: rows, error } = await supabaseAdmin
       .from("media")
-      .select("media_id, media_type, title, year, poster_url")
+      .select(
+        "media_id, media_type, title, year, poster_url, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
+      )
       .ilike("title", `%${q}%`)
-      .order("popularity", { ascending: false, nullsFirst: false })
+      .order("rank_score", { ascending: false, nullsFirst: false })
       .limit(10);
     if (error) throw new Error(error.message);
-    return (
-      (rows ?? []) as Array<{
-        media_id: string;
-        media_type: string;
-        title: string;
-        year: string | null;
-        poster_url: string | null;
-      }>
-    ).map((r) => ({
-      id: r.media_id,
-      mediaType: r.media_type,
-      title: r.title,
-      year: r.year,
-      posterUrl: r.poster_url,
-    }));
+    return ((rows ?? []) as unknown as SearchRow[]).map(searchRowToHit);
   });

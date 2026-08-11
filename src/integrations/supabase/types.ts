@@ -342,6 +342,20 @@ export type Database = {
           name: string;
         }[];
       };
+      search_titles: {
+        Args: { p_q: string };
+        Returns: {
+          media_id: string;
+          media_type: string;
+          title: string;
+          year: string | null;
+          poster_url: string | null;
+          rating_imdb: number | null;
+          rating_rotten_tomatoes: number | null;
+          rating_metacritic: number | null;
+          rating_tmdb: number | null;
+        }[];
+      };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
     };

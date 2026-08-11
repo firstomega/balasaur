@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Check, Eye } from "lucide-react";
+import { Check, Eye, Trophy } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
@@ -25,12 +25,15 @@ export function MediaCard({
   item,
   onQuickWatch,
   watched = false,
+  posterOverlay,
 }: {
   item: MediaItem;
   /** When provided, shows a desktop hover "Watched" quick-add button on the poster. */
   onQuickWatch?: (item: MediaItem) => void;
   /** Current watched state, to style the quick-add button as active. */
   watched?: boolean;
+  /** Rendered bottom-left on the poster (rail rank numerals, date chips, …). */
+  posterOverlay?: React.ReactNode;
 }) {
   const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
   const rawId = item.id.replace(/^(movie|tv)-/, "");
@@ -45,10 +48,10 @@ export function MediaCard({
             params={{ id: slug }}
             className="block"
           >
-            <CardArt item={item} />
+            <CardArt item={item} posterOverlay={posterOverlay} />
           </Link>
         ) : (
-          <CardArt item={item} />
+          <CardArt item={item} posterOverlay={posterOverlay} />
         )}
 
         {onQuickWatch && (
@@ -106,7 +109,7 @@ export function MediaCard({
   );
 }
 
-function CardArt({ item }: { item: MediaItem }) {
+function CardArt({ item, posterOverlay }: { item: MediaItem; posterOverlay?: React.ReactNode }) {
   return (
     <div className="relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
       <div className="aspect-[2/3] w-full">
@@ -150,6 +153,18 @@ function CardArt({ item }: { item: MediaItem }) {
         <div className="absolute right-1.5 top-1.5">
           <ScoreBadge score={item.ratings.balasaur} />
         </div>
+      )}
+      {/* The awards pipeline earns a pixel: winners get a small trophy. */}
+      {item.awardWinner && (
+        <span
+          title="Major award winner"
+          className="absolute bottom-1.5 right-1.5 rounded-[4px] bg-background/85 p-1 backdrop-blur-sm"
+        >
+          <Trophy className="h-3 w-3 text-rating" aria-label="Award winner" />
+        </span>
+      )}
+      {posterOverlay && (
+        <div className="pointer-events-none absolute bottom-1.5 left-1.5">{posterOverlay}</div>
       )}
     </div>
   );

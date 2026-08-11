@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
 import { mediaSlug } from "@/lib/slug";
 import { tmdbImage } from "@/lib/tmdbImage";
+import { ScoreBadge } from "./ScoreBadge";
 
 const TYPE_COLOR: Record<string, string> = {
   movie: "text-media-movie",
@@ -208,6 +209,9 @@ export function TopBarSearch() {
                         </span>
                       </div>
                     </div>
+                    {typeof hit.balasaur === "number" && (
+                      <ScoreBadge score={hit.balasaur} className="shrink-0" />
+                    )}
                   </li>
                 );
               })}

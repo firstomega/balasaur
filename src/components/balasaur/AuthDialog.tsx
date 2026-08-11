@@ -9,12 +9,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-// Google sign-in rides Lovable's OAuth app, which doesn't exist on the owner-managed
-// Supabase project. When the app points at the own project (VITE_APP_SUPABASE_URL set),
-// hide the button until Google credentials are configured there (then flip this on via
-// VITE_APP_AUTH_GOOGLE=1). Email/password works on both.
-const GOOGLE_AUTH_AVAILABLE =
-  !import.meta.env.VITE_APP_SUPABASE_URL || import.meta.env.VITE_APP_AUTH_GOOGLE === "1";
+// On Lovable's managed project, Google sign-in rides Lovable's OAuth app. On the
+// owner-managed Supabase project (VITE_APP_SUPABASE_URL set) it uses Supabase's own
+// Google provider instead — which must be configured in the Supabase dashboard
+// (Auth → Providers → Google) before the button is shown: flip VITE_APP_AUTH_GOOGLE=1
+// once that's done. Email/password + magic links work everywhere regardless.
+const OWN_SUPABASE = !!import.meta.env.VITE_APP_SUPABASE_URL;
+const GOOGLE_AUTH_AVAILABLE = !OWN_SUPABASE || import.meta.env.VITE_APP_AUTH_GOOGLE === "1";
 
 export function AuthDialog({
   open,
@@ -70,6 +71,15 @@ export function AuthDialog({
 
   async function google() {
     setError(null);
+    if (OWN_SUPABASE) {
+      // Standard Supabase OAuth: full-page redirect to Google and back.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) setError(error.message);
+      return;
+    }
     const res = (await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     })) as { error?: unknown; redirected?: boolean };
