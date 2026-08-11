@@ -9,8 +9,7 @@ export function CookieBanner() {
     if (getConsent() === null) setVisible(true);
     const open = () => setVisible(true);
     window.addEventListener("balasaur:open-cookie-settings", open);
-    return () =>
-      window.removeEventListener("balasaur:open-cookie-settings", open);
+    return () => window.removeEventListener("balasaur:open-cookie-settings", open);
   }, []);
 
   if (!visible) return null;
@@ -28,8 +27,8 @@ export function CookieBanner() {
     >
       <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
         <p className="font-mono text-[12px] leading-relaxed text-text-muted">
-          We use cookies to keep you signed in and, with your consent, to
-          measure usage and improve Balasaur.{" "}
+          We use cookies to keep you signed in and, with your consent, to measure usage and improve
+          Balasaur.{" "}
           <Link to="/privacy" className="text-text-bright underline-offset-2 hover:underline">
             Learn more
           </Link>

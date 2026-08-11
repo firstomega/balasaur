@@ -108,8 +108,13 @@ jobs:
           # After the grow/popular passes above, refresh the STALEST titles table-wide
           # so the obscure long tail (which discovery never re-surfaces) also stays
           # current. The grow passes just bumped popular titles to fresh, so the oldest
-          # rows are now the obscure ones — exactly what we want. ~5 passes ≈ 1.5k/day.
-          for i in $(seq 1 5); do
+          # rows are now the obscure ones — exactly what we want.
+          # TEMPORARY CATCH-UP (2026-08): raised 5 → 30 passes (~9k titles/night).
+          # The July data copy dropped raw_tmdb for ~57k rows, gutting facet/streaming
+          # coverage; stalest-first means those rows re-fetch first, so this heals the
+          # whole hole in roughly a week. Drop back to 5 once the backfill step below
+          # reports missingRaw near 0.
+          for i in $(seq 1 30); do
             echo "──────── refresh pass $i/5 ────────"
             HTTP=000
             for attempt in 1 2 3 4; do
@@ -190,7 +195,7 @@ jobs:
               echo "::warning::Backfill pass $i returned HTTP $HTTP — stopping backfill for this run (non-fatal; resumes next run)."
               break
             fi
-            echo "$(jq -c '{scanned,stamped,updatedFacets,updatedGenres,updatedStreaming,updatedAwards,failed,done,lastId}' /tmp/bf.json 2>/dev/null || cat /tmp/bf.json)"
+            echo "$(jq -c '{scanned,stamped,missingRaw,updatedFacets,updatedGenres,updatedStreaming,updatedAwards,failed,done,lastId}' /tmp/bf.json 2>/dev/null || cat /tmp/bf.json)"
             DONE=$(jq -r '.done // false' /tmp/bf.json 2>/dev/null || echo false)
             NEXT=$(jq -r '.lastId // empty' /tmp/bf.json 2>/dev/null || true)
             if [ "$DONE" = "true" ]; then echo "✅ Backfill complete after pass $i."; break; fi
