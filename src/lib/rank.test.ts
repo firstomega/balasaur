@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { computeRankScore } from "./rank";
+import { computeQualityScore, computeRankScore } from "./rank";
 
 const NOW = new Date("2026-08-11T00:00:00Z");
 
@@ -38,6 +38,19 @@ describe("computeRankScore", () => {
     const none = computeRankScore({ releaseDate: "unknown" }, NOW);
     expect(fresh).toBeGreaterThan(old);
     expect(none).toBe(computeRankScore({}, NOW));
+  });
+
+  it("quality score: the restaurant test — 100 from 3 votes loses to 92 from 400k", () => {
+    const tiny = computeQualityScore({ balasaur: 100, voteCount: 3 });
+    const huge = computeQualityScore({ balasaur: 92, voteCount: 400_000 });
+    expect(huge!).toBeGreaterThan(tiny!);
+    // ...but the low-vote title is discounted, not excluded: still above the prior
+    expect(tiny!).toBeGreaterThan(62);
+    // unrated titles have no claim at all → null (sorted last)
+    expect(computeQualityScore({ balasaur: null, voteCount: 500 })).toBe(null);
+    // matches the SQL backfill formula on a spot value: conf=1000/1300
+    // 0.7692·85 + 0.2308·62 ≈ 79.7
+    expect(computeQualityScore({ balasaur: 85, voteCount: 1000 })).toBeCloseTo(79.7, 1);
   });
 
   it("rounds to one decimal (skip-unchanged stability across daily runs)", () => {

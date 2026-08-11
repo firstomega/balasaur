@@ -260,9 +260,10 @@ function applyOrder(q: MediaQuery, sort: string) {
     case "oldest":
       return q.order("year", ASC).order("popularity", DESC);
     case "topRated":
-      // The unified Balasaur Score (falls back through the same blend the badge
-      // shows); popularity breaks ties so obscurities don't top the list.
-      return q.order("rating_balasaur", DESC).order("popularity", DESC);
+      // Bayesian-weighted: the Balasaur Score shrunk by vote confidence
+      // (rank.ts computeQualityScore), so a 100-from-3-votes doesn't outrank a
+      // 92-from-400k. No vote threshold — uncertainty just discounts the claim.
+      return q.order("quality_score", DESC).order("popularity", DESC);
     case "az":
       return q.order("title", ASC);
     case "za":

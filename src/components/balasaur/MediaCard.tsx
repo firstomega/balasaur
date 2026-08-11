@@ -180,7 +180,9 @@ function CardArt({ item, posterOverlay }: { item: MediaItem; posterOverlay?: Rea
             height={513}
             loading="lazy"
             decoding="async"
-            className="h-full w-full object-cover"
+            // Subtle inner zoom on hover (the container clips it) — signals
+            // interactivity without the layout shift a card-scale would cause.
+            className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.045] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-accent text-text-dim">

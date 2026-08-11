@@ -27,6 +27,31 @@ const RATED_DEFAULT_VOTES = 100; // assumed votes when rated but vote_count unkn
 const POP_SATURATION = 1000; // raw popularity treated as "maximum buzz"
 const RECENCY_TAU_YEARS = 2.5;
 
+/** Unrounded shrunk quality; null when there's no rating to shrink. */
+function shrunkQuality(balasaur?: number | null, voteCount?: number | null): number | null {
+  if (balasaur == null) return null;
+  const votes = voteCount ?? RATED_DEFAULT_VOTES;
+  const confidence = votes / (votes + CONFIDENCE_VOTES);
+  return confidence * balasaur + (1 - confidence) * PRIOR;
+}
+
+/**
+ * Vote-confidence-shrunk Balasaur Score (0–100, 1 decimal), IMDb-Top-250 style:
+ * a 100 from 3 votes lands near the prior; a 92 from 400k votes stays a 92 —
+ * no vote-count threshold, so a great film that "barely misses a cutoff" is
+ * never excluded, it just carries proportionally less certainty.
+ * Powers the "Top Rated" sort (as the stored quality_score column) and the
+ * quality term of rank_score. Returns null for unrated titles: with no rating
+ * at all there is no claim to shrink, and a ratings sort puts them last.
+ */
+export function computeQualityScore(s: {
+  balasaur?: number | null;
+  voteCount?: number | null;
+}): number | null {
+  const q = shrunkQuality(s.balasaur, s.voteCount);
+  return q == null ? null : Math.round(q * 10) / 10;
+}
+
 export function computeRankScore(
   s: {
     popularity?: number | null;
@@ -40,10 +65,8 @@ export function computeRankScore(
   const pop =
     Math.min(Math.log1p(Math.max(s.popularity ?? 0, 0)) / Math.log(1 + POP_SATURATION), 1) * 100;
 
-  const q = s.balasaur ?? PRIOR;
-  const votes = s.voteCount ?? (s.balasaur != null ? RATED_DEFAULT_VOTES : 0);
-  const confidence = votes / (votes + CONFIDENCE_VOTES);
-  const quality = confidence * q + (1 - confidence) * PRIOR;
+  // Unrated → pure prior (confidence 0), matching the SQL-seeded formula.
+  const quality = shrunkQuality(s.balasaur, s.voteCount) ?? PRIOR;
 
   let recency = 0;
   const parsed = parseIsoDate(s.releaseDate);

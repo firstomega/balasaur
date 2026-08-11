@@ -30,6 +30,7 @@ export type Database = {
           people: Json;
           popularity: number | null;
           poster_url: string | null;
+          quality_score: number | null;
           rank_score: number | null;
           rating_balasaur: number | null;
           rating_imdb: number | null;
@@ -72,6 +73,7 @@ export type Database = {
           people?: Json;
           popularity?: number | null;
           poster_url?: string | null;
+          quality_score?: number | null;
           rank_score?: number | null;
           rating_balasaur?: number | null;
           rating_imdb?: number | null;
@@ -114,6 +116,7 @@ export type Database = {
           people?: Json;
           popularity?: number | null;
           poster_url?: string | null;
+          quality_score?: number | null;
           rank_score?: number | null;
           rating_balasaur?: number | null;
           rating_imdb?: number | null;

@@ -654,23 +654,29 @@ function BackBar() {
       router.navigate({ to: "/" });
     }
   };
+  // Overlaid on the hero banner (absolute, below the top bar) instead of
+  // occupying its own row — the old placement burned a full-width band of
+  // vertical space just for one small button. Glassy treatment keeps it legible
+  // over any backdrop.
   return (
-    <div className="mx-auto max-w-[1100px] px-4 pt-3">
-      <button
-        type="button"
-        onClick={goBack}
-        className="inline-flex items-center gap-1.5 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-primary hover:text-primary"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Back to browse
-      </button>
+    <div className="pointer-events-none absolute inset-x-0 top-12 z-20">
+      <div className="mx-auto max-w-[1100px] px-4 pt-4">
+        <button
+          type="button"
+          onClick={goBack}
+          className="pointer-events-auto inline-flex items-center gap-1.5 rounded-[5px] border border-white/20 bg-background/60 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright backdrop-blur-md transition-colors hover:border-primary hover:text-primary"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to browse
+        </button>
+      </div>
     </div>
   );
 }
 
 export function MediaDetail({ mediaType, id }: { mediaType: "movie" | "tv"; id: string }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background">
       <TopBar />
       <BackBar />
       <Suspense fallback={<DetailLoader />}>

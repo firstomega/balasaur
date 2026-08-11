@@ -11,7 +11,7 @@ import { unifyGenres } from "./genres";
 import { deriveOrigins } from "./origins";
 import { deriveFacets } from "./taxonomy";
 import { computeBalasaurScore } from "./score";
-import { computeRankScore } from "./rank";
+import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -822,6 +822,10 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
       voteCount,
       releaseDate: item.releaseDate,
     }),
+    quality_score: computeQualityScore({
+      balasaur: computeBalasaurScore(item.ratings),
+      voteCount,
+    }),
     sensitive: deriveSensitive(rawTmdb),
     genres: item.genres,
     origins: item.origins ?? [],
@@ -929,7 +933,7 @@ export async function backfillFromRaw(opts?: {
     let query = supabaseAdmin
       .from("media")
       .select(
-        "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, popularity, release_date, rating_balasaur, vote_count, rank_score, sensitive, raw_tmdb, raw_omdb",
+        "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, popularity, release_date, rating_balasaur, vote_count, rank_score, quality_score, sensitive, raw_tmdb, raw_omdb",
       )
       .gt("media_id", cursor);
     if (useMissingFilter) query = query.is("facets_derived_at", null);
@@ -1025,6 +1029,10 @@ export async function backfillFromRaw(opts?: {
           voteCount: newVoteCount,
           releaseDate: row.release_date,
         });
+        const newQualityScore = computeQualityScore({
+          balasaur: row.rating_balasaur,
+          voteCount: newVoteCount,
+        });
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
@@ -1048,7 +1056,8 @@ export async function backfillFromRaw(opts?: {
         const rankChanged =
           (row.vote_count ?? null) !== newVoteCount ||
           (row.sensitive ?? false) !== newSensitive ||
-          (row.rank_score ?? null) !== newRankScore;
+          (row.rank_score ?? null) !== newRankScore ||
+          (row.quality_score ?? null) !== newQualityScore;
 
         // Skip rows that don't actually change. On a large catalog only the rows that
         // need it (co-productions, etc.) get rewritten, so the backfill stays light and
@@ -1095,6 +1104,7 @@ export async function backfillFromRaw(opts?: {
             completion_status: facets.completion_status,
             vote_count: newVoteCount,
             rank_score: newRankScore,
+            quality_score: newQualityScore,
             sensitive: newSensitive,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
