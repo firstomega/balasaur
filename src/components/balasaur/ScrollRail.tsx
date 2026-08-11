@@ -67,7 +67,7 @@ function RailArrow({ side, onClick }: { side: "left" | "right"; onClick: () => v
       aria-label={side === "left" ? "Scroll left" : "Scroll right"}
       className={cn(
         "absolute top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/90 text-text-bright shadow-md backdrop-blur transition-opacity hover:border-primary hover:text-primary focus-visible:opacity-100 md:flex",
-        "opacity-0 group-hover/rail:opacity-100",
+        "opacity-0 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100",
         side === "left" ? "left-1" : "right-1",
       )}
     >
