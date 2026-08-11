@@ -1,0 +1,38 @@
+# PR gate: nothing merges to main (which Lovable deploys to production) without
+# at least compiling, linting, and building. This repo shipped two incidents that
+# a machine could have caught before merge (2026-05-31 schema drift, 2026-07/08
+# silent sync freeze) — this is the floor that prevents the "doesn't even run"
+# class. Tests can hang off this job as they appear.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build
+        run: bun run build

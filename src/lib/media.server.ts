@@ -834,6 +834,14 @@ export interface BackfillResult {
   updatedFacets: number;
   /** Rows already correct that were marked derived (incremental mode). */
   stamped: number;
+  /**
+   * Rows with NO stored raw_tmdb — nothing can be derived for them until the
+   * nightly refresh re-fetches the title. They are deliberately NOT stamped, so
+   * `done: true` with a large missingRaw is "converged except N rows awaiting
+   * re-fetch", not "catalog fully derived". (2026-08: a data copy dropped raw
+   * payloads for ~60k rows and the old behavior stamped them all as done.)
+   */
+  missingRaw: number;
   failed: number;
   durationMs: number;
   /** Last media_id processed this call — pass back as `after` to resume. */
@@ -875,6 +883,7 @@ export async function backfillFromRaw(opts?: {
     updatedAwards: 0,
     updatedFacets: 0,
     stamped: 0,
+    missingRaw: 0,
     failed: 0,
     durationMs: 0,
     lastId: opts?.after ?? null,
@@ -945,6 +954,14 @@ export async function backfillFromRaw(opts?: {
     for (const row of data) {
       result.scanned++;
       try {
+        // No raw payload stored → nothing to derive from. Do NOT stamp: leave the
+        // row eligible so a future backfill picks it up after the nightly refresh
+        // restores its raw_tmdb. Stamping here is how 51k rows once got marked
+        // "derived" with empty facets.
+        if (row.raw_tmdb == null) {
+          result.missingRaw++;
+          continue;
+        }
         const raw = row.raw_tmdb as {
           genres?: TmdbGenreObj[];
           original_language?: string;
