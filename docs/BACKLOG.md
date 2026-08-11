@@ -1,0 +1,117 @@
+# Product backlog
+
+Unexecuted ideas from working sessions, kept here so they survive between
+sessions (Claude reads repo docs at session start — point it here and say
+"build X"). Shipped work is deliberately absent; this is only what's still
+open. Newest thinking wins: prune freely when an idea dies.
+
+_Last groomed: 2026-08-11 (the seven-PR UX day, #138–#144)._
+
+## Now / next (high conviction, scoped)
+
+- **Daily guessing game ("Balasaurdle")** — Wordle-loop: one title per day for
+  everyone, guess from a progressively revealed poster (or facts: year → genre
+  → actor → tagline), 6 tries, shareable emoji-grid result. Daily ritual +
+  built-in social share = the strongest single growth idea on this list. All
+  data already in `media`. Self-contained; shippable in one session.
+- **Taste Card / "Balasaur Wrapped"** — after ~20 ratings, a gorgeous
+  shareable image: top genres, score distribution vs the crowd, favorites
+  poster wall, and a dinosaur taste archetype ("Nocturnal Horror Raptor").
+  On-demand + annual Wrapped moment. The Spotify-Wrapped growth loop. Needs a
+  half-session of design thought before build.
+- **Ticker strip** — thin Bloomberg-style ticker under the top bar with real
+  catalog motion: rank deltas ("▲ Severance +4"), just-hit-streaming, titles
+  added today, release anniversaries ("45 years ago today: The Shining").
+  The most on-brand aliveness move available. Depends on rank-delta snapshots
+  (below).
+- **Rank movement deltas** — nightly snapshot of rank positions (small table:
+  media_id, rank, snapped_at) → ▲/▼ arrows on Trending + ticker fodder.
+- **Honest "Hide seen"** — currently filters only loaded pages client-side
+  (`index.tsx`); counts stay wrong. Make it a server-side predicate now that
+  statuses live in `user_media_status` (needs the user's seen ids server-side:
+  pass ids or join on auth uid).
+- **Public profiles / shareable lists (`/u/username`)** — deferred from the
+  UX-review batch because it needs its own privacy model: usernames, opt-in
+  public flag, RLS changes to expose `user_media_status` publicly, profile
+  routes. A `profiles` table already exists in the schema. The organic
+  acquisition loop every tracker grew on. One focused session.
+
+## Personality & delight (the dinosaur is the moat — mostly unused)
+
+- **Dino reactions** — deck swipe-up: quick chomp takes a bite from the poster
+  corner; Not interested: tiny asteroid streak; 100th rating: celebration.
+  200ms moments people screen-record.
+- **Named score tiers with voice** — 90+ "Apex", 85+ "Balasaur Approved"
+  (bite), <40 "Extinction event" (asteroid). Makes the score quotable; tier
+  names in badge tooltips + detail popover.
+- **Micro-copy voice pass** — empty states / loaders / errors: "Even the
+  asteroid missed this one" > "No matches". Dino-footprint loading walk,
+  fossil-dig 404.
+- **Easter egg** — typing "rawr" makes the dino sprint across the screen.
+  An hour of work; guaranteed screenshots.
+
+## Aliveness
+
+- **"Today on Balasaur"** — one algorithmic editorial slot rotated daily:
+  release anniversaries, hidden gem of the day, just-hit-streaming pick.
+- **"New since your last visit"** strip for returning users (store last-visit
+  timestamp; diff against fetched_at / rails).
+
+## Discovery magic
+
+- **"Surprise me" button** — ONE perfect pick honoring services, mood, and a
+  time budget ("I have 2 hours"), with a dino-roulette spin before the reveal.
+  The anti-database feature.
+- **Mood-based entry** — "What are you in the mood for?" chips (cozy /
+  mind-bending / adrenaline / cry-it-out) mapping onto the existing themes
+  taxonomy.
+- **Double Feature generator** — themed pair for tonight (theme + runtime
+  data already exist).
+- **"Because you watched X" rail** — personalization from `user_media_status`
+  + themes/sub_genres overlap, with an explanation chip ("Shared theme:
+  Heist").
+- **Smarter rate deck** — exclude already-rated server-side; interleave eras/
+  genres for taste calibration instead of quizzing this week's chart.
+
+## Social / sharing
+
+- **Taste match** (needs profiles) — "You and Sam: 87% taste match" + the
+  5 things they loved that you haven't seen. Two-person viral card.
+- **Rich OG share cards** — per filter URL, per list, per title: poster
+  collage + count + score badge, so pasted links look irresistible.
+- **Watchlist availability email** — the on-site nudge banner shipped; the
+  email digest ("3 watchlist titles just hit Netflix") has not. Needs an email
+  provider (Resend) + weekly cron.
+
+## Smaller UX debt
+
+- **Score-breakdown popover on card badges** (shipped on detail page only).
+- **People in global search** — merge `search_cast` hits into the top-bar
+  dropdown as a second section linking to person pages.
+- **Explainable "More like this"** — match detail-page rail on themes/
+  sub_genres and label the connection ("Also: Time Loop").
+- **Poster loading placeholders** — dominant-color or blur-up (TMDB w92)
+  instead of pop-in.
+- **Scroll restoration** from detail pages back into the grid (breadcrumbs
+  remember the view; the scroll offset is lost).
+- **"See all" per homepage rail** — needs grid-expressible equivalents
+  (release-window and popularity filters don't exist in FilterState yet).
+- **Season progress on TV detail** — render the `seasons` jsonb as a strip;
+  later, "watched up to S3" once per-episode tracking exists.
+- **Per-source rating sorts** in SortControl (deliberately held back).
+- **`@types/bun` as a real devDependency** — blocked: sandbox can't reach the
+  npm registry to update `bun.lock` (see `src/lib/bun-test.d.ts`, which
+  stands in meanwhile).
+
+## Platform / strategic
+
+- **User ratings → `rating_user_avg`** — the Balasaur Score reserves 50% for
+  community ratings; wire real user ratings in once volume exists (needs a
+  numeric rating or the liked/disliked mapping decision).
+- **Lovable MCP server ("works inside Claude/ChatGPT")** — enable after the
+  user-ratings loop ships; audit the auto-generated action list carefully
+  (custom Supabase auth, not Lovable Cloud). If the generator misfits, hand-
+  build a small MCP server over the existing server functions.
+- **Google sign-in** — code shipped (PR #140), gated on `VITE_APP_AUTH_GOOGLE`;
+  waiting on owner to configure the Google OAuth client + Supabase provider +
+  env var. Checklist lives in PR #140's description.
