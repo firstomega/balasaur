@@ -237,6 +237,33 @@ function HomePage() {
     [statuses],
   );
 
+  // "Ranked for <country>" escape hatch: geo-personalized ranking is visible
+  // and reversible instead of silent (visibility of system status). Persisted
+  // per device.
+  const [globalRank, setGlobalRank] = useState(false);
+  useEffect(() => {
+    try {
+      setGlobalRank(localStorage.getItem("balasaur:globalRank") === "1");
+    } catch {
+      // storage unavailable — non-fatal
+    }
+  }, []);
+  const toggleGlobalRank = () => {
+    setGlobalRank((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem("balasaur:globalRank", next ? "1" : "0");
+      } catch {
+        // non-fatal
+      }
+      return next;
+    });
+  };
+  const effectiveBoost = globalRank ? "" : boostCountry;
+
+  // Mobile bottom action sheet for a card (hover quick-actions don't exist on touch).
+  const [actionItem, setActionItem] = useState<MediaItem | null>(null);
+
   // First-visit taste ramp: auto-open once per device for visitors with an
   // empty library. Always skippable; picks migrate to the account on sign-in.
   const [rampOpen, setRampOpen] = useState(false);
@@ -289,7 +316,9 @@ function HomePage() {
         )}
 
         <main className="min-w-0 flex-1">
-          {!user && <LandingHero onBrowse={scrollToGrid} />}
+          {!user && (
+            <LandingHero onBrowse={scrollToGrid} onPickFavorites={() => setRampOpen(true)} />
+          )}
           <WatchlistNudge wantIds={wantIds} region={region} />
           <div ref={gridRef} tabIndex={-1} className="scroll-mt-16">
             <Suspense fallback={<MediaGridSkeleton />}>
@@ -300,14 +329,64 @@ function HomePage() {
                 wantIds={wantIds}
                 rejectedIds={rejectedIds}
                 region={region}
-                boostCountry={boostCountry}
+                boostCountry={effectiveBoost}
+                geoBase={boostCountry}
+                globalRank={globalRank}
+                onToggleGlobalRank={toggleGlobalRank}
                 onOpenMobileFilters={() => setMobileOpen(true)}
                 onQuickAction={handleQuickAction}
+                onOpenActions={setActionItem}
               />
             </Suspense>
           </div>
         </main>
       </div>
+
+      {/* Mobile card actions: one tap on the caption's ⋯ opens this. */}
+      <Sheet open={actionItem !== null} onOpenChange={(v) => !v && setActionItem(null)}>
+        <SheetContent side="bottom" className="border-border bg-panel">
+          {actionItem && (
+            <>
+              <SheetHeader className="pb-2">
+                <SheetTitle className="font-mono text-[13px] uppercase tracking-wider text-text-bright">
+                  {actionItem.title}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="grid gap-2 pb-4">
+                {(
+                  [
+                    { action: "want", label: "Want to Watch", active: wantIds.has(actionItem.id) },
+                    { action: "watched", label: "Watched", active: seenIds.has(actionItem.id) },
+                    {
+                      action: "notInterested",
+                      label: "Not interested",
+                      active: rejectedIds.has(actionItem.id),
+                    },
+                  ] as const
+                ).map((a) => (
+                  <button
+                    key={a.action}
+                    type="button"
+                    onClick={() => {
+                      handleQuickAction(actionItem, a.action);
+                      setActionItem(null);
+                    }}
+                    className={
+                      "w-full cursor-pointer rounded-[5px] border px-3 py-2.5 text-left font-mono text-[12px] uppercase tracking-wider transition-colors " +
+                      (a.active
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border bg-background text-text-bright hover:border-border-strong")
+                    }
+                  >
+                    {a.active ? "✓ " : ""}
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       <TasteRamp
         open={rampOpen}
@@ -373,6 +452,72 @@ function HomePage() {
   );
 }
 
+// Region code -> readable name for the geo-ranking indicator ("US" -> "United States").
+let regionNames: Intl.DisplayNames | null = null;
+function countryName(code: string): string {
+  try {
+    regionNames ??= new Intl.DisplayNames(["en"], { type: "region" });
+    return regionNames.of(code.toUpperCase()) ?? code.toUpperCase();
+  } catch {
+    return code.toUpperCase();
+  }
+}
+
+// Peak-end for infinite scroll: every N cards, a landmark breaks the wall and
+// offers a way to narrow down (or jump back up) instead of scrolling into 65k.
+const BROWSE_BREAK_EVERY = 200;
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  if (arr.length <= size) return [arr];
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function BrowseBreak({
+  browsed,
+  filters,
+  setFilters,
+  facetGenres,
+}: {
+  browsed: number;
+  filters: FilterState;
+  setFilters: (u: (p: FilterState) => FilterState) => void;
+  facetGenres?: Record<string, number>;
+}) {
+  // Top unselected genres under the current filters as one-tap narrowing.
+  const suggestions = Object.entries(facetGenres ?? {})
+    .filter(([g, c]) => c > 0 && !filters.genres.has(g))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([g]) => g);
+
+  return (
+    <div className="my-5 flex flex-wrap items-center gap-2 rounded-[5px] border border-border bg-panel/60 px-3 py-2.5">
+      <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+        {browsed.toLocaleString()} titles browsed · narrow it down?
+      </span>
+      {suggestions.map((g) => (
+        <button
+          key={g}
+          type="button"
+          onClick={() => setFilters((p) => ({ ...p, genres: new Set([...p.genres, g]) }))}
+          className="cursor-pointer rounded-[4px] border border-border bg-panel px-2 py-[3px] font-mono text-[10.5px] uppercase tracking-wide text-text-muted transition-colors hover:border-primary hover:text-primary"
+        >
+          {g}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className="ml-auto cursor-pointer font-mono text-[10px] uppercase tracking-wider text-text-dim hover:text-text-bright"
+      >
+        Back to top ↑
+      </button>
+    </div>
+  );
+}
+
 function MobileResultsBar({
   filters,
   region,
@@ -428,8 +573,12 @@ function GridWithControls({
   rejectedIds,
   region,
   boostCountry,
+  geoBase,
+  globalRank,
+  onToggleGlobalRank,
   onOpenMobileFilters,
   onQuickAction,
+  onOpenActions,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
@@ -438,8 +587,13 @@ function GridWithControls({
   rejectedIds: Set<string>;
   region: string;
   boostCountry: string;
+  /** The viewer's detected country (pre-toggle) for the geo indicator label. */
+  geoBase: string;
+  globalRank: boolean;
+  onToggleGlobalRank: () => void;
   onOpenMobileFilters: () => void;
   onQuickAction: (item: MediaItem, action: QuickAction) => void;
+  onOpenActions: (item: MediaItem) => void;
 }) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useCatalogInfinite(
     filters,
@@ -455,6 +609,9 @@ function GridWithControls({
   }, [data, filters.hideSeen, seenIds]);
   const total = data?.pages[0]?.total ?? 0;
   const activeCount = countActive(filters);
+  // Facet counts for the browse-break genre suggestions (already cached — the
+  // rail and mobile bar share the same query).
+  const { data: facets } = useCatalogFacets(filters, region);
 
   // Breadcrumb trail: record each distinct view (session-persisted) so wandering from
   // detail-page links (or filter changes) can be jumped back to instead of hammering Back.
@@ -531,7 +688,25 @@ function GridWithControls({
           <AnimatedCount value={total} className="text-text-bright" /> results
         </span>
 
-        <div className="flex items-center gap-3 sm:ml-2">
+        {/* Geo-personalized ranking is visible and one tap reversible, not silent. */}
+        {geoBase && activeCount === 0 && filters.sort === "popular" && (
+          <button
+            type="button"
+            onClick={onToggleGlobalRank}
+            title={
+              globalRank
+                ? "Showing the global ranking — switch back to your local one"
+                : `Home-country titles ranked first for ${countryName(geoBase)} — switch to global`
+            }
+            className="cursor-pointer rounded-[4px] border border-border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-wider text-text-dim transition-colors hover:border-border-strong hover:text-text-muted"
+          >
+            {globalRank ? "\u{1F310} Global ranking" : `Ranked for ${countryName(geoBase)}`}
+          </button>
+        )}
+
+        {/* Sort lives at the right end of the results bar — where every catalog
+            UI puts it (Jakob's law). */}
+        <div className="ml-auto flex items-center gap-3">
           <label className="flex cursor-pointer items-center gap-1.5">
             <Switch
               checked={filters.hideSeen}
@@ -561,13 +736,26 @@ function GridWithControls({
         <MediaGridSkeleton />
       ) : (
         <>
-          <MediaGrid
-            items={items}
-            onQuickAction={onQuickAction}
-            savedIds={wantIds}
-            watchedIds={seenIds}
-            rejectedIds={rejectedIds}
-          />
+          {chunk(items, BROWSE_BREAK_EVERY).map((slice, ci, arr) => (
+            <div key={ci} className={ci > 0 ? "mt-5" : undefined}>
+              <MediaGrid
+                items={slice}
+                onQuickAction={onQuickAction}
+                onOpenActions={onOpenActions}
+                savedIds={wantIds}
+                watchedIds={seenIds}
+                rejectedIds={rejectedIds}
+              />
+              {ci < arr.length - 1 && (
+                <BrowseBreak
+                  browsed={(ci + 1) * BROWSE_BREAK_EVERY}
+                  filters={filters}
+                  setFilters={setFilters}
+                  facetGenres={facets?.genres}
+                />
+              )}
+            </div>
+          ))}
           {hasNextPage && <div ref={sentinelRef} className="h-12" />}
           {isFetchingNextPage && (
             <div className="py-6 text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">

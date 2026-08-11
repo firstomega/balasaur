@@ -1,6 +1,16 @@
 import { Suspense, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, Bookmark, Check, ExternalLink, Play, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  ArrowLeft,
+  Bookmark,
+  Check,
+  ExternalLink,
+  Info,
+  Play,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TopBar } from "./TopBar";
 import { ShareButton } from "./ShareButton";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
@@ -366,18 +376,87 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
             <MicroLabel>Ratings</MicroLabel>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(() => {
-                // The unified blend, same as the card badges (per-source tiles follow).
+                // The unified blend, same as the card badges (per-source tiles
+                // follow). Click for the breakdown — the score earns trust by
+                // showing its math, and it explains why our 0–100 sits next to
+                // IMDb's 0–10 and RT's %.
                 const balasaur = ratings.balasaur ?? computeBalasaurScore(ratings);
-                return balasaur !== undefined ? (
-                  <div className="rounded-[5px] border border-border bg-panel px-3 py-2.5">
-                    <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
-                      Balasaur Score
-                    </div>
-                    <div className="mt-1">
-                      <ScoreBadge score={balasaur} size="md" />
-                    </div>
-                  </div>
-                ) : null;
+                if (balasaur === undefined) return null;
+                const sources: { label: string; value?: string; weight: string }[] = [
+                  {
+                    label: "IMDb",
+                    value: ratings.imdb !== undefined ? `${ratings.imdb}/10` : undefined,
+                    weight: "25%",
+                  },
+                  {
+                    label: "Rotten Tomatoes",
+                    value:
+                      ratings.rottenTomatoes !== undefined
+                        ? `${ratings.rottenTomatoes}%`
+                        : undefined,
+                    weight: "12.5%",
+                  },
+                  {
+                    label: "Metacritic",
+                    value:
+                      ratings.metacritic !== undefined ? `${ratings.metacritic}/100` : undefined,
+                    weight: "12.5%",
+                  },
+                  {
+                    label: "TMDB",
+                    value: ratings.tmdb !== undefined ? `${ratings.tmdb}/10` : undefined,
+                    weight: "10%",
+                  },
+                ];
+                return (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="cursor-pointer rounded-[5px] border border-border bg-panel px-3 py-2.5 text-left transition-colors hover:border-border-strong"
+                      >
+                        <div className="flex items-center gap-1 font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+                          Balasaur Score
+                          <Info className="h-2.5 w-2.5" aria-hidden="true" />
+                        </div>
+                        <div className="mt-1">
+                          <ScoreBadge score={balasaur} size="md" />
+                        </div>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      className="w-72 border-border bg-panel p-3 text-foreground"
+                    >
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-text-bright">
+                        How this score works
+                      </p>
+                      <p className="mt-1.5 text-[12px] leading-relaxed text-text-muted">
+                        One 0–100 blend of every rating source we have, weighted by reliability and
+                        renormalized when a source is missing.
+                      </p>
+                      <ul className="mt-2.5 space-y-1">
+                        {sources.map((s) => (
+                          <li
+                            key={s.label}
+                            className="flex items-center justify-between font-mono text-[11px]"
+                          >
+                            <span className={s.value ? "text-text-bright" : "text-text-dim"}>
+                              {s.label}
+                              <span className="ml-1.5 text-[9.5px] text-text-dim">{s.weight}</span>
+                            </span>
+                            <span className={s.value ? "text-text-bright" : "text-text-dim"}>
+                              {s.value ?? "—"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2.5 border-t border-border pt-2 text-[11px] leading-relaxed text-text-dim">
+                        User ratings join the blend (at 50%) as the community grows.
+                      </p>
+                    </PopoverContent>
+                  </Popover>
+                );
               })()}
               {ratings.imdb !== undefined && (
                 <RatingTile label="IMDb" value={ratings.imdb} suffix="/10" />

@@ -96,12 +96,14 @@ function emptyRails() {
 export function HomeRails({
   boostCountry,
   onQuickAction,
+  onOpenActions,
   savedIds,
   watchedIds,
   rejectedIds,
 }: {
   boostCountry?: string;
   onQuickAction?: (item: MediaItem, action: QuickAction) => void;
+  onOpenActions?: (item: MediaItem) => void;
   savedIds?: Set<string>;
   watchedIds?: Set<string>;
   rejectedIds?: Set<string>;
@@ -128,6 +130,7 @@ export function HomeRails({
                   <MediaCard
                     item={item}
                     onQuickAction={onQuickAction}
+                    onOpenActions={onOpenActions}
                     saved={savedIds?.has(item.id)}
                     watched={watchedIds?.has(item.id)}
                     rejected={rejectedIds?.has(item.id)}

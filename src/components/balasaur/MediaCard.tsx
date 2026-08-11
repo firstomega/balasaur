@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bookmark, Check, EyeOff, Trophy } from "lucide-react";
+import { Bookmark, Check, EyeOff, MoreHorizontal, Trophy } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
@@ -26,6 +26,7 @@ export type QuickAction = "want" | "watched" | "notInterested";
 export function MediaCard({
   item,
   onQuickAction,
+  onOpenActions,
   saved = false,
   watched = false,
   rejected = false,
@@ -35,6 +36,9 @@ export function MediaCard({
   /** When provided, shows desktop hover quick actions on the poster: save to
    *  Watchlist (primary — the high-intent action while browsing) and Watched. */
   onQuickAction?: (item: MediaItem, action: QuickAction) => void;
+  /** Mobile: opens the bottom action sheet for this title (hover doesn't exist
+   *  on touch, so saving from the grid needs an explicit affordance). */
+  onOpenActions?: (item: MediaItem) => void;
   /** Current watchlist state, to style the save button as active. */
   saved?: boolean;
   /** Current watched state, to style the watched button as active. */
@@ -131,32 +135,44 @@ export function MediaCard({
         )}
       </div>
 
-      <div className="mt-2 px-0.5">
-        {isLinkable ? (
-          <Link
-            to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
-            params={{ id: slug }}
-            className="block"
-          >
-            <h3 className="line-clamp-2 text-[12.5px] font-semibold leading-tight text-text-bright hover:text-primary">
+      <div className="mt-2 flex items-start gap-1 px-0.5">
+        <div className="min-w-0 flex-1">
+          {isLinkable ? (
+            <Link
+              to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
+              params={{ id: slug }}
+              className="block"
+            >
+              <h3 className="line-clamp-2 text-[12.5px] font-semibold leading-tight text-text-bright hover:text-primary">
+                {item.title}
+              </h3>
+            </Link>
+          ) : (
+            <h3 className="line-clamp-2 text-[12.5px] font-semibold leading-tight text-text-bright">
               {item.title}
             </h3>
-          </Link>
-        ) : (
-          <h3 className="line-clamp-2 text-[12.5px] font-semibold leading-tight text-text-bright">
-            {item.title}
-          </h3>
+          )}
+          <p className="mt-1 font-mono text-[10.5px] text-text-muted">
+            {displayYear(item)}
+            {(() => {
+              // Media type already shown as the tag on the poster, so the caption only
+              // adds the season count for TV (spelled out, e.g. "2 Seasons").
+              if (item.mediaType !== "tv") return "";
+              const seasons = item.seasonCount ?? item.seasons?.length ?? 0;
+              return seasons > 0 ? ` · ${seasons} Season${seasons === 1 ? "" : "s"}` : "";
+            })()}
+          </p>
+        </div>
+        {onOpenActions && (
+          <button
+            type="button"
+            onClick={() => onOpenActions(item)}
+            aria-label={`Actions for ${item.title}`}
+            className="shrink-0 cursor-pointer rounded-[4px] p-1 text-text-dim hover:text-text-bright md:hidden"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
         )}
-        <p className="mt-1 font-mono text-[10.5px] text-text-muted">
-          {displayYear(item)}
-          {(() => {
-            // Media type already shown as the tag on the poster, so the caption only
-            // adds the season count for TV (spelled out, e.g. "2 Seasons").
-            if (item.mediaType !== "tv") return "";
-            const seasons = item.seasonCount ?? item.seasons?.length ?? 0;
-            return seasons > 0 ? ` · ${seasons} Season${seasons === 1 ? "" : "s"}` : "";
-          })()}
-        </p>
       </div>
     </article>
   );
