@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Save, X } from "lucide-react";
+import { Save, SlidersHorizontal, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import type { FilterState } from "@/types/filters";
 import {
   AWARD_OPTIONS,
+  BALASAUR_BOUNDS,
   COMPLETION_OPTIONS,
   FILM_LENGTH_BUCKETS,
   IMDB_BOUNDS,
@@ -98,19 +99,52 @@ function Pill({
   );
 }
 
-function TriggerLabel({ active, children }: { active: boolean; children: React.ReactNode }) {
+// Collapsed-group header: shows WHAT is active ("Horror +2"), not just a dot —
+// scannable without opening the group. Falls back to the dot when no summary fits.
+function TriggerLabel({
+  active,
+  summary,
+  children,
+}: {
+  active: boolean;
+  summary?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <span className="flex items-center gap-1.5">
-      {children}
-      {active && (
-        <span
-          className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
-          aria-label="active filters"
-        />
-      )}
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="shrink-0">{children}</span>
+      {active &&
+        (summary ? (
+          <span className="min-w-0 truncate font-mono text-[9px] normal-case tracking-normal text-primary">
+            {summary}
+          </span>
+        ) : (
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+            aria-label="active filters"
+          />
+        ))}
     </span>
   );
 }
+
+/** "Horror, Thriller +2" — first couple of values plus an overflow count. */
+function summarize(values: Iterable<string>, max = 2): string | undefined {
+  const arr = [...values];
+  if (arr.length === 0) return undefined;
+  const head = arr.slice(0, max).join(", ");
+  return arr.length > max ? `${head} +${arr.length - max}` : head;
+}
+
+// Decade shortcuts for the year slider — the common ask ("90s movies") in one tap.
+const DECADES: { label: string; range: [number, number] }[] = [
+  { label: "'70s", range: [1970, 1979] },
+  { label: "'80s", range: [1980, 1989] },
+  { label: "'90s", range: [1990, 1999] },
+  { label: "'00s", range: [2000, 2009] },
+  { label: "'10s", range: [2010, 2019] },
+  { label: "'20s", range: [2020, YEAR_BOUNDS[1]] },
+];
 
 // Per-category reset, shown inside a group's content only when it's active.
 function GroupClear({ show, onClear }: { show: boolean; onClear: () => void }) {
@@ -382,6 +416,12 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
           return { ...prev, streaming: d.streaming };
         case "released":
           return { ...prev, yearRange: d.yearRange };
+        case "score":
+          return {
+            ...prev,
+            balasaurRange: d.balasaurRange,
+            includeUnratedBalasaur: d.includeUnratedBalasaur,
+          };
         case "rating":
           return {
             ...prev,
@@ -408,6 +448,11 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
     });
   };
 
+  // Saved-views state is read here too (same hook the section uses) so the Saved
+  // section can hide entirely for users with nothing saved and nothing to save.
+  const { items: savedViews } = useSavedFilters();
+  const totalActive = countActive(filters);
+
   const activeGroups = useMemo(() => {
     const s = new Set<string>();
     if (filters.mediaTypes.size !== 2) s.add("media-type");
@@ -421,6 +466,12 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
     if (filters.streaming.size > 0) s.add("streaming");
     if (filters.yearRange[0] !== YEAR_BOUNDS[0] || filters.yearRange[1] !== YEAR_BOUNDS[1])
       s.add("released");
+    if (
+      filters.balasaurRange[0] !== BALASAUR_BOUNDS[0] ||
+      filters.balasaurRange[1] !== BALASAUR_BOUNDS[1] ||
+      !filters.includeUnratedBalasaur
+    )
+      s.add("score");
     if (
       filters.imdbRange[0] !== IMDB_BOUNDS[0] ||
       filters.imdbRange[1] !== IMDB_BOUNDS[1] ||
@@ -441,6 +492,51 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
     return s;
   }, [filters]);
 
+  // Tiering: the four groups people actually reach for live at the top; the long
+  // tail collapses behind one "More filters" row. Auto-expanded while any of its
+  // groups is active (a live filter must never be stranded off-screen), and the
+  // user's explicit toggle wins after that.
+  const MORE_GROUPS = [
+    "themes",
+    "audience",
+    "film-length",
+    "completion",
+    "origin",
+    "rating",
+    "people",
+    "accolades",
+  ] as const;
+  const moreActiveCount = MORE_GROUPS.filter((g) => activeGroups.has(g)).length;
+  const [moreToggled, setMoreToggled] = useState<boolean | null>(null);
+  const moreOpen = moreToggled ?? moreActiveCount > 0;
+
+  // Collapsed-header summaries: what's set, visible without opening the group.
+  const groupSummary: Record<string, string | undefined> = {
+    "media-type":
+      filters.mediaTypes.size === 1
+        ? filters.mediaTypes.has("movie")
+          ? "Movies"
+          : "TV"
+        : undefined,
+    streaming: summarize(filters.streaming),
+    genre: summarize(filters.genres),
+    "sub-genre": summarize(filters.subGenres),
+    themes: summarize(filters.themes),
+    audience: summarize(filters.audience),
+    "film-length": summarize(filters.filmLength),
+    completion: summarize(filters.completion),
+    origin: summarize(filters.origins),
+    released: activeGroups.has("released")
+      ? `${filters.yearRange[0]}–${filters.yearRange[1]}`
+      : undefined,
+    score: activeGroups.has("score")
+      ? `${filters.balasaurRange[0]}–${filters.balasaurRange[1]}`
+      : undefined,
+    rating: activeGroups.has("rating") ? "custom" : undefined,
+    people: summarize(filters.people),
+    accolades: activeGroups.has("accolades") ? "set" : undefined,
+  };
+
   return (
     <div className="space-y-1">
       <Accordion
@@ -448,24 +544,33 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
         defaultValue={["saved", "media-type", "streaming", "genre"]}
         className="w-full"
       >
-        {/* Saved filters — above Media Type */}
-        <AccordionItem value="saved" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={false}>Saved</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <SavedFilters
-              filters={filters}
-              onApply={(f) => setFilters(() => f)}
-              onRequireAuth={onRequireAuth}
-            />
-          </AccordionContent>
-        </AccordionItem>
+        {/* Saved filters — hidden entirely until there's something saved OR an
+            active filter worth saving; empty top-of-rail slots teach new users
+            that the rail is mostly blank. */}
+        {(savedViews.length > 0 || totalActive > 0) && (
+          <AccordionItem value="saved" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={false}>Saved</TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <SavedFilters
+                filters={filters}
+                onApply={(f) => setFilters(() => f)}
+                onRequireAuth={onRequireAuth}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* Media Type */}
         <AccordionItem value="media-type" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("media-type")}>Media Type</TriggerLabel>
+            <TriggerLabel
+              active={activeGroups.has("media-type")}
+              summary={groupSummary["media-type"]}
+            >
+              Media Type
+            </TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <MediaTypeSwitch
@@ -478,7 +583,12 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
         {/* Streaming — positioned #2, open by default */}
         <AccordionItem value="streaming" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("streaming")}>Streaming Service</TriggerLabel>
+            <TriggerLabel
+              active={activeGroups.has("streaming")}
+              summary={groupSummary["streaming"]}
+            >
+              Streaming Service
+            </TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <GroupClear
@@ -503,7 +613,9 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
         {/* Genre */}
         <AccordionItem value="genre" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("genre")}>Genre</TriggerLabel>
+            <TriggerLabel active={activeGroups.has("genre")} summary={groupSummary["genre"]}>
+              Genre
+            </TriggerLabel>
           </AccordionTrigger>
           <AccordionContent className="pb-3 pt-1">
             <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
@@ -532,7 +644,12 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
         {showSubGenre && (
           <AccordionItem value="sub-genre" className="border-border">
             <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-              <TriggerLabel active={activeGroups.has("sub-genre")}>Sub-Genre</TriggerLabel>
+              <TriggerLabel
+                active={activeGroups.has("sub-genre")}
+                summary={groupSummary["sub-genre"]}
+              >
+                Sub-Genre
+              </TriggerLabel>
             </AccordionTrigger>
             <AccordionContent className="pb-3 pt-1">
               <GroupClear
@@ -558,11 +675,136 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
           </AccordionItem>
         )}
 
+        {/* Score — the unified Balasaur Score, the headline rating filter. The
+            per-source sliders (IMDb/RT/MC) moved to Source Ratings under More. */}
+        <AccordionItem value="score" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("score")} summary={groupSummary["score"]}>
+              Score
+            </TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4 pt-2">
+            <div className="px-1">
+              <GroupClear show={activeGroups.has("score")} onClear={() => clearGroup("score")} />
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+                  Balasaur Score
+                </span>
+                <span className="font-mono text-[10.5px] text-text-bright">
+                  {filters.balasaurRange[0]} – {filters.balasaurRange[1]}
+                </span>
+              </div>
+              <Slider
+                min={BALASAUR_BOUNDS[0]}
+                max={BALASAUR_BOUNDS[1]}
+                step={1}
+                value={filters.balasaurRange}
+                onValueChange={(v) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    balasaurRange: [v[0], v[1]] as [number, number],
+                  }))
+                }
+              />
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <label className="flex cursor-pointer items-center gap-1.5">
+                  <Checkbox
+                    checked={filters.includeUnratedBalasaur}
+                    onCheckedChange={(v) =>
+                      setFilters((prev) => ({ ...prev, includeUnratedBalasaur: !!v }))
+                    }
+                  />
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                    Include unrated
+                  </span>
+                </label>
+                <span className="font-mono text-[10px] text-text-dim">
+                  {facets?.scored.balasaur ?? 0} of {catalogTotal} scored
+                </span>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Released — promoted into Essentials, with decade shortcuts. */}
+        <AccordionItem value="released" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("released")} summary={groupSummary["released"]}>
+              Released
+            </TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4 pt-2">
+            <div className="px-1">
+              <GroupClear
+                show={activeGroups.has("released")}
+                onClear={() => clearGroup("released")}
+              />
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {DECADES.map((d) => {
+                  const active =
+                    filters.yearRange[0] === d.range[0] && filters.yearRange[1] === d.range[1];
+                  return (
+                    <Pill
+                      key={d.label}
+                      active={active}
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          yearRange: active ? [...YEAR_BOUNDS] : [...d.range],
+                        }))
+                      }
+                    >
+                      {d.label}
+                    </Pill>
+                  );
+                })}
+              </div>
+              <div className="mb-2 flex justify-between font-mono text-[10.5px] text-text-muted">
+                <span>{filters.yearRange[0]}</span>
+                <span>{filters.yearRange[1]}</span>
+              </div>
+              <Slider
+                min={YEAR_BOUNDS[0]}
+                max={YEAR_BOUNDS[1]}
+                step={1}
+                value={filters.yearRange}
+                onValueChange={(v) =>
+                  setFilters((prev) => ({ ...prev, yearRange: [v[0], v[1]] as [number, number] }))
+                }
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* The long tail collapses behind one row. */}
+        <div className="border-b border-border">
+          <button
+            type="button"
+            onClick={() => setMoreToggled(!moreOpen)}
+            aria-expanded={moreOpen}
+            className={
+              "flex w-full cursor-pointer items-center gap-1.5 py-2.5 " +
+              groupLabelClass +
+              " text-text-muted hover:text-text-bright"
+            }
+          >
+            <SlidersHorizontal className="h-3 w-3" />
+            {moreOpen ? "Fewer filters" : "More filters"}
+            {moreActiveCount > 0 && (
+              <span className="rounded-[3px] bg-primary/20 px-1 font-mono text-[9px] text-primary">
+                {moreActiveCount} active
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Themes — hidden entirely when no theme has results under the current filters. */}
-        {showThemes && (
+        {moreOpen && showThemes && (
           <AccordionItem value="themes" className="border-border">
             <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-              <TriggerLabel active={activeGroups.has("themes")}>Themes</TriggerLabel>
+              <TriggerLabel active={activeGroups.has("themes")} summary={groupSummary["themes"]}>
+                Themes
+              </TriggerLabel>
             </AccordionTrigger>
             <AccordionContent className="pb-3 pt-1">
               <GroupClear show={activeGroups.has("themes")} onClear={() => clearGroup("themes")} />
@@ -586,10 +828,15 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
         )}
 
         {/* Audience — hidden when no audience bucket applies under the current filters. */}
-        {showAudience && (
+        {moreOpen && showAudience && (
           <AccordionItem value="audience" className="border-border">
             <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-              <TriggerLabel active={activeGroups.has("audience")}>Audience</TriggerLabel>
+              <TriggerLabel
+                active={activeGroups.has("audience")}
+                summary={groupSummary["audience"]}
+              >
+                Audience
+              </TriggerLabel>
             </AccordionTrigger>
             <AccordionContent className="pb-3 pt-1">
               <GroupClear
@@ -618,10 +865,15 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
         )}
 
         {/* Film Length — movies only (runtime) */}
-        {showFilmLength && (
+        {moreOpen && showFilmLength && (
           <AccordionItem value="film-length" className="border-border">
             <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-              <TriggerLabel active={activeGroups.has("film-length")}>Film Length</TriggerLabel>
+              <TriggerLabel
+                active={activeGroups.has("film-length")}
+                summary={groupSummary["film-length"]}
+              >
+                Film Length
+              </TriggerLabel>
             </AccordionTrigger>
             <AccordionContent className="pb-3 pt-1">
               <GroupClear
@@ -651,10 +903,15 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
         )}
 
         {/* Status — series only (completion) */}
-        {showCompletion && (
+        {moreOpen && showCompletion && (
           <AccordionItem value="completion" className="border-border">
             <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-              <TriggerLabel active={activeGroups.has("completion")}>Series Status</TriggerLabel>
+              <TriggerLabel
+                active={activeGroups.has("completion")}
+                summary={groupSummary["completion"]}
+              >
+                Series Status
+              </TriggerLabel>
             </AccordionTrigger>
             <AccordionContent className="pb-3 pt-1">
               <GroupClear
@@ -682,154 +939,149 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
           </AccordionItem>
         )}
 
-        {/* Released */}
-        <AccordionItem value="released" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("released")}>Released</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-4 pt-2">
-            <div className="px-1">
-              <GroupClear
-                show={activeGroups.has("released")}
-                onClear={() => clearGroup("released")}
-              />
-              <div className="mb-2 flex justify-between font-mono text-[10.5px] text-text-muted">
-                <span>{filters.yearRange[0]}</span>
-                <span>{filters.yearRange[1]}</span>
+        {/* Origin */}
+        {moreOpen && (
+          <AccordionItem value="origin" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("origin")} summary={groupSummary["origin"]}>
+                Origin
+              </TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
+              <div className="flex flex-wrap gap-1.5">
+                {originOrder.map((o) => {
+                  const count = originCounts[o] ?? 0;
+                  const active = filters.origins.has(o);
+                  return (
+                    <Pill
+                      key={o}
+                      active={active}
+                      count={count}
+                      disabled={count === 0 && !active}
+                      onClick={() => toggleSet<string>("origins", o)}
+                    >
+                      {o}
+                    </Pill>
+                  );
+                })}
               </div>
-              <Slider
-                min={YEAR_BOUNDS[0]}
-                max={YEAR_BOUNDS[1]}
-                step={1}
-                value={filters.yearRange}
-                onValueChange={(v) =>
-                  setFilters((prev) => ({ ...prev, yearRange: [v[0], v[1]] as [number, number] }))
-                }
-              />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+              <div className="mt-2 font-mono text-[10px] text-text-dim">
+                {originTagged.toLocaleString()} of {catalogTotal.toLocaleString()} tagged
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-        {/* Origin — placed after Released per product preference */}
-        <AccordionItem value="origin" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("origin")}>Origin</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear show={activeGroups.has("origin")} onClear={() => clearGroup("origin")} />
-            <div className="flex flex-wrap gap-1.5">
-              {originOrder.map((o) => {
-                const count = originCounts[o] ?? 0;
-                const active = filters.origins.has(o);
-                return (
-                  <Pill
-                    key={o}
-                    active={active}
-                    count={count}
-                    disabled={count === 0 && !active}
-                    onClick={() => toggleSet<string>("origins", o)}
-                  >
-                    {o}
-                  </Pill>
-                );
-              })}
-            </div>
-            <div className="mt-2 font-mono text-[10px] text-text-dim">
-              {originTagged.toLocaleString()} of {catalogTotal.toLocaleString()} tagged
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Rating */}
-        <AccordionItem value="rating" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("rating")}>Rating</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-4 pt-2">
-            <div className="px-1">
-              <GroupClear show={activeGroups.has("rating")} onClear={() => clearGroup("rating")} />
-            </div>
-            <RatingSliders filters={filters} setFilters={setFilters} facets={facets} />
-          </AccordionContent>
-        </AccordionItem>
+        {/* Source Ratings — the per-source sliders, demoted to advanced now that
+            the unified Score slider covers the mainstream case. */}
+        {moreOpen && (
+          <AccordionItem value="rating" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("rating")} summary={groupSummary["rating"]}>
+                Source Ratings
+              </TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 pt-2">
+              <div className="px-1">
+                <GroupClear
+                  show={activeGroups.has("rating")}
+                  onClear={() => clearGroup("rating")}
+                />
+              </div>
+              <RatingSliders filters={filters} setFilters={setFilters} facets={facets} />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* By Person */}
-        <AccordionItem value="people" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("people")}>By Person</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear show={activeGroups.has("people")} onClear={() => clearGroup("people")} />
-            <PeoplePicker filters={filters} setFilters={setFilters} />
-          </AccordionContent>
-        </AccordionItem>
+        {moreOpen && (
+          <AccordionItem value="people" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel active={activeGroups.has("people")} summary={groupSummary["people"]}>
+                By Person
+              </TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear show={activeGroups.has("people")} onClear={() => clearGroup("people")} />
+              <PeoplePicker filters={filters} setFilters={setFilters} />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* Accolades */}
-        <AccordionItem value="accolades" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("accolades")}>Accolades</TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear
-              show={activeGroups.has("accolades")}
-              onClear={() => clearGroup("accolades")}
-            />
-            <div className="space-y-2">
-              <label className="flex cursor-pointer items-center gap-2">
-                <Checkbox
-                  checked={filters.awardWinners}
-                  onCheckedChange={(v) => setFilters((prev) => ({ ...prev, awardWinners: !!v }))}
-                />
-                <span className="font-mono text-[11.5px] text-text-bright">Award winners</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Checkbox
-                  checked={filters.nominated}
-                  onCheckedChange={(v) => setFilters((prev) => ({ ...prev, nominated: !!v }))}
-                />
-                <span className="font-mono text-[11.5px] text-text-bright">Nominated</span>
-              </label>
-            </div>
-
-            <div className="mt-3 space-y-2 border-t border-border pt-3">
-              <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
-                By award
+        {moreOpen && (
+          <AccordionItem value="accolades" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel
+                active={activeGroups.has("accolades")}
+                summary={groupSummary["accolades"]}
+              >
+                Accolades
+              </TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear
+                show={activeGroups.has("accolades")}
+                onClear={() => clearGroup("accolades")}
+              />
+              <div className="space-y-2">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={filters.awardWinners}
+                    onCheckedChange={(v) => setFilters((prev) => ({ ...prev, awardWinners: !!v }))}
+                  />
+                  <span className="font-mono text-[11.5px] text-text-bright">Award winners</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={filters.nominated}
+                    onCheckedChange={(v) => setFilters((prev) => ({ ...prev, nominated: !!v }))}
+                  />
+                  <span className="font-mono text-[11.5px] text-text-bright">Nominated</span>
+                </label>
               </div>
-              {AWARD_OPTIONS.map((a) => {
-                const status = filters.awardsWon.has(a.key)
-                  ? "won"
-                  : filters.awardsNominated.has(a.key)
-                    ? "nominated"
-                    : "any";
-                return (
-                  <div key={a.key} className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-[11px] text-text-muted">{a.label}</span>
-                    <div className="inline-flex rounded-[4px] border border-border bg-panel p-[2px]">
-                      {(["any", "nominated", "won"] as const).map((s) => {
-                        const active = status === s;
-                        return (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => setAward(a.key, s)}
-                            className={
-                              "cursor-pointer rounded-[3px] px-2 py-[3px] font-mono text-[9.5px] uppercase tracking-wider transition-colors " +
-                              (active
-                                ? "bg-accent text-text-bright"
-                                : "text-text-muted hover:text-text-bright")
-                            }
-                          >
-                            {s === "any" ? "Any" : s === "nominated" ? "Nom." : "Won"}
-                          </button>
-                        );
-                      })}
+
+              <div className="mt-3 space-y-2 border-t border-border pt-3">
+                <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+                  By award
+                </div>
+                {AWARD_OPTIONS.map((a) => {
+                  const status = filters.awardsWon.has(a.key)
+                    ? "won"
+                    : filters.awardsNominated.has(a.key)
+                      ? "nominated"
+                      : "any";
+                  return (
+                    <div key={a.key} className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[11px] text-text-muted">{a.label}</span>
+                      <div className="inline-flex rounded-[4px] border border-border bg-panel p-[2px]">
+                        {(["any", "nominated", "won"] as const).map((s) => {
+                          const active = status === s;
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => setAward(a.key, s)}
+                              className={
+                                "cursor-pointer rounded-[3px] px-2 py-[3px] font-mono text-[9.5px] uppercase tracking-wider transition-colors " +
+                                (active
+                                  ? "bg-accent text-text-bright"
+                                  : "text-text-muted hover:text-text-bright")
+                              }
+                            >
+                              {s === "any" ? "Any" : s === "nominated" ? "Nom." : "Won"}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+                  );
+                })}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
     </div>
   );

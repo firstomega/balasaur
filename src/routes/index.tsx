@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Filter, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
@@ -13,6 +13,7 @@ import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
+import { TasteRamp, tasteRampSeen } from "@/components/balasaur/TasteRamp";
 import { ShareButton } from "@/components/balasaur/ShareButton";
 import {
   useCatalogInfinite,
@@ -26,11 +27,18 @@ import {
   withBoost,
 } from "@/hooks/useCatalog";
 import { HomeRails } from "@/components/balasaur/HomeRails";
+import { WatchlistNudge } from "@/components/balasaur/WatchlistNudge";
 import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
-import { primaryOf, recordForWant, recordForWatched } from "@/lib/userStatus";
+import {
+  isNotInterested,
+  primaryOf,
+  recordForNotInterested,
+  recordForWant,
+  recordForWatched,
+} from "@/lib/userStatus";
 import type { QuickAction } from "@/components/balasaur/MediaCard";
 import { loadFilters, saveFilters } from "@/lib/filterStorage";
 import {
@@ -155,7 +163,7 @@ function HomePage() {
       // non-fatal
     }
   };
-  const { seenIds, statuses, recordStatus } = useUserStatus();
+  const { seenIds, statuses, recordStatus, ready, count } = useUserStatus();
   const { user } = useAuth();
   // Per-country streaming: filter availability by the viewer's account region.
   // Falls back to US for signed-out visitors / accounts with no region set.
@@ -183,6 +191,19 @@ function HomePage() {
       return;
     }
     const rec = statuses[item.id];
+    if (action === "notInterested") {
+      if (isNotInterested(rec)) {
+        recordStatus(item.id, null);
+        toast(`Restored · ${item.title}`, { duration: 1400 });
+      } else {
+        recordStatus(item.id, recordForNotInterested(), item);
+        toast(`Not interested · ${item.title}`, {
+          duration: 3500,
+          action: { label: "Undo", onClick: () => recordStatus(item.id, null) },
+        });
+      }
+      return;
+    }
     const current = primaryOf(rec);
     if (current === action) {
       recordStatus(item.id, null); // toggle off
@@ -196,7 +217,7 @@ function HomePage() {
     }
   };
 
-  // Watchlist ids for card save-state (seenIds already exists for watched).
+  // Watchlist / rejected ids for card states (seenIds already exists for watched).
   const wantIds = useMemo(
     () =>
       new Set(
@@ -206,6 +227,25 @@ function HomePage() {
       ),
     [statuses],
   );
+  const rejectedIds = useMemo(
+    () =>
+      new Set(
+        Object.entries(statuses)
+          .filter(([, v]) => isNotInterested(v))
+          .map(([k]) => k),
+      ),
+    [statuses],
+  );
+
+  // First-visit taste ramp: auto-open once per device for visitors with an
+  // empty library. Always skippable; picks migrate to the account on sign-in.
+  const [rampOpen, setRampOpen] = useState(false);
+  useEffect(() => {
+    if (!ready || count > 0 || rampOpen || tasteRampSeen()) return;
+    const t = window.setTimeout(() => setRampOpen(true), 1200);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, count]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -250,6 +290,7 @@ function HomePage() {
 
         <main className="min-w-0 flex-1">
           {!user && <LandingHero onBrowse={scrollToGrid} />}
+          <WatchlistNudge wantIds={wantIds} region={region} />
           <div ref={gridRef} tabIndex={-1} className="scroll-mt-16">
             <Suspense fallback={<MediaGridSkeleton />}>
               <GridWithControls
@@ -257,6 +298,7 @@ function HomePage() {
                 setFilters={setFilters}
                 seenIds={seenIds}
                 wantIds={wantIds}
+                rejectedIds={rejectedIds}
                 region={region}
                 boostCountry={boostCountry}
                 onOpenMobileFilters={() => setMobileOpen(true)}
@@ -266,6 +308,19 @@ function HomePage() {
           </div>
         </main>
       </div>
+
+      <TasteRamp
+        open={rampOpen}
+        onOpenChange={setRampOpen}
+        boostCountry={boostCountry}
+        recordStatus={recordStatus}
+        onComplete={(n) => {
+          if (n > 0) {
+            toast.success(`Saved ${n} favorite${n === 1 ? "" : "s"}`, { duration: 2000 });
+            if (!user) setAuthOpen(true);
+          }
+        }}
+      />
 
       <AuthDialog
         open={authOpen}
@@ -370,6 +425,7 @@ function GridWithControls({
   setFilters,
   seenIds,
   wantIds,
+  rejectedIds,
   region,
   boostCountry,
   onOpenMobileFilters,
@@ -379,6 +435,7 @@ function GridWithControls({
   setFilters: (u: (p: FilterState) => FilterState) => void;
   seenIds: Set<string>;
   wantIds: Set<string>;
+  rejectedIds: Set<string>;
   region: string;
   boostCountry: string;
   onOpenMobileFilters: () => void;
@@ -446,6 +503,7 @@ function GridWithControls({
           onQuickAction={onQuickAction}
           savedIds={wantIds}
           watchedIds={seenIds}
+          rejectedIds={rejectedIds}
         />
       )}
 
@@ -508,6 +566,7 @@ function GridWithControls({
             onQuickAction={onQuickAction}
             savedIds={wantIds}
             watchedIds={seenIds}
+            rejectedIds={rejectedIds}
           />
           {hasNextPage && <div ref={sentinelRef} className="h-12" />}
           {isFetchingNextPage && (

@@ -13,6 +13,8 @@ export interface Serialized {
   origins: string[];
   streaming: string[];
   yearRange: [number, number];
+  balasaurRange: [number, number];
+  includeUnratedBalasaur: boolean;
   imdbRange: [number, number];
   rtRange: [number, number];
   metaRange: [number, number];
@@ -42,6 +44,8 @@ export function serializeFilters(f: FilterState): Serialized {
     origins: [...f.origins],
     streaming: [...f.streaming],
     yearRange: f.yearRange,
+    balasaurRange: f.balasaurRange,
+    includeUnratedBalasaur: f.includeUnratedBalasaur,
     imdbRange: f.imdbRange,
     rtRange: f.rtRange,
     metaRange: f.metaRange,
@@ -72,6 +76,8 @@ export function deserializeFilters(s: Partial<Serialized>): FilterState {
     origins: new Set<string>(s.origins ?? []),
     streaming: new Set<string>(s.streaming ?? []),
     yearRange: s.yearRange ?? d.yearRange,
+    balasaurRange: s.balasaurRange ?? d.balasaurRange,
+    includeUnratedBalasaur: s.includeUnratedBalasaur ?? d.includeUnratedBalasaur,
     imdbRange: s.imdbRange ?? d.imdbRange,
     rtRange: s.rtRange ?? d.rtRange,
     metaRange: s.metaRange ?? d.metaRange,

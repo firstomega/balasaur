@@ -15,6 +15,9 @@ export interface FilterState {
   origins: Set<string>;
   streaming: Set<string>;
   yearRange: [number, number];
+  /** Unified Balasaur Score (0–100) — the headline rating filter. */
+  balasaurRange: [number, number];
+  includeUnratedBalasaur: boolean;
   imdbRange: [number, number];
   rtRange: [number, number];
   metaRange: [number, number];
@@ -57,6 +60,7 @@ export const STREAMING_OPTIONS = [
 ] as const;
 
 export const YEAR_BOUNDS: [number, number] = [1950, new Date().getFullYear()];
+export const BALASAUR_BOUNDS: [number, number] = [0, 100];
 export const IMDB_BOUNDS: [number, number] = [0, 10];
 export const RT_BOUNDS: [number, number] = [0, 100];
 export const META_BOUNDS: [number, number] = [0, 100];
@@ -79,6 +83,8 @@ export function defaultFilterState(): FilterState {
     origins: new Set(),
     streaming: new Set(),
     yearRange: [...YEAR_BOUNDS],
+    balasaurRange: [...BALASAUR_BOUNDS],
+    includeUnratedBalasaur: true,
     imdbRange: [...IMDB_BOUNDS],
     rtRange: [...RT_BOUNDS],
     metaRange: [...META_BOUNDS],
