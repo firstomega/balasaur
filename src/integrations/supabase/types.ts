@@ -1,475 +1,467 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
+    PostgrestVersion: "14.5";
+  };
   public: {
     Tables: {
       media: {
         Row: {
-          audience: string[]
-          award_nominations: number | null
-          award_nominee: boolean
-          award_winner: boolean
-          award_wins: number | null
-          awards_nominated: string[]
-          awards_won: string[]
-          completion_status: string | null
-          facets_derived_at: string | null
-          fetched_at: string
-          film_length_minutes: number | null
-          genres: string[]
-          length_label: string | null
-          media_id: string
-          media_type: string
-          origins: string[]
-          overview: string | null
-          people: Json
-          popularity: number | null
-          poster_url: string | null
-          rating_balasaur: number | null
-          rating_imdb: number | null
-          rating_metacritic: number | null
-          rating_rotten_tomatoes: number | null
-          rating_tmdb: number | null
-          rating_user_avg: number | null
-          raw_omdb: Json | null
-          raw_tmdb: Json | null
-          release_date: string | null
-          seasons: Json | null
-          streaming: string[]
-          streaming_regions: string[]
-          sub_genres: string[]
-          themes: string[]
-          title: string
-          updated_at: string
-          year: string | null
-        }
+          audience: string[];
+          award_nominations: number | null;
+          award_nominee: boolean;
+          award_winner: boolean;
+          award_wins: number | null;
+          awards_nominated: string[];
+          awards_won: string[];
+          completion_status: string | null;
+          facets_derived_at: string | null;
+          fetched_at: string;
+          film_length_minutes: number | null;
+          genres: string[];
+          length_label: string | null;
+          media_id: string;
+          media_type: string;
+          origins: string[];
+          overview: string | null;
+          people: Json;
+          popularity: number | null;
+          poster_url: string | null;
+          rating_balasaur: number | null;
+          rating_imdb: number | null;
+          rating_metacritic: number | null;
+          rating_rotten_tomatoes: number | null;
+          rating_tmdb: number | null;
+          rating_user_avg: number | null;
+          raw_omdb: Json | null;
+          raw_tmdb: Json | null;
+          release_date: string | null;
+          seasons: Json | null;
+          streaming: string[];
+          streaming_regions: string[];
+          sub_genres: string[];
+          themes: string[];
+          title: string;
+          updated_at: string;
+          year: string | null;
+        };
         Insert: {
-          audience?: string[]
-          award_nominations?: number | null
-          award_nominee?: boolean
-          award_winner?: boolean
-          award_wins?: number | null
-          awards_nominated?: string[]
-          awards_won?: string[]
-          completion_status?: string | null
-          facets_derived_at?: string | null
-          fetched_at?: string
-          film_length_minutes?: number | null
-          genres?: string[]
-          length_label?: string | null
-          media_id: string
-          media_type: string
-          origins?: string[]
-          overview?: string | null
-          people?: Json
-          popularity?: number | null
-          poster_url?: string | null
-          rating_balasaur?: number | null
-          rating_imdb?: number | null
-          rating_metacritic?: number | null
-          rating_rotten_tomatoes?: number | null
-          rating_tmdb?: number | null
-          rating_user_avg?: number | null
-          raw_omdb?: Json | null
-          raw_tmdb?: Json | null
-          release_date?: string | null
-          seasons?: Json | null
-          streaming?: string[]
-          streaming_regions?: string[]
-          sub_genres?: string[]
-          themes?: string[]
-          title: string
-          updated_at?: string
-          year?: string | null
-        }
+          audience?: string[];
+          award_nominations?: number | null;
+          award_nominee?: boolean;
+          award_winner?: boolean;
+          award_wins?: number | null;
+          awards_nominated?: string[];
+          awards_won?: string[];
+          completion_status?: string | null;
+          facets_derived_at?: string | null;
+          fetched_at?: string;
+          film_length_minutes?: number | null;
+          genres?: string[];
+          length_label?: string | null;
+          media_id: string;
+          media_type: string;
+          origins?: string[];
+          overview?: string | null;
+          people?: Json;
+          popularity?: number | null;
+          poster_url?: string | null;
+          rating_balasaur?: number | null;
+          rating_imdb?: number | null;
+          rating_metacritic?: number | null;
+          rating_rotten_tomatoes?: number | null;
+          rating_tmdb?: number | null;
+          rating_user_avg?: number | null;
+          raw_omdb?: Json | null;
+          raw_tmdb?: Json | null;
+          release_date?: string | null;
+          seasons?: Json | null;
+          streaming?: string[];
+          streaming_regions?: string[];
+          sub_genres?: string[];
+          themes?: string[];
+          title: string;
+          updated_at?: string;
+          year?: string | null;
+        };
         Update: {
-          audience?: string[]
-          award_nominations?: number | null
-          award_nominee?: boolean
-          award_winner?: boolean
-          award_wins?: number | null
-          awards_nominated?: string[]
-          awards_won?: string[]
-          completion_status?: string | null
-          facets_derived_at?: string | null
-          fetched_at?: string
-          film_length_minutes?: number | null
-          genres?: string[]
-          length_label?: string | null
-          media_id?: string
-          media_type?: string
-          origins?: string[]
-          overview?: string | null
-          people?: Json
-          popularity?: number | null
-          poster_url?: string | null
-          rating_balasaur?: number | null
-          rating_imdb?: number | null
-          rating_metacritic?: number | null
-          rating_rotten_tomatoes?: number | null
-          rating_tmdb?: number | null
-          rating_user_avg?: number | null
-          raw_omdb?: Json | null
-          raw_tmdb?: Json | null
-          release_date?: string | null
-          seasons?: Json | null
-          streaming?: string[]
-          streaming_regions?: string[]
-          sub_genres?: string[]
-          themes?: string[]
-          title?: string
-          updated_at?: string
-          year?: string | null
-        }
-        Relationships: []
-      }
+          audience?: string[];
+          award_nominations?: number | null;
+          award_nominee?: boolean;
+          award_winner?: boolean;
+          award_wins?: number | null;
+          awards_nominated?: string[];
+          awards_won?: string[];
+          completion_status?: string | null;
+          facets_derived_at?: string | null;
+          fetched_at?: string;
+          film_length_minutes?: number | null;
+          genres?: string[];
+          length_label?: string | null;
+          media_id?: string;
+          media_type?: string;
+          origins?: string[];
+          overview?: string | null;
+          people?: Json;
+          popularity?: number | null;
+          poster_url?: string | null;
+          rating_balasaur?: number | null;
+          rating_imdb?: number | null;
+          rating_metacritic?: number | null;
+          rating_rotten_tomatoes?: number | null;
+          rating_tmdb?: number | null;
+          rating_user_avg?: number | null;
+          raw_omdb?: Json | null;
+          raw_tmdb?: Json | null;
+          release_date?: string | null;
+          seasons?: Json | null;
+          streaming?: string[];
+          streaming_regions?: string[];
+          sub_genres?: string[];
+          themes?: string[];
+          title?: string;
+          updated_at?: string;
+          year?: string | null;
+        };
+        Relationships: [];
+      };
       media_cache: {
         Row: {
-          detail_fetched_at: string | null
-          detail_payload: Json | null
-          id: string
-          media_type: string
-          popularity: number | null
-          summary_fetched_at: string | null
-          summary_payload: Json | null
-          title: string | null
-          tmdb_id: number
-          updated_at: string
-          year: string | null
-        }
+          detail_fetched_at: string | null;
+          detail_payload: Json | null;
+          id: string;
+          media_type: string;
+          popularity: number | null;
+          summary_fetched_at: string | null;
+          summary_payload: Json | null;
+          title: string | null;
+          tmdb_id: number;
+          updated_at: string;
+          year: string | null;
+        };
         Insert: {
-          detail_fetched_at?: string | null
-          detail_payload?: Json | null
-          id: string
-          media_type: string
-          popularity?: number | null
-          summary_fetched_at?: string | null
-          summary_payload?: Json | null
-          title?: string | null
-          tmdb_id: number
-          updated_at?: string
-          year?: string | null
-        }
+          detail_fetched_at?: string | null;
+          detail_payload?: Json | null;
+          id: string;
+          media_type: string;
+          popularity?: number | null;
+          summary_fetched_at?: string | null;
+          summary_payload?: Json | null;
+          title?: string | null;
+          tmdb_id: number;
+          updated_at?: string;
+          year?: string | null;
+        };
         Update: {
-          detail_fetched_at?: string | null
-          detail_payload?: Json | null
-          id?: string
-          media_type?: string
-          popularity?: number | null
-          summary_fetched_at?: string | null
-          summary_payload?: Json | null
-          title?: string | null
-          tmdb_id?: number
-          updated_at?: string
-          year?: string | null
-        }
-        Relationships: []
-      }
+          detail_fetched_at?: string | null;
+          detail_payload?: Json | null;
+          id?: string;
+          media_type?: string;
+          popularity?: number | null;
+          summary_fetched_at?: string | null;
+          summary_payload?: Json | null;
+          title?: string | null;
+          tmdb_id?: number;
+          updated_at?: string;
+          year?: string | null;
+        };
+        Relationships: [];
+      };
       person_cache: {
         Row: {
-          fetched_at: string
-          id: number
-          name: string
-          payload: Json
-          updated_at: string
-        }
+          fetched_at: string;
+          id: number;
+          name: string;
+          payload: Json;
+          updated_at: string;
+        };
         Insert: {
-          fetched_at?: string
-          id: number
-          name: string
-          payload: Json
-          updated_at?: string
-        }
+          fetched_at?: string;
+          id: number;
+          name: string;
+          payload: Json;
+          updated_at?: string;
+        };
         Update: {
-          fetched_at?: string
-          id?: number
-          name?: string
-          payload?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          fetched_at?: string;
+          id?: number;
+          name?: string;
+          payload?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
-          avatar_preset: string | null
-          bio: string
-          created_at: string
-          display_name: string
-          favorite_genres: string[]
-          id: string
-          is_public: boolean
-          updated_at: string
-          username: string
-        }
+          avatar_preset: string | null;
+          bio: string;
+          created_at: string;
+          display_name: string;
+          favorite_genres: string[];
+          id: string;
+          is_public: boolean;
+          updated_at: string;
+          username: string;
+        };
         Insert: {
-          avatar_preset?: string | null
-          bio?: string
-          created_at?: string
-          display_name?: string
-          favorite_genres?: string[]
-          id: string
-          is_public?: boolean
-          updated_at?: string
-          username: string
-        }
+          avatar_preset?: string | null;
+          bio?: string;
+          created_at?: string;
+          display_name?: string;
+          favorite_genres?: string[];
+          id: string;
+          is_public?: boolean;
+          updated_at?: string;
+          username: string;
+        };
         Update: {
-          avatar_preset?: string | null
-          bio?: string
-          created_at?: string
-          display_name?: string
-          favorite_genres?: string[]
-          id?: string
-          is_public?: boolean
-          updated_at?: string
-          username?: string
-        }
-        Relationships: []
-      }
+          avatar_preset?: string | null;
+          bio?: string;
+          created_at?: string;
+          display_name?: string;
+          favorite_genres?: string[];
+          id?: string;
+          is_public?: boolean;
+          updated_at?: string;
+          username?: string;
+        };
+        Relationships: [];
+      };
       saved_filters: {
         Row: {
-          created_at: string
-          filter_state: Json
-          id: string
-          name: string
-          updated_at: string
-          user_id: string
-        }
+          created_at: string;
+          filter_state: Json;
+          id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          filter_state: Json
-          id?: string
-          name: string
-          updated_at?: string
-          user_id: string
-        }
+          created_at?: string;
+          filter_state: Json;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          filter_state?: Json
-          id?: string
-          name?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          filter_state?: Json;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       trending_cache: {
         Row: {
-          fetched_at: string
-          ids: string[]
-          key: string
-        }
+          fetched_at: string;
+          ids: string[];
+          key: string;
+        };
         Insert: {
-          fetched_at?: string
-          ids: string[]
-          key: string
-        }
+          fetched_at?: string;
+          ids: string[];
+          key: string;
+        };
         Update: {
-          fetched_at?: string
-          ids?: string[]
-          key?: string
-        }
-        Relationships: []
-      }
+          fetched_at?: string;
+          ids?: string[];
+          key?: string;
+        };
+        Relationships: [];
+      };
       user_media_status: {
         Row: {
-          id: string
-          intent: string | null
-          media_id: string
-          media_type: string
-          poster_url: string | null
-          rewatch_ok: boolean | null
-          sentiment: string | null
-          status: string
-          title: string
-          updated_at: string
-          user_id: string
-          year: string | null
-        }
+          id: string;
+          intent: string | null;
+          media_id: string;
+          media_type: string;
+          poster_url: string | null;
+          rewatch_ok: boolean | null;
+          sentiment: string | null;
+          status: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+          year: string | null;
+        };
         Insert: {
-          id?: string
-          intent?: string | null
-          media_id: string
-          media_type: string
-          poster_url?: string | null
-          rewatch_ok?: boolean | null
-          sentiment?: string | null
-          status: string
-          title: string
-          updated_at?: string
-          user_id: string
-          year?: string | null
-        }
+          id?: string;
+          intent?: string | null;
+          media_id: string;
+          media_type: string;
+          poster_url?: string | null;
+          rewatch_ok?: boolean | null;
+          sentiment?: string | null;
+          status: string;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+          year?: string | null;
+        };
         Update: {
-          id?: string
-          intent?: string | null
-          media_id?: string
-          media_type?: string
-          poster_url?: string | null
-          rewatch_ok?: boolean | null
-          sentiment?: string | null
-          status?: string
-          title?: string
-          updated_at?: string
-          user_id?: string
-          year?: string | null
-        }
-        Relationships: []
-      }
-    }
+          id?: string;
+          intent?: string | null;
+          media_id?: string;
+          media_type?: string;
+          poster_url?: string | null;
+          rewatch_ok?: boolean | null;
+          sentiment?: string | null;
+          status?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+          year?: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      catalog_facets: { Args: never; Returns: Json }
-      catalog_facets_filtered: { Args: { p: Json }; Returns: Json }
+      catalog_facets: { Args: never; Returns: Json };
+      catalog_facets_filtered: { Args: { p: Json }; Returns: Json };
       search_cast: {
-        Args: { p_exclude?: string[]; p_q: string }
+        Args: { p_exclude?: string[]; p_q: string };
         Returns: {
-          name: string
-        }[]
-      }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
-    }
+          name: string;
+        }[];
+      };
+      show_limit: { Args: never; Returns: number };
+      show_trgm: { Args: { "": string }; Returns: string[] };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const
+} as const;

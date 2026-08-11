@@ -5,11 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { openCookieSettings } from "@/lib/consent";
-import {
-  exportMyData,
-  clearMyActivity,
-  deleteMyAccount,
-} from "@/lib/account.functions";
+import { exportMyData, clearMyActivity, deleteMyAccount } from "@/lib/account.functions";
 import {
   Dialog,
   DialogContent,
@@ -31,9 +27,34 @@ export const Route = createFileRoute("/account")({
 });
 
 const COUNTRIES = [
-  "US", "CA", "GB", "IE", "AU", "NZ", "DE", "FR", "ES", "IT", "NL", "SE",
-  "NO", "DK", "FI", "PT", "BE", "AT", "CH", "PL", "BR", "MX", "AR", "JP",
-  "KR", "IN", "SG", "ZA",
+  "US",
+  "CA",
+  "GB",
+  "IE",
+  "AU",
+  "NZ",
+  "DE",
+  "FR",
+  "ES",
+  "IT",
+  "NL",
+  "SE",
+  "NO",
+  "DK",
+  "FI",
+  "PT",
+  "BE",
+  "AT",
+  "CH",
+  "PL",
+  "BR",
+  "MX",
+  "AR",
+  "JP",
+  "KR",
+  "IN",
+  "SG",
+  "ZA",
 ];
 
 function AccountPage() {
@@ -49,9 +70,7 @@ function AccountPage() {
       <div className="min-h-screen bg-background text-foreground">
         <TopBar />
         <main className="mx-auto max-w-[860px] px-5 py-12">
-          <p className="font-mono text-[12px] uppercase tracking-wider text-text-dim">
-            Loading…
-          </p>
+          <p className="font-mono text-[12px] uppercase tracking-wider text-text-dim">Loading…</p>
         </main>
       </div>
     );
@@ -78,9 +97,7 @@ function AccountPage() {
 
         <div className="space-y-6">
           <SecuritySection email={user.email ?? ""} />
-          <PreferencesSection
-            initial={(user.user_metadata?.region as string | undefined) ?? ""}
-          />
+          <PreferencesSection initial={(user.user_metadata?.region as string | undefined) ?? ""} />
           <NotificationsSection />
           <PrivacySection />
           <SubscriptionSection />
@@ -104,9 +121,7 @@ function Section({
 }) {
   const border = tone === "danger" ? "border-red-500/60" : "border-border";
   return (
-    <section
-      className={`rounded-[6px] border ${border} bg-panel/40 p-5`}
-    >
+    <section className={`rounded-[6px] border ${border} bg-panel/40 p-5`}>
       <h2
         className={`mb-4 font-mono text-[12px] font-semibold uppercase tracking-wider ${
           tone === "danger" ? "text-red-400" : "text-text-bright"
@@ -134,9 +149,7 @@ function Field({
         {label}
       </label>
       {children}
-      {hint && (
-        <p className="font-mono text-[10.5px] text-text-dim">{hint}</p>
-      )}
+      {hint && <p className="font-mono text-[10.5px] text-text-dim">{hint}</p>}
     </div>
   );
 }
@@ -264,15 +277,8 @@ function PreferencesSection({ initial }: { initial: string }) {
   return (
     <Section title="Preferences">
       <form onSubmit={save} className="space-y-2">
-        <Field
-          label="Region / country"
-          hint="Used later to refine streaming availability."
-        >
-          <select
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            className={inputCls}
-          >
+        <Field label="Region / country" hint="Used later to refine streaming availability.">
+          <select value={region} onChange={(e) => setRegion(e.target.value)} className={inputCls}>
             <option value="">— Not set —</option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
@@ -404,13 +410,7 @@ function SubscriptionSection() {
 
 /* ---------- 6. Danger Zone ---------- */
 
-function DangerZone({
-  email,
-  onDeleted,
-}: {
-  email: string;
-  onDeleted: () => Promise<void>;
-}) {
+function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Promise<void> }) {
   const clearFn = useServerFn(clearMyActivity);
   const deleteFn = useServerFn(deleteMyAccount);
   const navigate = useNavigate();
@@ -472,12 +472,8 @@ function DangerZone({
         <div className="h-px bg-border" />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-mono text-[12px] text-text-bright">
-              Delete my account permanently
-            </p>
-            <p className="font-mono text-[10.5px] text-text-dim">
-              This cannot be undone.
-            </p>
+            <p className="font-mono text-[12px] text-text-bright">Delete my account permanently</p>
+            <p className="font-mono text-[10.5px] text-text-dim">This cannot be undone.</p>
           </div>
           <button onClick={() => setDelOpen(true)} className={btnDanger}>
             Delete account
@@ -530,9 +526,7 @@ function DangerZone({
             <li>Your library (favorites, watchlist & watch history)</li>
             <li>Any lists tied to your account</li>
           </ul>
-          <Field
-            label={`Type DELETE or your email to confirm`}
-          >
+          <Field label={`Type DELETE or your email to confirm`}>
             <input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
@@ -545,11 +539,7 @@ function DangerZone({
             <button onClick={() => setDelOpen(false)} className={btnSecondary}>
               Cancel
             </button>
-            <button
-              onClick={doDelete}
-              disabled={!canDelete || busy}
-              className={btnDanger}
-            >
+            <button onClick={doDelete} disabled={!canDelete || busy} className={btnDanger}>
               {busy ? "…" : "Delete forever"}
             </button>
           </DialogFooter>

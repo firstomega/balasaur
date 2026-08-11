@@ -37,8 +37,7 @@ export function LandingHero({ onBrowse }: Props) {
               Your personal entertainment database.
             </h1>
             <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-text-muted">
-              Discover, track, and rate movies &amp; TV — and build a library that's
-              yours.
+              Discover, track, and rate movies &amp; TV — and build a library that's yours.
             </p>
           </div>
 

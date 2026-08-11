@@ -32,10 +32,7 @@ export const clearMyActivity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase
-      .from("user_media_status")
-      .delete()
-      .eq("user_id", userId);
+    const { error } = await supabase.from("user_media_status").delete().eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
