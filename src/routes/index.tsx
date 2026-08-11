@@ -92,7 +92,7 @@ export const Route = createFileRoute("/")({
           catalogInfiniteOptions(withBoost(params, boost)),
         ),
         context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
-        context.queryClient.ensureQueryData(homeRailsOptions()),
+        context.queryClient.ensureQueryData(homeRailsOptions(boost)),
       ]),
       5000,
     );
@@ -275,7 +275,7 @@ function HomePage() {
               )}
             </div>
           </SheetHeader>
-          <div className="mt-3">
+          <div className="mt-3 pb-16">
             <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
@@ -285,8 +285,40 @@ function HomePage() {
               />
             </Suspense>
           </div>
+          {/* Live feedback while filtering: the count updates as filters change,
+              and one tap closes the drawer to see the matches. */}
+          <MobileResultsBar
+            filters={filters}
+            region={region}
+            onClose={() => setMobileOpen(false)}
+          />
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function MobileResultsBar({
+  filters,
+  region,
+  onClose,
+}: {
+  filters: FilterState;
+  region: string;
+  onClose: () => void;
+}) {
+  const { data: facets } = useCatalogFacets(filters, region);
+  return (
+    <div className="absolute inset-x-0 bottom-0 border-t border-border bg-background p-3">
+      <button
+        type="button"
+        onClick={onClose}
+        className="w-full cursor-pointer rounded-[5px] bg-primary px-3 py-2.5 font-mono text-[11.5px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+      >
+        {typeof facets?.total === "number"
+          ? `Show ${facets.total.toLocaleString()} results`
+          : "Show results"}
+      </button>
     </div>
   );
 }
@@ -387,7 +419,7 @@ function GridWithControls({
       {/* Curated rails: only on the untouched default view — any filter means
           the visitor is searching, and the rails would push their results down. */}
       {activeCount === 0 && (filters.sort === "popular" || filters.sort === "trending") && (
-        <HomeRails onQuickWatch={onQuickWatch} watchedIds={seenIds} />
+        <HomeRails boostCountry={boostCountry} onQuickWatch={onQuickWatch} watchedIds={seenIds} />
       )}
 
       {/* Toolbar */}
