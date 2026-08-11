@@ -8,6 +8,7 @@ import {
 import {
   queryCatalog,
   getCatalogFacets,
+  getHomeRails,
   getViewerCountry,
   type CatalogQueryParams,
 } from "@/lib/catalog.functions";
@@ -103,6 +104,20 @@ export function catalogFacetsOptions(base: CatalogBaseParams) {
 
 export function useCatalogFacets(filters: FilterState, region = "US") {
   return useQuery(catalogFacetsOptions(filtersToParams(filters, region)));
+}
+
+/** Curated homepage rails (Trending / New & Noteworthy / Hidden Gems). One
+ *  cache entry for everyone — the rails are editorial, not filter-dependent. */
+export function homeRailsOptions() {
+  return queryOptions({
+    queryKey: ["home-rails"] as const,
+    queryFn: () => getHomeRails(),
+    staleTime: 15 * 60 * 1000,
+  });
+}
+
+export function useHomeRails() {
+  return useQuery(homeRailsOptions());
 }
 
 /** Bounded, popularity-ordered deck for the "Rate" (swipe) page. Loads a few hundred

@@ -30,6 +30,7 @@ export type Database = {
           people: Json;
           popularity: number | null;
           poster_url: string | null;
+          rank_score: number | null;
           rating_balasaur: number | null;
           rating_imdb: number | null;
           rating_metacritic: number | null;
@@ -40,12 +41,14 @@ export type Database = {
           raw_tmdb: Json | null;
           release_date: string | null;
           seasons: Json | null;
+          sensitive: boolean;
           streaming: string[];
           streaming_regions: string[];
           sub_genres: string[];
           themes: string[];
           title: string;
           updated_at: string;
+          vote_count: number | null;
           year: string | null;
         };
         Insert: {
@@ -69,6 +72,7 @@ export type Database = {
           people?: Json;
           popularity?: number | null;
           poster_url?: string | null;
+          rank_score?: number | null;
           rating_balasaur?: number | null;
           rating_imdb?: number | null;
           rating_metacritic?: number | null;
@@ -79,12 +83,14 @@ export type Database = {
           raw_tmdb?: Json | null;
           release_date?: string | null;
           seasons?: Json | null;
+          sensitive?: boolean;
           streaming?: string[];
           streaming_regions?: string[];
           sub_genres?: string[];
           themes?: string[];
           title: string;
           updated_at?: string;
+          vote_count?: number | null;
           year?: string | null;
         };
         Update: {
@@ -108,6 +114,7 @@ export type Database = {
           people?: Json;
           popularity?: number | null;
           poster_url?: string | null;
+          rank_score?: number | null;
           rating_balasaur?: number | null;
           rating_imdb?: number | null;
           rating_metacritic?: number | null;
@@ -118,12 +125,14 @@ export type Database = {
           raw_tmdb?: Json | null;
           release_date?: string | null;
           seasons?: Json | null;
+          sensitive?: boolean;
           streaming?: string[];
           streaming_regions?: string[];
           sub_genres?: string[];
           themes?: string[];
           title?: string;
           updated_at?: string;
+          vote_count?: number | null;
           year?: string | null;
         };
         Relationships: [];

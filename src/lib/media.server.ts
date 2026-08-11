@@ -11,6 +11,8 @@ import { unifyGenres } from "./genres";
 import { deriveOrigins } from "./origins";
 import { deriveFacets } from "./taxonomy";
 import { computeBalasaurScore } from "./score";
+import { computeRankScore } from "./rank";
+import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
@@ -570,6 +572,12 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
         rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
         metacritic: r.rating_metacritic ?? undefined,
         tmdb: r.rating_tmdb ?? undefined,
+        balasaur: computeBalasaurScore({
+          imdb: r.rating_imdb,
+          rottenTomatoes: r.rating_rotten_tomatoes,
+          metacritic: r.rating_metacritic,
+          tmdb: r.rating_tmdb,
+        }),
       },
       genres: r.genres ?? [],
       origins: r.origins ?? [],
@@ -775,6 +783,11 @@ function dedupeById(items: DiscoverResult[]): DiscoverResult[] {
   return out;
 }
 
+function extractVoteCount(rawTmdb: unknown): number | null {
+  const v = (rawTmdb as { vote_count?: unknown } | null)?.vote_count;
+  return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
+}
+
 function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown): MediaRow {
   const awards = parseAwards((rawOmdb as OmdbResponse | null)?.Awards);
   const awardDetail = parseAwardDetail((rawOmdb as OmdbResponse | null)?.Awards);
@@ -786,6 +799,7 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     } | null
   )?.["watch/providers"];
   const facets = deriveFacets(rawTmdb, item.mediaType, item.genres);
+  const voteCount = extractVoteCount(rawTmdb);
   return {
     media_id: item.id,
     media_type: item.mediaType,
@@ -799,6 +813,16 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
     rating_rotten_tomatoes: item.ratings.rottenTomatoes ?? null,
     rating_metacritic: item.ratings.metacritic ?? null,
     rating_tmdb: item.ratings.tmdb ?? null,
+    vote_count: voteCount,
+    // rank_score mirrors the DB-seeded formula (rank.ts); the balasaur input is
+    // recomputed here because rating_balasaur is DB-generated and not on `item`.
+    rank_score: computeRankScore({
+      popularity: item.popularity,
+      balasaur: computeBalasaurScore(item.ratings),
+      voteCount,
+      releaseDate: item.releaseDate,
+    }),
+    sensitive: deriveSensitive(rawTmdb),
     genres: item.genres,
     origins: item.origins ?? [],
     streaming: item.streaming,
@@ -832,6 +856,8 @@ export interface BackfillResult {
   updatedStreaming: number;
   updatedAwards: number;
   updatedFacets: number;
+  /** Rows whose vote_count / rank_score / sensitive flag were (re)derived. */
+  updatedRank: number;
   /** Rows already correct that were marked derived (incremental mode). */
   stamped: number;
   /**
@@ -882,6 +908,7 @@ export async function backfillFromRaw(opts?: {
     updatedStreaming: 0,
     updatedAwards: 0,
     updatedFacets: 0,
+    updatedRank: 0,
     stamped: 0,
     missingRaw: 0,
     failed: 0,
@@ -902,7 +929,7 @@ export async function backfillFromRaw(opts?: {
     let query = supabaseAdmin
       .from("media")
       .select(
-        "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, raw_tmdb, raw_omdb",
+        "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, popularity, release_date, rating_balasaur, vote_count, rank_score, sensitive, raw_tmdb, raw_omdb",
       )
       .gt("media_id", cursor);
     if (useMissingFilter) query = query.is("facets_derived_at", null);
@@ -989,6 +1016,15 @@ export async function backfillFromRaw(opts?: {
         const newStreaming = deriveStreaming(raw?.["watch/providers"]);
         const newStreamingRegions = deriveStreamingRegions(raw?.["watch/providers"]);
         const facets = deriveFacets(row.raw_tmdb, row.media_type, newGenres);
+        const newVoteCount = extractVoteCount(row.raw_tmdb);
+        const newSensitive = deriveSensitive(row.raw_tmdb);
+        // rating_balasaur is DB-generated, so it's already current on the row.
+        const newRankScore = computeRankScore({
+          popularity: row.popularity,
+          balasaur: row.rating_balasaur,
+          voteCount: newVoteCount,
+          releaseDate: row.release_date,
+        });
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
@@ -1009,6 +1045,10 @@ export async function backfillFromRaw(opts?: {
           JSON.stringify(facets.audience) !== JSON.stringify(row.audience ?? []) ||
           (facets.film_length_minutes ?? null) !== (row.film_length_minutes ?? null) ||
           (facets.completion_status ?? null) !== (row.completion_status ?? null);
+        const rankChanged =
+          (row.vote_count ?? null) !== newVoteCount ||
+          (row.sensitive ?? false) !== newSensitive ||
+          (row.rank_score ?? null) !== newRankScore;
 
         // Skip rows that don't actually change. On a large catalog only the rows that
         // need it (co-productions, etc.) get rewritten, so the backfill stays light and
@@ -1020,7 +1060,8 @@ export async function backfillFromRaw(opts?: {
           streamingChanged ||
           awardsChanged ||
           awardsDetailChanged ||
-          facetsChanged;
+          facetsChanged ||
+          rankChanged;
 
         // Nothing to rewrite. In incremental mode still stamp the row so it drops out of
         // future scans; otherwise just skip (classic full-scan behavior).
@@ -1052,6 +1093,9 @@ export async function backfillFromRaw(opts?: {
             audience: facets.audience,
             film_length_minutes: facets.film_length_minutes,
             completion_status: facets.completion_status,
+            vote_count: newVoteCount,
+            rank_score: newRankScore,
+            sensitive: newSensitive,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,
@@ -1071,6 +1115,7 @@ export async function backfillFromRaw(opts?: {
         if (streamingChanged) result.updatedStreaming++;
         if (awards.winner || awards.nominee) result.updatedAwards++;
         if (facetsChanged) result.updatedFacets++;
+        if (rankChanged) result.updatedRank++;
       } catch (e) {
         result.failed++;
         console.error("[backfill] row failed:", e);
@@ -1633,6 +1678,7 @@ function crossRowToItem(r: CrossRow): MediaItem {
         imdb: r.rating_imdb,
         rottenTomatoes: r.rating_rotten_tomatoes,
         metacritic: r.rating_metacritic,
+        tmdb: r.rating_tmdb,
       }),
     },
     genres: r.genres ?? [],

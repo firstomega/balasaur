@@ -21,13 +21,6 @@ const TYPE_COLOR_CLASS: Record<MediaType, string> = {
   podcast: "text-media-podcast",
 };
 
-function primaryRating(item: MediaItem): { value: string; raw: number } | null {
-  const { imdb, tmdb } = item.ratings;
-  if (typeof imdb === "number") return { value: imdb.toFixed(1), raw: imdb };
-  if (typeof tmdb === "number") return { value: tmdb.toFixed(1), raw: tmdb };
-  return null;
-}
-
 export function MediaCard({
   item,
   onQuickWatch,
@@ -39,7 +32,6 @@ export function MediaCard({
   /** Current watched state, to style the quick-add button as active. */
   watched?: boolean;
 }) {
-  const rating = primaryRating(item);
   const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
   const rawId = item.id.replace(/^(movie|tv)-/, "");
   const slug = mediaSlug(rawId, item.title);
@@ -53,10 +45,10 @@ export function MediaCard({
             params={{ id: slug }}
             className="block"
           >
-            <CardArt item={item} rating={rating} />
+            <CardArt item={item} />
           </Link>
         ) : (
-          <CardArt item={item} rating={rating} />
+          <CardArt item={item} />
         )}
 
         {onQuickWatch && (
@@ -114,13 +106,7 @@ export function MediaCard({
   );
 }
 
-function CardArt({
-  item,
-  rating,
-}: {
-  item: MediaItem;
-  rating: { value: string; raw: number } | null;
-}) {
+function CardArt({ item }: { item: MediaItem }) {
   return (
     <div className="relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
       <div className="aspect-[2/3] w-full">
@@ -157,15 +143,14 @@ function CardArt({
           {TYPE_LABEL[item.mediaType]}
         </span>
       </div>
-      {typeof item.ratings.balasaur === "number" ? (
+      {/* One score format everywhere: the Balasaur badge or nothing. (The old
+          "★ 7.0" raw-IMDb/TMDB fallback is gone — with TMDB in the blend, a
+          card without a badge genuinely has no rating data.) */}
+      {typeof item.ratings.balasaur === "number" && (
         <div className="absolute right-1.5 top-1.5">
           <ScoreBadge score={item.ratings.balasaur} />
         </div>
-      ) : rating ? (
-        <div className="absolute right-1.5 top-1.5 rounded-[4px] bg-background/85 px-1.5 py-0.5 backdrop-blur-sm">
-          <span className="font-mono text-[10px] font-medium text-rating">★ {rating.value}</span>
-        </div>
-      ) : null}
+      )}
     </div>
   );
 }

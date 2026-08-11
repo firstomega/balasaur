@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "bun test src",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write ."
   },
