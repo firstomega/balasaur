@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Bookmark, Check, EyeOff, Heart } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
+import { isNotInterested, primaryOf, sentimentOf } from "@/lib/userStatus";
 import type { MediaItem, MediaType } from "@/types/media";
 
 export const Route = createFileRoute("/lists")({
@@ -15,26 +17,62 @@ export const Route = createFileRoute("/lists")({
   component: ListsPage,
 });
 
-type Bucket = "favorites" | "history" | "watchlist";
+type Bucket = "watchlist" | "favorites" | "history" | "notInterested";
 
-const BUCKET_ORDER: Bucket[] = ["favorites", "watchlist", "history"];
+const BUCKET_ORDER: Bucket[] = ["watchlist", "favorites", "history", "notInterested"];
 
-const BUCKET_LABEL: Record<Bucket, string> = {
-  favorites: "Favorites",
-  watchlist: "Watchlist",
-  history: "History",
+const BUCKET_META: Record<
+  Bucket,
+  { label: string; hint: string; Icon: typeof Bookmark; iconClass: string }
+> = {
+  watchlist: {
+    label: "Watchlist",
+    hint: "Saved to watch later",
+    Icon: Bookmark,
+    iconClass: "text-[#e8b84b]",
+  },
+  favorites: {
+    label: "Favorites",
+    hint: "Watched and liked",
+    Icon: Heart,
+    iconClass: "text-rating",
+  },
+  history: {
+    label: "History",
+    hint: "Everything you've watched",
+    Icon: Check,
+    iconClass: "text-primary",
+  },
+  notInterested: {
+    label: "Not interested",
+    hint: "Hidden from the deck for good",
+    Icon: EyeOff,
+    iconClass: "text-[#c75d6e]",
+  },
 };
 
-const BUCKET_HINT: Record<Bucket, string> = {
-  favorites: "Titles you liked",
-  watchlist: "Saved to watch later",
-  history: "Everything you've watched",
-};
-
-const BUCKET_EMPTY: Record<Bucket, string> = {
-  favorites: "No favorites yet — like a title and it lands here.",
-  watchlist: "Nothing saved to watch yet — add titles from the grid or swipe deck.",
-  history: "Nothing watched yet — mark something Watched to start your history.",
+// Empty states that point somewhere: the grid for saving, the deck for rating.
+const BUCKET_EMPTY: Record<Bucket, { text: string; cta: string; to: string }> = {
+  watchlist: {
+    text: "Nothing saved yet. Hover a poster in the grid and hit Save, or swipe left in the deck.",
+    cta: "Browse the grid",
+    to: "/",
+  },
+  favorites: {
+    text: "No favorites yet. Mark something Watched, then tap “Liked it” — or swipe up in the deck.",
+    cta: "Rate titles",
+    to: "/rate",
+  },
+  history: {
+    text: "Nothing watched yet. The fastest way to build your history is a quick deck session.",
+    cta: "Rate titles",
+    to: "/rate",
+  },
+  notInterested: {
+    text: "Nothing hidden. Press X in the deck (or “Not interested” on a title page) to keep the junk out of your recommendations.",
+    cta: "Rate titles",
+    to: "/rate",
+  },
 };
 
 function snapToItem(
@@ -57,43 +95,53 @@ function snapToItem(
 }
 
 /**
- * A record can land in MULTIPLE buckets: a "liked" title is both a Favorite
- * AND part of History (you liked it, so you watched it). "skipped" files nowhere.
+ * A record can land in MULTIPLE buckets: watched+liked is a Favorite AND part
+ * of History. "skipped" files nowhere; "not interested" gets its own tab so
+ * the hard-hidden set stays inspectable (and reversible from the title page).
  */
-function bucketsFor(rec: { status: string; sentiment?: string; intent?: string }): Bucket[] {
-  if (rec.status === "seen") {
-    return rec.sentiment === "liked" ? ["favorites", "history"] : ["history"];
+function bucketsFor(rec: Parameters<typeof primaryOf>[0]): Bucket[] {
+  const primary = primaryOf(rec);
+  if (primary === "watched") {
+    return sentimentOf(rec) === "liked" ? ["favorites", "history"] : ["history"];
   }
-  if (rec.status === "unseen" && rec.intent === "want") return ["watchlist"];
-  return []; // skipped / anything else
+  if (primary === "want") return ["watchlist"];
+  if (isNotInterested(rec)) return ["notInterested"];
+  return [];
 }
 
 function ListsPage() {
   const { user, loading } = useAuth();
   const { statuses, ready } = useUserStatus();
   const [authOpen, setAuthOpen] = useState(false);
+  const [tab, setTab] = useState<Bucket>("watchlist");
   // Show skeletons until auth has resolved AND the status load has settled, so the
   // buckets don't flash "nothing here yet" before the user's saved data arrives.
   const showSkeleton = loading || !ready;
 
   const grouped = useMemo(() => {
-    const out: Record<Bucket, MediaItem[]> = {
-      favorites: [],
+    const out: Record<Bucket, { item: MediaItem; ts: number }[]> = {
       watchlist: [],
+      favorites: [],
       history: [],
+      notInterested: [],
     };
     for (const [id, rec] of Object.entries(statuses)) {
       const item = snapToItem(id, rec.snapshot ?? {});
-      for (const b of bucketsFor(rec)) out[b].push(item);
+      for (const b of bucketsFor(rec)) out[b].push({ item, ts: rec.ts });
     }
+    // Most recently touched first — "what did I just save" is the common lookup.
+    for (const b of BUCKET_ORDER) out[b].sort((a, z) => z.ts - a.ts);
     return out;
   }, [statuses]);
+
+  const active = BUCKET_META[tab];
+  const items = grouped[tab].map((e) => e.item);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
       <main className="mx-auto max-w-[1600px] px-4 py-6">
-        <h1 className="mb-6 font-mono text-[14px] uppercase tracking-[0.18em] text-text-bright">
+        <h1 className="mb-4 font-mono text-[14px] uppercase tracking-[0.18em] text-text-bright">
           My lists
         </h1>
 
@@ -115,32 +163,62 @@ function ListsPage() {
             <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
           </div>
         ) : (
-          <div className="space-y-10">
-            {BUCKET_ORDER.map((b) => (
-              <section key={b}>
-                <div className="mb-3 flex items-baseline justify-between border-b border-border pb-1">
-                  <div className="flex items-baseline gap-2">
-                    <h2 className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
-                      {BUCKET_LABEL[b]}
-                    </h2>
-                    <span className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
-                      {BUCKET_HINT[b]}
+          <>
+            {/* Tab bar with live counts */}
+            <div
+              role="tablist"
+              aria-label="Lists"
+              className="mb-5 flex flex-wrap gap-1 border-b border-border"
+            >
+              {BUCKET_ORDER.map((b) => {
+                const meta = BUCKET_META[b];
+                const selected = tab === b;
+                return (
+                  <button
+                    key={b}
+                    role="tab"
+                    aria-selected={selected}
+                    type="button"
+                    onClick={() => setTab(b)}
+                    className={
+                      "flex cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors " +
+                      (selected
+                        ? "border-primary text-text-bright"
+                        : "border-transparent text-text-muted hover:text-text-bright")
+                    }
+                  >
+                    <meta.Icon className={`h-3.5 w-3.5 ${selected ? meta.iconClass : ""}`} />
+                    {meta.label}
+                    <span className="font-mono text-[10px] text-text-dim">
+                      {showSkeleton ? "" : grouped[b].length}
                     </span>
-                  </div>
-                  <span className="font-mono text-[10.5px] text-text-muted">
-                    {showSkeleton ? "" : grouped[b].length}
-                  </span>
-                </div>
-                {showSkeleton ? (
-                  <MediaGridSkeleton count={6} />
-                ) : grouped[b].length === 0 ? (
-                  <p className="font-mono text-[10.5px] text-text-dim">{BUCKET_EMPTY[b]}</p>
-                ) : (
-                  <MediaGrid items={grouped[b]} />
-                )}
-              </section>
-            ))}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+              {active.hint} · newest first · open a title to change its status
+            </p>
+
+            {showSkeleton ? (
+              <MediaGridSkeleton count={12} />
+            ) : items.length === 0 ? (
+              <div className="rounded-[5px] border border-border bg-panel p-8 text-center">
+                <p className="mx-auto max-w-md font-mono text-[11px] leading-relaxed text-text-muted">
+                  {BUCKET_EMPTY[tab].text}
+                </p>
+                <Link
+                  to={BUCKET_EMPTY[tab].to}
+                  className="mt-4 inline-block rounded-[5px] bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+                >
+                  {BUCKET_EMPTY[tab].cta}
+                </Link>
+              </div>
+            ) : (
+              <MediaGrid items={items} />
+            )}
+          </>
         )}
       </main>
     </div>

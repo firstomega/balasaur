@@ -1,37 +1,69 @@
 import type { UserStatusRecord } from "@/hooks/useUserStatus";
 
-// Filable library statuses — shown as detail-page buttons AND as list buckets.
-// "Skip" is intentionally NOT here: it's a deck-only soft signal (see recordForSkip).
-export type StatusKey = "like" | "watched" | "didntWatch";
+// Two-axis status model.
+//
+//   PRIMARY (mutually exclusive):  "want"    → Watchlist   (unseen + intent want)
+//                                  "watched" → History     (seen)
+//   SENTIMENT (watched only):      "liked"   → + Favorites
+//                                  "disliked"  (negative taste signal; History only)
+//
+// This replaced a three-sibling radio ("Like / Watched / Didn't watch yet") where
+// "Like" secretly meant watched+liked — so tapping Watched after Like silently
+// ERASED the sentiment, and the watchlist hid behind a negated label. The stored
+// record shape (status + sentiment + intent) was already two-axis; only the
+// button model changed, so no data migration was needed.
+//
+// Off-list signals (file into no bucket):
+//   Skip           — deck-only soft "not now", resurfaces later, deprioritized.
+//   Not interested — hard "won't watch"; never resurfaces in the deck.
 
-export const STATUS_LABEL: Record<StatusKey, string> = {
-  like: "Like",
+export type PrimaryKey = "want" | "watched";
+export type SentimentKey = "liked" | "disliked";
+
+export const PRIMARY_LABEL: Record<PrimaryKey, string> = {
+  want: "Want to Watch",
   watched: "Watched",
-  didntWatch: "Didn't watch yet",
 };
 
-export const STATUS_HEX: Record<StatusKey, string> = {
-  like: "#9fe6a0", // green — favorites
+export const PRIMARY_HEX: Record<PrimaryKey, string> = {
+  want: "#e8b84b", // amber — watchlist
   watched: "#3b82f6", // blue — history
-  didntWatch: "#e8b84b", // amber — watchlist
 };
 
-// Detail-page button order.
-export const STATUS_ORDER: StatusKey[] = ["like", "watched", "didntWatch"];
+export const SENTIMENT_LABEL: Record<SentimentKey, string> = {
+  liked: "Liked it",
+  disliked: "Not for me",
+};
 
-export function recordForStatus(key: StatusKey): UserStatusRecord {
-  const ts = Date.now();
-  switch (key) {
-    case "like":
-      // Watched AND loved → lands in Favorites + History.
-      return { status: "seen", sentiment: "liked", ts };
-    case "watched":
-      // Watched, no strong feeling → History only.
-      return { status: "seen", ts };
-    case "didntWatch":
-      // Haven't seen it but want to → Watchlist.
-      return { status: "unseen", intent: "want", ts };
-  }
+export const SENTIMENT_HEX: Record<SentimentKey, string> = {
+  liked: "#9fe6a0", // green — favorites
+  disliked: "#e08aa4", // muted red — negative signal
+};
+
+export const NOT_INTERESTED_HEX = "#c75d6e";
+
+export function recordForWant(): UserStatusRecord {
+  return { status: "unseen", intent: "want", ts: Date.now() };
+}
+
+/** Mark watched, PRESERVING any sentiment already on the record — the old model's
+ *  silent Like→Watched downgrade is the exact bug this exists to prevent. */
+export function recordForWatched(prev?: UserStatusRecord): UserStatusRecord {
+  return {
+    status: "seen",
+    sentiment: prev?.status === "seen" ? prev.sentiment : undefined,
+    ts: Date.now(),
+  };
+}
+
+/** Set/toggle sentiment (implies watched). Same sentiment again → clears it,
+ *  leaving plain Watched. */
+export function recordForSentiment(
+  prev: UserStatusRecord | undefined,
+  sentiment: SentimentKey,
+): UserStatusRecord {
+  const clearing = prev?.status === "seen" && prev.sentiment === sentiment;
+  return { status: "seen", sentiment: clearing ? undefined : sentiment, ts: Date.now() };
 }
 
 /** Skip: a soft "not now" that resurfaces later, deprioritized. Files into no list. */
@@ -40,14 +72,23 @@ export function recordForSkip(): UserStatusRecord {
 }
 
 /** Not interested: a hard "won't watch" — files into NO list, and (unlike Skip) never
- *  resurfaces in the deck. Distinct from "Didn't watch yet", which is a Watchlist want. */
+ *  resurfaces in the deck. Distinct from Want to Watch, which is a positive intent. */
 export function recordForNotInterested(): UserStatusRecord {
   return { status: "unseen", intent: "not_interested", ts: Date.now() };
 }
 
-export function statusKeyOf(rec: UserStatusRecord | undefined): StatusKey | null {
+export function primaryOf(rec: UserStatusRecord | undefined): PrimaryKey | null {
   if (!rec) return null;
-  if (rec.status === "seen") return rec.sentiment === "liked" ? "like" : "watched";
-  if (rec.status === "unseen") return rec.intent === "want" ? "didntWatch" : null;
-  return null; // "skipped" → not a filed status
+  if (rec.status === "seen") return "watched";
+  if (rec.status === "unseen" && rec.intent === "want") return "want";
+  return null; // skipped / not_interested → no primary
+}
+
+export function sentimentOf(rec: UserStatusRecord | undefined): SentimentKey | null {
+  if (rec?.status !== "seen") return null;
+  return rec.sentiment ?? null;
+}
+
+export function isNotInterested(rec: UserStatusRecord | undefined): boolean {
+  return rec?.status === "unseen" && rec.intent === "not_interested";
 }

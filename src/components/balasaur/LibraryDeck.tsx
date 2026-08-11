@@ -7,11 +7,13 @@ import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "./AuthDialog";
 import {
-  recordForStatus,
-  recordForSkip,
   recordForNotInterested,
-  type StatusKey,
+  recordForSentiment,
+  recordForSkip,
+  recordForWant,
+  recordForWatched,
 } from "@/lib/userStatus";
+import type { UserStatusRecord } from "@/hooks/useUserStatus";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { ScoreBadge } from "./ScoreBadge";
 
@@ -20,17 +22,21 @@ const NUDGE_AFTER = 5;
 
 type Dir = "up" | "down" | "left" | "right";
 
-// Direction → meaning. "down" is Skip (soft, resurfaces); the rest file & leave.
-const DIR_TO_KEY: Record<Exclude<Dir, "down">, StatusKey> = {
-  up: "like",
-  right: "watched",
-  left: "didntWatch",
+// Direction → meaning ("down" is Skip: soft, resurfaces; the rest file & leave).
+// Same two-axis model as the detail page: "up" is watched+liked, "right" is
+// watched (neutral), "left" is Want to Watch (the watchlist).
+type FiledDir = Exclude<Dir, "down">;
+
+const DIR_TO_RECORD: Record<FiledDir, () => UserStatusRecord> = {
+  up: () => recordForSentiment(undefined, "liked"),
+  right: () => recordForWatched(),
+  left: () => recordForWant(),
 };
 
 const ACTION_LABEL: Record<Dir, string> = {
-  up: "Like",
+  up: "Loved it",
   right: "Watched",
-  left: "Didn't watch yet",
+  left: "Want to Watch",
   down: "Skip",
 };
 
@@ -50,9 +56,9 @@ const ACTION_SUBLABEL: Record<Dir, string> = {
 
 interface Summary {
   total: number;
-  like: number;
+  liked: number;
   watched: number;
-  didntWatch: number;
+  want: number;
   skip: number;
   notInterested: number;
 }
@@ -85,9 +91,9 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   const [index, setIndex] = useState(0);
   const [summary, setSummary] = useState<Summary>({
     total: 0,
-    like: 0,
+    liked: 0,
     watched: 0,
-    didntWatch: 0,
+    want: 0,
     skip: 0,
     notInterested: 0,
   });
@@ -114,14 +120,13 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         recordStatus(current.id, recordForSkip(), current);
         setSummary((s) => ({ ...s, total: s.total + 1, skip: s.skip + 1 }));
       } else {
-        const key = DIR_TO_KEY[dir];
-        recordStatus(current.id, recordForStatus(key), current);
+        recordStatus(current.id, DIR_TO_RECORD[dir](), current);
         setSummary((s) => ({
           ...s,
           total: s.total + 1,
-          like: s.like + (key === "like" ? 1 : 0),
-          watched: s.watched + (key === "watched" ? 1 : 0),
-          didntWatch: s.didntWatch + (key === "didntWatch" ? 1 : 0),
+          liked: s.liked + (dir === "up" ? 1 : 0),
+          watched: s.watched + (dir === "right" ? 1 : 0),
+          want: s.want + (dir === "left" ? 1 : 0),
         }));
         // Signed-in: confirm the save so it never looks like nothing happened.
         if (user) toast.success(`Saved · ${ACTION_LABEL[dir]}`, { duration: 1400 });
@@ -504,9 +509,9 @@ function LibrarySummary({
   onSignIn: () => void;
 }) {
   const lines: { label: string; value: number; color: string }[] = [
-    { label: "Liked", value: summary.like, color: ACTION_HEX.up },
+    { label: "Loved it", value: summary.liked, color: ACTION_HEX.up },
     { label: "Watched", value: summary.watched, color: ACTION_HEX.right },
-    { label: "Didn't watch yet", value: summary.didntWatch, color: ACTION_HEX.left },
+    { label: "Want to Watch", value: summary.want, color: ACTION_HEX.left },
     { label: "Skipped", value: summary.skip, color: ACTION_HEX.down },
     { label: "Not interested", value: summary.notInterested, color: "#c75d6e" },
   ];

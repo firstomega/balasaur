@@ -1,6 +1,6 @@
 import { Suspense, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, ExternalLink, Play } from "lucide-react";
+import { ArrowLeft, Bookmark, Check, ExternalLink, Play, ThumbsDown, ThumbsUp } from "lucide-react";
 import { TopBar } from "./TopBar";
 import { ShareButton } from "./ShareButton";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
@@ -18,12 +18,19 @@ import { WhereToWatch } from "./WhereToWatch";
 import { themeForKeyword } from "@/lib/taxonomy";
 import { deriveOrigins } from "@/lib/origins";
 import {
-  recordForStatus,
-  STATUS_HEX,
-  STATUS_LABEL,
-  STATUS_ORDER,
-  statusKeyOf,
-  type StatusKey,
+  isNotInterested,
+  primaryOf,
+  recordForNotInterested,
+  recordForSentiment,
+  recordForWant,
+  recordForWatched,
+  sentimentOf,
+  PRIMARY_HEX,
+  PRIMARY_LABEL,
+  SENTIMENT_HEX,
+  SENTIMENT_LABEL,
+  type PrimaryKey,
+  type SentimentKey,
 } from "@/lib/userStatus";
 
 function fmtMoney(n?: number) {
@@ -111,54 +118,121 @@ function RatingTile({ label, value, suffix }: { label: string; value: number; su
   );
 }
 
+// Two-axis status UI: pick a primary state (Want to Watch | Watched), and once
+// something is Watched a sentiment row appears (Liked it / Not for me). Sentiment
+// is never clobbered by re-tapping Watched. "Not interested" is the quiet escape
+// hatch underneath — a hard "won't watch" that keeps the deck honest.
 function StatusControls({ detail }: { detail: MediaDetailType }) {
   const { statuses, recordStatus } = useUserStatus();
-  const current = statusKeyOf(statuses[detail.id]);
+  const rec = statuses[detail.id];
+  const primary = primaryOf(rec);
+  const sentiment = sentimentOf(rec);
+  const rejected = isNotInterested(rec);
 
-  const onPick = (key: StatusKey) => {
-    if (current === key) {
-      recordStatus(detail.id, null);
+  const setPrimary = (key: PrimaryKey) => {
+    if (primary === key) {
+      recordStatus(detail.id, null); // tap again to clear
     } else {
-      recordStatus(detail.id, recordForStatus(key), detail);
+      recordStatus(detail.id, key === "want" ? recordForWant() : recordForWatched(rec), detail);
     }
+  };
+
+  const setSentiment = (s: SentimentKey) => {
+    recordStatus(detail.id, recordForSentiment(rec, s), detail);
+  };
+
+  const toggleNotInterested = () => {
+    recordStatus(detail.id, rejected ? null : recordForNotInterested(), detail);
+  };
+
+  const primaryBtn = (key: PrimaryKey, icon: React.ReactNode) => {
+    const active = primary === key;
+    return (
+      <button
+        type="button"
+        onClick={() => setPrimary(key)}
+        aria-pressed={active}
+        className={
+          "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 font-mono text-[10.5px] uppercase tracking-wider transition-colors " +
+          (active
+            ? "border-border-strong bg-background text-text-bright"
+            : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
+        }
+        style={active ? { borderColor: PRIMARY_HEX[key] } : undefined}
+      >
+        <span style={active ? { color: PRIMARY_HEX[key] } : undefined}>{icon}</span>
+        {PRIMARY_LABEL[key]}
+      </button>
+    );
   };
 
   return (
     <div className="rounded-[5px] border border-border bg-panel p-3">
       <MicroLabel>Your status</MicroLabel>
       <div className="grid grid-cols-2 gap-1.5">
-        {STATUS_ORDER.map((k) => {
-          const active = current === k;
-          return (
-            <button
-              key={k}
-              type="button"
-              onClick={() => onPick(k)}
-              className={
-                "flex items-center gap-1.5 rounded-[4px] border px-2 py-1.5 font-mono text-[10.5px] uppercase tracking-wider transition-colors " +
-                (active
-                  ? "border-border-strong bg-background text-text-bright"
-                  : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
-              }
-            >
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ backgroundColor: STATUS_HEX[k] }}
-              />
-              {STATUS_LABEL[k]}
-            </button>
-          );
-        })}
+        {primaryBtn("want", <Bookmark className="h-3.5 w-3.5" />)}
+        {primaryBtn("watched", <Check className="h-3.5 w-3.5" />)}
       </div>
-      {current && (
+
+      {primary === "watched" && (
+        <div className="mt-2">
+          <div className="mb-1 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+            How was it?
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {(["liked", "disliked"] as const).map((s) => {
+              const active = sentiment === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSentiment(s)}
+                  aria-pressed={active}
+                  className={
+                    "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors " +
+                    (active
+                      ? "bg-background text-text-bright"
+                      : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
+                  }
+                  style={
+                    active ? { borderColor: SENTIMENT_HEX[s], color: SENTIMENT_HEX[s] } : undefined
+                  }
+                >
+                  {s === "liked" ? (
+                    <ThumbsUp className="h-3 w-3" />
+                  ) : (
+                    <ThumbsDown className="h-3 w-3" />
+                  )}
+                  {SENTIMENT_LABEL[s]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-2 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => recordStatus(detail.id, null)}
-          className="mt-2 w-full rounded-[4px] border border-border px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-text-dim hover:border-border-strong hover:text-text-muted"
+          onClick={toggleNotInterested}
+          aria-pressed={rejected}
+          className={
+            "cursor-pointer font-mono text-[9.5px] uppercase tracking-wider transition-colors " +
+            (rejected ? "text-[#c75d6e]" : "text-text-dim hover:text-text-muted")
+          }
         >
-          Clear
+          {rejected ? "✕ Not interested — undo" : "Not interested"}
         </button>
-      )}
+        {(primary || rejected) && (
+          <button
+            type="button"
+            onClick={() => recordStatus(detail.id, null)}
+            className="cursor-pointer font-mono text-[9.5px] uppercase tracking-wider text-text-dim hover:text-text-muted"
+          >
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }
