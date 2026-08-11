@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Check, Eye, Trophy } from "lucide-react";
+import { Bookmark, Check, Trophy } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
@@ -21,16 +21,22 @@ const TYPE_COLOR_CLASS: Record<MediaType, string> = {
   podcast: "text-media-podcast",
 };
 
+export type QuickAction = "want" | "watched";
+
 export function MediaCard({
   item,
-  onQuickWatch,
+  onQuickAction,
+  saved = false,
   watched = false,
   posterOverlay,
 }: {
   item: MediaItem;
-  /** When provided, shows a desktop hover "Watched" quick-add button on the poster. */
-  onQuickWatch?: (item: MediaItem) => void;
-  /** Current watched state, to style the quick-add button as active. */
+  /** When provided, shows desktop hover quick actions on the poster: save to
+   *  Watchlist (primary — the high-intent action while browsing) and Watched. */
+  onQuickAction?: (item: MediaItem, action: QuickAction) => void;
+  /** Current watchlist state, to style the save button as active. */
+  saved?: boolean;
+  /** Current watched state, to style the watched button as active. */
   watched?: boolean;
   /** Rendered bottom-left on the poster (rail rank numerals, date chips, …). */
   posterOverlay?: React.ReactNode;
@@ -54,27 +60,52 @@ export function MediaCard({
           <CardArt item={item} posterOverlay={posterOverlay} />
         )}
 
-        {onQuickWatch && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onQuickWatch(item);
-            }}
-            aria-label={watched ? "Watched — click to remove" : "Mark as watched"}
-            aria-pressed={watched}
-            className={cn(
-              // desktop-only quick action; mobile uses the swipe deck
-              "absolute bottom-2 left-1/2 hidden -translate-x-1/2 items-center gap-1.5 rounded-[5px] border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider backdrop-blur-sm transition-all md:flex",
-              watched
-                ? "border-rating/60 bg-rating/25 text-rating opacity-100"
-                : "border-white/30 bg-black/70 text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
-            )}
-          >
-            {watched ? <Check className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-            Watched
-          </button>
+        {onQuickAction && (
+          // Desktop-only quick actions; mobile uses the swipe deck / detail page.
+          // Want to Watch leads — while browsing, "save for later" is the
+          // high-intent action; Watched is what you do after.
+          <div className="absolute bottom-2 left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onQuickAction(item, "want");
+              }}
+              aria-label={saved ? "On your watchlist — click to remove" : "Save to watchlist"}
+              aria-pressed={saved}
+              title={saved ? "On your watchlist" : "Want to Watch"}
+              className={cn(
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[10px] uppercase tracking-wider backdrop-blur-sm transition-all",
+                saved
+                  ? "border-[#e8b84b]/70 bg-[#e8b84b]/25 text-[#e8b84b] opacity-100"
+                  : "border-white/30 bg-black/70 text-white opacity-0 hover:border-[#e8b84b] hover:bg-[#e8b84b] hover:text-black group-hover:opacity-100",
+              )}
+            >
+              <Bookmark className="h-3 w-3" />
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onQuickAction(item, "watched");
+              }}
+              aria-label={watched ? "Watched — click to remove" : "Mark as watched"}
+              aria-pressed={watched}
+              title={watched ? "Watched" : "Mark as watched"}
+              className={cn(
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[10px] uppercase tracking-wider backdrop-blur-sm transition-all",
+                watched
+                  ? "border-rating/60 bg-rating/25 text-rating opacity-100"
+                  : "border-white/30 bg-black/70 text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
+              )}
+            >
+              <Check className="h-3 w-3" />
+              Seen
+            </button>
+          </div>
         )}
       </div>
 

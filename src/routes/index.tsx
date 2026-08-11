@@ -30,7 +30,8 @@ import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
-import { recordForStatus } from "@/lib/userStatus";
+import { primaryOf, recordForWant, recordForWatched } from "@/lib/userStatus";
+import type { QuickAction } from "@/components/balasaur/MediaCard";
 import { loadFilters, saveFilters } from "@/lib/filterStorage";
 import {
   filtersToSearch,
@@ -173,20 +174,38 @@ function HomePage() {
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Quick-add "Watched" from the grid (desktop hover). Supplements the swipe deck.
-  const handleQuickWatch = (item: MediaItem) => {
+  // Card quick actions (desktop hover): Save-to-watchlist (primary while
+  // browsing) and Watched. Each toggles its own state; Watched preserves any
+  // sentiment already on the record.
+  const handleQuickAction = (item: MediaItem, action: QuickAction) => {
     if (!user) {
       setAuthOpen(true);
       return;
     }
-    if (statuses[item.id]?.status === "seen") {
+    const rec = statuses[item.id];
+    const current = primaryOf(rec);
+    if (current === action) {
       recordStatus(item.id, null); // toggle off
       toast(`Removed · ${item.title}`, { duration: 1400 });
+    } else if (action === "want") {
+      recordStatus(item.id, recordForWant(), item);
+      toast.success(`Watchlist · ${item.title}`, { duration: 1400 });
     } else {
-      recordStatus(item.id, recordForStatus("watched"), item);
+      recordStatus(item.id, recordForWatched(rec), item);
       toast.success(`Watched · ${item.title}`, { duration: 1400 });
     }
   };
+
+  // Watchlist ids for card save-state (seenIds already exists for watched).
+  const wantIds = useMemo(
+    () =>
+      new Set(
+        Object.entries(statuses)
+          .filter(([, v]) => primaryOf(v) === "want")
+          .map(([k]) => k),
+      ),
+    [statuses],
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -237,10 +256,11 @@ function HomePage() {
                 filters={filters}
                 setFilters={setFilters}
                 seenIds={seenIds}
+                wantIds={wantIds}
                 region={region}
                 boostCountry={boostCountry}
                 onOpenMobileFilters={() => setMobileOpen(true)}
-                onQuickWatch={handleQuickWatch}
+                onQuickAction={handleQuickAction}
               />
             </Suspense>
           </div>
@@ -349,18 +369,20 @@ function GridWithControls({
   filters,
   setFilters,
   seenIds,
+  wantIds,
   region,
   boostCountry,
   onOpenMobileFilters,
-  onQuickWatch,
+  onQuickAction,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
   seenIds: Set<string>;
+  wantIds: Set<string>;
   region: string;
   boostCountry: string;
   onOpenMobileFilters: () => void;
-  onQuickWatch: (item: MediaItem) => void;
+  onQuickAction: (item: MediaItem, action: QuickAction) => void;
 }) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useCatalogInfinite(
     filters,
@@ -419,7 +441,12 @@ function GridWithControls({
       {/* Curated rails: only on the untouched default view — any filter means
           the visitor is searching, and the rails would push their results down. */}
       {activeCount === 0 && (filters.sort === "popular" || filters.sort === "trending") && (
-        <HomeRails boostCountry={boostCountry} onQuickWatch={onQuickWatch} watchedIds={seenIds} />
+        <HomeRails
+          boostCountry={boostCountry}
+          onQuickAction={onQuickAction}
+          savedIds={wantIds}
+          watchedIds={seenIds}
+        />
       )}
 
       {/* Toolbar */}
@@ -476,7 +503,12 @@ function GridWithControls({
         <MediaGridSkeleton />
       ) : (
         <>
-          <MediaGrid items={items} onQuickWatch={onQuickWatch} watchedIds={seenIds} />
+          <MediaGrid
+            items={items}
+            onQuickAction={onQuickAction}
+            savedIds={wantIds}
+            watchedIds={seenIds}
+          />
           {hasNextPage && <div ref={sentinelRef} className="h-12" />}
           {isFetchingNextPage && (
             <div className="py-6 text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">

@@ -1,13 +1,15 @@
 import type { MediaItem } from "@/types/media";
-import { MediaCard } from "./MediaCard";
+import { MediaCard, type QuickAction } from "./MediaCard";
 
 export function MediaGrid({
   items,
-  onQuickWatch,
+  onQuickAction,
+  savedIds,
   watchedIds,
 }: {
   items: MediaItem[];
-  onQuickWatch?: (item: MediaItem) => void;
+  onQuickAction?: (item: MediaItem, action: QuickAction) => void;
+  savedIds?: Set<string>;
   watchedIds?: Set<string>;
 }) {
   return (
@@ -16,7 +18,8 @@ export function MediaGrid({
         <MediaCard
           key={item.id}
           item={item}
-          onQuickWatch={onQuickWatch}
+          onQuickAction={onQuickAction}
+          saved={savedIds?.has(item.id)}
           watched={watchedIds?.has(item.id)}
         />
       ))}

@@ -1,7 +1,7 @@
 import { CalendarClock, Flame, Gem, Sparkles } from "lucide-react";
 import { useHomeRails } from "@/hooks/useCatalog";
 import type { MediaItem } from "@/types/media";
-import { MediaCard } from "./MediaCard";
+import { MediaCard, type QuickAction } from "./MediaCard";
 import { ScrollRail } from "./ScrollRail";
 
 // Curated on-ramps above the grid: horizontal rails so a casual visitor gets
@@ -95,11 +95,13 @@ function emptyRails() {
 
 export function HomeRails({
   boostCountry,
-  onQuickWatch,
+  onQuickAction,
+  savedIds,
   watchedIds,
 }: {
   boostCountry?: string;
-  onQuickWatch?: (item: MediaItem) => void;
+  onQuickAction?: (item: MediaItem, action: QuickAction) => void;
+  savedIds?: Set<string>;
   watchedIds?: Set<string>;
 }) {
   const { data } = useHomeRails(boostCountry);
@@ -121,7 +123,8 @@ export function HomeRails({
                 <div key={item.id} className="w-[124px] shrink-0 sm:w-[140px]">
                   <MediaCard
                     item={item}
-                    onQuickWatch={onQuickWatch}
+                    onQuickAction={onQuickAction}
+                    saved={savedIds?.has(item.id)}
                     watched={watchedIds?.has(item.id)}
                     posterOverlay={overlay?.(item, i)}
                   />
