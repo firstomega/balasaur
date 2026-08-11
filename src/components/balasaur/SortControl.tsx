@@ -8,8 +8,9 @@ import {
 } from "@/components/ui/select";
 
 // Dropdown (not tabs) so the list can grow past a handful of options without
-// crowding the toolbar. Rating-based sorts (per-source / Balasaur Score) are
-// intentionally held back for a dedicated pass.
+// crowding the toolbar. "Popular" is the blended rank (rank_score) and
+// "Top rated" the Balasaur Score; per-source rating sorts are intentionally
+// held back for a dedicated pass.
 const OPTIONS: { value: SortKey; label: string }[] = [
   { value: "popular", label: "Popular" },
   { value: "topRated", label: "Top rated" },

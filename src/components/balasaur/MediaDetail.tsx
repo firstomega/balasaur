@@ -9,7 +9,9 @@ import type { MediaDetail as MediaDetailType } from "@/types/media";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
+import { ScoreBadge } from "./ScoreBadge";
 import { ScrollRail } from "./ScrollRail";
+import { computeBalasaurScore } from "@/lib/score";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
@@ -289,6 +291,20 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
           <section>
             <MicroLabel>Ratings</MicroLabel>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(() => {
+                // The unified blend, same as the card badges (per-source tiles follow).
+                const balasaur = ratings.balasaur ?? computeBalasaurScore(ratings);
+                return balasaur !== undefined ? (
+                  <div className="rounded-[5px] border border-border bg-panel px-3 py-2.5">
+                    <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+                      Balasaur Score
+                    </div>
+                    <div className="mt-1">
+                      <ScoreBadge score={balasaur} size="md" />
+                    </div>
+                  </div>
+                ) : null;
+              })()}
               {ratings.imdb !== undefined && (
                 <RatingTile label="IMDb" value={ratings.imdb} suffix="/10" />
               )}

@@ -21,9 +21,11 @@ import {
   viewerCountryOptions,
   catalogInfiniteOptions,
   catalogFacetsOptions,
+  homeRailsOptions,
   filtersToParams,
   withBoost,
 } from "@/hooks/useCatalog";
+import { HomeRails } from "@/components/balasaur/HomeRails";
 import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
 import { useUserStatus } from "@/hooks/useUserStatus";
@@ -90,6 +92,7 @@ export const Route = createFileRoute("/")({
           catalogInfiniteOptions(withBoost(params, boost)),
         ),
         context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
+        context.queryClient.ensureQueryData(homeRailsOptions()),
       ]),
       5000,
     );
@@ -381,6 +384,12 @@ function GridWithControls({
 
   return (
     <>
+      {/* Curated rails: only on the untouched default view — any filter means
+          the visitor is searching, and the rails would push their results down. */}
+      {activeCount === 0 && (filters.sort === "popular" || filters.sort === "trending") && (
+        <HomeRails onQuickWatch={onQuickWatch} watchedIds={seenIds} />
+      )}
+
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-2">
         <button

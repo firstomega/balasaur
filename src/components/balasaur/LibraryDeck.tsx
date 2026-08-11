@@ -13,6 +13,7 @@ import {
   type StatusKey,
 } from "@/lib/userStatus";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
+import { ScoreBadge } from "./ScoreBadge";
 
 // After this many anonymous picks, nudge the user to sign in to save them.
 const NUDGE_AFTER = 5;
@@ -384,7 +385,7 @@ function CardFace({
   cue?: Dir | null;
   cueIntensity?: number;
 }) {
-  const rating = item.ratings.imdb ?? item.ratings.tmdb;
+  const score = item.ratings.balasaur;
   const cueColor = cue ? ACTION_HEX[cue] : null;
 
   return (
@@ -413,7 +414,7 @@ function CardFace({
         <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-white/80">
           <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
           {item.year && <span>· {item.year}</span>}
-          {rating !== undefined && <span>· ★ {rating.toFixed(1)}</span>}
+          {score !== undefined && <ScoreBadge score={score} />}
         </div>
         <h2 className="text-[20px] font-semibold leading-tight text-white">{item.title}</h2>
         {item.overview && (

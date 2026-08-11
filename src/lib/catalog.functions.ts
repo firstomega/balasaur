@@ -98,6 +98,7 @@ function rowToCardItem(r: CardRow): MediaItem {
         imdb: r.rating_imdb,
         rottenTomatoes: r.rating_rotten_tomatoes,
         metacritic: r.rating_metacritic,
+        tmdb: r.rating_tmdb,
       }),
     },
     genres: r.genres ?? [],
@@ -138,6 +139,10 @@ type MediaQuery = ReturnType<typeof buildBase>;
  *  rest) from one source of truth. `origins` is included but is a no-op on the boost
  *  path, which only runs when no Origin filter is set. */
 function applyCatalogFilters(q: MediaQuery, p: CatalogQueryParams): MediaQuery {
+  // Content safety: erotica-adjacent titles (see contentSafety.ts) never surface
+  // in the browse grid, facet counts, or rails. Deliberately NOT applied to
+  // searchTitles below — flagged titles stay findable by name and by direct link.
+  q = q.eq("sensitive", false);
   if (p.types.length === 1) q = q.eq("media_type", p.types[0]);
   if (p.genres.length) q = q.overlaps("genres", p.genres);
   if (p.origins.length) q = q.overlaps("origins", p.origins);
@@ -230,13 +235,18 @@ function applyOrder(q: MediaQuery, sort: string) {
     case "oldest":
       return q.order("year", ASC).order("popularity", DESC);
     case "topRated":
-      return q.order("rating_imdb", DESC).order("popularity", DESC);
+      // The unified Balasaur Score (falls back through the same blend the badge
+      // shows); popularity breaks ties so obscurities don't top the list.
+      return q.order("rating_balasaur", DESC).order("popularity", DESC);
     case "az":
       return q.order("title", ASC);
     case "za":
       return q.order("title", DESC);
     default:
-      return q.order("popularity", DESC);
+      // "popular": the blended rank (buzz + quality + recency, see rank.ts),
+      // not raw TMDB popularity — raw popularity surfaced high-churn obscurities
+      // above universally loved titles. Popularity remains the tiebreaker.
+      return q.order("rank_score", DESC).order("popularity", DESC);
   }
 }
 
@@ -322,11 +332,16 @@ async function queryLocalFirst(
   // null, and the caller serves the plain rows-first view instead. Self-healing: the
   // boost turns back on as soon as counts are fast again.
   const literal = arrayLiteral(buckets);
+  // Same blended rank as applyOrder's default — this path only runs on the
+  // default "popular" view, and the two must agree or the boosted and plain
+  // views would interleave differently.
   const localQ = applyCatalogFilters(buildCounted() as MediaQuery, p)
     .overlaps("origins", buckets)
+    .order("rank_score", DESC)
     .order("popularity", DESC);
   const globalQ = applyCatalogFilters(buildCounted() as MediaQuery, p)
     .not("origins", "ov", literal)
+    .order("rank_score", DESC)
     .order("popularity", DESC);
 
   // Fetch this page's slice of the local set first.
@@ -487,6 +502,86 @@ export const searchCast = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return ((rows ?? []) as { name: string }[]).map((r) => r.name).filter(Boolean);
   });
+
+export interface HomeRails {
+  trending: MediaItem[];
+  newAndNoteworthy: MediaItem[];
+  hiddenGems: MediaItem[];
+}
+
+const RAIL_SIZE = 24;
+const NOTEWORTHY_WINDOW_DAYS = 75;
+
+/**
+ * Curated homepage rails, shown above the grid on the unfiltered view:
+ *  - Trending This Week: the blended-rank top (buzz + quality + recency).
+ *  - New & Noteworthy: released in the last ~2.5 months with real traction,
+ *    minus anything already in Trending.
+ *  - Hidden Gems: little buzz, external-critic-validated high scores (an IMDb
+ *    rating is required so a handful of TMDB self-votes can't mint a "gem").
+ * All rails respect the content-safety flag and need a poster (a rail of "No
+ * art" cards sells nothing). Fail-soft per rail: a failed query renders as an
+ * absent rail, never an error page.
+ */
+export const getHomeRails = createServerFn({ method: "GET" }).handler(
+  async (): Promise<HomeRails> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const since = new Date(Date.now() - NOTEWORTHY_WINDOW_DAYS * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const base = () => buildBase().eq("sensitive", false).not("poster_url", "is", null);
+
+    const [trendingRes, newRes, gemsRes] = await Promise.all([
+      base()
+        .order("rank_score", DESC)
+        .order("popularity", DESC)
+        .limit(RAIL_SIZE)
+        .then(
+          (r) => r,
+          () => null,
+        ),
+      base()
+        .gte("release_date", since)
+        .lte("release_date", today)
+        .gte("popularity", 3)
+        .order("rank_score", DESC)
+        .limit(RAIL_SIZE * 2) // over-fetch: some of these are also in Trending
+        .then(
+          (r) => r,
+          () => null,
+        ),
+      base()
+        .not("rating_imdb", "is", null)
+        .gte("rating_balasaur", 75)
+        .lt("popularity", 15)
+        .order("rating_balasaur", DESC)
+        .order("popularity", DESC)
+        .limit(RAIL_SIZE)
+        .then(
+          (r) => r,
+          () => null,
+        ),
+    ]);
+
+    const toItems = (res: { data: unknown; error: unknown } | null): MediaItem[] => {
+      if (!res || res.error || !res.data) {
+        if (res?.error) console.error("[rails] query failed:", (res.error as Error).message);
+        return [];
+      }
+      return (res.data as unknown as CardRow[]).map(rowToCardItem);
+    };
+
+    const trending = toItems(trendingRes);
+    const trendingIds = new Set(trending.map((i) => i.id));
+    const newAndNoteworthy = toItems(newRes)
+      .filter((i) => !trendingIds.has(i.id))
+      .slice(0, RAIL_SIZE);
+    const shownIds = new Set([...trendingIds, ...newAndNoteworthy.map((i) => i.id)]);
+    const hiddenGems = toItems(gemsRes).filter((i) => !shownIds.has(i.id));
+
+    return { trending, newAndNoteworthy, hiddenGems };
+  },
+);
 
 export interface SearchHit {
   id: string;
