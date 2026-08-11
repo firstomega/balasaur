@@ -98,11 +98,13 @@ export function HomeRails({
   onQuickAction,
   savedIds,
   watchedIds,
+  rejectedIds,
 }: {
   boostCountry?: string;
   onQuickAction?: (item: MediaItem, action: QuickAction) => void;
   savedIds?: Set<string>;
   watchedIds?: Set<string>;
+  rejectedIds?: Set<string>;
 }) {
   const { data } = useHomeRails(boostCountry);
   if (!data) return null; // loading or failed — the grid stands on its own
@@ -110,8 +112,10 @@ export function HomeRails({
   return (
     <div className="mb-6 space-y-5 rounded-[6px] border border-border bg-panel/40 p-3 sm:p-4">
       {RAILS.map(({ key, title, Icon, iconClass, overlay }) => {
-        const items = data[key];
-        if (!items || items.length === 0) return null;
+        // Cheap client-side personalization: a title the viewer hard-rejected
+        // never shows up in a rail again.
+        const items = (data[key] ?? []).filter((i) => !rejectedIds?.has(i.id));
+        if (items.length === 0) return null;
         return (
           <section key={key} aria-label={title}>
             <h2 className="mb-2 flex items-center gap-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-text-bright">
@@ -126,6 +130,7 @@ export function HomeRails({
                     onQuickAction={onQuickAction}
                     saved={savedIds?.has(item.id)}
                     watched={watchedIds?.has(item.id)}
+                    rejected={rejectedIds?.has(item.id)}
                     posterOverlay={overlay?.(item, i)}
                   />
                 </div>

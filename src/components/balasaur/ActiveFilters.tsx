@@ -3,6 +3,7 @@ import type { FilterState } from "@/types/filters";
 import {
   AWARD_OPTIONS,
   FILM_LENGTH_BUCKETS,
+  BALASAUR_BOUNDS,
   IMDB_BOUNDS,
   META_BOUNDS,
   RT_BOUNDS,
@@ -154,6 +155,16 @@ export function buildChips(
     });
   }
 
+  if (
+    filters.balasaurRange[0] !== BALASAUR_BOUNDS[0] ||
+    filters.balasaurRange[1] !== BALASAUR_BOUNDS[1]
+  ) {
+    chips.push({
+      key: "score",
+      label: `Score ${filters.balasaurRange[0]}–${filters.balasaurRange[1]}`,
+      onRemove: () => setFilters((p) => ({ ...p, balasaurRange: [...BALASAUR_BOUNDS] })),
+    });
+  }
   if (filters.imdbRange[0] !== IMDB_BOUNDS[0] || filters.imdbRange[1] !== IMDB_BOUNDS[1]) {
     chips.push({
       key: "imdb",

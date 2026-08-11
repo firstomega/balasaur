@@ -1,5 +1,6 @@
 import {
   FILM_LENGTH_BUCKETS,
+  BALASAUR_BOUNDS,
   IMDB_BOUNDS,
   META_BOUNDS,
   RT_BOUNDS,
@@ -109,6 +110,9 @@ export function rescueCandidates(filters: FilterState): RescueCandidate[] {
     });
   }
   const ratingsActive =
+    filters.balasaurRange[0] !== BALASAUR_BOUNDS[0] ||
+    filters.balasaurRange[1] !== BALASAUR_BOUNDS[1] ||
+    !filters.includeUnratedBalasaur ||
     filters.imdbRange[0] !== IMDB_BOUNDS[0] ||
     filters.imdbRange[1] !== IMDB_BOUNDS[1] ||
     filters.rtRange[0] !== RT_BOUNDS[0] ||
@@ -124,6 +128,8 @@ export function rescueCandidates(filters: FilterState): RescueCandidate[] {
       label: "Rating filters",
       next: {
         ...filters,
+        balasaurRange: [...BALASAUR_BOUNDS],
+        includeUnratedBalasaur: true,
         imdbRange: [...IMDB_BOUNDS],
         rtRange: [...RT_BOUNDS],
         metaRange: [...META_BOUNDS],

@@ -44,6 +44,8 @@ function itemMatches(
     if (year < filters.yearRange[0] || year > filters.yearRange[1]) return false;
   }
 
+  if (!inRange(item.ratings.balasaur, filters.balasaurRange, filters.includeUnratedBalasaur))
+    return false;
   if (!inRange(item.ratings.imdb, filters.imdbRange, filters.includeUnratedImdb)) return false;
   if (!inRange(item.ratings.rottenTomatoes, filters.rtRange, filters.includeUnratedRt))
     return false;

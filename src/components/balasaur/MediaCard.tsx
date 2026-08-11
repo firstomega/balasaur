@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bookmark, Check, Trophy } from "lucide-react";
+import { Bookmark, Check, EyeOff, Trophy } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
@@ -21,13 +21,14 @@ const TYPE_COLOR_CLASS: Record<MediaType, string> = {
   podcast: "text-media-podcast",
 };
 
-export type QuickAction = "want" | "watched";
+export type QuickAction = "want" | "watched" | "notInterested";
 
 export function MediaCard({
   item,
   onQuickAction,
   saved = false,
   watched = false,
+  rejected = false,
   posterOverlay,
 }: {
   item: MediaItem;
@@ -38,6 +39,8 @@ export function MediaCard({
   saved?: boolean;
   /** Current watched state, to style the watched button as active. */
   watched?: boolean;
+  /** Current not-interested state, to style the hide button as active. */
+  rejected?: boolean;
   /** Rendered bottom-left on the poster (rail rank numerals, date chips, …). */
   posterOverlay?: React.ReactNode;
 }) {
@@ -104,6 +107,25 @@ export function MediaCard({
             >
               <Check className="h-3 w-3" />
               Seen
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onQuickAction(item, "notInterested");
+              }}
+              aria-label={rejected ? "Not interested — click to undo" : "Not interested"}
+              aria-pressed={rejected}
+              title={rejected ? "Not interested — click to undo" : "Not interested"}
+              className={cn(
+                "flex items-center rounded-[5px] border p-1 backdrop-blur-sm transition-all",
+                rejected
+                  ? "border-[#c75d6e]/70 bg-[#c75d6e]/25 text-[#c75d6e] opacity-100"
+                  : "border-white/30 bg-black/70 text-white opacity-0 hover:border-[#c75d6e] hover:bg-[#c75d6e] hover:text-white group-hover:opacity-100",
+              )}
+            >
+              <EyeOff className="h-3 w-3" />
             </button>
           </div>
         )}

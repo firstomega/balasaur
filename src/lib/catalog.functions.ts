@@ -1,7 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { IMDB_BOUNDS, RT_BOUNDS, META_BOUNDS, FILM_LENGTH_BUCKETS } from "@/types/filters";
+import {
+  BALASAUR_BOUNDS,
+  IMDB_BOUNDS,
+  RT_BOUNDS,
+  META_BOUNDS,
+  FILM_LENGTH_BUCKETS,
+  STREAMING_OPTIONS,
+} from "@/types/filters";
 import { computeBalasaurScore } from "@/lib/score";
 import { originsForCountry } from "@/lib/origins";
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
@@ -16,6 +23,11 @@ export interface CatalogQueryParams {
   streaming: string[];
   yearMin?: number; // omitted when the year range is at its default (no constraint)
   yearMax?: number;
+  /** Unified Balasaur Score range (0–100). Optional so older cached callers
+   *  (and saved param shapes) keep working — absent means unconstrained. */
+  balasaurMin?: number;
+  balasaurMax?: number;
+  balasaurUnrated?: boolean;
   imdbMin: number;
   imdbMax: number;
   imdbUnrated: boolean;
@@ -164,6 +176,19 @@ function applyCatalogFilters(q: MediaQuery, p: CatalogQueryParams): MediaQuery {
 
   // Ratings: only constrain when it isn't "full range AND include unrated".
   // include-unrated keeps nulls; strict mode drops them.
+  {
+    const min = p.balasaurMin ?? BALASAUR_BOUNDS[0];
+    const max = p.balasaurMax ?? BALASAUR_BOUNDS[1];
+    const unrated = p.balasaurUnrated ?? true;
+    const full = min <= BALASAUR_BOUNDS[0] && max >= BALASAUR_BOUNDS[1];
+    if (!(full && unrated)) {
+      if (unrated)
+        q = q.or(
+          `rating_balasaur.is.null,and(rating_balasaur.gte.${min},rating_balasaur.lte.${max})`,
+        );
+      else q = q.gte("rating_balasaur", min).lte("rating_balasaur", max);
+    }
+  }
   {
     const full = p.imdbMin <= IMDB_BOUNDS[0] && p.imdbMax >= IMDB_BOUNDS[1];
     if (!(full && p.imdbUnrated)) {
@@ -414,7 +439,7 @@ export interface CatalogFacets {
   audience: Record<string, number>;
   completion: Record<string, number>;
   filmLength: Record<string, number>;
-  scored: { imdb: number; rt: number; meta: number };
+  scored: { imdb: number; rt: number; meta: number; balasaur: number };
 }
 
 /** Filter params the facets respect (same shape as the grid, minus paging). */
@@ -438,7 +463,7 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
       audience: {},
       completion: {},
       filmLength: {},
-      scored: { imdb: 0, rt: 0, meta: 0 },
+      scored: { imdb: 0, rt: 0, meta: 0, balasaur: 0 },
     };
     const { data, error } = await supabaseAdmin.rpc("catalog_facets_filtered", {
       p: {
@@ -449,6 +474,9 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
         region: p.region ?? "US",
         year_min: p.yearMin ?? null,
         year_max: p.yearMax ?? null,
+        balasaur_min: p.balasaurMin ?? BALASAUR_BOUNDS[0],
+        balasaur_max: p.balasaurMax ?? BALASAUR_BOUNDS[1],
+        balasaur_unrated: p.balasaurUnrated ?? true,
         imdb_min: p.imdbMin,
         imdb_max: p.imdbMax,
         imdb_unrated: p.imdbUnrated,
@@ -485,7 +513,7 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
       audience: f.audience ?? {},
       completion: f.completion ?? {},
       filmLength: f.filmLength ?? {},
-      scored: f.scored ?? { imdb: 0, rt: 0, meta: 0 },
+      scored: { imdb: 0, rt: 0, meta: 0, balasaur: 0, ...(f.scored ?? {}) },
     };
   });
 
@@ -618,6 +646,51 @@ export const getHomeRails = createServerFn({ method: "GET" })
     const hiddenGems = toItems(gemsRes).filter((i) => !shownIds.has(i.id));
 
     return { trending, newAndNoteworthy, comingSoon: toItems(soonRes), hiddenGems };
+  });
+
+export interface WatchlistAvailability {
+  /** How many of the submitted watchlist ids stream on a major service in the
+   *  viewer's region right now. */
+  total: number;
+  /** A few example titles for the banner copy, with their providers. */
+  items: { id: string; title: string; providers: string[] }[];
+}
+
+/**
+ * "N titles on your watchlist are streaming now" — joins the caller's watchlist
+ * ids against streaming_regions for their region. Read-only, capped, fail-soft
+ * (an empty result renders as no banner, never an error).
+ */
+export const getWatchlistAvailability = createServerFn({ method: "POST" })
+  .inputValidator((p: { ids: string[]; region?: string }) => p)
+  .handler(async ({ data: p }): Promise<WatchlistAvailability> => {
+    const ids = (p.ids ?? []).slice(0, 200);
+    if (ids.length === 0) return { total: 0, items: [] };
+    const region = /^[A-Za-z]{2}$/.test(p.region ?? "") ? p.region!.toUpperCase() : "US";
+    const tokens = STREAMING_OPTIONS.map((s) => `${s}:${region}`);
+
+    const { data, error, count } = await supabaseAdmin
+      .from("media")
+      .select("media_id, title, streaming_regions", { count: "exact" })
+      .in("media_id", ids)
+      .overlaps("streaming_regions", tokens)
+      .limit(5);
+    if (error) {
+      console.error("[watchlist-nudge] query failed:", error.message);
+      return { total: 0, items: [] };
+    }
+    const rows = (data ?? []) as { media_id: string; title: string; streaming_regions: string[] }[];
+    const suffix = `:${region}`;
+    return {
+      total: count ?? rows.length,
+      items: rows.map((r) => ({
+        id: r.media_id,
+        title: r.title,
+        providers: (r.streaming_regions ?? [])
+          .filter((t) => t.endsWith(suffix))
+          .map((t) => t.slice(0, -suffix.length)),
+      })),
+    };
   });
 
 export interface SearchHit {

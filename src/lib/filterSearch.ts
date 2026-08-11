@@ -1,4 +1,5 @@
 import {
+  BALASAUR_BOUNDS,
   IMDB_BOUNDS,
   META_BOUNDS,
   RT_BOUNDS,
@@ -26,6 +27,8 @@ export interface FilterSearch {
   streaming?: string;
   people?: string;
   year?: string;
+  score?: string;
+  scoreU?: string;
   imdb?: string;
   rt?: string;
   meta?: string;
@@ -67,6 +70,8 @@ const SEARCH_KEYS: (keyof FilterSearch)[] = [
   "streaming",
   "people",
   "year",
+  "score",
+  "scoreU",
   "imdb",
   "rt",
   "meta",
@@ -111,6 +116,9 @@ export function filtersToSearch(f: FilterState): FilterSearch {
   if (f.people.length) s.people = f.people.join(",");
   if (f.yearRange[0] !== YEAR_BOUNDS[0] || f.yearRange[1] !== YEAR_BOUNDS[1])
     s.year = `${f.yearRange[0]}-${f.yearRange[1]}`;
+  if (f.balasaurRange[0] !== BALASAUR_BOUNDS[0] || f.balasaurRange[1] !== BALASAUR_BOUNDS[1])
+    s.score = `${f.balasaurRange[0]}-${f.balasaurRange[1]}`;
+  if (!f.includeUnratedBalasaur) s.scoreU = "0";
   if (f.imdbRange[0] !== IMDB_BOUNDS[0] || f.imdbRange[1] !== IMDB_BOUNDS[1])
     s.imdb = `${f.imdbRange[0]}-${f.imdbRange[1]}`;
   if (f.rtRange[0] !== RT_BOUNDS[0] || f.rtRange[1] !== RT_BOUNDS[1])
@@ -146,6 +154,8 @@ export function searchToFilters(s: FilterSearch): FilterState {
     streaming: new Set(parseCsv(s.streaming)),
     people: parseCsv(s.people),
     yearRange: parseRange(s.year, d.yearRange),
+    balasaurRange: parseRange(s.score, d.balasaurRange),
+    includeUnratedBalasaur: s.scoreU !== "0",
     imdbRange: parseRange(s.imdb, d.imdbRange),
     rtRange: parseRange(s.rt, d.rtRange),
     metaRange: parseRange(s.meta, d.metaRange),
