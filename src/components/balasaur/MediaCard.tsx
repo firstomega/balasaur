@@ -31,6 +31,8 @@ export function MediaCard({
   watched = false,
   rejected = false,
   posterOverlay,
+  imgSizes,
+  eager = false,
 }: {
   item: MediaItem;
   /** When provided, shows desktop hover quick actions on the poster: save to
@@ -47,6 +49,11 @@ export function MediaCard({
   rejected?: boolean;
   /** Rendered bottom-left on the poster (rail rank numerals, date chips, …). */
   posterOverlay?: React.ReactNode;
+  /** Override the responsive `sizes` hint (rails render at a fixed width). */
+  imgSizes?: string;
+  /** Load the poster eagerly with high priority — for above-the-fold cards
+   *  (the LCP element on grid-heavy pages). */
+  eager?: boolean;
 }) {
   const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
   const rawId = item.id.replace(/^(movie|tv)-/, "");
@@ -61,10 +68,10 @@ export function MediaCard({
             params={{ id: slug }}
             className="block"
           >
-            <CardArt item={item} posterOverlay={posterOverlay} />
+            <CardArt item={item} posterOverlay={posterOverlay} imgSizes={imgSizes} eager={eager} />
           </Link>
         ) : (
-          <CardArt item={item} posterOverlay={posterOverlay} />
+          <CardArt item={item} posterOverlay={posterOverlay} imgSizes={imgSizes} eager={eager} />
         )}
 
         {onQuickAction && (
@@ -178,7 +185,17 @@ export function MediaCard({
   );
 }
 
-function CardArt({ item, posterOverlay }: { item: MediaItem; posterOverlay?: React.ReactNode }) {
+function CardArt({
+  item,
+  posterOverlay,
+  imgSizes,
+  eager = false,
+}: {
+  item: MediaItem;
+  posterOverlay?: React.ReactNode;
+  imgSizes?: string;
+  eager?: boolean;
+}) {
   return (
     <div className="relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
       <div className="aspect-[2/3] w-full">
@@ -190,11 +207,15 @@ function CardArt({ item, posterOverlay }: { item: MediaItem; posterOverlay?: Rea
               { w: 342, size: "w342" },
               { w: 500, size: "w500" },
             ])}
-            sizes="(max-width: 640px) 33vw, (max-width: 1024px) 22vw, 160px"
+            sizes={
+              imgSizes ??
+              "(max-width: 640px) 46vw, (max-width: 768px) 30vw, (max-width: 1280px) 23vw, 200px"
+            }
             alt={item.title}
             width={342}
             height={513}
-            loading="lazy"
+            loading={eager ? "eager" : "lazy"}
+            fetchPriority={eager ? "high" : undefined}
             decoding="async"
             // Subtle inner zoom on hover (the container clips it) — signals
             // interactivity without the layout shift a card-scale would cause.

@@ -75,6 +75,28 @@ export function canonicalLink(url: string) {
   return { rel: "canonical", href: url };
 }
 
+/**
+ * CDN-cache the current SSR response. Call from a route LOADER (server pass
+ * only — the guard makes it a no-op during client-side navigation). Detail
+ * pages are user-agnostic HTML (auth state renders client-side after
+ * hydration), so shared caching is safe; this is the main lever on the
+ * 4.6s average Googlebot response time that collapsed the crawl budget.
+ * max-age=0 keeps browsers revalidating; s-maxage lets the CDN serve for
+ * `seconds`; stale-while-revalidate keeps responses instant during refresh.
+ */
+export async function cacheSsrResponse(seconds = 21600): Promise<void> {
+  if (!import.meta.env.SSR) return;
+  try {
+    const { setResponseHeader } = await import("@tanstack/react-start/server");
+    setResponseHeader(
+      "Cache-Control",
+      `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=86400`,
+    );
+  } catch {
+    // Outside a request context (prerender/edge quirk) — caching is best-effort.
+  }
+}
+
 /** Meta tag asking crawlers to skip this page (tiered indexation). */
 export function noindexMeta(): MetaTag {
   return { name: "robots", content: "noindex, follow" };

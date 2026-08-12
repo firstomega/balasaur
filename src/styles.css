@@ -69,8 +69,8 @@
   --color-media-tv: var(--media-tv);
   --color-media-book: var(--media-book);
   --color-media-podcast: var(--media-podcast);
-  --font-sans: "Archivo", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Archivo", "Archivo Fallback", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "JetBrains Mono Fallback", ui-monospace, monospace;
 }
 
 :root {
@@ -166,4 +166,30 @@
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* CLS: metric-matched fallback fonts so text set before the webfonts arrive
+   occupies (almost) the same space — the font swap stops reflowing the page.
+   Values approximate Archivo/JetBrains Mono against the universal locals. */
+@font-face {
+  font-family: "Archivo Fallback";
+  src: local("Arial");
+  size-adjust: 100.5%;
+  ascent-override: 88%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "JetBrains Mono Fallback";
+  src: local("Courier New");
+  size-adjust: 107%;
+  ascent-override: 96%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
+
+/* CLS: reserve the scrollbar gutter so the page doesn't shift horizontally
+   when async content makes the document scrollable. */
+html {
+  scrollbar-gutter: stable;
 }

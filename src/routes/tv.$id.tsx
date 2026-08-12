@@ -8,6 +8,7 @@ import {
   clampDescription,
   absoluteUrl,
   jsonLdScript,
+  cacheSsrResponse,
   detailMeta,
   isIndexableDetail,
   noindexMeta,
@@ -17,6 +18,8 @@ import { mediaSlug, parseMediaId } from "@/lib/slug";
 
 export const Route = createFileRoute("/tv/$id")({
   loader: async ({ context, params }) => {
+    // Six-hour CDN cache on the SSR'd HTML — detail pages change at most daily.
+    await cacheSsrResponse();
     const id = parseMediaId(params.id);
     const data = await context.queryClient.ensureQueryData(mediaDetailQueryOptions("tv", id));
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".

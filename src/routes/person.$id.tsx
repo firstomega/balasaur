@@ -2,12 +2,22 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { PersonDetail } from "@/components/balasaur/PersonDetail";
 import { personDetailQueryOptions } from "@/hooks/usePersonDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
-import { buildMeta, canonicalLink, clampDescription, absoluteUrl, jsonLdScript } from "@/lib/seo";
+import {
+  buildMeta,
+  canonicalLink,
+  clampDescription,
+  absoluteUrl,
+  jsonLdScript,
+  cacheSsrResponse,
+} from "@/lib/seo";
 import { personJsonLd } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/person/$id")({
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(personDetailQueryOptions(params.id)),
+  loader: async ({ context, params }) => {
+    // Six-hour CDN cache on the SSR'd HTML (person pages are user-agnostic).
+    await cacheSsrResponse();
+    return context.queryClient.ensureQueryData(personDetailQueryOptions(params.id));
+  },
   head: ({ loaderData, params }) => {
     const d = loaderData;
     const url = absoluteUrl(`/person/${params.id}`);
