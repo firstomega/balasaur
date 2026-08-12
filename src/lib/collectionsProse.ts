@@ -1,8 +1,9 @@
-// The collection-page dek: deterministic data-prose composed from the
+// The collection-page intro: deterministic data-prose composed from the
 // collection's materialized stats. Every sentence is a claim only our database
-// can make (counts, scores, medians vs the catalog prior, newest arrival) —
-// that's the whole anti-slop strategy. No LLM freeform, no hype adjectives,
-// no rhetorical questions; if a fact isn't notable, its sentence is omitted.
+// can make (counts, scores, medians vs the catalog prior, newest arrival).
+// That's the whole anti-slop strategy: no LLM freeform, no hype adjectives,
+// no em-dashes, no rhetorical questions. If a fact isn't notable, its
+// sentence is omitted.
 
 export interface CollectionRow {
   slug: string;
@@ -24,16 +25,6 @@ export interface DekTopItem {
 
 /** Catalog-wide typical Balasaur Score (mirrors the rank.ts prior). */
 const CATALOG_MEDIAN = 62;
-/** The named tier bar — scores at/above read as exceptional. */
-const APEX_BAR = 85;
-
-function scoreList(items: DekTopItem[]): string {
-  return items
-    .filter((i) => typeof i.score === "number")
-    .slice(0, 3)
-    .map((i) => `${i.title} (${i.score})`)
-    .join(", ");
-}
 
 function monthWord(iso: string): string | null {
   const m = Number(iso.slice(5, 7));
@@ -59,11 +50,7 @@ function subject(row: CollectionRow): string {
   switch (row.kind) {
     case "service":
     case "genre-service":
-      return "titles streaming now";
-    case "year":
-    case "decade":
-    case "genre-decade":
-      return "titles";
+      return "streaming titles";
     case "awards":
       return "winners";
     default:
@@ -75,32 +62,38 @@ export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
   const parts: string[] = [];
 
   parts.push(
-    `${row.item_count.toLocaleString()} ${subject(row)}, ranked by Balasaur Score — ` +
-      `one 0–100 blend of IMDb, Rotten Tomatoes, Metacritic, and TMDB ratings.`,
+    `${row.item_count.toLocaleString()} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
+  );
+  parts.push(
+    `The score blends IMDb, Rotten Tomatoes, Metacritic, and TMDB ratings into one 0 to 100 number.`,
   );
 
-  const apexCount = top.filter((t) => (t.score ?? 0) >= APEX_BAR).length;
-  const listed = scoreList(top);
-  if (listed) {
-    if (apexCount >= 2) {
-      parts.push(`The top of the shelf clears the Apex bar: ${listed}.`);
-    } else {
-      parts.push(`Leading the list: ${listed}.`);
-    }
+  const scored = top.filter((t) => typeof t.score === "number").slice(0, 3);
+  if (scored.length === 1) {
+    parts.push(`${scored[0].title} leads at ${scored[0].score}.`);
+  } else if (scored.length === 2) {
+    parts.push(
+      `${scored[0].title} leads at ${scored[0].score}, ahead of ${scored[1].title} (${scored[1].score}).`,
+    );
+  } else if (scored.length >= 3) {
+    parts.push(
+      `${scored[0].title} leads at ${scored[0].score}, ahead of ${scored[1].title} (${scored[1].score}) and ${scored[2].title} (${scored[2].score}).`,
+    );
   }
 
   if (typeof row.median_score === "number" && row.median_score >= CATALOG_MEDIAN + 5) {
     parts.push(
-      `The shelf's median score of ${row.median_score} runs well above the catalog-wide ${CATALOG_MEDIAN}.`,
+      `The typical pick here scores ${row.median_score}, well above the catalog median of ${CATALOG_MEDIAN}.`,
     );
   }
 
   if (row.newest_title && row.newest_date) {
     const month = monthWord(row.newest_date);
-    if (month)
+    if (month) {
       parts.push(
-        `Newest arrival: ${row.newest_title}, released in ${month} ${row.newest_date.slice(0, 4)}.`,
+        `The newest addition is ${row.newest_title}, released in ${month} ${row.newest_date.slice(0, 4)}.`,
       );
+    }
   }
 
   return parts.join(" ");

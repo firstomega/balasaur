@@ -132,7 +132,7 @@ export function detailMeta(d: {
   const score = d.ratings?.balasaur;
   const providers = (d.streaming ?? []).slice(0, 3);
   const title =
-    `${d.title}${year} — ` +
+    `${d.title}${year}: ` +
     (providers.length > 0 ? `Watch on ${providers.join(", ")}` : "Where to Watch") +
     (typeof score === "number" ? ` · Score ${score}` : "") +
     ` | ${SITE_NAME}`;

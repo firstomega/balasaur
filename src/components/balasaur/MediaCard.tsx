@@ -86,7 +86,7 @@ export function MediaCard({
                 e.stopPropagation();
                 onQuickAction(item, "want");
               }}
-              aria-label={saved ? "On your watchlist — click to remove" : "Save to watchlist"}
+              aria-label={saved ? "On your watchlist (click to remove)" : "Save to watchlist"}
               aria-pressed={saved}
               title={saved ? "On your watchlist" : "Want to Watch"}
               className={cn(
@@ -106,7 +106,7 @@ export function MediaCard({
                 e.stopPropagation();
                 onQuickAction(item, "watched");
               }}
-              aria-label={watched ? "Watched — click to remove" : "Mark as watched"}
+              aria-label={watched ? "Watched (click to remove)" : "Mark as watched"}
               aria-pressed={watched}
               title={watched ? "Watched" : "Mark as watched"}
               className={cn(
@@ -126,9 +126,9 @@ export function MediaCard({
                 e.stopPropagation();
                 onQuickAction(item, "notInterested");
               }}
-              aria-label={rejected ? "Not interested — click to undo" : "Not interested"}
+              aria-label={rejected ? "Not interested (click to undo)" : "Not interested"}
               aria-pressed={rejected}
-              title={rejected ? "Not interested — click to undo" : "Not interested"}
+              title={rejected ? "Not interested (click to undo)" : "Not interested"}
               className={cn(
                 "flex items-center rounded-[5px] border p-1 backdrop-blur-sm transition-all",
                 rejected

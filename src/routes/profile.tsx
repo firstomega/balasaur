@@ -188,7 +188,7 @@ function ProfileEditor() {
             Edit profile
           </h1>
           <p className="mt-2 font-mono text-[11px] text-text-dim">
-            This is your <span className="text-text-bright">public</span> page — it's what other
+            This is your <span className="text-text-bright">public</span> page. It's what other
             people see.{" "}
             <a href={`/@${profile.username}`} className="text-primary hover:underline">
               View your public profile →
@@ -334,7 +334,7 @@ function ProfileEditor() {
                 <span className="ml-2 font-normal text-text-dim">
                   {isPublic
                     ? "Anyone with the link can see your profile."
-                    : "Hidden — only you can see it."}
+                    : "Hidden. Only you can see it."}
                 </span>
               </span>
             </label>

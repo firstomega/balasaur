@@ -46,7 +46,7 @@ export function ScoreBadge({
   return (
     <span
       aria-label={`Balasaur Score ${score} out of 100`}
-      title={`Balasaur Score ${score}/100 — one 0–100 blend of IMDb, Rotten Tomatoes, Metacritic & TMDB`}
+      title={`Balasaur Score ${score}/100: IMDb, Rotten Tomatoes, Metacritic, and TMDB blended into one number`}
       className={cn(
         "inline-flex items-center gap-1 rounded-[4px] bg-background/90 font-mono font-semibold tabular-nums ring-1 backdrop-blur-sm",
         size === "sm" ? "h-[18px] px-1.5 text-[10px]" : "px-2 py-1 text-[13px]",
