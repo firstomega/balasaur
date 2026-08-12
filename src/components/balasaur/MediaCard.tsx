@@ -33,6 +33,7 @@ export function MediaCard({
   posterOverlay,
   imgSizes,
   eager = false,
+  showVotes = false,
 }: {
   item: MediaItem;
   /** When provided, shows desktop hover quick actions on the poster: save to
@@ -54,6 +55,8 @@ export function MediaCard({
   /** Load the poster eagerly with high priority — for above-the-fold cards
    *  (the LCP element on grid-heavy pages). */
   eager?: boolean;
+  /** Show vote counts under the Balasaur score. */
+  showVotes?: boolean;
 }) {
   const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
   const rawId = item.id.replace(/^(movie|tv)-/, "");
@@ -68,10 +71,22 @@ export function MediaCard({
             params={{ id: slug }}
             className="block"
           >
-            <CardArt item={item} posterOverlay={posterOverlay} imgSizes={imgSizes} eager={eager} />
+            <CardArt
+              item={item}
+              posterOverlay={posterOverlay}
+              imgSizes={imgSizes}
+              eager={eager}
+              showVotes={showVotes}
+            />
           </Link>
         ) : (
-          <CardArt item={item} posterOverlay={posterOverlay} imgSizes={imgSizes} eager={eager} />
+          <CardArt
+            item={item}
+            posterOverlay={posterOverlay}
+            imgSizes={imgSizes}
+            eager={eager}
+            showVotes={showVotes}
+          />
         )}
 
         {onQuickAction && (
@@ -190,11 +205,13 @@ function CardArt({
   posterOverlay,
   imgSizes,
   eager = false,
+  showVotes = false,
 }: {
   item: MediaItem;
   posterOverlay?: React.ReactNode;
   imgSizes?: string;
   eager?: boolean;
+  showVotes?: boolean;
 }) {
   return (
     <div className="relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
@@ -242,8 +259,13 @@ function CardArt({
           "★ 7.0" raw-IMDb/TMDB fallback is gone — with TMDB in the blend, a
           card without a badge genuinely has no rating data.) */}
       {typeof item.ratings.balasaur === "number" && (
-        <div className="absolute right-1.5 top-1.5">
+        <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
           <ScoreBadge score={item.ratings.balasaur} />
+          {showVotes && item.voteCount != null && (
+            <span className="rounded-[4px] bg-background/85 px-1 py-0.5 font-mono text-[9px] text-text-muted backdrop-blur-sm">
+              {Intl.NumberFormat("en-US", { notation: "compact" }).format(item.voteCount)} ratings
+            </span>
+          )}
         </div>
       )}
       {/* The awards pipeline earns a pixel: winners get a small trophy. */}

@@ -1,10 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaCard } from "@/components/balasaur/MediaCard";
-import { getCollection } from "@/lib/collections.functions";
+import { useEffect, useState } from "react";
+import { getCollection, getRelatedCollections } from "@/lib/collections.functions";
 import type { MediaItem } from "@/types/media";
 import { collectionDek } from "@/lib/collectionsProse";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse, jsonLdScript } from "@/lib/seo";
+import { useUserStatus } from "@/hooks/useUserStatus";
 
 // /best/<slug> — one programmatically minted ranked collection. SSR'd,
 // CDN-cached, ItemList-marked-up: this leaf family is the SEO engine.
@@ -14,7 +16,10 @@ export const Route = createFileRoute("/best/$slug")({
     await cacheSsrResponse();
     const data = await getCollection({ data: { slug: params.slug } });
     if (!data) throw notFound();
-    return data;
+    const related = await getRelatedCollections({
+      data: { slug: params.slug, kind: data.row.kind },
+    });
+    return { ...data, related };
   },
   head: ({ loaderData, params }) => {
     const d = loaderData;
@@ -52,14 +57,24 @@ export const Route = createFileRoute("/best/$slug")({
 });
 
 function CollectionPage() {
-  const { row, items } = Route.useLoaderData();
+  const { row, items, related } = Route.useLoaderData();
+  const { statuses, isAnonymous, ready } = useUserStatus();
+  const [mounted, setMounted] = useState(false);
+  const [hideSeen, setHideSeen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const dek = collectionDek(
     row,
     items.slice(0, 3).map((i: MediaItem) => ({ title: i.title, score: i.ratings.balasaur })),
   );
-  // The shelf's own refresh stamp (nightly rebuild), not the render date —
-  // under CDN caching those differ, and only the former is a truthful claim.
+  // The shelf's own refresh stamp (nightly rebuild), not the render date.
   const updated = (row.updated_at ?? "").slice(0, 10);
+
+  const seenCount = items.filter((i: MediaItem) => statuses[i.id]?.status === "seen").length;
+  const displayItems =
+    hideSeen && mounted ? items.filter((i: MediaItem) => statuses[i.id]?.status !== "seen") : items;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -81,18 +96,37 @@ function CollectionPage() {
         </h1>
         <p className="mt-2 max-w-[76ch] text-[14px] leading-relaxed text-text">{dek}</p>
 
-        <div className="mt-3.5 flex flex-wrap gap-2">
+        <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <MetaChip>{row.item_count.toLocaleString()} titles</MetaChip>
           {updated && <MetaChip>Updated {updated}</MetaChip>}
-          <MetaChip>Ranked by Balasaur Score</MetaChip>
+          <Link
+            to="/methodology"
+            className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+          >
+            Ranked by Balasaur Score
+          </Link>
+          {mounted && ready && !isAnonymous && seenCount > 0 && (
+            <>
+              <MetaChip>
+                You have seen {seenCount} of {row.item_count}
+              </MetaChip>
+              <button
+                onClick={() => setHideSeen(!hideSeen)}
+                className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+              >
+                {hideSeen ? "Show seen" : "Hide seen"}
+              </button>
+            </>
+          )}
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
-          {items.map((item: MediaItem, i: number) => (
+          {displayItems.map((item: MediaItem, i: number) => (
             <MediaCard
               key={item.id}
               item={item}
               eager={i < 5}
+              showVotes={true}
               posterOverlay={
                 <span
                   aria-hidden="true"
@@ -117,6 +151,26 @@ function CollectionPage() {
             Start rating
           </Link>
         </div>
+
+        {related && related.length > 0 && (
+          <div className="mt-12">
+            <h2 className="mb-4 text-[13px] font-bold uppercase tracking-wider text-text-bright">
+              Related collections
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {related.map((r) => (
+                <Link
+                  key={r.slug}
+                  to="/best/$slug"
+                  params={{ slug: r.slug }}
+                  className="rounded-[4px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+                >
+                  {r.title} <span className="ml-1 opacity-70">{r.item_count}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

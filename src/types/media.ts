@@ -77,12 +77,12 @@ export interface MediaItem {
    * so the catalog payload can omit the heavy `seasons` array.
    */
   seasonCount?: number;
+  /** TMDB community vote count. */
+  voteCount?: number;
 }
 
 export interface MediaDetail extends MediaItem {
   backdropUrl?: string;
-  /** TMDB community vote count — powers AggregateRating.ratingCount in JSON-LD. */
-  voteCount?: number;
   tagline?: string;
   runtime?: number;
   numberOfSeasons?: number;

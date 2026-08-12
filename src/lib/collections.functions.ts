@@ -121,3 +121,110 @@ export const getAppearsIn = createServerFn({ method: "GET" })
         .slice(0, 3)
     );
   });
+
+export interface RelatedCollection {
+  slug: string;
+  title: string;
+  item_count: number;
+}
+
+export const getRelatedCollections = createServerFn({ method: "GET" })
+  .inputValidator((p: { slug: string; kind: string }) => p)
+  .handler(async ({ data: p }): Promise<RelatedCollection[]> => {
+    const { slug, kind } = p;
+    let res: RelatedCollection[] = [];
+
+    const fetchSlugs = async (slugs: string[]) => {
+      const { data } = await supabaseAdmin
+        .from("collections")
+        .select("slug, title, item_count")
+        .in("slug", slugs)
+        .neq("slug", slug);
+      return (data || []) as RelatedCollection[];
+    };
+
+    if (kind === "genre-service") {
+      const match = slug.match(/^best-(.+)-on-(.+)$/);
+      if (match) {
+        const [, genre, service] = match;
+        const [parents, siblings] = await Promise.all([
+          fetchSlugs([`best-on-${service}`, `best-${genre}`]),
+          supabaseAdmin
+            .from("collections")
+            .select("slug, title, item_count")
+            .eq("kind", "genre-service")
+            .like("slug", `%-on-${service}`)
+            .neq("slug", slug)
+            .order("item_count", { ascending: false })
+            .limit(4),
+        ]);
+        res = [...parents, ...((siblings.data || []) as RelatedCollection[])];
+      }
+    } else if (kind === "genre-decade") {
+      const match = slug.match(/^best-(\d{4}s)-(.+)$/);
+      if (match) {
+        const [, decade, genre] = match;
+        const decInt = parseInt(decade);
+        res = await fetchSlugs([
+          `best-${genre}`,
+          `best-of-the-${decade}`,
+          `best-${decInt - 10}s-${genre}`,
+          `best-${decInt + 10}s-${genre}`,
+        ]);
+      }
+    } else if (kind === "year") {
+      const match = slug.match(/^best-of-(\d{4})$/);
+      if (match) {
+        const year = parseInt(match[1]);
+        const decade = Math.floor(year / 10) * 10;
+        res = await fetchSlugs([
+          `best-of-${year - 1}`,
+          `best-of-${year + 1}`,
+          `best-of-the-${decade}s`,
+        ]);
+      }
+    } else if (kind === "genre") {
+      const match = slug.match(/^best-(.+)$/);
+      if (match) {
+        const genre = match[1];
+        const [services, decades] = await Promise.all([
+          supabaseAdmin
+            .from("collections")
+            .select("slug, title, item_count")
+            .eq("kind", "genre-service")
+            .like("slug", `best-${genre}-on-%`)
+            .neq("slug", slug)
+            .order("item_count", { ascending: false })
+            .limit(3),
+          supabaseAdmin
+            .from("collections")
+            .select("slug, title, item_count")
+            .eq("kind", "genre-decade")
+            .like("slug", `best-%-${genre}`)
+            .neq("slug", slug)
+            .order("item_count", { ascending: false })
+            .limit(3),
+        ]);
+        res = [
+          ...((services.data || []) as RelatedCollection[]),
+          ...((decades.data || []) as RelatedCollection[]),
+        ];
+      }
+    } else {
+      const { data } = await supabaseAdmin
+        .from("collections")
+        .select("slug, title, item_count")
+        .eq("kind", kind)
+        .neq("slug", slug)
+        .order("item_count", { ascending: false })
+        .limit(6);
+      res = (data || []) as RelatedCollection[];
+    }
+
+    // Deduplicate and limit
+    const unique = new Map<string, RelatedCollection>();
+    for (const item of res) {
+      if (!unique.has(item.slug)) unique.set(item.slug, item);
+    }
+    return Array.from(unique.values()).slice(0, 6);
+  });

@@ -68,8 +68,8 @@ _Last groomed: 2026-08-11 (the seven-PR UX day, #138–#144)._
 - **Double Feature generator** — themed pair for tonight (theme + runtime
   data already exist).
 - **"Because you watched X" rail** — personalization from `user_media_status`
-  + themes/sub_genres overlap, with an explanation chip ("Shared theme:
-  Heist").
+  - themes/sub_genres overlap, with an explanation chip ("Shared theme:
+    Heist").
 - **Smarter rate deck** — exclude already-rated server-side; interleave eras/
   genres for taste calibration instead of quizzing this week's chart.
 
@@ -148,6 +148,7 @@ Trap to avoid: building monetization before traffic — monetization multiplies
 an audience, it doesn't create one.
 
 **Core stack (the credible path)**
+
 1. Balasaur Pro ($4.99/mo, $39/yr): viewing-DNA stats, Wrapped on demand,
    unlimited saved views, advanced filters, CSV export, supporter badge.
 2. Streaming click-out affiliate on Where-to-Watch (Apple/Prime bounties,
@@ -159,38 +160,23 @@ an audience, it doesn't create one.
 5. Personalized weekly email (watchlist availability + picks) with one sponsor
    slot at newsletter CPMs.
 
-**Audience & data leverage**
-6. B2B API: license the Balasaur Score + mood/theme taxonomy + availability
-   (tiered $99–999/mo).
-7. Studio/streamer insight dashboards: anonymized taste-cohort + watchlist
-   conversion signal, pre-release tracking.
-8. Annual "State of Streaming Taste" report — backlink/PR cannon + sponsor
-   vehicle.
-9. White-label discovery widget (ISPs, hotel/airline portals) — one deal =
-   thousands of consumers.
-10. The consented taste graph as enterprise/exit value (Plex, JustWatch,
-    Fandango, streamers) — every consumer feature compounds it.
+**Audience & data leverage** 6. B2B API: license the Balasaur Score + mood/theme taxonomy + availability
+(tiered $99–999/mo). 7. Studio/streamer insight dashboards: anonymized taste-cohort + watchlist
+conversion signal, pre-release tracking. 8. Annual "State of Streaming Taste" report — backlink/PR cannon + sponsor
+vehicle. 9. White-label discovery widget (ISPs, hotel/airline portals) — one deal =
+thousands of consumers. 10. The consented taste graph as enterprise/exit value (Plex, JustWatch,
+Fandango, streamers) — every consumer feature compounds it.
 
-**Product-led revenue**
-11. Games as funnel: Balasaurdle free daily; archive + stats are Pro (NYT
-    Games playbook).
-12. AI concierge tier: works-inside-Claude/ChatGPT (Lovable MCP) + in-app
-    natural-language picker as Pro exclusive — first mover in category.
-13. Clubs: shared queue/schedule/discussion; join free, host on Pro.
-14. Gift subs + family plan (holiday spike, viral vector).
-15. Critic/creator program: curated lists with rev-share on driven Pro
-    conversions.
+**Product-led revenue** 11. Games as funnel: Balasaurdle free daily; archive + stats are Pro (NYT
+Games playbook). 12. AI concierge tier: works-inside-Claude/ChatGPT (Lovable MCP) + in-app
+natural-language picker as Pro exclusive — first mover in category. 13. Clubs: shared queue/schedule/discussion; join free, host on Pro. 14. Gift subs + family plan (holiday spike, viral vector). 15. Critic/creator program: curated lists with rev-share on driven Pro
+conversions.
 
-**Expansion & optionality**
-16. Cross-media (books, podcasts, games) — the original vision; "one library
-    for everything" is a stronger $5/mo pitch.
-17. Direct-sold "Presented by" rail sponsorships for studio launch windows
-    ($5–15k/slot once traffic justifies).
-18. International first-mover: geo-ranking already works; localize UI + SEO
-    pages for DE/FR/BR/JP where incumbents are weak.
-19. Dino merch — margin small, brand flywheel real.
-20. Pro for teams: casting agencies, film classes, shared lists/assignments
-    ($20–50/seat).
+**Expansion & optionality** 16. Cross-media (books, podcasts, games) — the original vision; "one library
+for everything" is a stronger $5/mo pitch. 17. Direct-sold "Presented by" rail sponsorships for studio launch windows
+($5–15k/slot once traffic justifies). 18. International first-mover: geo-ranking already works; localize UI + SEO
+pages for DE/FR/BR/JP where incumbents are weak. 19. Dino merch — margin small, brand flywheel real. 20. Pro for teams: casting agencies, film classes, shared lists/assignments
+($20–50/seat).
 
 ## Platform / strategic
 

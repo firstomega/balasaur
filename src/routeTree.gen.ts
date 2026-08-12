@@ -16,6 +16,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as ListsRouteImport } from './routes/lists'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AccountRouteImport } from './routes/account'
@@ -25,9 +26,9 @@ import { Route as TvIdRouteImport } from './routes/tv.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
 import { Route as BestSlugRouteImport } from './routes/best.$slug'
+import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
 import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
-import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
 
 const WatchedRoute = WatchedRouteImport.update({
   id: '/watched',
@@ -62,6 +63,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListsRoute = ListsRouteImport.update({
@@ -109,6 +115,11 @@ const BestSlugRoute = BestSlugRouteImport.update({
   path: '/best/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1ScoreRoute = ApiPublicV1ScoreRouteImport.update({
+  id: '/api/public/v1/score',
+  path: '/api/public/v1/score',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncMediaRoute = ApiPublicHooksSyncMediaRouteImport.update({
   id: '/api/public/hooks/sync-media',
   path: '/api/public/hooks/sync-media',
@@ -120,11 +131,6 @@ const ApiPublicHooksBackfillMediaRoute =
     path: '/api/public/hooks/backfill-media',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicV1ScoreRoute = ApiPublicV1ScoreRouteImport.update({
-  id: '/api/public/v1/score',
-  path: '/api/public/v1/score',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
   '/lists': typeof ListsRoute
+  '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -144,8 +151,8 @@ export interface FileRoutesByFullPath {
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
-  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
+  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
   '/lists': typeof ListsRoute
+  '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -165,8 +173,8 @@ export interface FileRoutesByTo {
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
-  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
+  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
   '/lists': typeof ListsRoute
+  '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -187,8 +196,8 @@ export interface FileRoutesById {
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
-  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
+  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/collections'
     | '/lists'
+    | '/methodology'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -210,8 +220,8 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
-    | '/api/public/v1/score'
     | '/api/public/hooks/sync-media'
+    | '/api/public/v1/score'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/collections'
     | '/lists'
+    | '/methodology'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -231,8 +242,8 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
-    | '/api/public/v1/score'
     | '/api/public/hooks/sync-media'
+    | '/api/public/v1/score'
   id:
     | '__root__'
     | '/'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/collections'
     | '/lists'
+    | '/methodology'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -252,8 +264,8 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
-    | '/api/public/v1/score'
     | '/api/public/hooks/sync-media'
+    | '/api/public/v1/score'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   CollectionsRoute: typeof CollectionsRoute
   ListsRoute: typeof ListsRoute
+  MethodologyRoute: typeof MethodologyRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -274,8 +287,8 @@ export interface RootRouteChildren {
   PersonIdRoute: typeof PersonIdRoute
   TvIdRoute: typeof TvIdRoute
   ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
-  ApiPublicV1ScoreRoute: typeof ApiPublicV1ScoreRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
+  ApiPublicV1ScoreRoute: typeof ApiPublicV1ScoreRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -327,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lists': {
@@ -392,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BestSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/score': {
+      id: '/api/public/v1/score'
+      path: '/api/public/v1/score'
+      fullPath: '/api/public/v1/score'
+      preLoaderRoute: typeof ApiPublicV1ScoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-media': {
       id: '/api/public/hooks/sync-media'
       path: '/api/public/hooks/sync-media'
@@ -406,13 +433,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksBackfillMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/v1/score': {
-      id: '/api/public/v1/score'
-      path: '/api/public/v1/score'
-      fullPath: '/api/public/v1/score'
-      preLoaderRoute: typeof ApiPublicV1ScoreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -422,6 +442,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   CollectionsRoute: CollectionsRoute,
   ListsRoute: ListsRoute,
+  MethodologyRoute: MethodologyRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -434,9 +455,19 @@ const rootRouteChildren: RootRouteChildren = {
   PersonIdRoute: PersonIdRoute,
   TvIdRoute: TvIdRoute,
   ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
-  ApiPublicV1ScoreRoute: ApiPublicV1ScoreRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
+  ApiPublicV1ScoreRoute: ApiPublicV1ScoreRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
