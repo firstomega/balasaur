@@ -73,8 +73,8 @@ function CollectionPage() {
   const updated = (row.updated_at ?? "").slice(0, 10);
 
   const seenCount = items.filter((i: MediaItem) => statuses[i.id]?.status === "seen").length;
-  const displayItems =
-    hideSeen && mounted ? items.filter((i: MediaItem) => statuses[i.id]?.status !== "seen") : items;
+  const ranked = items.map((item: MediaItem, idx: number) => ({ item, rank: idx + 1 }));
+  const displayItems = hideSeen && mounted ? ranked.filter(({ item }) => statuses[item.id]?.status !== "seen") : ranked;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -121,7 +121,7 @@ function CollectionPage() {
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
-          {displayItems.map((item: MediaItem, i: number) => (
+          {displayItems.map(({ item, rank }, i) => (
             <MediaCard
               key={item.id}
               item={item}
@@ -132,7 +132,7 @@ function CollectionPage() {
                   aria-hidden="true"
                   className="font-mono text-[30px] font-bold leading-none text-white/95 [text-shadow:0_2px_10px_rgba(0,0,0,0.95)]"
                 >
-                  {i + 1}
+                  {rank}
                 </span>
               }
             />

@@ -33,11 +33,6 @@ function MethodologyPage() {
 
         <div className="mt-10 space-y-12">
           <section>
-            <div className="mb-3">
-              <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                Section 1
-              </span>
-            </div>
             <h2 className="text-[18px] font-semibold text-text-bright">The Balasaur Score</h2>
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
@@ -50,11 +45,6 @@ function MethodologyPage() {
           </section>
 
           <section>
-            <div className="mb-3">
-              <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                Section 2
-              </span>
-            </div>
             <h2 className="text-[18px] font-semibold text-text-bright">Ranked Collections</h2>
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
@@ -70,11 +60,6 @@ function MethodologyPage() {
           </section>
 
           <section>
-            <div className="mb-3">
-              <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                Section 3
-              </span>
-            </div>
             <h2 className="text-[18px] font-semibold text-text-bright">Freshness</h2>
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
@@ -86,11 +71,6 @@ function MethodologyPage() {
           </section>
 
           <section>
-            <div className="mb-3">
-              <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                Section 4
-              </span>
-            </div>
             <h2 className="text-[18px] font-semibold text-text-bright">What we do not do</h2>
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
