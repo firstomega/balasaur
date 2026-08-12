@@ -2,8 +2,17 @@ import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-rout
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
-import { buildMeta, canonicalLink, clampDescription, absoluteUrl, jsonLdScript } from "@/lib/seo";
-import { tvJsonLd } from "@/lib/jsonld";
+import {
+  buildMeta,
+  canonicalLink,
+  clampDescription,
+  absoluteUrl,
+  jsonLdScript,
+  detailMeta,
+  isIndexableDetail,
+  noindexMeta,
+} from "@/lib/seo";
+import { breadcrumbJsonLd, tvJsonLd } from "@/lib/jsonld";
 import { mediaSlug, parseMediaId } from "@/lib/slug";
 
 export const Route = createFileRoute("/tv/$id")({
@@ -22,13 +31,19 @@ export const Route = createFileRoute("/tv/$id")({
   head: ({ loaderData, params }) => {
     const d = loaderData;
     const url = absoluteUrl(`/tv/${mediaSlug(parseMediaId(params.id), d?.title)}`);
-    const title = d ? `${d.title}${d.year ? ` (${d.year})` : ""} — Balasaur` : "Balasaur";
-    const description = d ? clampDescription(d.overview) : "TV details on Balasaur.";
+    const { title, description } = d
+      ? detailMeta(d)
+      : { title: "Balasaur", description: clampDescription(undefined) };
     const image = d?.backdropUrl || d?.posterUrl;
     return {
-      meta: buildMeta({ title, description, url, image, type: "video.tv_show" }),
+      meta: [
+        ...buildMeta({ title, description, url, image, type: "video.tv_show" }),
+        ...(d && !isIndexableDetail(d) ? [noindexMeta()] : []),
+      ],
       links: [canonicalLink(url)],
-      ...(d ? { scripts: [jsonLdScript(tvJsonLd(d, url))] } : {}),
+      ...(d
+        ? { scripts: [jsonLdScript(tvJsonLd(d, url)), jsonLdScript(breadcrumbJsonLd(d, url))] }
+        : {}),
     };
   },
   component: TvPage,

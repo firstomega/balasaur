@@ -25,6 +25,7 @@ import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
 import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
+import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
 
 const WatchedRoute = WatchedRouteImport.update({
   id: '/watched',
@@ -107,6 +108,11 @@ const ApiPublicHooksBackfillMediaRoute =
     path: '/api/public/hooks/backfill-media',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicV1ScoreRoute = ApiPublicV1ScoreRouteImport.update({
+  id: '/api/public/v1/score',
+  path: '/api/public/v1/score',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
+  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRoutesByTo {
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
+  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRoutesById {
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
+  '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
 }
 export interface FileRouteTypes {
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
+    | '/api/public/v1/score'
     | '/api/public/hooks/sync-media'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
+    | '/api/public/v1/score'
     | '/api/public/hooks/sync-media'
   id:
     | '__root__'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
+    | '/api/public/v1/score'
     | '/api/public/hooks/sync-media'
   fileRoutesById: FileRoutesById
 }
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   PersonIdRoute: typeof PersonIdRoute
   TvIdRoute: typeof TvIdRoute
   ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
+  ApiPublicV1ScoreRoute: typeof ApiPublicV1ScoreRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
 }
 
@@ -353,6 +366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksBackfillMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/score': {
+      id: '/api/public/v1/score'
+      path: '/api/public/v1/score'
+      fullPath: '/api/public/v1/score'
+      preLoaderRoute: typeof ApiPublicV1ScoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   PersonIdRoute: PersonIdRoute,
   TvIdRoute: TvIdRoute,
   ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
+  ApiPublicV1ScoreRoute: ApiPublicV1ScoreRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
 }
 export const routeTree = rootRouteImport

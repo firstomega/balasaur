@@ -75,6 +75,51 @@ export function canonicalLink(url: string) {
   return { rel: "canonical", href: url };
 }
 
+/** Meta tag asking crawlers to skip this page (tiered indexation). */
+export function noindexMeta(): MetaTag {
+  return { name: "robots", content: "noindex, follow" };
+}
+
+/** A detail page earns an index slot only when it can stand alone in a search
+ *  result: art + synopsis + at least one rating. Mirrors the sitemap gate in
+ *  listSitemapEntries — the two must agree or sitemap URLs would carry noindex. */
+export function isIndexableDetail(d: {
+  overview?: string;
+  posterUrl?: string;
+  ratings?: { imdb?: number; tmdb?: number; balasaur?: number };
+}): boolean {
+  return Boolean(
+    d.overview &&
+    d.posterUrl &&
+    (d.ratings?.balasaur !== undefined ||
+      d.ratings?.imdb !== undefined ||
+      d.ratings?.tmdb !== undefined),
+  );
+}
+
+/** Intent-tuned title/description for movie & TV detail pages: front-load what
+ *  searchers type ("watch X", "X streaming") plus the score. */
+export function detailMeta(d: {
+  title: string;
+  year?: string;
+  overview?: string;
+  streaming?: string[];
+  ratings?: { balasaur?: number };
+}): { title: string; description: string } {
+  const year = d.year ? ` (${d.year})` : "";
+  const score = d.ratings?.balasaur;
+  const providers = (d.streaming ?? []).slice(0, 3);
+  const title =
+    `${d.title}${year} — ` +
+    (providers.length > 0 ? `Watch on ${providers.join(", ")}` : "Where to Watch") +
+    (typeof score === "number" ? ` · Score ${score}` : "") +
+    ` | ${SITE_NAME}`;
+  const lead =
+    (typeof score === "number" ? `Balasaur Score ${score}/100. ` : "") +
+    (providers.length > 0 ? `Streaming on ${providers.join(", ")}. ` : "");
+  return { title, description: clampDescription(lead + (d.overview ?? ""), 160) };
+}
+
 /**
  * Wrap a JSON-LD object for the `scripts` array of a route head().
  * TanStack serializes `children` into a <script type="application/ld+json">.

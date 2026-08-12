@@ -53,7 +53,8 @@ import type { MediaItem } from "@/types/media";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
+import { SITE_ORIGIN, canonicalLink, jsonLdScript } from "@/lib/seo";
+import { websiteJsonLd } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): FilterSearch => parseFilterSearch(search),
@@ -75,6 +76,7 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: SITE_ORIGIN + "/" },
     ],
     links: [canonicalLink(SITE_ORIGIN + "/")],
+    scripts: [jsonLdScript(websiteJsonLd())],
   }),
   loader: async ({ context, deps }) => {
     // Detect the viewer's country (edge geo header) so the default view can be

@@ -486,9 +486,20 @@ async function mapWithLimit<T, R>(
 export async function listSitemapEntries(
   limit = 20000,
 ): Promise<{ path: string; lastmod?: string }[]> {
+  // Tiered indexation: only titles rich enough to stand alone in a search
+  // result (art + synopsis + a score) get sitemap slots, and never
+  // content-flagged rows. Asking Google to index every thin API-mirror page is
+  // how database sites earn "low value content" verdicts — quality of the
+  // indexed SAMPLE beats quantity. The thin tail stays reachable (linked,
+  // crawlable) but carries noindex until it earns its way in.
   const { data, error } = await supabaseAdmin
     .from("media")
     .select("media_id, media_type, title, updated_at")
+    .eq("sensitive", false)
+    .not("poster_url", "is", null)
+    .not("overview", "is", null)
+    .neq("overview", "")
+    .not("rating_balasaur", "is", null)
     .order("popularity", { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -1854,6 +1865,7 @@ function buildDetailFromRaw(
     posterUrl: raw.poster_path ? `${POSTER_BASE}${raw.poster_path}` : "",
     backdropUrl: raw.backdrop_path ? `${BACKDROP_BASE}${raw.backdrop_path}` : undefined,
     tagline: raw.tagline || undefined,
+    voteCount: extractVoteCount(raw) ?? undefined,
     ratings: {
       tmdb: raw.vote_average ? Number(raw.vote_average.toFixed(1)) : undefined,
     },
