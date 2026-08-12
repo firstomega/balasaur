@@ -119,23 +119,23 @@ _Last groomed: 2026-08-11 (the seven-PR UX day, #138–#144)._
   Revisit as a hover-row or only when a streaming filter is active (where the
   answer is unambiguous).
 
-## AdSense / ads readiness (gaps as of 2026-08-12)
+## AdSense / ads readiness (corrected audit, 2026-08-12)
 
-1. **Legal pages**: no Privacy Policy, Terms, or Contact/About pages — AdSense
-   requires them (and the privacy policy must disclose ad cookies).
-2. **Consent**: the cookie banner exists but is not a Google-certified CMP; EEA
-   traffic needs a TCF-registered CMP wired to Consent Mode before ads serve.
-3. **ads.txt** at the domain root once an AdSense publisher ID exists.
-4. **Custom domain**: balasaur.com is live — good; AdSense strongly prefers a
-   root domain over *.lovable.app.
-5. **Thin-content risk**: pure database pages get rejected as "no added value";
-   the programmatic SEO pages need editorial intros/blurbs (also good for
-   ranking). Sitemap.xml + robots.txt for crawlability.
-6. **Layout stability**: reserve fixed-height ad slots (grid interstitial and
-   detail-page sidebar are the natural placements) so ads don't cause CLS;
-   never place ads that look like poster cards (accidental-click policy).
-7. **Traffic**: no minimum for approval, but meaningful revenue needs the SEO
-   engine first — sequencing per the business plan (SEO -> affiliate -> ads).
+Already in place (earlier gap list was stale): privacy + terms pages (with
+future-ads disclosure), footer, cookie banner, robots.txt, sitemap.xml,
+JSON-LD, canonical URLs, SSR, balasaur.com. Remaining gaps:
+
+1. **About + Contact pages** (E-E-A-T) and a Balasaur Score methodology page.
+2. **Certified CMP**: swap the homemade banner for a TCF-registered CMP wired
+   to Consent Mode v2 (easiest: Google Privacy & Messaging) before EEA ads.
+3. **ads.txt** once an AdSense publisher ID exists.
+4. **Thin-content**: DONE at the indexation layer (tiered sitemap + noindex on
+   thin detail pages, shipped with Group 0); still needed at the content layer
+   — unique data-prose module on detail pages + editorial collection pages.
+5. **Layout stability**: reserve fixed-height ad slots (grid interstitial +
+   detail sidebar); never style ads like poster cards.
+6. **Sequencing**: verify Search Console, let the tiered sitemap index 3-4
+   weeks, apply after ~50 collection pages exist. Affiliate first regardless.
 
 ## Business strategy (path to $1M/yr — 2026-08-11 session)
 
@@ -197,10 +197,16 @@ an audience, it doesn't create one.
 - **User ratings → `rating_user_avg`** — the Balasaur Score reserves 50% for
   community ratings; wire real user ratings in once volume exists (needs a
   numeric rating or the liked/disliked mapping decision).
-- **Lovable MCP server ("works inside Claude/ChatGPT")** — enable after the
-  user-ratings loop ships; audit the auto-generated action list carefully
-  (custom Supabase auth, not Lovable Cloud). If the generator misfits, hand-
-  build a small MCP server over the existing server functions.
+- **Lovable MCP server ("works inside Claude/ChatGPT")** — deliberately NOT
+  auto-enabled during the Group-0 pass (2026-08-12): turning it on publishes an
+  external surface whose action list + access scope (everyone vs signed-in)
+  are product decisions, and the generated actions need review against our
+  custom Supabase auth. To enable: ask Lovable ("enable agent integrations"),
+  restrict to signed-in users, review each action, publish. If the generator
+  misfits, hand-build a small MCP server over the existing server functions.
+- **Public API-lite** — v1 shipped (GET /api/public/v1/score?id=movie-27205:
+  score + link + attribution, CORS open, CDN-cached 24h). Next: a docs page,
+  more fields/endpoints if anyone uses it.
 - **Google sign-in** — code shipped (PR #140), gated on `VITE_APP_AUTH_GOOGLE`;
   waiting on owner to configure the Google OAuth client + Supabase provider +
   env var. Checklist lives in PR #140's description.

@@ -81,6 +81,8 @@ export interface MediaItem {
 
 export interface MediaDetail extends MediaItem {
   backdropUrl?: string;
+  /** TMDB community vote count — powers AggregateRating.ratingCount in JSON-LD. */
+  voteCount?: number;
   tagline?: string;
   runtime?: number;
   numberOfSeasons?: number;

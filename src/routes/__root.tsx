@@ -135,6 +135,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      // Every poster/backdrop loads from TMDB's CDN — warming the connection
+      // before the first <img> shaves the LCP handshake.
+      { rel: "preconnect", href: "https://image.tmdb.org" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

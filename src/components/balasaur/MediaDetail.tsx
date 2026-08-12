@@ -284,6 +284,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               sizes="100vw"
               alt=""
               decoding="async"
+              fetchPriority="high"
               className="absolute inset-0 h-full w-full object-cover opacity-50"
             />
           )}
