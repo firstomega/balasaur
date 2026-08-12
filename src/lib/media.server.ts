@@ -40,7 +40,7 @@ const TRENDING_PAGES = 5; // ~100 of each type — currently hot
 const STREAMING_REGIONS = ["US", "GB", "CA", "AU", "DE", "FR", "JP", "KR", "IN"] as const;
 // TMDB watch-provider ids for the majors, queried INDIVIDUALLY (not OR'd) so each
 // service's full catalog is captured, not just the headliners shared across all.
-const PROVIDER_IDS = [8, 9, 337, 1899, 15, 350, 531, 386]; // Netflix, Prime, Disney+, Max, Hulu, Apple TV+, Paramount+, Peacock
+const PROVIDER_IDS = [8, 9, 337, 1899, 15, 350, 531, 386, 73]; // Netflix, Prime, Disney+, Max, Hulu, Apple TV+, Paramount+, Peacock, Tubi
 const PROVIDER_DISCOVER_PAGES = 500; // TMDB's hard page cap — go as deep as the API allows per combo
 const OMDB_BUDGET_PER_RUN = 1500; // patron tier ~100k/day; ≥ MAX_ENRICH so every enriched title also gets OMDb ratings
 // Keep each request SHORT. Enriching hundreds of titles in one HTTP call holds the
@@ -198,21 +198,48 @@ const PROVIDER_NAME_MAP: Record<string, string> = {
   "Disney+": "Disney+",
 };
 
+// B-tier services ship under many channel-variant names ("Paramount Plus
+// Premium", "Paramount+ Roku Premium Channel", one even has a trailing space),
+// so they normalize by prefix instead of exact name.
+const PROVIDER_PREFIX_RULES: [RegExp, string][] = [
+  [/^Paramount/i, "Paramount+"],
+  [/^Peacock/i, "Peacock"],
+  [/^Tubi/i, "Tubi"],
+];
+
+/** TMDB provider_name → our normalized service name (or null if untracked). */
+function normalizeProviderName(raw: string | undefined): string | null {
+  const name = (raw ?? "").trim();
+  if (!name) return null;
+  const exact = PROVIDER_NAME_MAP[name];
+  if (exact) return exact;
+  for (const [re, ours] of PROVIDER_PREFIX_RULES) if (re.test(name)) return ours;
+  return null;
+}
+
 /**
  * Map a TMDB US `watch/providers` block to our normalized streaming-service set
  * (flatrate / subscription only). Shared by live enrichment and the raw backfill
  * so both produce identical `streaming` values.
  */
+type ProviderBlock = {
+  flatrate?: { provider_name: string }[];
+  free?: { provider_name: string }[];
+  ads?: { provider_name: string }[];
+};
+
+/** Subscription + free-with-ads entries for one region (AVOD services like
+ *  Tubi report under free/ads, never flatrate). */
+function regionProviders(block: ProviderBlock | undefined): { provider_name: string }[] {
+  return [...(block?.flatrate ?? []), ...(block?.free ?? []), ...(block?.ads ?? [])];
+}
+
 function deriveStreaming(
-  watchProviders:
-    | { results?: Record<string, { flatrate?: { provider_name: string }[] }> }
-    | undefined,
+  watchProviders: { results?: Record<string, ProviderBlock> } | undefined,
 ): string[] {
-  const flatrate = watchProviders?.results?.US?.flatrate;
-  if (!flatrate) return [];
   const mapped = new Set<string>();
-  for (const p of flatrate) {
-    const name = PROVIDER_NAME_MAP[p.provider_name];
+  for (const p of regionProviders(watchProviders?.results?.US)) {
+    const name = normalizeProviderName(p.provider_name);
     if (name) mapped.add(name);
   }
   return Array.from(mapped);
@@ -226,18 +253,14 @@ function deriveStreaming(
  * values. Region codes are upper-cased to match TMDB's ISO-3166-1 keys.
  */
 function deriveStreamingRegions(
-  watchProviders:
-    | { results?: Record<string, { flatrate?: { provider_name: string }[] }> }
-    | undefined,
+  watchProviders: { results?: Record<string, ProviderBlock> } | undefined,
 ): string[] {
   const results = watchProviders?.results;
   if (!results) return [];
   const tokens = new Set<string>();
   for (const [region, block] of Object.entries(results)) {
-    const flatrate = block?.flatrate;
-    if (!flatrate) continue;
-    for (const p of flatrate) {
-      const name = PROVIDER_NAME_MAP[p.provider_name];
+    for (const p of regionProviders(block)) {
+      const name = normalizeProviderName(p.provider_name);
       if (name) tokens.add(`${name}:${region.toUpperCase()}`);
     }
   }
@@ -268,7 +291,7 @@ export async function fetchProviderLogos(): Promise<Record<string, string>> {
     );
     const map: Record<string, string> = {};
     for (const p of data.results ?? []) {
-      const ourKey = PROVIDER_NAME_MAP[p.provider_name];
+      const ourKey = normalizeProviderName(p.provider_name);
       if (ourKey && p.logo_path && !map[ourKey]) {
         map[ourKey] = `${PROVIDER_LOGO_BASE}${p.logo_path}`;
       }

@@ -57,6 +57,9 @@ export const STREAMING_OPTIONS = [
   "Disney+",
   "Apple TV+",
   "Hulu",
+  "Paramount+",
+  "Peacock",
+  "Tubi",
 ] as const;
 
 export const YEAR_BOUNDS: [number, number] = [1950, new Date().getFullYear()];

@@ -2,7 +2,16 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { tmdbImage } from "@/lib/tmdbImage";
 
-export type ProviderName = "Netflix" | "Max" | "Prime" | "Apple TV+" | "Hulu" | "Disney+";
+export type ProviderName =
+  | "Netflix"
+  | "Max"
+  | "Prime"
+  | "Apple TV+"
+  | "Hulu"
+  | "Disney+"
+  | "Paramount+"
+  | "Peacock"
+  | "Tubi";
 
 interface ProviderMark {
   label: string;
@@ -127,6 +136,63 @@ const MARKS: Record<ProviderName, ProviderMark> = {
         letterSpacing="-0.5"
       >
         D+
+      </text>
+    ),
+  },
+  "Paramount+": {
+    label: "Paramount+",
+    bg: "#0037C5",
+    fg: "#FFFFFF",
+    glyph: (
+      <text
+        x="16"
+        y="22"
+        textAnchor="middle"
+        fontFamily="Archivo, system-ui, sans-serif"
+        fontWeight={800}
+        fontSize="13"
+        fill="currentColor"
+        letterSpacing="-0.5"
+      >
+        P+
+      </text>
+    ),
+  },
+  Peacock: {
+    label: "Peacock",
+    bg: "#000000",
+    fg: "#FFFFFF",
+    glyph: (
+      <text
+        x="16"
+        y="21"
+        textAnchor="middle"
+        fontFamily="Archivo, system-ui, sans-serif"
+        fontWeight={800}
+        fontSize="10"
+        fill="currentColor"
+        letterSpacing="-0.3"
+      >
+        PCK
+      </text>
+    ),
+  },
+  Tubi: {
+    label: "Tubi",
+    bg: "#1A0B2E",
+    fg: "#FA382F",
+    glyph: (
+      <text
+        x="16"
+        y="21"
+        textAnchor="middle"
+        fontFamily="Archivo, system-ui, sans-serif"
+        fontWeight={800}
+        fontSize="10"
+        fill="currentColor"
+        letterSpacing="-0.3"
+      >
+        tubi
       </text>
     ),
   },
