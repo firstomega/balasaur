@@ -8,7 +8,6 @@ import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { FilterRail } from "@/components/balasaur/FilterRail";
 import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters";
 import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
-import { Breadcrumbs } from "@/components/balasaur/Breadcrumbs";
 import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
@@ -48,12 +47,6 @@ import {
   hasFilterSearch,
   type FilterSearch,
 } from "@/lib/filterSearch";
-import {
-  labelForFilters,
-  recordView,
-  clearTrail,
-  type BreadcrumbEntry,
-} from "@/lib/breadcrumbTrail";
 import { rescueCandidates } from "@/lib/filterRescue";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import type { MediaItem } from "@/types/media";
@@ -613,13 +606,6 @@ function GridWithControls({
   // rail and mobile bar share the same query).
   const { data: facets } = useCatalogFacets(filters, region);
 
-  // Breadcrumb trail: record each distinct view (session-persisted) so wandering from
-  // detail-page links (or filter changes) can be jumped back to instead of hammering Back.
-  const [trail, setTrail] = useState<BreadcrumbEntry[]>([]);
-  useEffect(() => {
-    setTrail(recordView({ label: labelForFilters(filters), search: filtersToSearch(filters) }));
-  }, [filters]);
-
   // Empty-state rescue: when nothing matches, price each "remove one filter group"
   // option by its own result count, so we can suggest the biggest unlockers.
   const rescue = useMemo(
@@ -652,34 +638,32 @@ function GridWithControls({
 
   return (
     <>
-      {/* Curated rails: only on the untouched default view — any filter means
-          the visitor is searching, and the rails would push their results down. */}
-      {/* When filtering, the rails give way to results — but say where they
-          went instead of vanishing (only power users deduce "clear = rails"). */}
-      {activeCount > 0 && (
-        <button
-          type="button"
-          onClick={() =>
-            setFilters((p) => ({ ...defaultFilterState(), sort: p.sort, hideSeen: p.hideSeen }))
+      {/* Curated rails share the default view with the grid; while filtering
+          they collapse smoothly instead of popping out of existence — the
+          animation itself says where they went, and clearing filters animates
+          them back. (An explainer banner tried this job first: too much
+          chrome for too little message.) */}
+      {(filters.sort === "popular" || filters.sort === "trending") && (
+        <div
+          aria-hidden={activeCount > 0}
+          className={
+            "grid transition-all duration-300 ease-out " +
+            (activeCount === 0 ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")
           }
-          className="mb-3 flex w-full cursor-pointer items-center gap-2 rounded-[5px] border border-border bg-panel/50 px-3 py-2 text-left transition-colors hover:border-border-strong"
         >
-          <span className="min-w-0 flex-1 truncate font-mono text-[10px] uppercase tracking-wider text-text-dim">
-            Trending, New &amp; Noteworthy and other rails are hidden while filters are active
-          </span>
-          <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-primary">
-            Clear filters to bring them back
-          </span>
-        </button>
-      )}
-      {activeCount === 0 && (filters.sort === "popular" || filters.sort === "trending") && (
-        <HomeRails
-          boostCountry={boostCountry}
-          onQuickAction={onQuickAction}
-          savedIds={wantIds}
-          watchedIds={seenIds}
-          rejectedIds={rejectedIds}
-        />
+          <div
+            className={"min-h-0 overflow-hidden" + (activeCount > 0 ? " pointer-events-none" : "")}
+          >
+            <HomeRails
+              boostCountry={boostCountry}
+              onQuickAction={onQuickAction}
+              onOpenActions={onOpenActions}
+              savedIds={wantIds}
+              watchedIds={seenIds}
+              rejectedIds={rejectedIds}
+            />
+          </div>
+        </div>
       )}
 
       {/* Toolbar */}
@@ -751,8 +735,6 @@ function GridWithControls({
           <ShareButton title="Balasaur" />
         </div>
       </div>
-
-      <Breadcrumbs trail={trail} onClear={() => setTrail(clearTrail())} />
 
       {/* Active chips */}
       <div className="mb-3">
