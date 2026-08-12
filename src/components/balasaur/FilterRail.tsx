@@ -146,6 +146,39 @@ const DECADES: { label: string; range: [number, number] }[] = [
   { label: "'20s", range: [2020, YEAR_BOUNDS[1]] },
 ];
 
+// Slider that previews locally while dragging and only COMMITS on release
+// (pointer-up / key-up). Committing per drag-tick fired a query + facets
+// round trip for every intermediate value — the "score filter feels broken
+// for 3 seconds" bug.
+function CommitSlider({
+  min,
+  max,
+  step,
+  value,
+  onCommit,
+}: {
+  min: number;
+  max: number;
+  step: number;
+  value: [number, number];
+  onCommit: (v: [number, number]) => void;
+}) {
+  const [draft, setDraft] = useState<number[] | null>(null);
+  return (
+    <Slider
+      min={min}
+      max={max}
+      step={step}
+      value={draft ?? value}
+      onValueChange={(v) => setDraft(v)}
+      onValueCommit={(v) => {
+        setDraft(null);
+        onCommit([v[0], v[1]] as [number, number]);
+      }}
+    />
+  );
+}
+
 // Per-category reset, shown inside a group's content only when it's active.
 function GroupClear({ show, onClear }: { show: boolean; onClear: () => void }) {
   if (!show) return null;
@@ -694,17 +727,12 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                   {filters.balasaurRange[0]} – {filters.balasaurRange[1]}
                 </span>
               </div>
-              <Slider
+              <CommitSlider
                 min={BALASAUR_BOUNDS[0]}
                 max={BALASAUR_BOUNDS[1]}
                 step={1}
                 value={filters.balasaurRange}
-                onValueChange={(v) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    balasaurRange: [v[0], v[1]] as [number, number],
-                  }))
-                }
+                onCommit={(v) => setFilters((prev) => ({ ...prev, balasaurRange: v }))}
               />
               <div className="mt-1.5 flex items-center justify-between gap-2">
                 <label className="flex cursor-pointer items-center gap-1.5">
@@ -763,14 +791,12 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                 <span>{filters.yearRange[0]}</span>
                 <span>{filters.yearRange[1]}</span>
               </div>
-              <Slider
+              <CommitSlider
                 min={YEAR_BOUNDS[0]}
                 max={YEAR_BOUNDS[1]}
                 step={1}
                 value={filters.yearRange}
-                onValueChange={(v) =>
-                  setFilters((prev) => ({ ...prev, yearRange: [v[0], v[1]] as [number, number] }))
-                }
+                onCommit={(v) => setFilters((prev) => ({ ...prev, yearRange: v }))}
               />
             </div>
           </AccordionContent>
@@ -1151,14 +1177,12 @@ function RatingSliders({
                 {row.suffix ?? ""}
               </span>
             </div>
-            <Slider
+            <CommitSlider
               min={row.bounds[0]}
               max={row.bounds[1]}
               step={row.step}
               value={value}
-              onValueChange={(v) =>
-                setFilters((prev) => ({ ...prev, [row.key]: [v[0], v[1]] as [number, number] }))
-              }
+              onCommit={(v) => setFilters((prev) => ({ ...prev, [row.key]: v }))}
             />
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <label className="flex cursor-pointer items-center gap-1.5">

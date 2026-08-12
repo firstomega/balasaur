@@ -595,11 +595,8 @@ function GridWithControls({
   onQuickAction: (item: MediaItem, action: QuickAction) => void;
   onOpenActions: (item: MediaItem) => void;
 }) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useCatalogInfinite(
-    filters,
-    region,
-    boostCountry,
-  );
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } =
+    useCatalogInfinite(filters, region, boostCountry);
 
   // Flatten loaded pages. "Hide seen" is applied to what's loaded (client-side),
   // so the headline count stays the catalog total for the active filters.
@@ -609,6 +606,9 @@ function GridWithControls({
   }, [data, filters.hideSeen, seenIds]);
   const total = data?.pages[0]?.total ?? 0;
   const activeCount = countActive(filters);
+  // A filter changed and fresh results are on the way: keep the stale grid
+  // visible but SAY SO — the silent 1-3s freeze read as "broken".
+  const refreshing = isFetching && !isFetchingNextPage && !isLoading;
   // Facet counts for the browse-break genre suggestions (already cached — the
   // rail and mobile bar share the same query).
   const { data: facets } = useCatalogFacets(filters, region);
@@ -654,6 +654,24 @@ function GridWithControls({
     <>
       {/* Curated rails: only on the untouched default view — any filter means
           the visitor is searching, and the rails would push their results down. */}
+      {/* When filtering, the rails give way to results — but say where they
+          went instead of vanishing (only power users deduce "clear = rails"). */}
+      {activeCount > 0 && (
+        <button
+          type="button"
+          onClick={() =>
+            setFilters((p) => ({ ...defaultFilterState(), sort: p.sort, hideSeen: p.hideSeen }))
+          }
+          className="mb-3 flex w-full cursor-pointer items-center gap-2 rounded-[5px] border border-border bg-panel/50 px-3 py-2 text-left transition-colors hover:border-border-strong"
+        >
+          <span className="min-w-0 flex-1 truncate font-mono text-[10px] uppercase tracking-wider text-text-dim">
+            Trending, New &amp; Noteworthy and other rails are hidden while filters are active
+          </span>
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-primary">
+            Clear filters to bring them back
+          </span>
+        </button>
+      )}
       {activeCount === 0 && (filters.sort === "popular" || filters.sort === "trending") && (
         <HomeRails
           boostCountry={boostCountry}
@@ -687,6 +705,15 @@ function GridWithControls({
         <span className="font-mono text-[11px] text-text-muted">
           <AnimatedCount value={total} className="text-text-bright" /> results
         </span>
+
+        {refreshing && (
+          <span
+            role="status"
+            className="animate-pulse font-mono text-[9.5px] uppercase tracking-wider text-primary"
+          >
+            Updating…
+          </span>
+        )}
 
         {/* Geo-personalized ranking is visible and one tap reversible, not silent. */}
         {geoBase && activeCount === 0 && filters.sort === "popular" && (
@@ -737,7 +764,13 @@ function GridWithControls({
       ) : (
         <>
           {chunk(items, BROWSE_BREAK_EVERY).map((slice, ci, arr) => (
-            <div key={ci} className={ci > 0 ? "mt-5" : undefined}>
+            <div
+              key={ci}
+              className={
+                (ci > 0 ? "mt-5 " : "") +
+                (refreshing ? "opacity-60 transition-opacity duration-200" : "transition-opacity")
+              }
+            >
               <MediaGrid
                 items={slice}
                 onQuickAction={onQuickAction}

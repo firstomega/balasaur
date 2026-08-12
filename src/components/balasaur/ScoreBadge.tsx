@@ -49,7 +49,7 @@ export function ScoreBadge({
       title={`Balasaur Score ${score}/100 — one 0–100 blend of IMDb, Rotten Tomatoes, Metacritic & TMDB`}
       className={cn(
         "inline-flex items-center gap-1 rounded-[4px] bg-background/90 font-mono font-semibold tabular-nums ring-1 backdrop-blur-sm",
-        size === "sm" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[13px]",
+        size === "sm" ? "h-[18px] px-1.5 text-[10px]" : "px-2 py-1 text-[13px]",
         t.text,
         t.ring,
         className,

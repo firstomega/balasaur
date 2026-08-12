@@ -103,6 +103,40 @@ _Last groomed: 2026-08-11 (the seven-PR UX day, #138–#144)._
   npm registry to update `bun.lock` (see `src/lib/bun-test.d.ts`, which
   stands in meanwhile).
 
+## Availability & monetization plumbing
+
+- **PVOD / rent-buy as first-class availability** (2026-08-12): today only
+  subscription (flatrate) + free-with-ads services are derived; titles that are
+  rent/buy-only look "unavailable". Plan: derive a rent_buy token set from the
+  raw watch-provider `rent`/`buy` blocks, add an Availability facet to the rail
+  (Streaming / Free with ads / Rent or Buy / Not available), show a "Rent/Buy"
+  chip in Where to Watch, and let the streaming filter optionally include
+  rent/buy. This is also the on-ramp for VOD affiliate revenue (business idea
+  #3) — rent/buy click-outs are the highest-intent monetizable action.
+- **Provider-on-card question** (decided against for now): no provider logos on
+  grid cards — multi-provider titles and region-dependence make a single logo
+  misleading, and the poster grid is already carrying type/score/trophy chips.
+  Revisit as a hover-row or only when a streaming filter is active (where the
+  answer is unambiguous).
+
+## AdSense / ads readiness (gaps as of 2026-08-12)
+
+1. **Legal pages**: no Privacy Policy, Terms, or Contact/About pages — AdSense
+   requires them (and the privacy policy must disclose ad cookies).
+2. **Consent**: the cookie banner exists but is not a Google-certified CMP; EEA
+   traffic needs a TCF-registered CMP wired to Consent Mode before ads serve.
+3. **ads.txt** at the domain root once an AdSense publisher ID exists.
+4. **Custom domain**: balasaur.com is live — good; AdSense strongly prefers a
+   root domain over *.lovable.app.
+5. **Thin-content risk**: pure database pages get rejected as "no added value";
+   the programmatic SEO pages need editorial intros/blurbs (also good for
+   ranking). Sitemap.xml + robots.txt for crawlability.
+6. **Layout stability**: reserve fixed-height ad slots (grid interstitial and
+   detail-page sidebar are the natural placements) so ads don't cause CLS;
+   never place ads that look like poster cards (accidental-click policy).
+7. **Traffic**: no minimum for approval, but meaningful revenue needs the SEO
+   engine first — sequencing per the business plan (SEO -> affiliate -> ads).
+
 ## Business strategy (path to $1M/yr — 2026-08-11 session)
 
 Anchor math: $1M/yr ≈ $83k/mo ≈ 17k subs at $5/mo, or ~2M monthly visits at

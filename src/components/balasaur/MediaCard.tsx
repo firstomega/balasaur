@@ -206,7 +206,7 @@ function CardArt({ item, posterOverlay }: { item: MediaItem; posterOverlay?: Rea
           </div>
         )}
       </div>
-      <div className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-[4px] bg-background/85 px-1.5 py-0.5 backdrop-blur-sm">
+      <div className="absolute left-1.5 top-1.5 flex h-[18px] items-center gap-1 rounded-[4px] bg-background/85 px-1.5 backdrop-blur-sm">
         <span
           className={`inline-block h-1.5 w-1.5 rounded-full bg-current ${TYPE_COLOR_CLASS[item.mediaType]}`}
           aria-hidden="true"
