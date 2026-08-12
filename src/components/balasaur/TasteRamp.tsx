@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Search } from "lucide-react";
+import { Check, Search, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -169,6 +169,7 @@ export function TasteRamp({
   };
 
   const shown = hits.length > 0 ? hits : pool;
+  const remaining = Math.max(0, TARGET - picked.size);
 
   return (
     <Dialog
@@ -178,7 +179,7 @@ export function TasteRamp({
         else onOpenChange(v);
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto border-border bg-panel text-foreground sm:max-w-[560px]">
+      <DialogContent className="flex max-h-[88vh] flex-col border-border bg-panel text-foreground sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle className="font-mono text-[13px] uppercase tracking-wider text-text-bright">
             Pick {TARGET} things you loved
@@ -187,6 +188,44 @@ export function TasteRamp({
             Seeds your favorites so Balasaur learns your taste — search for anything
           </DialogDescription>
         </DialogHeader>
+
+        {/* Your picks tray: every selection lands here immediately (visible
+            progress), removable with one tap. Slots show how far to go. */}
+        <div className="flex items-center gap-2 overflow-x-auto rounded-[5px] border border-border bg-background/60 p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {[...picked.values()].map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => toggle(c)}
+              title={`Remove ${c.title}`}
+              aria-label={`Remove ${c.title}`}
+              className="group/pick relative h-[72px] w-[48px] shrink-0 overflow-hidden rounded-[4px] border border-rating"
+            >
+              <img
+                src={tmdbImage(c.posterUrl, "w92")}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+              <span className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover/pick:opacity-100">
+                <X className="h-4 w-4 text-white" />
+              </span>
+            </button>
+          ))}
+          {Array.from({ length: remaining }, (_, i) => (
+            <span
+              key={`slot-${i}`}
+              aria-hidden="true"
+              className="flex h-[72px] w-[48px] shrink-0 items-center justify-center rounded-[4px] border border-dashed border-border font-mono text-[13px] text-text-dim"
+            >
+              {picked.size + i + 1}
+            </span>
+          ))}
+          <span className="ml-1 shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+            {picked.size >= TARGET
+              ? `${picked.size} picked — nice taste`
+              : `${picked.size} of ${TARGET}`}
+          </span>
+        </div>
 
         <label className="relative block">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim" />
@@ -199,41 +238,54 @@ export function TasteRamp({
           />
         </label>
 
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-          {shown.map((c) => {
-            const active = picked.has(c.id);
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => toggle(c)}
-                aria-pressed={active}
-                title={`${c.title}${c.year ? ` (${c.year})` : ""}`}
-                className={
-                  "relative aspect-[2/3] overflow-hidden rounded-[5px] border transition-all " +
-                  (active
-                    ? "border-rating ring-2 ring-rating/60"
-                    : "border-border opacity-90 hover:border-border-strong hover:opacity-100")
-                }
-              >
-                <img
-                  src={tmdbImage(c.posterUrl, "w185")}
-                  alt={c.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover"
-                />
-                {active && (
-                  <span className="absolute right-1 top-1 rounded-full bg-rating p-0.5 text-black">
-                    <Check className="h-3 w-3" />
+        {/* Big, LABELED cells — recognizing a title needs its name, not just a
+            thumbnail. Scrolls inside the dialog; the tray + footer stay put. */}
+        <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-2">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {shown.map((c) => {
+              const active = picked.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggle(c)}
+                  aria-pressed={active}
+                  className="group/cell cursor-pointer text-left"
+                >
+                  <span
+                    className={
+                      "relative block aspect-[2/3] overflow-hidden rounded-[5px] border transition-all " +
+                      (active
+                        ? "border-rating ring-2 ring-rating/60"
+                        : "border-border group-hover/cell:border-border-strong")
+                    }
+                  >
+                    <img
+                      src={tmdbImage(c.posterUrl, "w342")}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover"
+                    />
+                    {active && (
+                      <span className="absolute right-1.5 top-1.5 rounded-full bg-rating p-1 text-black">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                   </span>
-                )}
-              </button>
-            );
-          })}
+                  <span className="mt-1 line-clamp-1 block text-[11.5px] font-semibold leading-tight text-text-bright">
+                    {c.title}
+                  </span>
+                  <span className="block font-mono text-[9.5px] text-text-muted">
+                    {c.year || "—"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
           <button
             type="button"
             onClick={skip}
@@ -243,13 +295,11 @@ export function TasteRamp({
           </button>
           <button
             type="button"
-            disabled={picked.size === 0}
+            disabled={picked.size < TARGET}
             onClick={finish}
             className="cursor-pointer rounded-[5px] bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {picked.size >= TARGET
-              ? `Save ${picked.size} favorites`
-              : `Save${picked.size > 0 ? ` (${picked.size}/${TARGET})` : ""}`}
+            {picked.size >= TARGET ? `Save ${picked.size} favorites` : `Pick ${remaining} more`}
           </button>
         </div>
       </DialogContent>

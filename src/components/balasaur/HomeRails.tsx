@@ -124,9 +124,12 @@ export function HomeRails({
               <Icon className={`h-3.5 w-3.5 ${iconClass}`} aria-hidden="true" />
               {title}
             </h2>
+            {/* Card width sits between the old shelf (124/140) and the grid's
+                cards: big enough to read, still visibly subordinate to the grid
+                so the shelf → canvas hierarchy holds. */}
             <ScrollRail className="gap-3">
               {items.map((item, i) => (
-                <div key={item.id} className="w-[124px] shrink-0 sm:w-[140px]">
+                <div key={item.id} className="w-[148px] shrink-0 sm:w-[170px]">
                   <MediaCard
                     item={item}
                     onQuickAction={onQuickAction}
