@@ -13,6 +13,8 @@ export interface CollectionRow {
   median_score: number | null;
   newest_title: string | null;
   newest_date: string | null;
+  /** Last rebuild_collections() run — when this shelf's ranking was refreshed. */
+  updated_at?: string | null;
 }
 
 export interface DekTopItem {

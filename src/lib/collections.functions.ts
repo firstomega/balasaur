@@ -62,7 +62,9 @@ export const getCollection = createServerFn({ method: "GET" })
 
     const { data: row, error } = await supabaseAdmin
       .from("collections")
-      .select("slug, kind, title, item_count, top_score, median_score, newest_title, newest_date")
+      .select(
+        "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, updated_at",
+      )
       .eq("slug", slug)
       .maybeSingle();
     if (error || !row) return null;

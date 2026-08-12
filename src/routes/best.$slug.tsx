@@ -57,7 +57,9 @@ function CollectionPage() {
     row,
     items.slice(0, 3).map((i: MediaItem) => ({ title: i.title, score: i.ratings.balasaur })),
   );
-  const updated = new Date().toISOString().slice(0, 10);
+  // The shelf's own refresh stamp (nightly rebuild), not the render date —
+  // under CDN caching those differ, and only the former is a truthful claim.
+  const updated = (row.updated_at ?? "").slice(0, 10);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -81,7 +83,7 @@ function CollectionPage() {
 
         <div className="mt-3.5 flex flex-wrap gap-2">
           <MetaChip>{row.item_count.toLocaleString()} titles</MetaChip>
-          <MetaChip>Updated {updated}</MetaChip>
+          {updated && <MetaChip>Updated {updated}</MetaChip>}
           <MetaChip>Ranked by Balasaur Score</MetaChip>
         </div>
 
