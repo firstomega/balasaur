@@ -276,7 +276,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         <button
           type="button"
           onClick={markNotInterested}
-          title="Won't watch — hide for good (key: X)"
+          title="Won't watch: hide for good (key: X)"
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
         >
           <X className="h-3.5 w-3.5" />

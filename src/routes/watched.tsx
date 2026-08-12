@@ -16,11 +16,11 @@ import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
 export const Route = createFileRoute("/watched")({
   head: () => ({
     meta: [
-      { title: "Rate Titles — Balasaur" },
+      { title: "Rate Titles | Balasaur" },
       {
         name: "description",
         content:
-          "Swipe through movies and TV to build your library — like, mark watched, save for later, or skip.",
+          "Swipe through movies and TV to build your library: like, mark watched, save for later, or skip.",
       },
       { property: "og:url", content: SITE_ORIGIN + "/watched" },
     ],

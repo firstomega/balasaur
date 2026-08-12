@@ -76,7 +76,7 @@ function Group({
               href={link}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Watch on ${p.name} — opens JustWatch`}
+              aria-label={`Watch on ${p.name} (opens JustWatch)`}
               className="rounded-[5px] transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             >
               {badge}

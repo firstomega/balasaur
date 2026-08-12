@@ -21,7 +21,7 @@ export const Route = createFileRoute("/person/$id")({
   head: ({ loaderData, params }) => {
     const d = loaderData;
     const url = absoluteUrl(`/person/${params.id}`);
-    const title = d ? `${d.name} — Balasaur` : "Balasaur";
+    const title = d ? `${d.name} | Balasaur` : "Balasaur";
     const description = d
       ? clampDescription(d.biography || `${d.name}'s movies and TV on Balasaur.`)
       : "Person details on Balasaur.";

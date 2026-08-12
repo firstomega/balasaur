@@ -279,7 +279,7 @@ function PreferencesSection({ initial }: { initial: string }) {
       <form onSubmit={save} className="space-y-2">
         <Field label="Region / country" hint="Used later to refine streaming availability.">
           <select value={region} onChange={(e) => setRegion(e.target.value)} className={inputCls}>
-            <option value="">— Not set —</option>
+            <option value="">Not set</option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
                 {c}

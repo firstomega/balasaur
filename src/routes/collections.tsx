@@ -16,9 +16,9 @@ export const Route = createFileRoute("/collections")({
   },
   head: () => ({
     meta: buildMeta({
-      title: "Collections — Ranked Movie & TV Lists | Balasaur",
+      title: "Ranked Movie & TV Collections | Balasaur",
       description:
-        "Ranked shelves cut from 65,000 titles — by service, decade, genre, and acclaim. Every list is ordered by Balasaur Score and refreshed nightly.",
+        "Ranked lists drawn from 65,000 titles: by service, decade, genre, and acclaim. Each one is ordered by Balasaur Score and rebuilt nightly.",
       url: `${SITE_ORIGIN}/collections`,
     }),
     links: [canonicalLink(`${SITE_ORIGIN}/collections`)],
@@ -83,8 +83,8 @@ function CollectionsPage() {
       <main className="mx-auto max-w-[1160px] px-4 py-6">
         <h1 className="text-[24px] font-bold tracking-tight text-text-bright">Collections</h1>
         <p className="mt-1 max-w-[72ch] text-[13.5px] text-text-muted">
-          Ranked shelves cut from 65,000 titles — by service, decade, genre, and acclaim. Every list
-          is ordered by Balasaur Score and refreshed nightly.
+          Ranked lists drawn from 65,000 titles: by service, decade, genre, and acclaim. Each one is
+          ordered by Balasaur Score and rebuilt nightly.
         </p>
 
         {TILE_SECTIONS.map(({ kinds, label }) => {

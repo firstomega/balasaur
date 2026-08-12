@@ -233,7 +233,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
             (rejected ? "text-[#c75d6e]" : "text-text-dim hover:text-text-muted")
           }
         >
-          {rejected ? "✕ Not interested — undo" : "Not interested"}
+          {rejected ? "✕ Not interested (undo)" : "Not interested"}
         </button>
         {(primary || rejected) && (
           <button

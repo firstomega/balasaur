@@ -61,13 +61,13 @@ export const Route = createFileRoute("/")({
   loaderDeps: ({ search }) => search,
   head: () => ({
     meta: [
-      { title: "Balasaur — Your personal entertainment database" },
+      { title: "Balasaur: Your Personal Entertainment Database" },
       {
         name: "description",
         content:
           "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
       },
-      { property: "og:title", content: "Balasaur — Your personal entertainment database" },
+      { property: "og:title", content: "Balasaur: Your Personal Entertainment Database" },
       {
         property: "og:description",
         content:
@@ -708,8 +708,8 @@ function GridWithControls({
             onClick={onToggleGlobalRank}
             title={
               globalRank
-                ? "Showing the global ranking — switch back to your local one"
-                : `Home-country titles ranked first for ${countryName(geoBase)} — switch to global`
+                ? "Showing the global ranking. Click to switch back to your local one"
+                : `Home-country titles ranked first for ${countryName(geoBase)}. Click to switch to global`
             }
             className="cursor-pointer rounded-[4px] border border-border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-wider text-text-dim transition-colors hover:border-border-strong hover:text-text-muted"
           >

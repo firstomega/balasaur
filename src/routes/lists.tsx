@@ -59,7 +59,7 @@ const BUCKET_EMPTY: Record<Bucket, { text: string; cta: string; to: string }> = 
     to: "/",
   },
   favorites: {
-    text: "No favorites yet. Mark something Watched, then tap “Liked it” — or swipe up in the deck.",
+    text: "No favorites yet. Mark something Watched and tap “Liked it”, or swipe up in the deck.",
     cta: "Rate titles",
     to: "/rate",
   },

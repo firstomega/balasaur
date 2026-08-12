@@ -70,6 +70,11 @@ language sql immutable as $$
   end
 $$;
 
+-- v3: selection vs display order split. The top-60 CUT uses quality_score
+-- (vote-confidence shrunk, so obscure 3-vote titles can't crowd in), but the
+-- DISPLAYED rank orders by rating_balasaur — the number printed on every card.
+-- Ranking by one number while showing another read as broken ("#1 scores 86,
+-- #2 scores 87").
 create or replace function public.rebuild_collections() returns void
 language plpgsql
 security definer
@@ -103,12 +108,12 @@ begin
   -- service · gate >= 20
   insert into _defs
   select 'best-on-' || slugify(s), 'service', 'The Best on ' || s || ' Right Now',
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select x.media_id, x.s,
+    select x.media_id, x.s, x.rating_balasaur, x.quality_score,
            row_number() over (partition by x.s order by x.quality_score desc) rn,
            count(*) over (partition by x.s) cnt
-    from (select e.media_id, e.quality_score, unnest(e.streaming) s from _elig e) x
+    from (select e.media_id, e.quality_score, e.rating_balasaur, unnest(e.streaming) s from _elig e) x
     where x.s in ('Netflix','Max','Prime','Disney+','Apple TV+','Hulu','Paramount+','Peacock','Tubi')
   ) t where rn <= 60
   group by s having max(cnt) >= 20
@@ -118,12 +123,12 @@ begin
   insert into _defs
   select 'best-' || slugify(g) || '-on-' || slugify(s), 'genre-service',
          genre_plural(g) || ' on ' || s || ', Ranked',
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select x.media_id, x.g, x.s,
+    select x.media_id, x.g, x.s, x.rating_balasaur, x.quality_score,
            row_number() over (partition by x.g, x.s order by x.quality_score desc) rn,
            count(*) over (partition by x.g, x.s) cnt
-    from (select e.media_id, e.quality_score, unnest(e.genres) g, unnest(e.streaming) s from _elig e) x
+    from (select e.media_id, e.quality_score, e.rating_balasaur, unnest(e.genres) g, unnest(e.streaming) s from _elig e) x
     where x.s in ('Netflix','Max','Prime','Disney+','Apple TV+','Hulu','Paramount+','Peacock','Tubi')
       and x.g in ('Drama','Comedy','Action','Thriller','Crime','Horror','Science Fiction',
                   'Romance','Mystery','Fantasy','Animation','Documentary','Adventure','Family')
@@ -134,12 +139,12 @@ begin
   -- genre · gate >= 30
   insert into _defs
   select 'best-' || slugify(g), 'genre', 'The Best ' || genre_plural(g) || ' of All Time',
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select x.media_id, x.g,
+    select x.media_id, x.g, x.rating_balasaur, x.quality_score,
            row_number() over (partition by x.g order by x.quality_score desc) rn,
            count(*) over (partition by x.g) cnt
-    from (select e.media_id, e.quality_score, unnest(e.genres) g from _elig e) x
+    from (select e.media_id, e.quality_score, e.rating_balasaur, unnest(e.genres) g from _elig e) x
     where x.g in ('Drama','Comedy','Action','Thriller','Crime','Horror','Science Fiction',
                   'Romance','Mystery','Fantasy','Animation','Documentary','Adventure','Family','War','Western')
   ) t where rn <= 60
@@ -149,12 +154,12 @@ begin
   -- decade · gate >= 30
   insert into _defs
   select 'best-of-the-' || dec, 'decade', 'The Best of the ' || dec,
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select x.media_id, x.dec,
+    select x.media_id, x.dec, x.rating_balasaur, x.quality_score,
            row_number() over (partition by x.dec order by x.quality_score desc) rn,
            count(*) over (partition by x.dec) cnt
-    from (select e.media_id, e.quality_score, substring(e.year from 1 for 3) || '0s' as dec
+    from (select e.media_id, e.quality_score, e.rating_balasaur, substring(e.year from 1 for 3) || '0s' as dec
           from _elig e where e.year ~ '^\d{4}$' and e.year >= '1950') x
   ) t where rn <= 60
   group by dec having max(cnt) >= 30
@@ -164,12 +169,12 @@ begin
   insert into _defs
   select 'best-' || dec || '-' || slugify(g), 'genre-decade',
          dec || ' ' || genre_plural(g) || ', Ranked',
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select x.media_id, x.g, x.dec,
+    select x.media_id, x.g, x.dec, x.rating_balasaur, x.quality_score,
            row_number() over (partition by x.g, x.dec order by x.quality_score desc) rn,
            count(*) over (partition by x.g, x.dec) cnt
-    from (select e.media_id, e.quality_score, unnest(e.genres) g,
+    from (select e.media_id, e.quality_score, e.rating_balasaur, unnest(e.genres) g,
                  substring(e.year from 1 for 3) || '0s' as dec
           from _elig e where e.year ~ '^\d{4}$' and e.year >= '1950') x
     where x.g in ('Drama','Comedy','Action','Thriller','Crime','Horror','Science Fiction',
@@ -181,9 +186,9 @@ begin
   -- year · gate >= 40
   insert into _defs
   select 'best-of-' || yr, 'year', 'The Best of ' || yr,
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select e.media_id, e.year as yr,
+    select e.media_id, e.year as yr, e.rating_balasaur, e.quality_score,
            row_number() over (partition by e.year order by e.quality_score desc) rn,
            count(*) over (partition by e.year) cnt
     from _elig e
@@ -196,12 +201,12 @@ begin
   insert into _defs
   select 'best-' || slugify(o) || '-' || slugify(genre_plural(g)), 'origin-genre',
          'The Best ' || o || ' ' || genre_plural(g),
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select x.media_id, x.o, x.g,
+    select x.media_id, x.o, x.g, x.rating_balasaur, x.quality_score,
            row_number() over (partition by x.o, x.g order by x.quality_score desc) rn,
            count(*) over (partition by x.o, x.g) cnt
-    from (select e.media_id, e.quality_score, unnest(e.origins) o, unnest(e.genres) g from _elig e) x
+    from (select e.media_id, e.quality_score, e.rating_balasaur, unnest(e.origins) o, unnest(e.genres) g from _elig e) x
     where x.o in ('Korean','Japanese','Chinese','Indian','French','Spanish','British')
       and x.g in ('Drama','Comedy','Action','Thriller','Crime','Horror','Romance','Animation')
   ) t where rn <= 60
@@ -211,9 +216,9 @@ begin
   -- discovery: completed TV · gate >= 20
   insert into _defs
   select 'completed-tv-shows-worth-binging', 'discovery', 'Completed TV Shows Worth Binging',
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select e.media_id,
+    select e.media_id, e.rating_balasaur, e.quality_score,
            row_number() over (order by e.quality_score desc) rn,
            count(*) over () cnt
     from _elig e where e.media_type = 'tv' and e.completion_status = 'Ended'
@@ -224,9 +229,9 @@ begin
   -- discovery: under 90 minutes · gate >= 20
   insert into _defs
   select 'great-movies-under-90-minutes', 'discovery', 'Great Movies Under 90 Minutes',
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select e.media_id,
+    select e.media_id, e.rating_balasaur, e.quality_score,
            row_number() over (order by e.quality_score desc) rn,
            count(*) over () cnt
     from _elig e where e.media_type = 'movie' and e.film_length_minutes between 1 and 89
@@ -237,13 +242,13 @@ begin
   -- awards · gate >= 10
   insert into _defs
   select 'best-' || slugify(label) || '-winners', 'awards', label || ' Winners, Ranked',
-         array_agg(media_id order by rn), max(cnt)::int
+         array_agg(media_id order by rating_balasaur desc, quality_score desc, media_id), max(cnt)::int
   from (
-    select x.media_id, x.label,
+    select x.media_id, x.label, x.rating_balasaur, x.quality_score,
            row_number() over (partition by x.label order by x.quality_score desc) rn,
            count(*) over (partition by x.label) cnt
     from (
-      select e.media_id, e.quality_score,
+      select e.media_id, e.quality_score, e.rating_balasaur,
              case a when 'oscar' then 'Oscar' when 'emmy' then 'Emmy'
                     when 'globe' then 'Golden Globe' when 'bafta' then 'BAFTA' end as label
       from _elig e, unnest(e.awards_won) a

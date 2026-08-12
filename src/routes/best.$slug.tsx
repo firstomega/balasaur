@@ -108,7 +108,7 @@ function CollectionPage() {
         <div className="mt-8 flex items-center gap-4 rounded-[6px] border border-primary/30 bg-primary/5 px-4 py-3.5">
           <p className="text-[13px] text-text">
             <b className="text-text-bright">Seen a few of these?</b> Track what you've watched and
-            Balasaur learns your taste — free.
+            Balasaur learns your taste. It's free.
           </p>
           <Link
             to="/watched"
