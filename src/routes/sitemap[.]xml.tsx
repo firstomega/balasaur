@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SITE_ORIGIN } from "@/lib/seo";
 import { listSitemapEntries } from "@/lib/media.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 // Served at /sitemap.xml — static pages plus every catalogued title.
 // Sitemaps cap at 50,000 URLs; listSitemapEntries already limits well under that.
@@ -17,10 +18,27 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const staticPaths = ["/", "/watched", "/lists", "/privacy", "/terms"];
+        const staticPaths = ["/", "/collections", "/watched", "/lists", "/privacy", "/terms"];
         const urls: { loc: string; lastmod?: string }[] = staticPaths.map((p) => ({
           loc: `${SITE_ORIGIN}${p}`,
         }));
+
+        try {
+          // Every materialized collection shelf (~350 rows, one query).
+          const { data: shelves, error } = await supabaseAdmin
+            .from("collections")
+            .select("slug, updated_at")
+            .order("slug", { ascending: true });
+          if (error) throw error;
+          for (const s of (shelves ?? []) as { slug: string; updated_at: string | null }[]) {
+            urls.push({
+              loc: `${SITE_ORIGIN}/best/${s.slug}`,
+              lastmod: s.updated_at ? s.updated_at.slice(0, 10) : undefined,
+            });
+          }
+        } catch (err) {
+          console.error("[sitemap] collections load failed:", err);
+        }
 
         try {
           const entries = await listSitemapEntries();

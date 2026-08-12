@@ -17,12 +17,14 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ListsRouteImport } from './routes/lists'
+import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TvIdRouteImport } from './routes/tv.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
+import { Route as BestSlugRouteImport } from './routes/best.$slug'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
 import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
 import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
@@ -67,6 +69,11 @@ const ListsRoute = ListsRouteImport.update({
   path: '/lists',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CollectionsRoute = CollectionsRouteImport.update({
+  id: '/collections',
+  path: '/collections',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -97,6 +104,11 @@ const MovieIdRoute = MovieIdRouteImport.update({
   path: '/movie/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BestSlugRoute = BestSlugRouteImport.update({
+  id: '/best/$slug',
+  path: '/best/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSyncMediaRoute = ApiPublicHooksSyncMediaRouteImport.update({
   id: '/api/public/hooks/sync-media',
   path: '/api/public/hooks/sync-media',
@@ -118,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$handle': typeof HandleRoute
   '/account': typeof AccountRoute
+  '/collections': typeof CollectionsRoute
   '/lists': typeof ListsRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -126,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
+  '/best/$slug': typeof BestSlugRoute
   '/movie/$id': typeof MovieIdRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
@@ -137,6 +151,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$handle': typeof HandleRoute
   '/account': typeof AccountRoute
+  '/collections': typeof CollectionsRoute
   '/lists': typeof ListsRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -145,6 +160,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
+  '/best/$slug': typeof BestSlugRoute
   '/movie/$id': typeof MovieIdRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
@@ -157,6 +173,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$handle': typeof HandleRoute
   '/account': typeof AccountRoute
+  '/collections': typeof CollectionsRoute
   '/lists': typeof ListsRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -165,6 +182,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
+  '/best/$slug': typeof BestSlugRoute
   '/movie/$id': typeof MovieIdRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
@@ -178,6 +196,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$handle'
     | '/account'
+    | '/collections'
     | '/lists'
     | '/privacy'
     | '/profile'
@@ -186,6 +205,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/triage'
     | '/watched'
+    | '/best/$slug'
     | '/movie/$id'
     | '/person/$id'
     | '/tv/$id'
@@ -197,6 +217,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$handle'
     | '/account'
+    | '/collections'
     | '/lists'
     | '/privacy'
     | '/profile'
@@ -205,6 +226,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/triage'
     | '/watched'
+    | '/best/$slug'
     | '/movie/$id'
     | '/person/$id'
     | '/tv/$id'
@@ -216,6 +238,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$handle'
     | '/account'
+    | '/collections'
     | '/lists'
     | '/privacy'
     | '/profile'
@@ -224,6 +247,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/triage'
     | '/watched'
+    | '/best/$slug'
     | '/movie/$id'
     | '/person/$id'
     | '/tv/$id'
@@ -236,6 +260,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HandleRoute: typeof HandleRoute
   AccountRoute: typeof AccountRoute
+  CollectionsRoute: typeof CollectionsRoute
   ListsRoute: typeof ListsRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -244,6 +269,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
   WatchedRoute: typeof WatchedRoute
+  BestSlugRoute: typeof BestSlugRoute
   MovieIdRoute: typeof MovieIdRoute
   PersonIdRoute: typeof PersonIdRoute
   TvIdRoute: typeof TvIdRoute
@@ -310,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/collections': {
+      id: '/collections'
+      path: '/collections'
+      fullPath: '/collections'
+      preLoaderRoute: typeof CollectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account': {
       id: '/account'
       path: '/account'
@@ -352,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MovieIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/best/$slug': {
+      id: '/best/$slug'
+      path: '/best/$slug'
+      fullPath: '/best/$slug'
+      preLoaderRoute: typeof BestSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sync-media': {
       id: '/api/public/hooks/sync-media'
       path: '/api/public/hooks/sync-media'
@@ -380,6 +420,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HandleRoute: HandleRoute,
   AccountRoute: AccountRoute,
+  CollectionsRoute: CollectionsRoute,
   ListsRoute: ListsRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
@@ -388,6 +429,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,
   WatchedRoute: WatchedRoute,
+  BestSlugRoute: BestSlugRoute,
   MovieIdRoute: MovieIdRoute,
   PersonIdRoute: PersonIdRoute,
   TvIdRoute: TvIdRoute,

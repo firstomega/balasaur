@@ -8,6 +8,78 @@ export type Database = {
   };
   public: {
     Tables: {
+      collection_items: {
+        Row: {
+          media_id: string;
+          rank: number;
+          slug: string;
+        };
+        Insert: {
+          media_id: string;
+          rank: number;
+          slug: string;
+        };
+        Update: {
+          media_id?: string;
+          rank?: number;
+          slug?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "collection_items_media_id_fkey";
+            columns: ["media_id"];
+            isOneToOne: false;
+            referencedRelation: "media";
+            referencedColumns: ["media_id"];
+          },
+          {
+            foreignKeyName: "collection_items_slug_fkey";
+            columns: ["slug"];
+            isOneToOne: false;
+            referencedRelation: "collections";
+            referencedColumns: ["slug"];
+          },
+        ];
+      };
+      collections: {
+        Row: {
+          item_count: number;
+          kind: string;
+          median_score: number | null;
+          newest_date: string | null;
+          newest_title: string | null;
+          poster_ids: string[];
+          slug: string;
+          title: string;
+          top_score: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          item_count: number;
+          kind: string;
+          median_score?: number | null;
+          newest_date?: string | null;
+          newest_title?: string | null;
+          poster_ids?: string[];
+          slug: string;
+          title: string;
+          top_score?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          item_count?: number;
+          kind?: string;
+          median_score?: number | null;
+          newest_date?: string | null;
+          newest_title?: string | null;
+          poster_ids?: string[];
+          slug?: string;
+          title?: string;
+          top_score?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       media: {
         Row: {
           audience: string[];
@@ -339,6 +411,8 @@ export type Database = {
     Functions: {
       catalog_facets: { Args: never; Returns: Json };
       catalog_facets_filtered: { Args: { p: Json }; Returns: Json };
+      genre_plural: { Args: { g: string }; Returns: string };
+      rebuild_collections: { Args: never; Returns: undefined };
       search_cast: {
         Args: { p_exclude?: string[]; p_q: string };
         Returns: {
@@ -350,17 +424,16 @@ export type Database = {
         Returns: {
           media_id: string;
           media_type: string;
+          poster_url: string;
+          rating_imdb: number;
+          rating_metacritic: number;
+          rating_rotten_tomatoes: number;
+          rating_tmdb: number;
           title: string;
-          year: string | null;
-          poster_url: string | null;
-          rating_imdb: number | null;
-          rating_rotten_tomatoes: number | null;
-          rating_metacritic: number | null;
-          rating_tmdb: number | null;
+          year: string;
         }[];
       };
-      show_limit: { Args: never; Returns: number };
-      show_trgm: { Args: { "": string }; Returns: string[] };
+      slugify: { Args: { t: string }; Returns: string };
     };
     Enums: {
       [_ in never]: never;
