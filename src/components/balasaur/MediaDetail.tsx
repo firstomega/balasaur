@@ -308,7 +308,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                     alt={detail.title}
                     width={342}
                     height={513}
-                    loading="lazy"
+                    fetchPriority="high"
                     decoding="async"
                     className="h-full w-full object-cover"
                   />

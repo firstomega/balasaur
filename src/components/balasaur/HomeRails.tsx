@@ -132,6 +132,8 @@ export function HomeRails({
                 <div key={item.id} className="w-[148px] shrink-0 sm:w-[170px]">
                   <MediaCard
                     item={item}
+                    imgSizes="170px"
+                    eager={key === "trending" && i < 3}
                     onQuickAction={onQuickAction}
                     onOpenActions={onOpenActions}
                     saved={savedIds?.has(item.id)}

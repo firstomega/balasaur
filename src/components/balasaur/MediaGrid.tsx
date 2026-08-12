@@ -22,10 +22,11 @@ export function MediaGrid({
   // poster. 2xl gets the sixth column back on genuinely wide screens.
   return (
     <div className="grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-      {items.map((item) => (
+      {items.map((item, i) => (
         <MediaCard
           key={item.id}
           item={item}
+          eager={i < 4}
           onQuickAction={onQuickAction}
           onOpenActions={onOpenActions}
           saved={savedIds?.has(item.id)}

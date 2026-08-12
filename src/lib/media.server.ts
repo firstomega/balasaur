@@ -2055,7 +2055,25 @@ export async function fetchMediaDetail(
       if (!error && data?.detail_payload && data.detail_fetched_at) {
         const age = Date.now() - new Date(data.detail_fetched_at).getTime();
         if (age < DETAIL_TTL_MS) {
-          return data.detail_payload as unknown as MediaDetail;
+          const cached = data.detail_payload as unknown as MediaDetail;
+          // Cache-shape healing: payloads written before `voteCount` existed
+          // lack it, which silently drops AggregateRating.ratingCount from the
+          // JSON-LD (GSC's live validation failed on exactly this). Patch the
+          // field from the catalog row instead of purging ~190k cached details
+          // (a purge would also stampede TMDB with rebuild fetches).
+          if (cached.voteCount === undefined) {
+            try {
+              const { data: row } = await supabaseAdmin
+                .from("media")
+                .select("vote_count")
+                .eq("media_id", cacheId)
+                .maybeSingle();
+              if (typeof row?.vote_count === "number") cached.voteCount = row.vote_count;
+            } catch {
+              // best-effort — the page still renders without ratingCount
+            }
+          }
+          return cached;
         }
       }
     } catch (e) {
