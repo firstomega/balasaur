@@ -60,10 +60,10 @@ export interface CatalogQueryParams {
 // Card-only columns — note we do NOT select people/overview here (the grid doesn't
 // render them), which is most of the payload savings. `seasons` is read only to
 // derive the TV year range, then dropped before it goes to the client.
-const CARD_COLS =
+export const CARD_COLS =
   "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,seasons,award_winner,award_nominee";
 
-interface CardRow {
+export interface CardRow {
   media_id: string;
   media_type: string;
   title: string;
@@ -83,7 +83,7 @@ interface CardRow {
   award_nominee: boolean | null;
 }
 
-function rowToCardItem(r: CardRow): MediaItem {
+export function rowToCardItem(r: CardRow): MediaItem {
   const seasons = r.seasons as MediaSeason[] | null;
   let lastAirYear: string | undefined;
   let seasonCount: number | undefined;

@@ -11,6 +11,9 @@ declare module "bun:test" {
     toBeGreaterThan(expected: number): void;
     toBeLessThan(expected: number): void;
     toBeLessThanOrEqual(expected: number): void;
+    toContain(expected: string): void;
+    toStartWith(expected: string): void;
+    not: Matchers;
   }
   export function describe(name: string, fn: () => void): void;
   export function it(name: string, fn: () => void | Promise<void>): void;

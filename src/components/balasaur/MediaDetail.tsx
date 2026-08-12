@@ -1,5 +1,6 @@
 import { Suspense, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Bookmark,
@@ -25,6 +26,7 @@ import { computeBalasaurScore } from "@/lib/score";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
+import { getAppearsIn } from "@/lib/collections.functions";
 import { themeForKeyword } from "@/lib/taxonomy";
 import { deriveOrigins } from "@/lib/origins";
 import {
@@ -623,6 +625,8 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
             </dl>
           </div>
 
+          <AppearsIn mediaId={detail.id} />
+
           {(external.imdbId || external.homepage || external.wikidataId) && (
             <div className="rounded-[5px] border border-border bg-panel p-3">
               <MicroLabel>Links</MicroLabel>
@@ -680,6 +684,37 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
         </Dialog>
       )}
     </article>
+  );
+}
+
+// Collections this title ranks in — links the detail page into the /best/*
+// shelf network. Fail-soft: nothing renders while loading, on error, or when
+// the title hasn't earned a shelf spot.
+function AppearsIn({ mediaId }: { mediaId: string }) {
+  const { data } = useQuery({
+    queryKey: ["appears-in", mediaId],
+    queryFn: () => getAppearsIn({ data: { mediaId } }),
+    staleTime: 60 * 60 * 1000,
+  });
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="rounded-[5px] border border-border bg-panel p-3">
+      <MicroLabel>Appears in</MicroLabel>
+      <ul className="space-y-1.5">
+        {data.map((c) => (
+          <li key={c.slug}>
+            <Link
+              to="/best/$slug"
+              params={{ slug: c.slug }}
+              className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-text-muted hover:text-primary"
+            >
+              <span className="truncate">{c.title}</span>
+              <span className="shrink-0 text-text-dim">#{c.rank}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

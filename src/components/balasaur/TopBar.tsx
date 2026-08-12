@@ -32,6 +32,12 @@ export function TopBar() {
           </span>
         </a>
 
+        {/* Primary nav — places (content spaces). Personal actions stay right. */}
+        <nav aria-label="Primary" className="flex items-center gap-0.5">
+          <NavPlace to="/" label="Browse" exact />
+          <NavPlace to="/collections" label="Collections" />
+        </nav>
+
         {/* Center search (desktop only; mobile gets a full-width row below) */}
         <div className="mx-auto hidden w-full max-w-md md:block">
           <TopBarSearch />
@@ -53,7 +59,7 @@ export function TopBar() {
             className="inline-flex items-center gap-1.5 rounded-[5px] px-2 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:px-2.5"
           >
             <Library className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Lists</span>
+            <span className="hidden sm:inline">My Lists</span>
           </Link>
           {user ? (
             <DropdownMenu>
@@ -161,5 +167,21 @@ export function TopBar() {
       </div>
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </header>
+  );
+}
+
+// A primary-nav "place" link with an active underline. `exact` keeps Browse
+// from lighting up on every route (it only owns "/").
+function NavPlace({ to, label, exact = false }: { to: string; label: string; exact?: boolean }) {
+  return (
+    <Link
+      to={to}
+      activeOptions={{ exact }}
+      activeProps={{ className: "text-text-bright border-primary" }}
+      inactiveProps={{ className: "text-text-muted border-transparent hover:text-text-bright" }}
+      className="border-b-2 px-2 py-1 font-mono text-[12px] uppercase tracking-wide transition-colors"
+    >
+      {label}
+    </Link>
   );
 }
