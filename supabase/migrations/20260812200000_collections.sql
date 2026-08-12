@@ -32,7 +32,9 @@ create table if not exists public.collections (
 
 create table if not exists public.collection_items (
   slug text not null references public.collections (slug) on delete cascade,
-  media_id text not null,
+  -- Real FK required: PostgREST resource embedding (collection_items -> media
+  -- on the shelf page) only resolves across declared foreign keys.
+  media_id text not null references public.media (media_id) on delete cascade,
   rank int not null,
   primary key (slug, media_id)
 );
