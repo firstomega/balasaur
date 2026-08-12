@@ -74,7 +74,10 @@ function CollectionPage() {
 
   const seenCount = items.filter((i: MediaItem) => statuses[i.id]?.status === "seen").length;
   const ranked = items.map((item: MediaItem, idx: number) => ({ item, rank: idx + 1 }));
-  const displayItems = hideSeen && mounted ? ranked.filter(({ item }) => statuses[item.id]?.status !== "seen") : ranked;
+  const displayItems =
+    hideSeen && mounted
+      ? ranked.filter(({ item }) => statuses[item.id]?.status !== "seen")
+      : ranked;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
