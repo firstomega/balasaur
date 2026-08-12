@@ -27,7 +27,14 @@ and the implementing agent (Antigravity, junior). Protocol:
 
 ---
 
-## TASK-002 · OPEN · Fix pass on collections-depth branch
+## TASK-002 · DONE · Fix pass on collections-depth branch
+
+Completed 2026-08-12, merged in PR #157 along with TASK-001. All four fixes
+landed correctly. One review note for future tasks: the verification step
+was run with tsc and build but NOT prettier, which failed CI lint; the
+house rule "bunx prettier --write on changed files" is not optional.
+
+Original brief follows for the record.
 
 You previously pushed the branch `antigravity/collections-depth` (commit
 2283fee). The features are approved; four fixes are required. Stay on that
@@ -60,9 +67,8 @@ progress, methodology page". Body: one short section per feature plus a
 
 ---
 
-## TASK-001 · IN REVIEW · Collections depth (original brief)
+## TASK-001 · DONE · Collections depth (original brief)
 
-Superseded by TASK-002, which carries the review feedback. The original
-brief (vote counts on collection cards, related collections, seen progress,
-/methodology page) was executed on `antigravity/collections-depth` and
-reviewed on 2026-08-12.
+Executed on `antigravity/collections-depth`, reviewed, fixed via TASK-002,
+and merged in PR #157 on 2026-08-12. Live: vote counts on collection cards,
+related collections, seen progress, /methodology page.
