@@ -484,7 +484,7 @@ async function mapWithLimit<T, R>(
  * under the 50k sitemap limit, most-popular first.
  */
 export async function listSitemapEntries(
-  limit = 20000,
+  limit = 10000,
 ): Promise<{ path: string; lastmod?: string }[]> {
   // Tiered indexation: only titles rich enough to stand alone in a search
   // result (art + synopsis + a score) get sitemap slots, and never
@@ -492,23 +492,42 @@ export async function listSitemapEntries(
   // how database sites earn "low value content" verdicts — quality of the
   // indexed SAMPLE beats quantity. The thin tail stays reachable (linked,
   // crawlable) but carries noindex until it earns its way in.
-  const { data, error } = await supabaseAdmin
-    .from("media")
-    .select("media_id, media_type, title, updated_at")
-    .eq("sensitive", false)
-    .not("poster_url", "is", null)
-    .not("overview", "is", null)
-    .neq("overview", "")
-    .not("rating_balasaur", "is", null)
-    .order("popularity", { ascending: false, nullsFirst: false })
-    .limit(limit);
+  //
+  // Paged in 1,000-row chunks: PostgREST clamps any single request to its
+  // max-rows setting (default 1000), which silently capped the old
+  // `.limit(20000)` at ~1,000 URLs — Search Console's "1,005 discovered
+  // pages" was this bug. The 10k budget is deliberate: Googlebot currently
+  // crawls this site at ~100 pages/day (throttled by response time), so a
+  // focused top-10k sitemap indexes faster than an aspirational 50k one.
+  const PAGE = 1000;
+  const rows: {
+    media_id: string;
+    media_type: string;
+    title: string | null;
+    updated_at: string | null;
+  }[] = [];
+  for (let offset = 0; offset < limit; offset += PAGE) {
+    const { data, error } = await supabaseAdmin
+      .from("media")
+      .select("media_id, media_type, title, updated_at")
+      .eq("sensitive", false)
+      .not("poster_url", "is", null)
+      .not("overview", "is", null)
+      .neq("overview", "")
+      .not("rating_balasaur", "is", null)
+      .order("popularity", { ascending: false, nullsFirst: false })
+      .order("media_id", { ascending: true }) // stable tiebreak across pages
+      .range(offset, Math.min(offset + PAGE, limit) - 1);
 
-  if (error) {
-    console.error("[sitemap] media query failed:", error.message);
-    return [];
+    if (error) {
+      console.error("[sitemap] media query failed:", error.message);
+      break; // serve what we have — a partial sitemap beats a 500
+    }
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
   }
 
-  return (data ?? []).map(
+  return rows.map(
     (r: {
       media_id: string;
       media_type: string;
