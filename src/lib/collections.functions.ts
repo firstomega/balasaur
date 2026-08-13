@@ -10,9 +10,16 @@ import type { MediaItem } from "@/types/media";
 // only read the materialized rows, so pages stay cheap to SSR and
 // CDN-cacheable.
 
+export interface TopTitle {
+  title: string;
+  score: number | null;
+}
+
 export interface CollectionSummary extends CollectionRow {
-  /** Poster URLs for the hub tile collage (top 4 titles). */
+  /** Poster URLs for the hub fan (top 5 titles, display order). */
   posters: string[];
+  /** Top-3 titles with scores, materialized by rebuild_collections(). */
+  top_titles: TopTitle[];
 }
 
 export const listCollections = createServerFn({ method: "GET" }).handler(
@@ -20,14 +27,17 @@ export const listCollections = createServerFn({ method: "GET" }).handler(
     const { data, error } = await supabaseAdmin
       .from("collections")
       .select(
-        "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids",
+        "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids, top_titles",
       )
       .order("item_count", { ascending: false });
     if (error || !data) {
       if (error) console.error("[collections] list failed:", error.message);
       return [];
     }
-    const rows = data as (CollectionRow & { poster_ids: string[] })[];
+    const rows = data as unknown as (CollectionRow & {
+      poster_ids: string[];
+      top_titles: TopTitle[] | null;
+    })[];
 
     // One lookup for every collage poster (~4 ids × N collections).
     const ids = [...new Set(rows.flatMap((r) => r.poster_ids ?? []))];
@@ -45,6 +55,7 @@ export const listCollections = createServerFn({ method: "GET" }).handler(
     return rows.map((r) => ({
       ...r,
       posters: (r.poster_ids ?? []).map((id) => posterById.get(id)).filter(Boolean) as string[],
+      top_titles: Array.isArray(r.top_titles) ? r.top_titles : [],
     }));
   },
 );

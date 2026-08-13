@@ -27,6 +27,9 @@ create table if not exists public.collections (
   newest_title text,
   newest_date text,
   poster_ids text[] not null default '{}',
+  -- Top-3 titles with scores, materialized so hub cards can NAME the leaders
+  -- instead of showing an abstract number.
+  top_titles jsonb not null default '[]',
   updated_at timestamptz not null default now()
 );
 
@@ -91,7 +94,17 @@ begin
       and poster_url is not null
       and overview is not null and overview <> ''
       and rating_balasaur is not null
-      and quality_score is not null;
+      and quality_score is not null
+      -- v5 corroboration gate: a lone 10.0 from a handful of TMDB voters (or
+      -- a single-source IMDb 10 on an obscure title) must not top a list.
+      -- Eligible = real vote volume, OR IMDb corroborated by a second critic
+      -- source, OR IMDb on a title with real popularity. The pool regrows
+      -- automatically as the nightly refresh heals vote_count.
+      and (coalesce(vote_count, 0) >= 25
+           or (rating_imdb is not null
+               and (rating_rotten_tomatoes is not null
+                    or rating_metacritic is not null
+                    or coalesce(popularity, 0) >= 20)));
 
   create temporary table _defs (
     slug text primary key,
@@ -280,6 +293,18 @@ begin
            round(percentile_cont(0.5) within group (order by e.rating_balasaur))::int as med
     from public.collection_items ci
     join _elig e on e.media_id = ci.media_id
+    group by ci.slug
+  ) s where s.slug = c.slug;
+
+  update public.collections c
+  set top_titles = s.tt
+  from (
+    select ci.slug,
+           jsonb_agg(jsonb_build_object('title', e.title, 'score', e.rating_balasaur)
+                     order by ci.rank) as tt
+    from public.collection_items ci
+    join _elig e on e.media_id = ci.media_id
+    where ci.rank <= 3
     group by ci.slug
   ) s where s.slug = c.slug;
 

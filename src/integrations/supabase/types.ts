@@ -52,6 +52,7 @@ export type Database = {
           slug: string;
           title: string;
           top_score: number | null;
+          top_titles: Json;
           updated_at: string;
         };
         Insert: {
@@ -64,6 +65,7 @@ export type Database = {
           slug: string;
           title: string;
           top_score?: number | null;
+          top_titles?: Json;
           updated_at?: string;
         };
         Update: {
@@ -76,6 +78,7 @@ export type Database = {
           slug?: string;
           title?: string;
           top_score?: number | null;
+          top_titles?: Json;
           updated_at?: string;
         };
         Relationships: [];
