@@ -143,7 +143,9 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
     <Link
       to="/best/$slug"
       params={{ slug: c.slug }}
-      className="group block rounded-[8px] bg-gradient-to-b from-panel to-panel/40 p-4 transition-colors hover:bg-[#1c2129] sm:p-5"
+      // overflow-hidden: on narrow phones the five-poster fan is wider than the
+      // card, so the deck clips at the edge instead of widening the layout.
+      className="group block overflow-hidden rounded-[8px] bg-gradient-to-b from-panel to-panel/40 p-4 transition-colors hover:bg-[#1c2129] sm:p-5"
     >
       <Fan
         posters={c.posters}
