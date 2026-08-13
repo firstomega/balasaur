@@ -25,15 +25,20 @@ export function TopBar() {
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
         {/* Wordmark */}
-        <a href="/" className="flex items-center gap-2 text-text-bright">
+        <a href="/" className="flex shrink-0 items-center gap-2 text-text-bright">
           <DinoMark className="h-5 w-5 text-primary" />
-          <span className="font-mono text-[15px] font-medium lowercase tracking-tight">
+          {/* On very narrow phones the glyph carries the brand alone, so the
+              bar never outgrows the screen. */}
+          <span className="font-mono text-[15px] font-medium lowercase tracking-tight max-[399px]:hidden">
             balasaur
           </span>
         </a>
 
-        {/* Primary nav — places (content spaces). Personal actions stay right. */}
-        <nav aria-label="Primary" className="flex items-center gap-0.5">
+        {/* Primary nav — places (content spaces). Personal actions stay right.
+            Hidden here on mobile: the bar can't fit wordmark + nav + actions on
+            a phone, and forcing it made the whole PAGE scroll sideways. It
+            moves to the second row instead. */}
+        <nav aria-label="Primary" className="hidden items-center gap-0.5 md:flex">
           <NavPlace to="/" label="Browse" exact />
           <NavPlace to="/collections" label="Collections" />
         </nav>
@@ -44,11 +49,11 @@ export function TopBar() {
         </div>
 
         {/* Right nav */}
-        <nav className="ml-auto flex items-center gap-1 md:gap-2">
+        <nav className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
           <Link
             to="/watched"
             title="Swipe through titles to rate them and build your library fast"
-            className="inline-flex items-center gap-1.5 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary"
           >
             <Zap className="h-3.5 w-3.5" />
             Rate
@@ -153,7 +158,7 @@ export function TopBar() {
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[12px] font-medium uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
+              className="whitespace-nowrap rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[12px] font-medium uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Sign in
             </button>
@@ -161,9 +166,16 @@ export function TopBar() {
         </nav>
       </div>
 
-      {/* Search (mobile) — full-width second row, since it doesn't fit the top bar */}
-      <div className="mx-auto max-w-[1600px] px-4 pb-2 md:hidden">
-        <TopBarSearch />
+      {/* Mobile second row: the primary nav plus search. Both live here because
+          neither fits beside the wordmark and personal actions on a phone. */}
+      <div className="mx-auto flex max-w-[1600px] items-center gap-2 px-4 pb-2 md:hidden">
+        <nav aria-label="Primary" className="flex shrink-0 items-center gap-0.5">
+          <NavPlace to="/" label="Browse" exact compact />
+          <NavPlace to="/collections" label="Collections" compact />
+        </nav>
+        <div className="min-w-0 flex-1">
+          <TopBarSearch />
+        </div>
       </div>
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </header>
@@ -172,14 +184,27 @@ export function TopBar() {
 
 // A primary-nav "place" link with an active underline. `exact` keeps Browse
 // from lighting up on every route (it only owns "/").
-function NavPlace({ to, label, exact = false }: { to: string; label: string; exact?: boolean }) {
+function NavPlace({
+  to,
+  label,
+  exact = false,
+  compact = false,
+}: {
+  to: string;
+  label: string;
+  exact?: boolean;
+  /** Tighter type and padding for the mobile row, where it shares space with search. */
+  compact?: boolean;
+}) {
   return (
     <Link
       to={to}
       activeOptions={{ exact }}
       activeProps={{ className: "text-text-bright border-primary" }}
       inactiveProps={{ className: "text-text-muted border-transparent hover:text-text-bright" }}
-      className="border-b-2 px-2 py-1 font-mono text-[12px] uppercase tracking-wide transition-colors"
+      className={`whitespace-nowrap border-b-2 uppercase tracking-wide transition-colors ${
+        compact ? "px-1.5 py-1 font-mono text-[11px]" : "px-2 py-1 font-mono text-[12px]"
+      }`}
     >
       {label}
     </Link>
