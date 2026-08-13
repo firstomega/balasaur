@@ -256,6 +256,22 @@ Full plan and the reasoning behind the sequencing is in the revenue artifact.
   Install the Journey by Mediavine Grow script (its 30-day clock is free and
   is not running).
 
+### Media detail rehaul, remaining pieces
+
+The 2026-08-13 rehaul shipped mobile reordering, score receipts, per-title
+prose, the seasons table, and the facts subtraction. Still open:
+
+- **Score percentile claims** ("higher than 94% of 2010s thrillers"). Needs a
+  materialized percentile per title, or per genre and decade medians. The
+  strongest originality claim available and the only proposed item that
+  needed new data, which is why it was deferred.
+- **Similar titles by our own score proximity**, replacing TMDB's `similar`
+  endpoint that every competitor mirrors.
+- **Per-provider watch links.** The chips now carry honest labels, but they
+  still share one TMDB link because TMDB exposes a single deep link per
+  title and region. Real per-provider destinations arrive with the `/go`
+  affiliate plumbing.
+
 ### Content and SEO work, not started
 
 - **Per-title deterministic prose** on `/movie/$id` and `/tv/$id`, extending

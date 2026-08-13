@@ -76,7 +76,7 @@ function Group({
               href={link}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Watch on ${p.name} (opens JustWatch)`}
+              aria-label={`${p.name}: see watch options for this title`}
               className="rounded-[5px] transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             >
               {badge}
@@ -156,14 +156,13 @@ export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
           rel="noopener noreferrer"
           className="mt-3 flex items-center gap-1 border-t border-border pt-2 font-mono text-[9px] uppercase tracking-wider text-text-dim hover:text-text-muted"
         >
-          More options on JustWatch
+          All watch options
           <ExternalLink className="h-2.5 w-2.5" />
         </a>
-      ) : (
-        <p className="mt-3 border-t border-border pt-2 font-mono text-[9px] uppercase tracking-wider text-text-dim">
-          Streaming data by JustWatch.
-        </p>
-      )}
+      ) : null}
+      <p className="mt-2 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+        Streaming data by JustWatch.
+      </p>
     </div>
   );
 }

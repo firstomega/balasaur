@@ -26,6 +26,7 @@ import { computeBalasaurScore } from "@/lib/score";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
+import { titleProse, normalizedSources, divergenceNote } from "@/lib/titleProse";
 import { getAppearsIn } from "@/lib/collections.functions";
 import { themeForKeyword } from "@/lib/taxonomy";
 import { deriveOrigins } from "@/lib/origins";
@@ -114,18 +115,6 @@ function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-text-dim">
       {children}
-    </div>
-  );
-}
-
-function RatingTile({ label, value, suffix }: { label: string; value: number; suffix: string }) {
-  return (
-    <div className="rounded-[5px] border border-border bg-panel px-3 py-2.5">
-      <div className="font-mono text-[9.5px] uppercase tracking-wider text-text-dim">{label}</div>
-      <div className="mt-1 font-mono text-[18px] text-text-bright">
-        {value}
-        <span className="ml-0.5 text-[11px] text-text-muted">{suffix}</span>
-      </div>
     </div>
   );
 }
@@ -271,6 +260,27 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
   // Chinese, Indian, Spanish, French); English-language titles resolve to no bucket here.
   const origin = deriveOrigins(facts.originalLanguage, undefined)[0];
 
+  // Deterministic data-prose, composed from what this database holds. See
+  // src/lib/titleProse.ts for why this exists and what it is allowed to say.
+  const prose = titleProse({
+    mediaType: detail.mediaType,
+    title: detail.title,
+    year: detail.year,
+    genres: detail.genres,
+    origins: detail.origins,
+    streaming: detail.streaming,
+    runtime: detail.runtime,
+    numberOfSeasons: detail.numberOfSeasons,
+    numberOfEpisodes: detail.numberOfEpisodes,
+    completionStatus: facts.status,
+    awardWinner: detail.awardWinner,
+    awardNominee: detail.awardNominee,
+    voteCount: detail.voteCount,
+    ratings,
+  });
+  const sourceBars = normalizedSources(ratings);
+  const divergence = divergenceNote(ratings);
+
   return (
     <article>
       {/* Hero */}
@@ -364,14 +374,29 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
         </div>
       </header>
 
-      {/* Body */}
-      <div className="mx-auto mt-8 grid max-w-[1100px] gap-6 px-4 pb-16 md:grid-cols-[1fr_300px]">
+      {/* Body. On mobile the aside comes FIRST: someone who arrived from a
+          "where to watch X" search needs the answer and the save button on the
+          first screen, not below eight editorial sections. On md and up it
+          returns to a right sidebar. */}
+      <div className="mx-auto mt-8 flex max-w-[1100px] flex-col gap-6 px-4 pb-16 md:grid md:grid-cols-[1fr_300px]">
         {/* MAIN */}
-        <div className="min-w-0 space-y-6">
+        <div className="order-2 min-w-0 space-y-6 md:order-1">
+          {/* Our read first, the distributor's synopsis second. The prose is
+              composed from this database (score provenance, source
+              disagreement, vote weight, shape, availability), so the page
+              leads with something no other site holding the same API data
+              can print. */}
+          {prose && (
+            <section>
+              <MicroLabel>The read</MicroLabel>
+              <p className="text-[14.5px] leading-relaxed text-text-bright">{prose}</p>
+            </section>
+          )}
+
           {detail.overview && (
             <section>
-              <MicroLabel>Overview</MicroLabel>
-              <p className="text-[14.5px] leading-relaxed text-text-bright">{detail.overview}</p>
+              <MicroLabel>Synopsis</MicroLabel>
+              <p className="text-[14.5px] leading-relaxed text-text">{detail.overview}</p>
             </section>
           )}
 
@@ -461,25 +486,82 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                   </Popover>
                 );
               })()}
-              {ratings.imdb !== undefined && (
-                <RatingTile label="IMDb" value={ratings.imdb} suffix="/10" />
-              )}
-              {ratings.rottenTomatoes !== undefined && (
-                <RatingTile label="Rotten Tomatoes" value={ratings.rottenTomatoes} suffix="%" />
-              )}
-              {ratings.metacritic !== undefined && (
-                <RatingTile label="Metacritic" value={ratings.metacritic} suffix="/100" />
-              )}
-              {ratings.tmdb !== undefined && ratings.imdb === undefined && (
-                <RatingTile label="TMDB" value={ratings.tmdb} suffix="/10" />
-              )}
-              {!ratings.imdb && !ratings.rottenTomatoes && !ratings.metacritic && !ratings.tmdb && (
-                <div className="col-span-full font-mono text-[11px] text-text-dim">
-                  No ratings available yet.
-                </div>
-              )}
             </div>
+
+            {/* Four sources on one 0 to 100 axis. Tiles showed four numbers in
+                four different units, which hid the only thing worth seeing:
+                whether the sources agree. Holding all four normalized is the
+                thing a competitor mirroring the same API cannot do. */}
+            {sourceBars.length > 0 ? (
+              <div className="mt-3 space-y-1.5">
+                {sourceBars.map((src) => (
+                  <div key={src.label} className="flex items-center gap-2.5">
+                    <span className="w-[104px] shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+                      {src.label}
+                    </span>
+                    <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-border">
+                      <span
+                        className="block h-full rounded-full bg-rating"
+                        style={{ width: `${Math.max(2, Math.min(100, src.pct))}%` }}
+                      />
+                    </span>
+                    <span className="w-[68px] shrink-0 text-right font-mono text-[11px] text-text-bright">
+                      {src.shown}
+                    </span>
+                  </div>
+                ))}
+                {divergence && (
+                  <p className="pt-1.5 font-mono text-[11px] leading-relaxed text-text-muted">
+                    {divergence}
+                  </p>
+                )}
+                {typeof detail.voteCount === "number" && detail.voteCount > 0 && (
+                  <p className="font-mono text-[10.5px] text-text-dim">
+                    {detail.voteCount.toLocaleString("en-US")} audience votes
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 font-mono text-[11px] text-text-dim">
+                No ratings available yet.
+              </div>
+            )}
           </section>
+
+          {/* TV seasons are a sequence, so they get a table. Half the catalog
+              is TV and this was previously not rendered at all. */}
+          {detail.mediaType === "tv" && (detail.seasons?.length ?? 0) > 0 && (
+            <section>
+              <MicroLabel>Seasons</MicroLabel>
+              <div className="overflow-hidden rounded-[5px] border border-border">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {detail
+                      .seasons!.filter((sn) => sn.seasonNumber > 0)
+                      .map((sn) => (
+                        <tr
+                          key={sn.seasonNumber}
+                          className="border-b border-border last:border-b-0"
+                        >
+                          <td className="px-3 py-2 font-mono text-[11px] text-text-dim">
+                            {sn.seasonNumber}
+                          </td>
+                          <td className="min-w-0 px-1 py-2 text-[13px] text-text-bright">
+                            <span className="block truncate">{sn.name}</span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-[11px] text-text-muted">
+                            {sn.episodeCount > 0 && `${sn.episodeCount} ep`}
+                            {sn.airDate && (
+                              <span className="ml-2 text-text-dim">{sn.airDate.slice(0, 4)}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {detail.crew.length > 0 && (
             <section>
@@ -593,7 +675,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
         </div>
 
         {/* SIDE */}
-        <aside className="space-y-4">
+        <aside className="order-1 space-y-4 md:order-2">
           <StatusControls detail={detail} />
 
           <WhereToWatch detail={detail} />
@@ -614,20 +696,19 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                   </dd>
                 </div>
               )}
-              {facts.productionCountries && facts.productionCountries.length > 0 && (
-                <FactRow k="Countries" v={facts.productionCountries.slice(0, 3).join(", ")} />
+              {/* Production countries and companies were removed: they
+                  duplicated Origin and changed nothing a viewer decides.
+                  Status only earns its row while a title is unreleased. */}
+              {facts.status && facts.status !== "Released" && facts.status !== "Ended" && (
+                <FactRow k="Status" v={facts.status} />
               )}
-              {facts.productionCompanies && facts.productionCompanies.length > 0 && (
-                <FactRow k="Companies" v={facts.productionCompanies.slice(0, 3).join(", ")} />
-              )}
-              {facts.status && <FactRow k="Status" v={facts.status} />}
               {facts.releaseDate && <FactRow k="Released" v={facts.releaseDate} />}
             </dl>
           </div>
 
           <AppearsIn mediaId={detail.id} />
 
-          {(external.imdbId || external.homepage || external.wikidataId) && (
+          {(external.imdbId || external.homepage) && (
             <div className="rounded-[5px] border border-border bg-panel p-3">
               <MicroLabel>Links</MicroLabel>
               <ul className="space-y-1.5">
@@ -635,12 +716,6 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                   <LinkRow href={`https://www.imdb.com/title/${external.imdbId}/`} label="IMDb" />
                 )}
                 {external.homepage && <LinkRow href={external.homepage} label="Official site" />}
-                {external.wikidataId && (
-                  <LinkRow
-                    href={`https://www.wikidata.org/wiki/${external.wikidataId}`}
-                    label="Wikidata"
-                  />
-                )}
               </ul>
             </div>
           )}
