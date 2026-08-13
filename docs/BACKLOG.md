@@ -68,8 +68,8 @@ _Last groomed: 2026-08-11 (the seven-PR UX day, #138–#144)._
 - **Double Feature generator** — themed pair for tonight (theme + runtime
   data already exist).
 - **"Because you watched X" rail** — personalization from `user_media_status`
-  + themes/sub_genres overlap, with an explanation chip ("Shared theme:
-  Heist").
+  - themes/sub_genres overlap, with an explanation chip ("Shared theme:
+    Heist").
 - **Smarter rate deck** — exclude already-rated server-side; interleave eras/
   genres for taste calibration instead of quizzing this week's chart.
 
@@ -148,6 +148,7 @@ Trap to avoid: building monetization before traffic — monetization multiplies
 an audience, it doesn't create one.
 
 **Core stack (the credible path)**
+
 1. Balasaur Pro ($4.99/mo, $39/yr): viewing-DNA stats, Wrapped on demand,
    unlimited saved views, advanced filters, CSV export, supporter badge.
 2. Streaming click-out affiliate on Where-to-Watch (Apple/Prime bounties,
@@ -159,38 +160,23 @@ an audience, it doesn't create one.
 5. Personalized weekly email (watchlist availability + picks) with one sponsor
    slot at newsletter CPMs.
 
-**Audience & data leverage**
-6. B2B API: license the Balasaur Score + mood/theme taxonomy + availability
-   (tiered $99–999/mo).
-7. Studio/streamer insight dashboards: anonymized taste-cohort + watchlist
-   conversion signal, pre-release tracking.
-8. Annual "State of Streaming Taste" report — backlink/PR cannon + sponsor
-   vehicle.
-9. White-label discovery widget (ISPs, hotel/airline portals) — one deal =
-   thousands of consumers.
-10. The consented taste graph as enterprise/exit value (Plex, JustWatch,
-    Fandango, streamers) — every consumer feature compounds it.
+**Audience & data leverage** 6. B2B API: license the Balasaur Score + mood/theme taxonomy + availability
+(tiered $99–999/mo). 7. Studio/streamer insight dashboards: anonymized taste-cohort + watchlist
+conversion signal, pre-release tracking. 8. Annual "State of Streaming Taste" report — backlink/PR cannon + sponsor
+vehicle. 9. White-label discovery widget (ISPs, hotel/airline portals) — one deal =
+thousands of consumers. 10. The consented taste graph as enterprise/exit value (Plex, JustWatch,
+Fandango, streamers) — every consumer feature compounds it.
 
-**Product-led revenue**
-11. Games as funnel: Balasaurdle free daily; archive + stats are Pro (NYT
-    Games playbook).
-12. AI concierge tier: works-inside-Claude/ChatGPT (Lovable MCP) + in-app
-    natural-language picker as Pro exclusive — first mover in category.
-13. Clubs: shared queue/schedule/discussion; join free, host on Pro.
-14. Gift subs + family plan (holiday spike, viral vector).
-15. Critic/creator program: curated lists with rev-share on driven Pro
-    conversions.
+**Product-led revenue** 11. Games as funnel: Balasaurdle free daily; archive + stats are Pro (NYT
+Games playbook). 12. AI concierge tier: works-inside-Claude/ChatGPT (Lovable MCP) + in-app
+natural-language picker as Pro exclusive — first mover in category. 13. Clubs: shared queue/schedule/discussion; join free, host on Pro. 14. Gift subs + family plan (holiday spike, viral vector). 15. Critic/creator program: curated lists with rev-share on driven Pro
+conversions.
 
-**Expansion & optionality**
-16. Cross-media (books, podcasts, games) — the original vision; "one library
-    for everything" is a stronger $5/mo pitch.
-17. Direct-sold "Presented by" rail sponsorships for studio launch windows
-    ($5–15k/slot once traffic justifies).
-18. International first-mover: geo-ranking already works; localize UI + SEO
-    pages for DE/FR/BR/JP where incumbents are weak.
-19. Dino merch — margin small, brand flywheel real.
-20. Pro for teams: casting agencies, film classes, shared lists/assignments
-    ($20–50/seat).
+**Expansion & optionality** 16. Cross-media (books, podcasts, games) — the original vision; "one library
+for everything" is a stronger $5/mo pitch. 17. Direct-sold "Presented by" rail sponsorships for studio launch windows
+($5–15k/slot once traffic justifies). 18. International first-mover: geo-ranking already works; localize UI + SEO
+pages for DE/FR/BR/JP where incumbents are weak. 19. Dino merch — margin small, brand flywheel real. 20. Pro for teams: casting agencies, film classes, shared lists/assignments
+($20–50/seat).
 
 ## Platform / strategic
 
@@ -210,3 +196,93 @@ an audience, it doesn't create one.
 - **Google sign-in** — code shipped (PR #140), gated on `VITE_APP_AUTH_GOOGLE`;
   waiting on owner to configure the Google OAuth client + Supabase provider +
   env var. Checklist lives in PR #140's description.
+
+## Open loose ends (logged 2026-08-13)
+
+Everything raised in the 2026-08-13 session that was NOT done. Grouped by
+why it is still open.
+
+### Known bugs, not yet fixed
+
+- **`WhereToWatch` provider chips all open the same link**, which points at
+  themeoviedb.org, not the provider. The `aria-label` says "opens JustWatch"
+  and the footer says "More options on JustWatch". Both strings are false
+  today. Every outbound watch click is currently donated to TMDB.
+- **Person pages are absent from the sitemap.** `listSitemapEntries` queries
+  only the `media` table, so `/person/$id` is never submitted.
+- **Second React hydration error (the HTML variant of error 418)** is not
+  identified. The cookie banner, taste ramp, and user-status hooks were
+  traced and correctly defer to effects. Needs a browser repro or source maps
+  (currently disabled) to name it.
+- **7 user-visible em-dashes survive** the purge: `TasteRamp` (2),
+  `account.tsx` (2), `index.tsx` empty states (2), `best.$slug` not-found (1).
+  Table-cell "-" placeholders are legitimate and excluded.
+- **`llms.txt` is malformed**: no H1 header and no links, so it fails the
+  agentic-browsing audit.
+- **Contrast failures**: the primary "Sign in" button and several footer
+  strings fail WCAG contrast.
+
+### Mechanisms proposed and agreed, not built
+
+These exist to stop the same feedback recurring; see `/CLAUDE.md`.
+
+- **Copy lint across all of `src`.** The em-dash test guards exactly one file
+  (`collectionsProse.ts`), which is why the 7 above survived. Should fail CI
+  on em-dashes in any user-visible string plus banned explainer phrasing.
+- **Layout CI job.** Playwright plus Chromium in GitHub Actions: load the key
+  routes at 390 / 768 / 1440, assert `scrollWidth <= innerWidth` (this alone
+  catches the mobile overflow class of bug automatically), upload screenshots
+  as artifacts. This is the mechanical answer to "judge the rendered page";
+  the sandbox cannot run the app, so CI has to.
+- **Ranking canary in the nightly job.** Same shape as the existing freshness
+  canary: fail red when any collection's top item is uncorroborated or when
+  displayed order is not monotonic in the displayed score.
+- **Source maps** in the production build, so console errors name a component
+  instead of a minified symbol.
+
+### Monetization plumbing, designed not built
+
+Full plan and the reasoning behind the sequencing is in the revenue artifact.
+
+- `/go` outbound redirect route (server-side allowlist, never a raw URL
+  parameter), `outbound_clicks` table (RLS on, no policies, no IP or full
+  user agent stored), `src/lib/providers.ts` normalization extraction,
+  `affiliate.server.ts` shipped with an empty template table.
+- `/about` and `/contact` pages (neither exists; both are approval signals),
+  FTC disclosure component above the watch module, `rel="sponsored nofollow"`
+  on affiliate anchors.
+- **Owner actions, blocking:** written clarification from TMDB on commercial
+  use, and from OMDb on the CC BY-NC terms. Reelgood publisher API key.
+  Install the Journey by Mediavine Grow script (its 30-day clock is free and
+  is not running).
+
+### Content and SEO work, not started
+
+- **Per-title deterministic prose** on `/movie/$id` and `/tv/$id`, extending
+  the `collectionsProse.ts` pattern. This is the single item that unblocks
+  Amazon, AdSense, Journey, and the scaled-content risk at once.
+- Attribute-intersection collection pages behind a distinctness gate.
+- "Similar to X" pages seeded from our own score proximity.
+- Sitemap sharding, ETag/304 handling, IndexNow ping.
+- Free public API docs page, embeddable score badge widget, newsletter.
+
+### Decisions parked for the owner
+
+- **The onboarding modal auto-opens on first visit.** It was open during the
+  PageSpeed run, carries most of the contrast failures and two
+  non-composited animations, and on mobile an interstitial over content is
+  an intrusive-interstitial signal to Google. Options: leave it, delay to
+  second visit, or trigger on scroll.
+- 23 unused shadcn `ui/` components. Nothing imports them so they are not
+  bundled; deleting is hygiene, not performance.
+
+### Environment and process notes
+
+- **Deploy lag:** PR #162 (principles plus PageSpeed fixes) is merged to main
+  at `f290018` but two deploy attempts published `5721604`. Lovable's mirror
+  had not picked up the newest commit. Re-deploy to land it.
+- GitHub Actions dropped every push event for roughly three hours on
+  2026-08-13; PRs #159 and #160 were merged without CI as a result.
+- Search Console: resubmit the sitemap (should now read about 10,400 URLs)
+  and re-run VALIDATE FIX on review snippets.
+- No TASK-003 is queued for the delegated agent.
