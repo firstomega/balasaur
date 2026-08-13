@@ -32,5 +32,5 @@ export function AnimatedCount({ value, className }: { value: number; className?:
     };
   }, [value]);
 
-  return <span className={className}>{display.toLocaleString()}</span>;
+  return <span className={className}>{display.toLocaleString("en-US")}</span>;
 }

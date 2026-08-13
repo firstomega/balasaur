@@ -62,7 +62,7 @@ export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
   const parts: string[] = [];
 
   parts.push(
-    `${row.item_count.toLocaleString()} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
+    `${row.item_count.toLocaleString("en-US")} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
   );
   parts.push(
     `The score blends IMDb, Rotten Tomatoes, Metacritic, and TMDB ratings into one 0 to 100 number.`,

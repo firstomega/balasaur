@@ -138,11 +138,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // Every poster/backdrop loads from TMDB's CDN — warming the connection
       // before the first <img> shaves the LCP handshake.
       { rel: "preconnect", href: "https://image.tmdb.org" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      // Fonts are self-hosted (see styles.css). Preloading them here means the
+      // real face is usually in place for first paint, so there is no swap and
+      // no layout shift from it.
       {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: "/fonts/archivo-latin-var.woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: "/fonts/jetbrains-mono-latin-var.woff2",
+        crossOrigin: "anonymous",
       },
     ],
   }),
