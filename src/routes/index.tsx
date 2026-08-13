@@ -29,6 +29,8 @@ import { HomeRails } from "@/components/balasaur/HomeRails";
 import { WatchlistNudge } from "@/components/balasaur/WatchlistNudge";
 import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
+import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
+import type { HomeRails as HomeRailsData } from "@/lib/catalog.functions";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -59,25 +61,6 @@ import { websiteJsonLd } from "@/lib/jsonld";
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): FilterSearch => parseFilterSearch(search),
   loaderDeps: ({ search }) => search,
-  head: () => ({
-    meta: [
-      { title: "Balasaur: Your Personal Entertainment Database" },
-      {
-        name: "description",
-        content:
-          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
-      },
-      { property: "og:title", content: "Balasaur: Your Personal Entertainment Database" },
-      {
-        property: "og:description",
-        content:
-          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
-      },
-      { property: "og:url", content: SITE_ORIGIN + "/" },
-    ],
-    links: [canonicalLink(SITE_ORIGIN + "/")],
-    scripts: [jsonLdScript(websiteJsonLd())],
-  }),
   loader: async ({ context, deps }) => {
     // Detect the viewer's country (edge geo header) so the default view can be
     // server-rendered local-first — same value the client reads, so no hydration flip.
@@ -100,7 +83,57 @@ export const Route = createFileRoute("/")({
       ]),
       5000,
     );
+
+    // Hand head() the above-the-fold poster so it can be preloaded. Read from
+    // the cache the prefetch just filled; null when the prefetch was skipped
+    // or timed out, in which case no preload is emitted.
+    const rails = context.queryClient.getQueryData<HomeRailsData>(homeRailsOptions(boost).queryKey);
+    const lcpPoster =
+      rails?.trending?.[0]?.posterUrl || rails?.newAndNoteworthy?.[0]?.posterUrl || null;
+    return { lcpPoster };
   },
+  head: ({ loaderData }) => ({
+    meta: [
+      { title: "Balasaur: Your Personal Entertainment Database" },
+      {
+        name: "description",
+        content:
+          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+      },
+      { property: "og:title", content: "Balasaur: Your Personal Entertainment Database" },
+      {
+        property: "og:description",
+        content:
+          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+      },
+      { property: "og:url", content: SITE_ORIGIN + "/" },
+    ],
+    links: [
+      canonicalLink(SITE_ORIGIN + "/"),
+      // The first rail poster is the LCP element on mobile. Without this the
+      // browser only discovers it after parsing the document, which measured
+      // as ~2.9s of "resource load delay" on slow 4G. srcset and sizes mirror
+      // MediaCard exactly, so this preloads the same candidate the img picks
+      // rather than causing a second download.
+      ...(loaderData?.lcpPoster
+        ? [
+            {
+              rel: "preload",
+              as: "image",
+              href: tmdbImage(loaderData.lcpPoster, "w342"),
+              imageSrcSet: tmdbSrcSet(loaderData.lcpPoster, [
+                { w: 185, size: "w185" },
+                { w: 342, size: "w342" },
+                { w: 500, size: "w500" },
+              ]),
+              imageSizes: "(max-width: 640px) 148px, 170px",
+              fetchPriority: "high" as const,
+            },
+          ]
+        : []),
+    ],
+    scripts: [jsonLdScript(websiteJsonLd())],
+  }),
   errorComponent: HomeError,
   component: HomePage,
 });
@@ -490,7 +523,7 @@ function BrowseBreak({
   return (
     <div className="my-5 flex flex-wrap items-center gap-2 rounded-[5px] border border-border bg-panel/60 px-3 py-2.5">
       <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
-        {browsed.toLocaleString()} titles browsed · narrow it down?
+        {browsed.toLocaleString("en-US")} titles browsed · narrow it down?
       </span>
       {suggestions.map((g) => (
         <button
@@ -531,7 +564,7 @@ function MobileResultsBar({
         className="w-full cursor-pointer rounded-[5px] bg-primary px-3 py-2.5 font-mono text-[11.5px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
       >
         {typeof facets?.total === "number"
-          ? `Show ${facets.total.toLocaleString()} results`
+          ? `Show ${facets.total.toLocaleString("en-US")} results`
           : "Show results"}
       </button>
     </div>
@@ -806,7 +839,7 @@ function GridWithControls({
                       <span className="truncate">{s.label}</span>
                     </span>
                     <span className="shrink-0 font-mono text-[11px] text-primary">
-                      +{s.unlock.toLocaleString()}
+                      +{s.unlock.toLocaleString("en-US")}
                     </span>
                   </button>
                 ))}

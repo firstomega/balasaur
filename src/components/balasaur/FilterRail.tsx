@@ -993,7 +993,8 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                 })}
               </div>
               <div className="mt-2 font-mono text-[10px] text-text-dim">
-                {originTagged.toLocaleString()} of {catalogTotal.toLocaleString()} tagged
+                {originTagged.toLocaleString("en-US")} of {catalogTotal.toLocaleString("en-US")}{" "}
+                tagged
               </div>
             </AccordionContent>
           </AccordionItem>

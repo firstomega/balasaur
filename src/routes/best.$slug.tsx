@@ -100,7 +100,7 @@ function CollectionPage() {
         <p className="mt-2 max-w-[76ch] text-[14px] leading-relaxed text-text">{dek}</p>
 
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
-          <MetaChip>{row.item_count.toLocaleString()} titles</MetaChip>
+          <MetaChip>{row.item_count.toLocaleString("en-US")} titles</MetaChip>
           {updated && <MetaChip>Updated {updated}</MetaChip>}
           <Link
             to="/methodology"
