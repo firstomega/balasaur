@@ -264,7 +264,8 @@ begin
 
   insert into public.collections
     (slug, kind, title, item_count, poster_ids, updated_at)
-  select d.slug, d.kind, d.title, d.item_count, d.media_id[1:4], now()
+  -- Top FIVE covers: the hub's featured cards fan five posters.
+  select d.slug, d.kind, d.title, d.item_count, d.media_id[1:5], now()
   from _defs d;
 
   insert into public.collection_items (slug, media_id, rank)
