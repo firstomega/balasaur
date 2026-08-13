@@ -147,14 +147,34 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
       // card, so the deck clips at the edge instead of widening the layout.
       className="group block overflow-hidden rounded-[8px] bg-gradient-to-b from-panel to-panel/40 p-4 transition-colors hover:bg-[#1c2129] sm:p-5"
     >
-      <Fan
-        posters={c.posters}
-        count={5}
-        width="w-[86px] sm:w-[106px]"
-        height="h-[129px] sm:h-[159px]"
-        overlap="ml-[-36px] sm:ml-[-45px]"
-        size="w342"
-      />
+      <span className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+        <span className="shrink-0">
+          <Fan
+            posters={c.posters}
+            count={5}
+            width="w-[86px] sm:w-[96px]"
+            height="h-[129px] sm:h-[144px]"
+            overlap="ml-[-36px] sm:ml-[-40px]"
+            size="w342"
+          />
+        </span>
+        {/* The leaders fill what used to be dead space, and let you judge the
+            list before clicking it. */}
+        <span className="min-w-0 flex-1 self-stretch sm:flex sm:flex-col sm:justify-center">
+          {c.top_titles.slice(0, 3).map((t, i) => (
+            <span
+              key={i}
+              className="flex items-baseline gap-2.5 border-b border-border/60 py-2 font-mono text-[12px] last:border-b-0"
+            >
+              <span className="w-3 shrink-0 text-text-dim">{i + 1}</span>
+              <span className="truncate text-text">{t.title}</span>
+              {typeof t.score === "number" && (
+                <span className="ml-auto shrink-0 pl-2 text-rating">{t.score}</span>
+              )}
+            </span>
+          ))}
+        </span>
+      </span>
       <span className="mt-3.5 block text-[19px] font-semibold leading-tight tracking-tight text-text-bright group-hover:text-primary sm:text-[21px]">
         {chip && (
           <span
@@ -164,14 +184,6 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
           </span>
         )}
         {c.title}
-      </span>
-      <span className="mt-1 block font-mono text-[11px] text-text-dim">
-        {typeof c.top_score === "number" && (
-          <>
-            Top pick scores <span className="text-rating">{c.top_score}</span>
-          </>
-        )}
-        {c.item_count < 60 && <> · {c.item_count} titles cleared the bar</>}
       </span>
     </Link>
   );
@@ -242,39 +254,172 @@ function Shelf({
   );
 }
 
-// One index column: all links stay in the HTML; past the cap they collapse via
-// CSS until expanded.
-function IndexColumn({ label, rows }: { label: string; rows: CollectionSummary[] }) {
-  const CAP = 12;
-  const [open, setOpen] = useState(false);
+// ---- Tier 3 index: matrices and a year grid, not link lists. A cross of two
+// facets is a table, and 67 years are a timeline; rendering either as a
+// truncated list with "+55 more" made the index read as filler. Every cell
+// and year below is a real link in the SSR HTML (the crawl mesh), just shaped
+// like the data.
+
+const MATRIX_COLS: { slug: string; label: string; short: string }[] = [
+  { slug: "netflix", label: "Netflix", short: "NFLX" },
+  { slug: "max", label: "Max", short: "MAX" },
+  { slug: "prime", label: "Prime", short: "PRIME" },
+  { slug: "disney-plus", label: "Disney+", short: "D+" },
+  { slug: "apple-tv-plus", label: "Apple TV+", short: "TV+" },
+  { slug: "hulu", label: "Hulu", short: "HULU" },
+  { slug: "paramount-plus", label: "Paramount+", short: "P+" },
+  { slug: "peacock", label: "Peacock", short: "PCK" },
+  { slug: "tubi", label: "Tubi", short: "TUBI" },
+];
+
+const DECADE_COLS = ["1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"];
+
+interface MatrixRow {
+  label: string;
+  cells: (CollectionSummary | null)[];
+}
+
+function buildMatrix(
+  pairs: { row: string; col: string; c: CollectionSummary }[],
+  cols: string[],
+): MatrixRow[] {
+  const rowLabels = [...new Set(pairs.map((p) => p.row))].sort();
+  return rowLabels.map((label) => ({
+    label,
+    cells: cols.map((col) => pairs.find((p) => p.row === label && p.col === col)?.c ?? null),
+  }));
+}
+
+function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; rows: MatrixRow[] }) {
+  if (rows.length === 0) return null;
   return (
-    <div>
-      <h3 className="mb-2 border-b border-border pb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">
-        {label} · {rows.length}
+    <div className="mt-8">
+      <h3 className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">
+        {label}
       </h3>
-      {rows.map((c: CollectionSummary, i: number) => (
-        <Link
-          key={c.slug}
-          to="/best/$slug"
-          params={{ slug: c.slug }}
-          className={`block py-[2.5px] text-[12.5px] leading-snug text-text-muted hover:text-primary ${
-            !open && i >= CAP ? "hidden" : ""
-          }`}
-        >
-          {c.title}
-        </Link>
-      ))}
-      {rows.length > CAP && (
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="mt-1.5 font-mono text-[10.5px] text-text-dim transition-colors hover:text-primary"
-        >
-          {open ? "Show fewer" : `+ ${rows.length - CAP} more`}
-        </button>
-      )}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] border-collapse">
+          <thead>
+            <tr>
+              <th className="w-36 pb-1.5 pr-3" />
+              {cols.map((col) => (
+                <th
+                  key={col}
+                  className="px-1 pb-1.5 text-center font-mono text-[9px] font-normal uppercase tracking-wider text-text-dim"
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label} className="border-t border-border/60">
+                <td className="py-0.5 pr-3 text-[12.5px] leading-tight text-text-muted">
+                  {r.label}
+                </td>
+                {r.cells.map((cell, i) =>
+                  cell ? (
+                    <td key={i} className="px-0.5 py-0.5 text-center">
+                      <Link
+                        to="/best/$slug"
+                        params={{ slug: cell.slug }}
+                        aria-label={cell.title}
+                        title={cell.title}
+                        className="group/cell inline-flex h-6 w-full min-w-7 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                      >
+                        <span className="h-2 w-2 rounded-[2px] bg-text-dim transition-colors group-hover/cell:bg-primary" />
+                      </Link>
+                    </td>
+                  ) : (
+                    <td key={i} className="px-0.5 py-0.5 text-center">
+                      <span className="mx-auto block h-[3px] w-[3px] rounded-full bg-border-strong" />
+                    </td>
+                  ),
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+}
+
+// All 67 year lists at once, grouped by decade. A year label is the year;
+// repeating "Best of" 67 times said nothing.
+function YearIndex({ years }: { years: CollectionSummary[] }) {
+  if (years.length === 0) return null;
+  const byDecade = new Map<string, CollectionSummary[]>();
+  for (const c of years) {
+    const y = c.slug.replace("best-of-", "");
+    const dec = `${y.slice(0, 3)}0s`;
+    byDecade.set(dec, [...(byDecade.get(dec) ?? []), c]);
+  }
+  const decades = [...byDecade.keys()].sort().reverse();
+  return (
+    <div className="mt-8">
+      <h3 className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">
+        By year
+      </h3>
+      <div className="space-y-1">
+        {decades.map((dec) => (
+          <div key={dec} className="flex items-baseline gap-3 border-t border-border/60 py-1">
+            <span className="w-14 shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+              {dec}
+            </span>
+            <div className="flex flex-wrap gap-x-1 gap-y-0.5">
+              {(byDecade.get(dec) ?? [])
+                .sort((a: CollectionSummary, b: CollectionSummary) => b.slug.localeCompare(a.slug))
+                .map((c: CollectionSummary) => (
+                  <Link
+                    key={c.slug}
+                    to="/best/$slug"
+                    params={{ slug: c.slug }}
+                    aria-label={c.title}
+                    className="rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
+                  >
+                    {c.slug.replace("best-of-", "")}
+                  </Link>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function genreServicePairs(rows: CollectionSummary[]) {
+  const out: { row: string; col: string; c: CollectionSummary }[] = [];
+  for (const c of rows) {
+    const svc = MATRIX_COLS.find((sv) => c.slug.endsWith(`-on-${sv.slug}`));
+    if (!svc) continue;
+    out.push({ row: c.title.split(" on ")[0], col: svc.short, c });
+  }
+  return out;
+}
+
+function genreDecadePairs(rows: CollectionSummary[]) {
+  const out: { row: string; col: string; c: CollectionSummary }[] = [];
+  for (const c of rows) {
+    const m = c.slug.match(/^best-(\d{4}s)-/);
+    if (!m) continue;
+    const genre = c.title.replace(/^\d{4}s /, "").replace(/, Ranked$/, "");
+    out.push({ row: genre, col: m[1], c });
+  }
+  return out;
+}
+
+function originGenrePairs(rows: CollectionSummary[]) {
+  const out: { row: string; col: string; c: CollectionSummary }[] = [];
+  for (const c of rows) {
+    const rest = c.title.replace(/^The Best /, "");
+    const [origin, ...genre] = rest.split(" ");
+    if (genre.length === 0) continue;
+    out.push({ row: origin, col: genre.join(" "), c });
+  }
+  return out;
 }
 
 function CollectionsPage() {
@@ -303,8 +448,8 @@ function CollectionsPage() {
   const years = byKind("year").sort((a: CollectionSummary, b: CollectionSummary) =>
     b.slug.localeCompare(a.slug),
   );
-  const alpha = (rows: CollectionSummary[]) =>
-    [...rows].sort((a: CollectionSummary, b: CollectionSummary) => a.title.localeCompare(b.title));
+  const originPairs = originGenrePairs(byKind("origin-genre"));
+  const originCols = [...new Set(originPairs.map((p) => p.col))].sort();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -315,9 +460,6 @@ function CollectionsPage() {
             <h1 className="text-[29px] font-bold leading-tight tracking-tight text-text-bright">
               Collections
             </h1>
-            <p className="mt-1.5 max-w-[58ch] text-[13.5px] text-text-muted">
-              Ranked lists drawn from 65,000 titles. Ordered by Balasaur Score, rebuilt nightly.
-            </p>
           </div>
           <input
             type="search"
@@ -400,18 +542,30 @@ function CollectionsPage() {
           {/* Tier 3: the full index */}
           <section className="mt-13 border-t border-border pt-7">
             <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
-              Every collection
+              Every collection · {collections.length}
             </div>
-            <p className="mt-1 text-[12px] text-text-dim">
-              The complete index, {collections.length} lists. Or type in the box above to jump
-              straight to one.
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-7 md:grid-cols-4">
-              <IndexColumn label="Genre × service" rows={alpha(byKind("genre-service"))} />
-              <IndexColumn label="Genre × decade" rows={alpha(byKind("genre-decade"))} />
-              <IndexColumn label="By year" rows={years} />
-              <IndexColumn label="By origin" rows={alpha(byKind("origin-genre"))} />
+
+            <div className="lg:grid lg:grid-cols-2 lg:gap-x-10">
+              <IndexMatrix
+                label="Genre × service"
+                cols={MATRIX_COLS.map((c) => c.short)}
+                rows={buildMatrix(
+                  genreServicePairs(byKind("genre-service")),
+                  MATRIX_COLS.map((c) => c.short),
+                )}
+              />
+              <IndexMatrix
+                label="Genre × decade"
+                cols={DECADE_COLS}
+                rows={buildMatrix(genreDecadePairs(byKind("genre-decade")), DECADE_COLS)}
+              />
             </div>
+            <IndexMatrix
+              label="Origin × genre"
+              cols={originCols}
+              rows={buildMatrix(originPairs, originCols)}
+            />
+            <YearIndex years={years} />
 
             <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 pb-2">
               <Link
@@ -420,7 +574,6 @@ function CollectionsPage() {
               >
                 How we rank →
               </Link>
-              <span className="font-mono text-[10.5px] text-text-dim">Rebuilt nightly</span>
               <span className="font-mono text-[10.5px] text-text-dim">Data: TMDB &amp; OMDb</span>
             </div>
           </section>
