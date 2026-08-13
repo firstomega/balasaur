@@ -1,20 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
 import { tmdbImage } from "@/lib/tmdbImage";
 
-// /collections — the library front door. Hub redesign notes:
-// - One focal point per collection: the cover is the #1 title's poster on a
-//   stacked deck (the old 2x2 collages read as an undifferentiated 8-column
-//   poster wall).
-// - Hero tier: "By service" gets rich deck tiles; every other browsable kind
-//   compresses to list rows so the page reads like a table of contents.
-// - Capped sections: overflow items stay in the SSR HTML (CSS-hidden until
-//   expanded) so all ~350 pages keep a crawlable sitewide link.
-// - Type-to-jump box filters all collections client-side; the full layout
-//   stays in the DOM while searching for the same reason.
+// /collections — three tiers, priorities in this order: seduction, navigation,
+// completeness.
+// Tier 1  Featured: four flagship lists picked by rule (biggest service,
+//         latest year, top award, one discovery) as large poster-fan cards.
+// Tier 2  Shelves by intent (streaming / genre / decades / acclaim) on the
+//         same ScrollRail pattern Browse uses.
+// Tier 3  The full index at the bottom: plain text links, grouped, carrying
+//         the crawl mesh for all ~350 pages (genre-service and genre-decade
+//         live ONLY here; they are refinements, not top-level sections).
+// The find box filters client side; while searching, tiers 1-2 hide via CSS
+// so every link stays in the SSR HTML.
 
 export const Route = createFileRoute("/collections")({
   loader: async () => {
@@ -33,134 +35,240 @@ export const Route = createFileRoute("/collections")({
   component: CollectionsPage,
 });
 
-const ROW_SECTIONS: { kinds: string[]; label: string; cap: number }[] = [
-  { kinds: ["origin-genre"], label: "By origin", cap: 12 },
-  { kinds: ["genre"], label: "By genre", cap: 12 },
-  { kinds: ["decade"], label: "By decade", cap: 12 },
-  { kinds: ["awards", "discovery"], label: "Acclaim & discovery", cap: 12 },
+// Deterministic brand chips for service cards (no logo fetch, no CLS).
+const PROVIDER_CHIP: { name: string; label: string; className: string }[] = [
+  { name: "Netflix", label: "N", className: "bg-[#e50914] text-white" },
+  { name: "Max", label: "max", className: "bg-[#2723a6] text-white" },
+  { name: "Prime", label: "prime", className: "bg-[#0f79af] text-white" },
+  { name: "Disney+", label: "D+", className: "bg-[#0e2a72] text-white" },
+  { name: "Apple TV+", label: "tv+", className: "border border-[#3a3a3a] bg-black text-white" },
+  { name: "Hulu", label: "hulu", className: "bg-[#1ce783] text-[#04210f]" },
+  { name: "Paramount+", label: "P+", className: "bg-[#0064ff] text-white" },
+  {
+    name: "Peacock",
+    label: "pck",
+    className: "bg-gradient-to-br from-[#7b2ff7] to-[#f107a3] text-white",
+  },
+  { name: "Tubi", label: "tubi", className: "bg-[#fa382f] text-white" },
 ];
 
-const CHIP_SECTIONS: { kind: string; label: string; cap: number }[] = [
-  { kind: "genre-service", label: "Genre × service", cap: 36 },
-  { kind: "genre-decade", label: "Genre × decade", cap: 36 },
-  { kind: "year", label: "By year", cap: 36 },
-];
-
-// The #1 title's poster on a fanned stack of card edges: one visual object
-// that says "a ranked pile of titles" without four competing focal points.
-function DeckTile({ c, hidden }: { c: CollectionSummary; hidden?: boolean }) {
-  const cover = c.posters[0];
-  return (
-    <Link
-      to="/best/$slug"
-      params={{ slug: c.slug }}
-      className={`group block ${hidden ? "hidden" : ""}`}
-    >
-      <span className="relative block aspect-[2/3]">
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 rotate-[2.5deg] rounded-[6px] border border-border bg-panel transition-transform duration-150 group-hover:translate-x-1 group-hover:rotate-[5deg]"
-        />
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 rotate-[1deg] rounded-[6px] border border-border bg-border/60 transition-transform duration-150 group-hover:rotate-[2.5deg]"
-        />
-        {cover ? (
-          <img
-            src={tmdbImage(cover, "w342")}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="relative h-full w-full rounded-[6px] border border-border object-cover transition-transform duration-150 group-hover:-translate-y-1"
-          />
-        ) : (
-          <span className="relative block h-full w-full rounded-[6px] border border-border bg-panel" />
-        )}
-      </span>
-      <span className="mt-2 block text-[13.5px] font-semibold leading-tight text-text-bright group-hover:text-primary">
-        {c.title}
-      </span>
-      <span className="mt-0.5 flex gap-2 font-mono text-[10px] text-text-dim">
-        <span>{c.item_count} titles</span>
-        {typeof c.top_score === "number" && <span className="text-rating">top {c.top_score}</span>}
-      </span>
-    </Link>
-  );
+function providerChip(title: string) {
+  return PROVIDER_CHIP.find((p) => title.includes(p.name));
 }
 
-// Table-of-contents row: mini cover, title, stats. Low visual weight on
-// purpose; these sections are for scanning, not browsing.
-function RowLink({ c, hidden }: { c: CollectionSummary; hidden?: boolean }) {
-  const cover = c.posters[0];
+/** Big-numeral overlay for decade cards ("The Best of the 1990s" -> "1990s"). */
+function decadeWord(title: string): string | null {
+  return title.match(/\d{4}s/)?.[0] ?? null;
+}
+
+// Featured picks, by rule (never hand-curated): the biggest service list, the
+// latest year list, the biggest award list, and one discovery list. Backfilled
+// from the largest remaining lists if a rule comes up empty.
+function pickFeatured(all: CollectionSummary[]): CollectionSummary[] {
+  const used = new Set<string>();
+  const take = (c: CollectionSummary | undefined) => {
+    if (c && !used.has(c.slug)) {
+      used.add(c.slug);
+      return c;
+    }
+    return null;
+  };
+  const years = all
+    .filter((c: CollectionSummary) => c.kind === "year")
+    .sort((a: CollectionSummary, b: CollectionSummary) => b.slug.localeCompare(a.slug));
+  const awards = all
+    .filter((c: CollectionSummary) => c.kind === "awards")
+    .sort((a: CollectionSummary, b: CollectionSummary) => b.item_count - a.item_count);
+  const picks = [
+    take(all.find((c: CollectionSummary) => c.kind === "service")),
+    take(years[0]),
+    take(awards[0]),
+    take(all.find((c: CollectionSummary) => c.kind === "discovery")),
+  ].filter(Boolean) as CollectionSummary[];
+  for (const c of all) {
+    if (picks.length >= 4) break;
+    if (!used.has(c.slug)) {
+      picks.push(c);
+      used.add(c.slug);
+    }
+  }
+  return picks.slice(0, 4);
+}
+
+// Hover spread per fan position (Tailwind needs literal class names).
+const SPREAD = [
+  "",
+  "group-hover:translate-x-[6px]",
+  "group-hover:translate-x-[12px]",
+  "group-hover:translate-x-[18px]",
+  "group-hover:translate-x-[24px]",
+];
+
+function Fan({
+  posters,
+  count,
+  width,
+  height,
+  overlap,
+  size,
+}: {
+  posters: string[];
+  count: number;
+  width: string;
+  height: string;
+  overlap: string;
+  size: string;
+}) {
   return (
-    <Link
-      to="/best/$slug"
-      params={{ slug: c.slug }}
-      className={`group flex items-center gap-3 rounded-[6px] border border-border bg-panel px-3 py-2 transition-colors hover:border-primary ${hidden ? "hidden" : ""}`}
-    >
-      {cover ? (
+    <span className="flex">
+      {posters.slice(0, count).map((p, i) => (
         <img
-          src={tmdbImage(cover, "w92")}
+          key={i}
+          src={tmdbImage(p, size)}
           alt=""
           loading="lazy"
           decoding="async"
-          className="h-12 w-8 shrink-0 rounded-[3px] object-cover"
+          className={`${width} ${height} flex-none rounded-[5px] object-cover shadow-[-14px_0_22px_-12px_rgba(0,0,0,0.85)] ring-1 ring-white/10 transition-transform duration-150 ${
+            i > 0 ? overlap : ""
+          } ${SPREAD[i]}`}
         />
-      ) : (
-        <span className="h-12 w-8 shrink-0 rounded-[3px] bg-border" />
-      )}
-      <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-tight text-text-bright group-hover:text-primary">
-        {c.title}
-      </span>
-      <span className="shrink-0 font-mono text-[10px] text-text-dim">
-        {c.item_count}
-        {typeof c.top_score === "number" && (
-          <span className="text-rating"> · top {c.top_score}</span>
-        )}
-      </span>
-    </Link>
+      ))}
+    </span>
   );
 }
 
-function ChipLink({ c, hidden }: { c: CollectionSummary; hidden?: boolean }) {
+function FeaturedCard({ c }: { c: CollectionSummary }) {
+  const chip = c.kind === "service" ? providerChip(c.title) : null;
   return (
     <Link
       to="/best/$slug"
       params={{ slug: c.slug }}
-      className={`rounded-[4px] border border-border bg-panel px-2 py-[3px] font-mono text-[10.5px] text-text-muted transition-colors hover:border-primary hover:text-primary ${hidden ? "hidden" : ""}`}
+      className="group block rounded-[8px] bg-gradient-to-b from-panel to-panel/40 p-4 transition-colors hover:bg-[#1c2129] sm:p-5"
     >
-      {c.title}
-      <span className="ml-1 text-text-dim">{c.item_count}</span>
+      <Fan
+        posters={c.posters}
+        count={5}
+        width="w-[86px] sm:w-[106px]"
+        height="h-[129px] sm:h-[159px]"
+        overlap="ml-[-36px] sm:ml-[-45px]"
+        size="w342"
+      />
+      <span className="mt-3.5 block text-[19px] font-semibold leading-tight tracking-tight text-text-bright group-hover:text-primary sm:text-[21px]">
+        {chip && (
+          <span
+            className={`mr-2 inline-grid h-5 place-items-center rounded-[4px] px-1.5 align-[2px] font-mono text-[10px] font-bold ${chip.className}`}
+          >
+            {chip.label}
+          </span>
+        )}
+        {c.title}
+      </span>
+      <span className="mt-1 block font-mono text-[11px] text-text-dim">
+        {typeof c.top_score === "number" && (
+          <>
+            Top pick scores <span className="text-rating">{c.top_score}</span>
+          </>
+        )}
+        {c.item_count < 60 && <> · {c.item_count} titles cleared the bar</>}
+      </span>
     </Link>
   );
 }
 
-function SectionHeader({
-  label,
-  count,
-  open,
-  cap,
-  onToggle,
+function ShelfCard({ c }: { c: CollectionSummary }) {
+  const chip = c.kind === "service" ? providerChip(c.title) : null;
+  const era = c.kind === "decade" ? decadeWord(c.title) : null;
+  return (
+    <Link
+      to="/best/$slug"
+      params={{ slug: c.slug }}
+      className="group block w-[196px] flex-none rounded-[7px] p-3 transition-colors hover:bg-panel"
+    >
+      <span className="relative block w-max">
+        {chip && (
+          <span
+            className={`absolute -left-1.5 -top-1.5 z-10 grid h-6 min-w-6 place-items-center rounded-[5px] px-1.5 font-mono text-[11px] font-bold shadow-[0_3px_10px_rgba(0,0,0,0.6)] ${chip.className}`}
+          >
+            {chip.label}
+          </span>
+        )}
+        <Fan
+          posters={c.posters}
+          count={3}
+          width="w-[78px]"
+          height="h-[117px]"
+          overlap="ml-[-33px]"
+          size="w185"
+        />
+        {era && (
+          <span className="absolute bottom-2 left-2.5 z-10 font-mono text-[22px] font-bold tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.95)]">
+            {era}
+          </span>
+        )}
+      </span>
+      <span className="mt-2.5 block text-[14px] font-semibold leading-snug text-text-bright group-hover:text-primary">
+        {c.title}
+      </span>
+      {typeof c.top_score === "number" && (
+        <span className="mt-0.5 block font-mono text-[10px] text-text-dim">
+          top <span className="text-rating">{c.top_score}</span>
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function Shelf({
+  title,
+  meta,
+  children,
 }: {
-  label: string;
-  count: number;
-  open: boolean;
-  cap: number;
-  onToggle: () => void;
+  title: string;
+  meta?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-baseline gap-2 border-b border-border pb-1.5">
-      <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-text-bright">
-        {label}
-      </h2>
-      <span className="font-mono text-[10px] text-text-dim">{count}</span>
-      {count > cap && (
+    <section className="mt-11">
+      <div className="flex items-baseline gap-3">
+        <h2 className="text-[17px] font-semibold tracking-tight text-text-bright">{title}</h2>
+        {meta && <span className="font-mono text-[10.5px] text-text-dim">{meta}</span>}
+      </div>
+      <div className="mt-3.5">
+        <ScrollRail className="gap-2">{children}</ScrollRail>
+      </div>
+    </section>
+  );
+}
+
+// One index column: all links stay in the HTML; past the cap they collapse via
+// CSS until expanded.
+function IndexColumn({ label, rows }: { label: string; rows: CollectionSummary[] }) {
+  const CAP = 12;
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <h3 className="mb-2 border-b border-border pb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">
+        {label} · {rows.length}
+      </h3>
+      {rows.map((c: CollectionSummary, i: number) => (
+        <Link
+          key={c.slug}
+          to="/best/$slug"
+          params={{ slug: c.slug }}
+          className={`block py-[2.5px] text-[12.5px] leading-snug text-text-muted hover:text-primary ${
+            !open && i >= CAP ? "hidden" : ""
+          }`}
+        >
+          {c.title}
+        </Link>
+      ))}
+      {rows.length > CAP && (
         <button
           type="button"
-          onClick={onToggle}
-          className="ml-auto font-mono text-[10px] uppercase tracking-wider text-text-muted transition-colors hover:text-primary"
+          onClick={() => setOpen(!open)}
+          className="mt-1.5 font-mono text-[10.5px] text-text-dim transition-colors hover:text-primary"
         >
-          {open ? "Show fewer" : `All ${count}`}
+          {open ? "Show fewer" : `+ ${rows.length - CAP} more`}
         </button>
       )}
     </div>
@@ -170,9 +278,6 @@ function SectionHeader({
 function CollectionsPage() {
   const collections = Route.useLoaderData();
   const [q, setQ] = useState("");
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-
-  const toggle = (label: string) => setOpenSections((s) => ({ ...s, [label]: !s[label] }));
 
   const query = q.trim().toLowerCase();
   const matches = useMemo(
@@ -185,18 +290,31 @@ function CollectionsPage() {
     [query, collections],
   );
 
-  const services = collections.filter((c: CollectionSummary) => c.kind === "service");
+  const featured = useMemo(() => pickFeatured(collections), [collections]);
+  const byKind = (k: string) => collections.filter((c: CollectionSummary) => c.kind === k);
+  const services = byKind("service");
+  const genres = byKind("genre");
+  const decades = byKind("decade").sort((a: CollectionSummary, b: CollectionSummary) =>
+    b.slug.localeCompare(a.slug),
+  );
+  const acclaim = [...byKind("awards"), ...byKind("discovery")];
+  const years = byKind("year").sort((a: CollectionSummary, b: CollectionSummary) =>
+    b.slug.localeCompare(a.slug),
+  );
+  const alpha = (rows: CollectionSummary[]) =>
+    [...rows].sort((a: CollectionSummary, b: CollectionSummary) => a.title.localeCompare(b.title));
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
-      <main className="mx-auto max-w-[1160px] px-4 py-6">
+      <main className="mx-auto max-w-[1240px] px-5 py-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-[24px] font-bold tracking-tight text-text-bright">Collections</h1>
-            <p className="mt-1 max-w-[62ch] text-[13.5px] text-text-muted">
-              Ranked lists drawn from 65,000 titles: by service, decade, genre, and acclaim. Each
-              one is ordered by Balasaur Score and rebuilt nightly.
+            <h1 className="text-[29px] font-bold leading-tight tracking-tight text-text-bright">
+              Collections
+            </h1>
+            <p className="mt-1.5 max-w-[58ch] text-[13.5px] text-text-muted">
+              Ranked lists drawn from 65,000 titles. Ordered by Balasaur Score, rebuilt nightly.
             </p>
           </div>
           <input
@@ -205,28 +323,31 @@ function CollectionsPage() {
             onChange={(e) => setQ(e.target.value)}
             placeholder="Find a collection"
             aria-label="Find a collection"
-            className="w-full rounded-[5px] border border-border bg-panel px-3 py-2 font-mono text-[12px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-64"
+            className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 font-mono text-[12px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
           />
         </div>
 
-        {/* Jump results: shown while typing; the full directory below stays in
-            the DOM (CSS-hidden) so crawlers always see every link. */}
         {matches && (
-          <section className="mt-6">
-            <div className="mb-3 flex items-baseline gap-2 border-b border-border pb-1.5">
-              <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-text-bright">
-                Matches
-              </h2>
-              <span className="font-mono text-[10px] text-text-dim">{matches.length}</span>
-            </div>
+          <section className="mt-7">
+            <h2 className="text-[15px] font-semibold text-text-bright">
+              Matches{" "}
+              <span className="font-mono text-[10.5px] text-text-dim">{matches.length}</span>
+            </h2>
             {matches.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {matches.map((c: CollectionSummary) => (
-                  <ChipLink key={c.slug} c={c} />
+                  <Link
+                    key={c.slug}
+                    to="/best/$slug"
+                    params={{ slug: c.slug }}
+                    className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] text-text-muted transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {c.title}
+                  </Link>
                 ))}
               </div>
             ) : (
-              <p className="text-[13px] text-text-muted">
+              <p className="mt-3 text-[13px] text-text-muted">
                 Nothing matches "{q.trim()}". Try a genre, service, decade, or year.
               </p>
             )}
@@ -234,68 +355,73 @@ function CollectionsPage() {
         )}
 
         <div className={matches ? "hidden" : undefined}>
-          {/* Hero tier: services are what people actually browse by. */}
+          {/* Tier 1: featured */}
+          <div className="mt-7 grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {featured.map((c) => (
+              <FeaturedCard key={c.slug} c={c} />
+            ))}
+          </div>
+
+          {/* Tier 2: shelves */}
           {services.length > 0 && (
-            <section className="mt-7">
-              <div className="mb-3 flex items-baseline gap-2 border-b border-border pb-1.5">
-                <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-text-bright">
-                  By service
-                </h2>
-                <span className="font-mono text-[10px] text-text-dim">{services.length}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                {services.map((c: CollectionSummary) => (
-                  <DeckTile key={c.slug} c={c} />
-                ))}
-              </div>
-            </section>
+            <Shelf title="Streaming now" meta={`${services.length} services · updated nightly`}>
+              {services.map((c: CollectionSummary) => (
+                <ShelfCard key={c.slug} c={c} />
+              ))}
+            </Shelf>
+          )}
+          {genres.length > 0 && (
+            <Shelf title="By genre" meta={`${genres.length} lists`}>
+              {genres.map((c: CollectionSummary) => (
+                <ShelfCard key={c.slug} c={c} />
+              ))}
+            </Shelf>
+          )}
+          {decades.length > 0 && (
+            <Shelf
+              title="Through the decades"
+              meta={`${decades.length} decades · ${years.length} years`}
+            >
+              {decades.map((c: CollectionSummary) => (
+                <ShelfCard key={c.slug} c={c} />
+              ))}
+            </Shelf>
+          )}
+          {acclaim.length > 0 && (
+            <Shelf title="Acclaimed & curated" meta={`${acclaim.length} lists`}>
+              {acclaim.map((c: CollectionSummary) => (
+                <ShelfCard key={c.slug} c={c} />
+              ))}
+            </Shelf>
           )}
 
-          {ROW_SECTIONS.map(({ kinds, label, cap }) => {
-            const rows = collections.filter((c: CollectionSummary) => kinds.includes(c.kind));
-            if (rows.length === 0) return null;
-            const open = !!openSections[label];
-            return (
-              <section key={label} className="mt-7">
-                <SectionHeader
-                  label={label}
-                  count={rows.length}
-                  open={open}
-                  cap={cap}
-                  onToggle={() => toggle(label)}
-                />
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {rows.map((c: CollectionSummary, i: number) => (
-                    <RowLink key={c.slug} c={c} hidden={!open && i >= cap} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+          {/* Tier 3: the full index */}
+          <section className="mt-13 border-t border-border pt-7">
+            <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
+              Every collection
+            </div>
+            <p className="mt-1 text-[12px] text-text-dim">
+              The complete index, {collections.length} lists. Or type in the box above to jump
+              straight to one.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-7 md:grid-cols-4">
+              <IndexColumn label="Genre × service" rows={alpha(byKind("genre-service"))} />
+              <IndexColumn label="Genre × decade" rows={alpha(byKind("genre-decade"))} />
+              <IndexColumn label="By year" rows={years} />
+              <IndexColumn label="By origin" rows={alpha(byKind("origin-genre"))} />
+            </div>
 
-          {CHIP_SECTIONS.map(({ kind, label, cap }) => {
-            const rows = collections
-              .filter((c: CollectionSummary) => c.kind === kind)
-              .sort((a: CollectionSummary, b: CollectionSummary) => a.title.localeCompare(b.title));
-            if (rows.length === 0) return null;
-            const open = !!openSections[label];
-            return (
-              <section key={kind} className="mt-7">
-                <SectionHeader
-                  label={label}
-                  count={rows.length}
-                  open={open}
-                  cap={cap}
-                  onToggle={() => toggle(label)}
-                />
-                <div className="flex flex-wrap gap-1.5">
-                  {rows.map((c: CollectionSummary, i: number) => (
-                    <ChipLink key={c.slug} c={c} hidden={!open && i >= cap} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+            <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 pb-2">
+              <Link
+                to="/methodology"
+                className="font-mono text-[10.5px] text-text-muted hover:text-primary"
+              >
+                How we rank →
+              </Link>
+              <span className="font-mono text-[10.5px] text-text-dim">Rebuilt nightly</span>
+              <span className="font-mono text-[10.5px] text-text-dim">Data: TMDB &amp; OMDb</span>
+            </div>
+          </section>
         </div>
       </main>
     </div>
