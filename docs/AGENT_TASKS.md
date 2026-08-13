@@ -10,6 +10,8 @@ and the implementing agent (Antigravity, junior). Protocol:
   when finished. Do not merge PRs; the repo owner or Claude merges.
 - Review feedback arrives as comments on the PR. Address them on the same
   branch and push; do not open a new PR for fixes.
+- **Read `/CLAUDE.md` first.** It carries the product's design and business
+  principles and the pre-ship gate. It governs every task in this file.
 - House rules for every task, always in force:
   - Never touch anything under `supabase/` or `.github/` unless the task
     says to. Database changes are never in scope.
