@@ -13,6 +13,8 @@ import { Route as WatchedRouteImport } from './routes/watched'
 import { Route as TriageRouteImport } from './routes/triage'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SitemapTitlesDotxmlRouteImport } from './routes/sitemap-titles[.]xml'
+import { Route as SitemapPagesDotxmlRouteImport } from './routes/sitemap-pages[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -50,6 +52,16 @@ const TermsRoute = TermsRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapTitlesDotxmlRoute = SitemapTitlesDotxmlRouteImport.update({
+  id: '/sitemap-titles.xml',
+  path: '/sitemap-titles.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapPagesDotxmlRoute = SitemapPagesDotxmlRouteImport.update({
+  id: '/sitemap-pages.xml',
+  path: '/sitemap-pages.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -156,6 +168,8 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
@@ -180,6 +194,8 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
@@ -205,6 +221,8 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
@@ -231,6 +249,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/robots.txt'
+    | '/sitemap-pages.xml'
+    | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
@@ -255,6 +275,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/robots.txt'
+    | '/sitemap-pages.xml'
+    | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
@@ -279,6 +301,8 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/robots.txt'
+    | '/sitemap-pages.xml'
+    | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
@@ -304,6 +328,8 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapPagesDotxmlRoute: typeof SitemapPagesDotxmlRoute
+  SitemapTitlesDotxmlRoute: typeof SitemapTitlesDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
@@ -345,6 +371,20 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap-titles.xml': {
+      id: '/sitemap-titles.xml'
+      path: '/sitemap-titles.xml'
+      fullPath: '/sitemap-titles.xml'
+      preLoaderRoute: typeof SitemapTitlesDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap-pages.xml': {
+      id: '/sitemap-pages.xml'
+      path: '/sitemap-pages.xml'
+      fullPath: '/sitemap-pages.xml'
+      preLoaderRoute: typeof SitemapPagesDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -488,6 +528,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapPagesDotxmlRoute: SitemapPagesDotxmlRoute,
+  SitemapTitlesDotxmlRoute: SitemapTitlesDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,
