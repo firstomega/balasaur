@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "bun test src",
     "typecheck": "tsc --noEmit",
+    "layout": "bun scripts/layout-check.ts",
     "format": "prettier --write ."
   },
   "dependencies": {
