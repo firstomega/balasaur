@@ -826,7 +826,7 @@ function GridWithControls({
           {suggestions.length > 0 ? (
             <>
               <p className="mt-2 text-[13.5px] text-text-bright">
-                Nothing fits — try removing a filter:
+                Nothing fits. Try removing a filter:
               </p>
               <div className="mt-4 flex w-full max-w-xs flex-col gap-1.5">
                 {suggestions.map((s) => (
@@ -857,7 +857,7 @@ function GridWithControls({
           ) : (
             <>
               <p className="mt-2 text-[13.5px] text-text-bright">
-                Nothing fits the current filters — try loosening one.
+                Nothing fits the current filters. Try loosening one.
               </p>
               <button
                 type="button"

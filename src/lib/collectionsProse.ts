@@ -1,9 +1,17 @@
 // The collection-page intro: deterministic data-prose composed from the
-// collection's materialized stats. Every sentence is a claim only our database
-// can make (counts, scores, medians vs the catalog prior, newest arrival).
-// That's the whole anti-slop strategy: no LLM freeform, no hype adjectives,
-// no em-dashes, no rhetorical questions. If a fact isn't notable, its
-// sentence is omitted.
+// collection's materialized stats. Every sentence is a claim about the titles
+// in this shelf (leaders and their scores, median vs the catalog prior, newest
+// arrival). That's the whole anti-slop strategy: no LLM freeform, no hype
+// adjectives, no em-dashes, no rhetorical questions. If a fact isn't notable,
+// its sentence is omitted.
+//
+// The dek deliberately does NOT state the item count, describe the sort order,
+// or define the Balasaur Score. The page already renders the count as a chip
+// and links "Ranked by Balasaur Score" to /methodology directly beneath this
+// paragraph, and a reader looking at a descending list of scores does not need
+// to be told it descends. Those two sentences were also byte-identical across
+// every shelf, which made them the most duplicated strings on the domain and
+// pushed the real claims out of the meta description.
 
 export interface CollectionRow {
   slug: string;
@@ -45,28 +53,12 @@ function monthWord(iso: string): string | null {
   return m >= 1 && m <= 12 ? months[m - 1] : null;
 }
 
-/** Subject noun for the opening sentence, derived from the kind. */
-function subject(row: CollectionRow): string {
-  switch (row.kind) {
-    case "service":
-    case "genre-service":
-      return "streaming titles";
-    case "awards":
-      return "winners";
-    default:
-      return "titles";
-  }
-}
-
+/**
+ * Returns "" when nothing notable is known about the shelf. Callers must
+ * handle that: render no paragraph, and fall back for the meta description.
+ */
 export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
   const parts: string[] = [];
-
-  parts.push(
-    `${row.item_count.toLocaleString("en-US")} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
-  );
-  parts.push(
-    `The score blends IMDb, Rotten Tomatoes, Metacritic, and TMDB ratings into one 0 to 100 number.`,
-  );
 
   const scored = top.filter((t) => typeof t.score === "number").slice(0, 3);
   if (scored.length === 1) {

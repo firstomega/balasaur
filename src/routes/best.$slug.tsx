@@ -45,7 +45,10 @@ export const Route = createFileRoute("/best/$slug")({
     return {
       meta: buildMeta({
         title: `${d.row.title} (${d.row.item_count}) | Balasaur`,
-        description: dek.slice(0, 158),
+        // The dek is empty only when the shelf has no scored leaders, no
+        // median, and no dated newest arrival. Falling back to the shelf title
+        // keeps the description from rendering blank.
+        description: (dek || d.row.title).slice(0, 158),
         url,
       }),
       links: [canonicalLink(url)],
@@ -97,7 +100,7 @@ function CollectionPage() {
         <h1 className="max-w-[30ch] text-[26px] font-bold leading-tight tracking-tight text-text-bright">
           {row.title}
         </h1>
-        <p className="mt-2 max-w-[76ch] text-[14px] leading-relaxed text-text">{dek}</p>
+        {dek && <p className="mt-2 max-w-[76ch] text-[14px] leading-relaxed text-text">{dek}</p>}
 
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <MetaChip>{row.item_count.toLocaleString("en-US")} titles</MetaChip>
@@ -193,9 +196,7 @@ function CollectionNotFound() {
       <TopBar />
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-xl font-semibold text-text-bright">Collection not found</h1>
-        <p className="mt-2 text-sm text-text-muted">
-          It may have been retired in a refresh — collections come and go with the catalog.
-        </p>
+        <p className="mt-2 text-sm text-text-muted">That collection no longer exists.</p>
         <Link
           to="/collections"
           className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-primary hover:text-primary"

@@ -19,12 +19,30 @@ const top: DekTopItem[] = [
 ];
 
 describe("collectionDek", () => {
-  it("opens with the count and explains the score in plain words", () => {
+  it("opens on the leaders, not on the count or the sort order", () => {
     const dek = collectionDek(base, top);
-    expect(dek).toStartWith(
-      "60 streaming titles made the cut, ordered from highest Balasaur Score to lowest.",
-    );
-    expect(dek).toContain("IMDb, Rotten Tomatoes, Metacritic, and TMDB");
+    expect(dek).toStartWith("Alpha leads at 92");
+  });
+
+  // The page renders the count as a chip and links "Ranked by Balasaur Score"
+  // to /methodology right below the dek, so restating either here was both
+  // redundant and byte-identical across every shelf.
+  it("never restates the count, the sort order, or the score definition", () => {
+    const dek = collectionDek(base, top);
+    expect(dek).not.toContain("made the cut");
+    expect(dek).not.toContain("highest Balasaur Score to lowest");
+    expect(dek).not.toContain("IMDb, Rotten Tomatoes, Metacritic, and TMDB");
+    expect(dek).not.toContain("60");
+  });
+
+  it("returns an empty string when nothing about the shelf is notable", () => {
+    const bare: CollectionRow = {
+      ...base,
+      median_score: null,
+      newest_title: null,
+      newest_date: null,
+    };
+    expect(collectionDek(bare, [{ title: "Alpha" }])).toBe("");
   });
 
   it("never contains an em-dash", () => {
@@ -65,16 +83,9 @@ describe("collectionDek", () => {
     );
   });
 
-  it("picks the subject noun from the kind", () => {
-    expect(collectionDek({ ...base, kind: "awards" }, top)).toStartWith("60 winners made the cut");
-    expect(collectionDek({ ...base, kind: "decade" }, top)).toStartWith("60 titles made the cut");
-    expect(collectionDek({ ...base, kind: "genre-service" }, top)).toStartWith(
-      "60 streaming titles made the cut",
-    );
-  });
-
-  it("formats large counts with separators", () => {
-    const dek = collectionDek({ ...base, item_count: 3147, kind: "genre" }, top);
-    expect(dek).toStartWith("3,147 titles made the cut");
+  it("reads the same for every kind, since the dek no longer names a subject noun", () => {
+    const awards = collectionDek({ ...base, kind: "awards" }, top);
+    expect(collectionDek({ ...base, kind: "decade" }, top)).toBe(awards);
+    expect(collectionDek({ ...base, kind: "genre-service" }, top)).toBe(awards);
   });
 });
