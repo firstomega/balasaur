@@ -33,3 +33,6 @@ dist-ssr
 
 # Personal Claude Code settings
 .claude/settings.local.json
+
+# Layout check screenshots
+artifacts

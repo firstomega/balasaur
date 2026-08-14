@@ -1,0 +1,53 @@
+# Layout gate: no page may scroll sideways.
+#
+# Typecheck and tests cannot see a rendered page, so every layout bug this repo
+# has shipped was found by a human looking at a phone. This boots the dev
+# server, loads the main routes at 390, 768, and 1440 pixels wide, and fails the
+# PR when the document scrolls horizontally, naming the element responsible.
+#
+# It also uploads a full-page screenshot of every route at every width, pass or
+# fail, so "have I seen this at 390px" has an answer without opening a browser.
+name: Layout
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: layout-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  overflow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Kept out of package.json on purpose: this is a CI-only browser driver and
+      # nothing in src/ imports it.
+      - name: Install Playwright
+        run: |
+          bun add --no-save playwright@1.62.1
+          bunx playwright install --with-deps chromium
+
+      - name: Check for horizontal overflow
+        run: bun scripts/layout-check.ts
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layout-screenshots
+          path: artifacts/layout/
+          if-no-files-found: warn
+          retention-days: 14
