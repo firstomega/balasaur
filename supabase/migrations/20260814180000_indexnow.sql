@@ -113,9 +113,10 @@ begin
   where (p_full or updated_at >= v_since)
     and canonical_media_path(media_id, media_type, title) is null;
 
+  -- pg_net validates this header strictly and raises on "; charset=utf-8".
   select net.http_post(
     url     := 'https://api.indexnow.org/indexnow',
-    headers := jsonb_build_object('Content-Type', 'application/json; charset=utf-8'),
+    headers := jsonb_build_object('Content-Type', 'application/json'),
     body    := jsonb_build_object(
                  'host', 'balasaur.com',
                  'key', v_key,
@@ -140,3 +141,9 @@ comment on function public.ping_indexnow(boolean) is
 -- 5. Twenty minutes after rebuild_collections() (jobid 1, 20 9 * * *), so the
 --    collections it announces are the ones just rebuilt.
 -- select cron.schedule('indexnow-nightly', '40 9 * * *', $$select public.ping_indexnow()$$);
+
+-- Verified end to end on 2026-08-14 against the deployed site. The first
+-- submission returned 403 SiteVerificationNotCompleted, which is IndexNow
+-- checking the key file asynchronously the first time a host appears, not a
+-- rejected key. A retry minutes later returned 200 with an empty body, its
+-- success response, accepting 9,346 URLs.
