@@ -26,6 +26,8 @@ export const Route = createFileRoute("/sitemap.xml")({
           "/privacy",
           "/terms",
           "/methodology",
+          "/about",
+          "/contact",
         ];
         const urls: { loc: string; lastmod?: string }[] = staticPaths.map((p) => ({
           loc: `${SITE_ORIGIN}${p}`,

@@ -14,6 +14,12 @@ export function Footer() {
         </div>
         <div className="flex flex-col gap-2 md:items-end">
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-text-muted">
+            <Link to="/about" className="hover:text-text-bright">
+              About
+            </Link>
+            <Link to="/contact" className="hover:text-text-bright">
+              Contact
+            </Link>
             <Link to="/privacy" className="hover:text-text-bright">
               Privacy
             </Link>

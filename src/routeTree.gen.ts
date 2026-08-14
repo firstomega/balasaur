@@ -18,8 +18,10 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as ListsRouteImport } from './routes/lists'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TvIdRouteImport } from './routes/tv.$id'
@@ -75,6 +77,11 @@ const ListsRoute = ListsRouteImport.update({
   path: '/lists',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsRoute = CollectionsRouteImport.update({
   id: '/collections',
   path: '/collections',
@@ -83,6 +90,11 @@ const CollectionsRoute = CollectionsRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HandleRoute = HandleRouteImport.update({
@@ -135,8 +147,10 @@ const ApiPublicHooksBackfillMediaRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$handle': typeof HandleRoute
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
+  '/contact': typeof ContactRoute
   '/lists': typeof ListsRoute
   '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
@@ -157,8 +171,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$handle': typeof HandleRoute
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
+  '/contact': typeof ContactRoute
   '/lists': typeof ListsRoute
   '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
@@ -180,8 +196,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$handle': typeof HandleRoute
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
+  '/contact': typeof ContactRoute
   '/lists': typeof ListsRoute
   '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
@@ -204,8 +222,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$handle'
+    | '/about'
     | '/account'
     | '/collections'
+    | '/contact'
     | '/lists'
     | '/methodology'
     | '/privacy'
@@ -226,8 +246,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$handle'
+    | '/about'
     | '/account'
     | '/collections'
+    | '/contact'
     | '/lists'
     | '/methodology'
     | '/privacy'
@@ -248,8 +270,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$handle'
+    | '/about'
     | '/account'
     | '/collections'
+    | '/contact'
     | '/lists'
     | '/methodology'
     | '/privacy'
@@ -271,8 +295,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HandleRoute: typeof HandleRoute
+  AboutRoute: typeof AboutRoute
   AccountRoute: typeof AccountRoute
   CollectionsRoute: typeof CollectionsRoute
+  ContactRoute: typeof ContactRoute
   ListsRoute: typeof ListsRoute
   MethodologyRoute: typeof MethodologyRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -356,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/collections': {
       id: '/collections'
       path: '/collections'
@@ -368,6 +401,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$handle': {
@@ -439,8 +479,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HandleRoute: HandleRoute,
+  AboutRoute: AboutRoute,
   AccountRoute: AccountRoute,
   CollectionsRoute: CollectionsRoute,
+  ContactRoute: ContactRoute,
   ListsRoute: ListsRoute,
   MethodologyRoute: MethodologyRoute,
   PrivacyRoute: PrivacyRoute,

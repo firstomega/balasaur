@@ -175,7 +175,7 @@ async function main() {
       }, prefix);
     };
 
-    const routes = ["/", "/collections", "/methodology"];
+    const routes = ["/", "/collections", "/methodology", "/about", "/contact"];
     for (const [from, prefix] of [
       ["/collections", "/best/"],
       ["/", "/movie/"],
