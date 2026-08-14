@@ -159,6 +159,7 @@ async function main() {
   const browser = await chromium.launch();
   const failures: string[] = [];
   const skipped: string[] = [];
+  let checkedRoutes = 0;
 
   try {
     // Detail routes carry an id in the path, so pick real ones off the site
@@ -198,6 +199,7 @@ async function main() {
     console.log(`Checking ${routes.length} routes at ${WIDTHS.length} widths\n`);
 
     for (const route of routes) {
+      checkedRoutes++;
       for (const { w, h, label } of WIDTHS) {
         const page = await browser.newPage({
           viewport: { width: w, height: h },
@@ -261,7 +263,20 @@ async function main() {
     console.log(`\n${failures.length} layout failure(s). Screenshots show the rendered page.`);
     process.exit(1);
   }
-  console.log("\nNo page scrolls sideways.");
+
+  // State coverage, never a bare pass. A green run that quietly checked five
+  // routes instead of eight reads as "everything is fine" and is not.
+  const planned = checkedRoutes + skipped.length;
+  console.log(
+    `\nNo page scrolls sideways. Checked ${checkedRoutes} of ${planned} routes at ${WIDTHS.length} widths.`,
+  );
+  if (skipped.length > 0) {
+    console.log(
+      `${skipped.length} route(s) skipped, so this run did NOT cover them. ` +
+        `Catalog pages need a privileged database key: anon has no read grant on the media table, ` +
+        `so without APP_SUPABASE_SERVICE_ROLE_KEY the data-driven pages render empty and no detail links exist to follow.`,
+    );
+  }
 }
 
 await main();

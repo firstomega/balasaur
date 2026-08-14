@@ -40,7 +40,15 @@ jobs:
           bun add --no-save playwright@1.62.1
           bunx playwright install --with-deps chromium
 
+      # Catalog pages read the media table, which grants SELECT only to
+      # service_role, so the anon key in .env cannot render them. Without this
+      # secret the run still checks the static pages and says plainly which
+      # routes it skipped. Add it in Settings > Secrets > Actions to get the
+      # homepage, collection, and detail pages covered too. GitHub withholds
+      # secrets from fork pull requests, so this stays out of untrusted runs.
       - name: Check for horizontal overflow
+        env:
+          APP_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.APP_SUPABASE_SERVICE_ROLE_KEY }}
         run: bun scripts/layout-check.ts
 
       - name: Upload screenshots
