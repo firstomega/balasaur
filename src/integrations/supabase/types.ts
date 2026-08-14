@@ -409,12 +409,28 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      // Titles eligible for search indexing: the SQL mirror of isCorroborated()
+      // in src/lib/indexability.ts. Every column of a view is nullable, which is
+      // what the generator emits column by column; expressed as a mapped type so
+      // it cannot drift from `media` when a column is added.
+      indexable_media: {
+        Row: {
+          [K in keyof Database["public"]["Tables"]["media"]["Row"]]:
+            | Database["public"]["Tables"]["media"]["Row"][K]
+            | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
+      canonical_media_path: {
+        Args: { p_media_id: string; p_media_type: string; p_title: string };
+        Returns: string;
+      };
       catalog_facets: { Args: never; Returns: Json };
       catalog_facets_filtered: { Args: { p: Json }; Returns: Json };
       genre_plural: { Args: { g: string }; Returns: string };
+      ping_indexnow: { Args: { p_full?: boolean }; Returns: Json };
       rebuild_collections: { Args: never; Returns: undefined };
       search_cast: {
         Args: { p_exclude?: string[]; p_q: string };

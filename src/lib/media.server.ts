@@ -14,7 +14,6 @@ import { computeBalasaurScore } from "./score";
 import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
-import { CORROBORATION_MIN_VOTES } from "./indexability";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
 
@@ -27,16 +26,6 @@ type MediaRow = TablesInsert<"media">;
  * whole domain's quality assessment down with it.
  */
 export const SITEMAP_TITLE_BUDGET = 2500;
-
-/**
- * PostgREST `.or()` form of the corroboration rule in isCorroborated().
- * The two MUST express the same thing: the sitemap must never contain a URL
- * whose page renders noindex.
- */
-const SITEMAP_CORROBORATION_FILTER =
-  `vote_count.gte.${CORROBORATION_MIN_VOTES},` +
-  `rating_rotten_tomatoes.not.is.null,` +
-  `rating_metacritic.not.is.null`;
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
@@ -505,12 +494,11 @@ async function mapWithLimit<T, R>(
 export async function listSitemapEntries(
   limit = SITEMAP_TITLE_BUDGET,
 ): Promise<{ path: string; lastmod?: string }[]> {
-  // Tiered indexation: only titles rich enough to stand alone in a search
-  // result (art + synopsis + a score) get sitemap slots, and never
-  // content-flagged rows. Asking Google to index every thin API-mirror page is
-  // how database sites earn "low value content" verdicts — quality of the
-  // indexed SAMPLE beats quantity. The thin tail stays reachable (linked,
-  // crawlable) but carries noindex until it earns its way in.
+  // Reads the indexable_media view, which encodes the same rule as
+  // isCorroborated() in indexability.ts and is also what ping_indexnow() reads.
+  // One definition, three callers: a URL can never be submitted whose page
+  // renders noindex. The thin tail stays reachable (linked, crawlable) but
+  // carries noindex until it earns its way in.
   //
   // Ordered by RATING COUNT, not TMDB popularity. Popularity measures what is
   // trending on TMDB this week, which is uncorrelated with what people search
@@ -533,14 +521,8 @@ export async function listSitemapEntries(
   }[] = [];
   for (let offset = 0; offset < limit; offset += PAGE) {
     const { data, error } = await supabaseAdmin
-      .from("media")
+      .from("indexable_media")
       .select("media_id, media_type, title, updated_at")
-      .eq("sensitive", false)
-      .not("poster_url", "is", null)
-      .not("overview", "is", null)
-      .neq("overview", "")
-      .not("rating_balasaur", "is", null)
-      .or(SITEMAP_CORROBORATION_FILTER)
       .order("vote_count", { ascending: false, nullsFirst: false })
       .order("popularity", { ascending: false, nullsFirst: false })
       .order("media_id", { ascending: true }) // stable tiebreak across pages
@@ -550,26 +532,30 @@ export async function listSitemapEntries(
       console.error("[sitemap] media query failed:", error.message);
       break; // serve what we have — a partial sitemap beats a 500
     }
-    rows.push(...(data ?? []));
+    // A view reports every column as nullable, so drop any row missing the two
+    // fields a URL cannot be built without rather than emitting "/movie/null".
+    for (const r of data ?? []) {
+      if (r.media_id && r.media_type) {
+        rows.push({
+          media_id: r.media_id,
+          media_type: r.media_type,
+          title: r.title,
+          updated_at: r.updated_at,
+        });
+      }
+    }
     if (!data || data.length < PAGE) break;
   }
 
-  return rows.map(
-    (r: {
-      media_id: string;
-      media_type: string;
-      title: string | null;
-      updated_at: string | null;
-    }) => {
-      const rawId = r.media_id.replace(/^(movie|tv)-/, "");
-      const seg = r.media_type === "tv" ? "tv" : "movie";
-      // Emit the canonical slugged URL so crawlers index it directly (no 301 hop).
-      return {
-        path: `/${seg}/${mediaSlug(rawId, r.title)}`,
-        lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
-      };
-    },
-  );
+  return rows.map((r) => {
+    const rawId = r.media_id.replace(/^(movie|tv)-/, "");
+    const seg = r.media_type === "tv" ? "tv" : "movie";
+    // Emit the canonical slugged URL so crawlers index it directly (no 301 hop).
+    return {
+      path: `/${seg}/${mediaSlug(rawId, r.title)}`,
+      lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
+    };
+  });
 }
 
 /**
