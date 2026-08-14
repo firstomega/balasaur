@@ -12,7 +12,7 @@ import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
-import { TasteRamp, tasteRampSeen } from "@/components/balasaur/TasteRamp";
+import { TasteRamp } from "@/components/balasaur/TasteRamp";
 import { ShareButton } from "@/components/balasaur/ShareButton";
 import {
   useCatalogInfinite,
@@ -65,8 +65,13 @@ export const Route = createFileRoute("/")({
     // Detect the viewer's country (edge geo header) so the default view can be
     // server-rendered local-first — same value the client reads, so no hydration flip.
     // Guarded + budgeted: a geo hiccup or hang must never take down the loader.
+    // 400ms, not 2000ms. This await runs BEFORE the prefetch below, so its
+    // budget is added to the document's time to complete, and the LCP image
+    // cannot be discovered until the document lands. Geo only decides row
+    // ordering: not worth seconds of blank screen. Missing it degrades to the
+    // global ordering and the client corrects after mount.
     const country =
-      (await ssrBudget(context.queryClient.ensureQueryData(viewerCountryOptions()), 2000)) ?? "";
+      (await ssrBudget(context.queryClient.ensureQueryData(viewerCountryOptions()), 400)) ?? "";
     const boost = boostBucketsForCountry(country).length > 0 ? country : "";
     // Prefetch the URL's filters (so a shared/filtered link is server-rendered, not just
     // the default grid) + facet stats. allSettled so a prefetch failure can never reject
@@ -81,7 +86,7 @@ export const Route = createFileRoute("/")({
         context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
         context.queryClient.ensureQueryData(homeRailsOptions(boost)),
       ]),
-      5000,
+      1500,
     );
 
     // Hand head() the above-the-fold poster so it can be preloaded. Read from
@@ -191,7 +196,7 @@ function HomePage() {
       // non-fatal
     }
   };
-  const { seenIds, statuses, recordStatus, ready, count } = useUserStatus();
+  const { seenIds, statuses, recordStatus } = useUserStatus();
   const { user } = useAuth();
   // Per-country streaming: filter availability by the viewer's account region.
   // Falls back to US for signed-out visitors / accounts with no region set.
@@ -292,15 +297,12 @@ function HomePage() {
   // Mobile bottom action sheet for a card (hover quick-actions don't exist on touch).
   const [actionItem, setActionItem] = useState<MediaItem | null>(null);
 
-  // First-visit taste ramp: auto-open once per device for visitors with an
-  // empty library. Always skippable; picks migrate to the account on sign-in.
+  // The taste ramp is opt-in now. It used to open itself 1.2s after load for
+  // anyone with an empty library, which interrupted first-time visitors from
+  // search before they had been given anything, and put a pop-up over the
+  // content on mobile, which search engines treat as a demotion signal. It
+  // stays one tap away from the hero button.
   const [rampOpen, setRampOpen] = useState(false);
-  useEffect(() => {
-    if (!ready || count > 0 || rampOpen || tasteRampSeen()) return;
-    const t = window.setTimeout(() => setRampOpen(true), 1200);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, count]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

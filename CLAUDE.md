@@ -140,6 +140,66 @@ environment, say so plainly rather than implying coverage.
 
 ---
 
+## How to report work to the owner
+
+The principles above govern the product. This one governs the conversation.
+
+The owner is technical enough to run this project and is not interested in
+reading like a release note. Reports that lean on internal vocabulary make
+him re-read a paragraph to extract one fact, which wastes the scarcest
+input on the project.
+
+- **Lead with what changed for a person using the site**, then the cause.
+  Not "the preload lives in head() which receives loaderData" but "the fix
+  could not run until the slow thing finished, so it did nothing."
+- **Name things by what they do.** "The page waited up to 7 seconds before
+  sending anything" beats "the loader awaited a 2000ms geo budget serially
+  ahead of a 5000ms prefetch."
+- **A technical term is allowed when it is load-bearing**, and then it gets
+  defined once, in the same sentence. Metric names (LCP, CLS) are worth
+  keeping because they appear in the reports he reads. File paths and
+  function names belong in commits and pull requests, not in chat.
+- **Numbers carry units and a comparison.** "2.6 seconds, down from 3.8"
+  beats "FCP improved."
+- **Predictions carry their own track record.** If the last estimate was
+  wrong, say so before making another one.
+
+**Check:** could someone who does not write code follow what changed and
+why it matters, without stopping to look anything up? If a sentence only
+parses for someone who has read the file being described, rewrite it.
+
+### End every response with a model recommendation
+
+The owner pays for usage and wants to spend it deliberately. Close every
+response with one short line naming the model and effort level that fits the
+work he is most likely to do next, and why. Switching mid-session is free and
+keeps the conversation, so recommend the cheapest thing that will do the job
+and say when to come back up.
+
+Rough mapping, by the shape of the next task rather than by feel:
+
+- **Haiku, low effort.** Mechanical and verifiable: rename, copy tweak,
+  formatting, a single obvious edit, re-running a check.
+- **Sonnet, medium.** Well-specified single-file work, straightforward
+  components, writing tests against an existing pattern, routine debugging
+  with a clear error message.
+- **Opus, medium.** Multi-file changes, anything touching the database or a
+  migration, reviewing someone else's pull request, work where being wrong
+  is expensive.
+- **Opus, high or above.** Architecture, taste calls on design, ranking or
+  scoring logic, diagnosing a bug with no obvious cause, planning a feature
+  from scratch.
+- **Fable.** Long-form writing, naming, prose passes, mock copy.
+
+Be specific about the next step, not generic. "Sonnet medium is enough to
+apply the copy fixes; come back to Opus high before touching the ranking
+function again" is useful. "Use Sonnet for simple tasks" is not.
+
+If the work ahead genuinely needs the current model, say so plainly rather
+than inventing a downgrade.
+
+---
+
 ## Business posture, current phase
 
 These are conditions of the moment, not permanent truths. Revisit when
