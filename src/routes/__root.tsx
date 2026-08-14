@@ -10,6 +10,8 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import archivoFontUrl from "../fonts/archivo-latin-var.woff2?url";
+import monoFontUrl from "../fonts/jetbrains-mono-latin-var.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Footer } from "@/components/balasaur/Footer";
@@ -145,14 +147,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "preload",
         as: "font",
         type: "font/woff2",
-        href: "/fonts/archivo-latin-var.woff2",
+        href: archivoFontUrl,
         crossOrigin: "anonymous",
       },
       {
         rel: "preload",
         as: "font",
         type: "font/woff2",
-        href: "/fonts/jetbrains-mono-latin-var.woff2",
+        href: monoFontUrl,
         crossOrigin: "anonymous",
       },
     ],
