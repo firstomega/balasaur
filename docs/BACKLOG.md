@@ -274,9 +274,10 @@ prose, the seasons table, and the facts subtraction. Still open:
 
 ### Content and SEO work, not started
 
-- **Per-title deterministic prose** on `/movie/$id` and `/tv/$id`, extending
-  the `collectionsProse.ts` pattern. This is the single item that unblocks
-  Amazon, AdSense, Journey, and the scaled-content risk at once.
+- ~~Per-title deterministic prose~~ **SHIPPED** 2026-08-13 in PR #163 as
+  `src/lib/titleProse.ts`. Every title page now leads with database-only
+  claims (score provenance, critic vs audience split, vote weight, series
+  completion, availability) before the borrowed synopsis.
 - Attribute-intersection collection pages behind a distinctness gate.
 - "Similar to X" pages seeded from our own score proximity.
 - Sitemap sharding, ETag/304 handling, IndexNow ping.
