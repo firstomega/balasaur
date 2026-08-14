@@ -106,22 +106,9 @@ export function noindexMeta(): MetaTag {
   return { name: "robots", content: "noindex, follow" };
 }
 
-/** A detail page earns an index slot only when it can stand alone in a search
- *  result: art + synopsis + at least one rating. Mirrors the sitemap gate in
- *  listSitemapEntries — the two must agree or sitemap URLs would carry noindex. */
-export function isIndexableDetail(d: {
-  overview?: string;
-  posterUrl?: string;
-  ratings?: { imdb?: number; tmdb?: number; balasaur?: number };
-}): boolean {
-  return Boolean(
-    d.overview &&
-    d.posterUrl &&
-    (d.ratings?.balasaur !== undefined ||
-      d.ratings?.imdb !== undefined ||
-      d.ratings?.tmdb !== undefined),
-  );
-}
+// The index gate lives in indexability.ts so it stays pure and testable, and
+// so media.server.ts can share the same rule without importing this module.
+export { CORROBORATION_MIN_VOTES, isCorroborated, isIndexableDetail } from "./indexability";
 
 /** Intent-tuned title/description for movie & TV detail pages: front-load what
  *  searchers type ("watch X", "X streaming") plus the score. */

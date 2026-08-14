@@ -13,11 +13,15 @@ import { Route as WatchedRouteImport } from './routes/watched'
 import { Route as TriageRouteImport } from './routes/triage'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SitemapTitlesDotxmlRouteImport } from './routes/sitemap-titles[.]xml'
+import { Route as SitemapPagesDotxmlRouteImport } from './routes/sitemap-pages[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as ListsRouteImport } from './routes/lists'
+import { Route as D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport } from './routes/d50e38be1b86ef6ef1079ff766aa2079[.]txt'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AccountRouteImport } from './routes/account'
@@ -52,6 +56,16 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapTitlesDotxmlRoute = SitemapTitlesDotxmlRouteImport.update({
+  id: '/sitemap-titles.xml',
+  path: '/sitemap-titles.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapPagesDotxmlRoute = SitemapPagesDotxmlRouteImport.update({
+  id: '/sitemap-pages.xml',
+  path: '/sitemap-pages.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   id: '/robots.txt',
   path: '/robots.txt',
@@ -72,11 +86,22 @@ const MethodologyRoute = MethodologyRouteImport.update({
   path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ListsRoute = ListsRouteImport.update({
   id: '/lists',
   path: '/lists',
   getParentRoute: () => rootRouteImport,
 } as any)
+const D50e38be1b86ef6ef1079ff766aa2079DottxtRoute =
+  D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport.update({
+    id: '/d50e38be1b86ef6ef1079ff766aa2079.txt',
+    path: '/d50e38be1b86ef6ef1079ff766aa2079.txt',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -151,11 +176,15 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
+  '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   '/lists': typeof ListsRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
@@ -175,11 +204,15 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
+  '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   '/lists': typeof ListsRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
@@ -200,11 +233,15 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
+  '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   '/lists': typeof ListsRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
@@ -226,11 +263,15 @@ export interface FileRouteTypes {
     | '/account'
     | '/collections'
     | '/contact'
+    | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
     | '/lists'
+    | '/llms.txt'
     | '/methodology'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
+    | '/sitemap-pages.xml'
+    | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
@@ -250,11 +291,15 @@ export interface FileRouteTypes {
     | '/account'
     | '/collections'
     | '/contact'
+    | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
     | '/lists'
+    | '/llms.txt'
     | '/methodology'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
+    | '/sitemap-pages.xml'
+    | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
@@ -274,11 +319,15 @@ export interface FileRouteTypes {
     | '/account'
     | '/collections'
     | '/contact'
+    | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
     | '/lists'
+    | '/llms.txt'
     | '/methodology'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
+    | '/sitemap-pages.xml'
+    | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
     | '/triage'
@@ -299,11 +348,15 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   CollectionsRoute: typeof CollectionsRoute
   ContactRoute: typeof ContactRoute
+  D50e38be1b86ef6ef1079ff766aa2079DottxtRoute: typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   ListsRoute: typeof ListsRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   MethodologyRoute: typeof MethodologyRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapPagesDotxmlRoute: typeof SitemapPagesDotxmlRoute
+  SitemapTitlesDotxmlRoute: typeof SitemapTitlesDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
@@ -347,6 +400,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap-titles.xml': {
+      id: '/sitemap-titles.xml'
+      path: '/sitemap-titles.xml'
+      fullPath: '/sitemap-titles.xml'
+      preLoaderRoute: typeof SitemapTitlesDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap-pages.xml': {
+      id: '/sitemap-pages.xml'
+      path: '/sitemap-pages.xml'
+      fullPath: '/sitemap-pages.xml'
+      preLoaderRoute: typeof SitemapPagesDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/robots.txt': {
       id: '/robots.txt'
       path: '/robots.txt'
@@ -375,11 +442,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lists': {
       id: '/lists'
       path: '/lists'
       fullPath: '/lists'
       preLoaderRoute: typeof ListsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/d50e38be1b86ef6ef1079ff766aa2079.txt': {
+      id: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+      path: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+      fullPath: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+      preLoaderRoute: typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -483,11 +564,16 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   CollectionsRoute: CollectionsRoute,
   ContactRoute: ContactRoute,
+  D50e38be1b86ef6ef1079ff766aa2079DottxtRoute:
+    D50e38be1b86ef6ef1079ff766aa2079DottxtRoute,
   ListsRoute: ListsRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   MethodologyRoute: MethodologyRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapPagesDotxmlRoute: SitemapPagesDotxmlRoute,
+  SitemapTitlesDotxmlRoute: SitemapTitlesDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,

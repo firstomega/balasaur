@@ -19,6 +19,14 @@ import type { Json, TablesInsert } from "@/integrations/supabase/types";
 
 type MediaRow = TablesInsert<"media">;
 
+/**
+ * How many title URLs the sitemap asks Google to index. Deliberately small.
+ * Googlebot crawls this site at roughly 100 pages a day, so a focused list
+ * indexes faster than an aspirational one, and a mass of thin pages drags the
+ * whole domain's quality assessment down with it.
+ */
+export const SITEMAP_TITLE_BUDGET = 2500;
+
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w500";
@@ -484,21 +492,26 @@ async function mapWithLimit<T, R>(
  * under the 50k sitemap limit, most-popular first.
  */
 export async function listSitemapEntries(
-  limit = 10000,
+  limit = SITEMAP_TITLE_BUDGET,
 ): Promise<{ path: string; lastmod?: string }[]> {
-  // Tiered indexation: only titles rich enough to stand alone in a search
-  // result (art + synopsis + a score) get sitemap slots, and never
-  // content-flagged rows. Asking Google to index every thin API-mirror page is
-  // how database sites earn "low value content" verdicts — quality of the
-  // indexed SAMPLE beats quantity. The thin tail stays reachable (linked,
-  // crawlable) but carries noindex until it earns its way in.
+  // Reads the indexable_media view, which encodes the same rule as
+  // isCorroborated() in indexability.ts and is also what ping_indexnow() reads.
+  // One definition, three callers: a URL can never be submitted whose page
+  // renders noindex. The thin tail stays reachable (linked, crawlable) but
+  // carries noindex until it earns its way in.
+  //
+  // Ordered by RATING COUNT, not TMDB popularity. Popularity measures what is
+  // trending on TMDB this week, which is uncorrelated with what people search
+  // for: under it, sitemap position 500 was a title with 19 ratings, 7,811 of
+  // the 10,000 slots went to titles under 50 ratings, and 683 titles with
+  // 1,000+ ratings were left out of the sitemap entirely. Rating count is a
+  // direct proxy for how many people have seen a title, so it approximates
+  // search demand. Measured 2026-08-14.
   //
   // Paged in 1,000-row chunks: PostgREST clamps any single request to its
   // max-rows setting (default 1000), which silently capped the old
   // `.limit(20000)` at ~1,000 URLs — Search Console's "1,005 discovered
-  // pages" was this bug. The 10k budget is deliberate: Googlebot currently
-  // crawls this site at ~100 pages/day (throttled by response time), so a
-  // focused top-10k sitemap indexes faster than an aspirational 50k one.
+  // pages" was this bug.
   const PAGE = 1000;
   const rows: {
     media_id: string;
@@ -508,13 +521,9 @@ export async function listSitemapEntries(
   }[] = [];
   for (let offset = 0; offset < limit; offset += PAGE) {
     const { data, error } = await supabaseAdmin
-      .from("media")
+      .from("indexable_media")
       .select("media_id, media_type, title, updated_at")
-      .eq("sensitive", false)
-      .not("poster_url", "is", null)
-      .not("overview", "is", null)
-      .neq("overview", "")
-      .not("rating_balasaur", "is", null)
+      .order("vote_count", { ascending: false, nullsFirst: false })
       .order("popularity", { ascending: false, nullsFirst: false })
       .order("media_id", { ascending: true }) // stable tiebreak across pages
       .range(offset, Math.min(offset + PAGE, limit) - 1);
@@ -523,26 +532,30 @@ export async function listSitemapEntries(
       console.error("[sitemap] media query failed:", error.message);
       break; // serve what we have — a partial sitemap beats a 500
     }
-    rows.push(...(data ?? []));
+    // A view reports every column as nullable, so drop any row missing the two
+    // fields a URL cannot be built without rather than emitting "/movie/null".
+    for (const r of data ?? []) {
+      if (r.media_id && r.media_type) {
+        rows.push({
+          media_id: r.media_id,
+          media_type: r.media_type,
+          title: r.title,
+          updated_at: r.updated_at,
+        });
+      }
+    }
     if (!data || data.length < PAGE) break;
   }
 
-  return rows.map(
-    (r: {
-      media_id: string;
-      media_type: string;
-      title: string | null;
-      updated_at: string | null;
-    }) => {
-      const rawId = r.media_id.replace(/^(movie|tv)-/, "");
-      const seg = r.media_type === "tv" ? "tv" : "movie";
-      // Emit the canonical slugged URL so crawlers index it directly (no 301 hop).
-      return {
-        path: `/${seg}/${mediaSlug(rawId, r.title)}`,
-        lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
-      };
-    },
-  );
+  return rows.map((r) => {
+    const rawId = r.media_id.replace(/^(movie|tv)-/, "");
+    const seg = r.media_type === "tv" ? "tv" : "movie";
+    // Emit the canonical slugged URL so crawlers index it directly (no 301 hop).
+    return {
+      path: `/${seg}/${mediaSlug(rawId, r.title)}`,
+      lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
+    };
+  });
 }
 
 /**
