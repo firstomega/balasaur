@@ -166,13 +166,21 @@ async function main() {
     const scout = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const firstHref = async (from: string, prefix: string): Promise<string | null> => {
       await scout.goto(`${url}${from}`, { waitUntil: "load", timeout: 60_000 });
-      await scout.waitForTimeout(2500);
-      return scout.evaluate((p: string) => {
-        const a = Array.from(document.querySelectorAll("a[href]")).find((el) =>
-          (el.getAttribute("href") ?? "").startsWith(p),
-        );
-        return a ? a.getAttribute("href") : null;
-      }, prefix);
+      // Budgeted loaders stream the shell first and fill in data client-side,
+      // and a cold dev server compiles on demand, so a link can legitimately
+      // take a while to exist. Wait for it rather than for a fixed pause.
+      const found = await scout
+        .waitForSelector(`a[href^="${prefix}"]`, { timeout: 30_000 })
+        .catch(() => null);
+      if (found) return found.getAttribute("href");
+      // Say what WAS there, so a miss in the log is diagnosable.
+      const sample = await scout.evaluate(() =>
+        Array.from(document.querySelectorAll("a[href]"), (a) => a.getAttribute("href"))
+          .filter((h): h is string => !!h)
+          .slice(0, 8),
+      );
+      console.log(`      ${from} rendered ${sample.length} link(s): ${sample.join(" ")}`);
+      return null;
     };
 
     const routes = ["/", "/collections", "/methodology", "/about", "/contact"];
@@ -202,6 +210,19 @@ async function main() {
 
           const slug = route === "/" ? "home" : route.replace(/^\//, "").replace(/\//g, "-");
           await page.screenshot({ path: `${OUT_DIR}/${slug}-${label}.png`, fullPage: true });
+
+          // A page with zero internal links did not actually render (an error
+          // page or an empty shell has no nav). Without this, a broken page
+          // passes the overflow check by being blank, which is a false green.
+          const internalLinks = await page.evaluate(
+            () => document.querySelectorAll('a[href^="/"]').length,
+          );
+          if (internalLinks === 0) {
+            const msg = `FAIL  ${route} @ ${label}px  rendered with no internal links, treating as a render failure`;
+            failures.push(msg);
+            console.log(msg);
+            continue;
+          }
 
           const m = (await page.evaluate(measure)) as Measurement;
           if (m.overflow > SLACK_PX) {

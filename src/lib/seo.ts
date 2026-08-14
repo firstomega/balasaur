@@ -4,6 +4,8 @@
 // the production custom domain so canonical/sitemap/robots are always absolute
 // even if the env var is missing in a given environment.
 
+import { createIsomorphicFn } from "@tanstack/react-start";
+
 const RAW_ORIGIN = (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://balasaur.com";
 
 /** Canonical origin with no trailing slash, e.g. "https://balasaur.com". */
@@ -84,17 +86,19 @@ export function canonicalLink(url: string) {
  * max-age=0 keeps browsers revalidating; s-maxage lets the CDN serve for
  * `seconds`; stale-while-revalidate keeps responses instant during refresh.
  */
+const setSsrCacheControl = createIsomorphicFn()
+  .client((_value: string) => {})
+  .server(async (value: string) => {
+    try {
+      const { setResponseHeader } = await import("@tanstack/react-start/server");
+      setResponseHeader("Cache-Control", value);
+    } catch {
+      // Outside a request context (prerender/edge quirk) — caching is best-effort.
+    }
+  });
+
 export async function cacheSsrResponse(seconds = 21600): Promise<void> {
-  if (!import.meta.env.SSR) return;
-  try {
-    const { setResponseHeader } = await import("@tanstack/react-start/server");
-    setResponseHeader(
-      "Cache-Control",
-      `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=86400`,
-    );
-  } catch {
-    // Outside a request context (prerender/edge quirk) — caching is best-effort.
-  }
+  await setSsrCacheControl(`public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=86400`);
 }
 
 /** Meta tag asking crawlers to skip this page (tiered indexation). */
