@@ -41,8 +41,42 @@ export type Database = {
           },
         ];
       };
+      collection_recipes: {
+        Row: {
+          slug: string;
+          title: string;
+          section: string;
+          season_months: number[] | null;
+          criteria: Json;
+          min_items: number;
+          active: boolean;
+          sort_order: number;
+        };
+        Insert: {
+          slug: string;
+          title: string;
+          section: string;
+          season_months?: number[] | null;
+          criteria: Json;
+          min_items?: number;
+          active?: boolean;
+          sort_order?: number;
+        };
+        Update: {
+          slug?: string;
+          title?: string;
+          section?: string;
+          season_months?: number[] | null;
+          criteria?: Json;
+          min_items?: number;
+          active?: boolean;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       collections: {
         Row: {
+          season_months: number[] | null;
           item_count: number;
           kind: string;
           median_score: number | null;
@@ -56,6 +90,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          season_months?: number[] | null;
           item_count: number;
           kind: string;
           median_score?: number | null;
@@ -69,6 +104,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          season_months?: number[] | null;
           item_count?: number;
           kind?: string;
           median_score?: number | null;
