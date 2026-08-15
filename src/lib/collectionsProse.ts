@@ -53,6 +53,8 @@ function subject(row: CollectionRow): string {
       return "streaming titles";
     case "awards":
       return "winners";
+    case "occasion":
+      return "picks";
     default:
       return "titles";
   }

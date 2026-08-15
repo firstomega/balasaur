@@ -439,6 +439,13 @@ function CollectionsPage() {
 
   const featured = useMemo(() => pickFeatured(collections), [collections]);
   const byKind = (k: string) => collections.filter((c: CollectionSummary) => c.kind === k);
+  // Occasions are the human-shaped shelves ("Date Night Movies"). Those whose
+  // season covers the current month lead, so October surfaces the Halloween
+  // list without anyone touching it.
+  const month = new Date().getMonth() + 1;
+  const occasions = byKind("occasion");
+  const inSeason = occasions.filter((c: CollectionSummary) => c.season_months?.includes(month));
+  const everyday = occasions.filter((c: CollectionSummary) => !c.season_months?.includes(month));
   const services = byKind("service");
   const genres = byKind("genre");
   const decades = byKind("decade").sort((a: CollectionSummary, b: CollectionSummary) =>
@@ -506,7 +513,22 @@ function CollectionsPage() {
             ))}
           </div>
 
-          {/* Tier 2: shelves */}
+          {/* Tier 2: shelves. Occasions lead: they answer "what should I put on
+              tonight", which is the question people actually arrive with. */}
+          {occasions.length > 0 && (
+            <Shelf
+              title="What are you in the mood for"
+              meta={
+                inSeason.length > 0
+                  ? `${occasions.length} lists · ${inSeason.length} in season`
+                  : `${occasions.length} lists`
+              }
+            >
+              {[...inSeason, ...everyday].map((c: CollectionSummary) => (
+                <ShelfCard key={c.slug} c={c} />
+              ))}
+            </Shelf>
+          )}
           {services.length > 0 && (
             <Shelf title="Streaming now" meta={`${services.length} services · updated nightly`}>
               {services.map((c: CollectionSummary) => (
