@@ -2,7 +2,12 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
+import {
+  searchTitles,
+  searchPersons,
+  type SearchHit,
+  type PersonHit,
+} from "@/lib/catalog.functions";
 import { mediaSlug } from "@/lib/slug";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { ScoreBadge } from "./ScoreBadge";
@@ -17,8 +22,10 @@ const TYPE_COLOR: Record<string, string> = {
 export function TopBarSearch() {
   const navigate = useNavigate();
   const search = useServerFn(searchTitles);
+  const searchPeople = useServerFn(searchPersons);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchHit[]>([]);
+  const [people, setPeople] = useState<PersonHit[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -31,16 +38,18 @@ export function TopBarSearch() {
     const q = query.trim();
     if (!q) {
       setResults([]);
+      setPeople([]);
       return;
     }
     let cancelled = false;
     const t = setTimeout(async () => {
-      try {
-        const hits = await search({ data: { query: q } });
-        if (!cancelled) setResults(hits);
-      } catch {
-        if (!cancelled) setResults([]);
-      }
+      const [titleHits, personHits] = await Promise.allSettled([
+        search({ data: { query: q } }),
+        searchPeople({ data: { query: q } }),
+      ]);
+      if (cancelled) return;
+      setResults(titleHits.status === "fulfilled" ? titleHits.value : []);
+      setPeople(personHits.status === "fulfilled" ? personHits.value.slice(0, 3) : []);
     }, 200);
     return () => {
       cancelled = true;
@@ -50,7 +59,10 @@ export function TopBarSearch() {
 
   useEffect(() => {
     setActive(0);
-  }, [results]);
+  }, [results, people]);
+
+  // Keyboard navigation walks one combined list: titles first, then people.
+  const navLength = results.length + people.length;
 
   // Outside click closes
   useEffect(() => {
@@ -89,6 +101,12 @@ export function TopBarSearch() {
     });
   }
 
+  function goPerson(hit: PersonHit) {
+    setOpen(false);
+    setQuery("");
+    navigate({ to: "/person/$id", params: { id: String(hit.personId) } });
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
       setOpen(false);
@@ -100,14 +118,19 @@ export function TopBarSearch() {
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((a) => Math.min(a + 1, Math.max(results.length - 1, 0)));
+      setActive((a) => Math.min(a + 1, Math.max(navLength - 1, 0)));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const hit = results[active];
-      if (hit) go(hit);
+      if (active < results.length) {
+        const hit = results[active];
+        if (hit) go(hit);
+      } else {
+        const hit = people[active - results.length];
+        if (hit) goPerson(hit);
+      }
     }
   }
 
@@ -134,7 +157,7 @@ export function TopBarSearch() {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Search titles…"
+          placeholder="Search titles and people…"
           className="h-8 w-full rounded-[5px] border border-border bg-panel pl-8 pr-8 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
         />
         {query && (
@@ -158,7 +181,7 @@ export function TopBarSearch() {
           role="listbox"
           className="absolute left-0 right-0 top-[calc(100%+4px)] z-40 max-h-[70vh] overflow-y-auto rounded-[5px] border border-border bg-panel shadow-[0_12px_32px_-12px_rgba(0,0,0,0.8)]"
         >
-          {results.length === 0 ? (
+          {results.length === 0 && people.length === 0 ? (
             <div className="px-3 py-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
               No matches
             </div>
@@ -216,6 +239,55 @@ export function TopBarSearch() {
                 );
               })}
             </ul>
+          )}
+          {people.length > 0 && (
+            <div className="border-t border-border">
+              <div className="px-3 pb-0.5 pt-1.5 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+                People
+              </div>
+              <ul className="pb-1">
+                {people.map((hit, i) => {
+                  const navIndex = results.length + i;
+                  const isActive = navIndex === active;
+                  return (
+                    <li
+                      key={hit.personId}
+                      role="option"
+                      aria-selected={isActive}
+                      onMouseEnter={() => setActive(navIndex)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        goPerson(hit);
+                      }}
+                      className={
+                        "flex cursor-pointer items-center gap-3 px-2 py-1.5 " +
+                        (isActive ? "bg-background" : "")
+                      }
+                    >
+                      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-border bg-background">
+                        {hit.profileUrl ? (
+                          <img
+                            src={tmdbImage(hit.profileUrl, "w92")}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="truncate text-[12.5px] font-semibold text-text-bright">
+                          {hit.name}
+                        </span>
+                        <div className="mt-0.5 font-mono text-[10px] text-text-dim">
+                          {hit.titles} titles here
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
           <div className="border-t border-border px-3 py-1.5 font-mono text-[9px] uppercase tracking-wider text-text-dim">
             ↑↓ navigate · ↵ open · esc close

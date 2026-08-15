@@ -409,6 +409,17 @@ export type Database = {
       };
     };
     Views: {
+      // People with 3+ leading or directing credits in indexable titles.
+      // Materialized, refreshed nightly at 09:30.
+      person_index: {
+        Row: {
+          person_id: number;
+          name: string;
+          profile_path: string | null;
+          titles: number;
+        };
+        Relationships: [];
+      };
       // Titles eligible for search indexing: the SQL mirror of isCorroborated()
       // in src/lib/indexability.ts. Every column of a view is nullable, which is
       // what the generator emits column by column; expressed as a mapped type so
@@ -431,6 +442,15 @@ export type Database = {
       catalog_facets_filtered: { Args: { p: Json }; Returns: Json };
       genre_plural: { Args: { g: string }; Returns: string };
       ping_indexnow: { Args: { p_full?: boolean }; Returns: Json };
+      search_persons: {
+        Args: { p_q: string };
+        Returns: {
+          person_id: number;
+          name: string;
+          profile_path: string | null;
+          titles: number;
+        }[];
+      };
       rebuild_collections: { Args: never; Returns: undefined };
       search_cast: {
         Args: { p_exclude?: string[]; p_q: string };

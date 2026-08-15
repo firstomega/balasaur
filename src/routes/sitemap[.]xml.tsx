@@ -13,6 +13,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           sitemapIndexXml([
             `${SITE_ORIGIN}/sitemap-pages.xml`,
             `${SITE_ORIGIN}/sitemap-titles.xml`,
+            `${SITE_ORIGIN}/sitemap-people.xml`,
           ]),
         ),
     },

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import type { MediaDetail as MediaDetailType, ProviderRef } from "@/types/media";
 import { ProviderIcon } from "./ProviderIcon";
+import { providerWatchUrl } from "@/lib/providerLinks";
 
 const REGION_OPTIONS: { code: string; label: string }[] = [
   { code: "US", label: "United States" },
@@ -44,10 +45,12 @@ function Group({
   label,
   items,
   link,
+  title,
 }: {
   label: string;
   items: ProviderRef[];
   link?: string | null;
+  title: string;
 }) {
   if (items.length === 0) return null;
   return (
@@ -67,16 +70,21 @@ function Group({
               asBadge
             />
           );
-          // TMDB/JustWatch exposes a single deep link per title+region (the JustWatch
-          // page listing every option), not per-provider URLs — so each chip opens
-          // that page, where the user picks the service.
-          return link ? (
+          // Each chip opens the provider's own search for this title. TMDB has
+          // no per-provider deep links, so providers without a reliable search
+          // URL fall back to the aggregate all-options page.
+          const providerUrl = providerWatchUrl(p.name, title);
+          const href = providerUrl ?? link;
+          const label2 = providerUrl
+            ? `Search ${p.name} for ${title}`
+            : `${p.name}: see all watch options for ${title}`;
+          return href ? (
             <a
               key={p.name}
-              href={link}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`${p.name}: see watch options for this title`}
+              aria-label={label2}
               className="rounded-[5px] transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             >
               {badge}
@@ -143,9 +151,9 @@ export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
         </p>
       ) : (
         <div className="space-y-3">
-          <Group label="Stream" items={current.stream} link={current.link} />
-          <Group label="Rent" items={current.rent} link={current.link} />
-          <Group label="Buy" items={current.buy} link={current.link} />
+          <Group label="Stream" items={current.stream} link={current.link} title={detail.title} />
+          <Group label="Rent" items={current.rent} link={current.link} title={detail.title} />
+          <Group label="Buy" items={current.buy} link={current.link} title={detail.title} />
         </div>
       )}
 

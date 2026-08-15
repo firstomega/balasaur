@@ -534,6 +534,41 @@ export const searchCast = createServerFn({ method: "GET" })
     return ((rows ?? []) as { name: string }[]).map((r) => r.name).filter(Boolean);
   });
 
+export interface PersonHit {
+  personId: number;
+  name: string;
+  profileUrl?: string;
+  titles: number;
+}
+
+/** People for the top-bar search: anyone with a real footprint in the
+ *  indexable catalog (3+ leading or directing credits, via person_index). */
+export const searchPersons = createServerFn({ method: "GET" })
+  .inputValidator((input: { query: string }) => input)
+  .handler(async ({ data }): Promise<PersonHit[]> => {
+    const q = (data.query ?? "").trim();
+    if (q.length < 2) return [];
+    const { data: rows, error } = await supabaseAdmin.rpc("search_persons", { p_q: q });
+    if (error) {
+      // Fail-soft: title results still render if the person search hiccups.
+      console.error("[search] person query failed:", error.message);
+      return [];
+    }
+    return (
+      (rows ?? []) as {
+        person_id: number;
+        name: string;
+        profile_path: string | null;
+        titles: number;
+      }[]
+    ).map((r) => ({
+      personId: r.person_id,
+      name: r.name,
+      profileUrl: r.profile_path ? `https://image.tmdb.org/t/p/w185${r.profile_path}` : undefined,
+      titles: r.titles,
+    }));
+  });
+
 export interface HomeRails {
   trending: MediaItem[];
   newAndNoteworthy: MediaItem[];
