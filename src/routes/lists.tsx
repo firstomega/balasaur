@@ -12,7 +12,12 @@ import type { MediaItem, MediaType } from "@/types/media";
 
 export const Route = createFileRoute("/lists")({
   head: () => ({
-    meta: [{ title: "My lists · Balasaur" }],
+    meta: [
+      { title: "My lists · Balasaur" },
+      { name: "description", content: "Your watchlist, favorites, and viewing history." },
+      // Signed out this page is an empty shell, so it stays out of the index.
+      { name: "robots", content: "noindex,follow" },
+    ],
   }),
   component: ListsPage,
 });
