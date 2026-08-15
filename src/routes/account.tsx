@@ -88,7 +88,7 @@ function AccountPage() {
             Signed in as {user.email}
           </p>
           <p className="mt-2 font-mono text-[11px] text-text-dim">
-            Private settings — only you can see this.{" "}
+            Private settings. Only you can see this.{" "}
             <Link to="/profile" className="text-primary hover:underline">
               Manage your public profile →
             </Link>
@@ -309,7 +309,7 @@ function NotificationsSection() {
   return (
     <Section title="Notifications & Email">
       <p className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
-        Coming soon — no email system is wired up yet.
+        Coming soon. No email system is wired up yet.
       </p>
       <ul className="divide-y divide-border rounded-[5px] border border-border">
         {rows.map((r) => (

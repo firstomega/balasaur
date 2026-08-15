@@ -194,7 +194,7 @@ function CollectionNotFound() {
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-xl font-semibold text-text-bright">Collection not found</h1>
         <p className="mt-2 text-sm text-text-muted">
-          It may have been retired in a refresh — collections come and go with the catalog.
+          It may have been retired in a refresh. Collections come and go with the catalog.
         </p>
         <Link
           to="/collections"

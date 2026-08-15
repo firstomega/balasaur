@@ -9,6 +9,7 @@ import {
   absoluteUrl,
   jsonLdScript,
   cacheSsrResponse,
+  noindexMeta,
 } from "@/lib/seo";
 import { personJsonLd } from "@/lib/jsonld";
 
@@ -25,8 +26,15 @@ export const Route = createFileRoute("/person/$id")({
     const description = d
       ? clampDescription(d.biography || `${d.name}'s movies and TV on Balasaur.`)
       : "Person details on Balasaur.";
+    // Half a million people are reachable through credits links, most with a
+    // couple of rows to their name. Only a real filmography earns an index
+    // slot; the rest stay crawlable with noindex, mirroring the title gate.
+    const workCount = d ? d.groups.reduce((n, g) => n + g.items.length, 0) : 0;
     return {
-      meta: buildMeta({ title, description, url, image: d?.profileUrl, type: "profile" }),
+      meta: [
+        ...buildMeta({ title, description, url, image: d?.profileUrl, type: "profile" }),
+        ...(d && workCount < 8 ? [noindexMeta()] : []),
+      ],
       links: [canonicalLink(url)],
       ...(d ? { scripts: [jsonLdScript(personJsonLd(d, url))] } : {}),
     };

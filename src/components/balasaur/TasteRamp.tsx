@@ -185,7 +185,7 @@ export function TasteRamp({
             Pick {TARGET} things you loved
           </DialogTitle>
           <DialogDescription className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
-            Seeds your favorites so Balasaur learns your taste — search for anything
+            Seeds your favorites so Balasaur learns your taste. Search for anything
           </DialogDescription>
         </DialogHeader>
 
@@ -222,7 +222,7 @@ export function TasteRamp({
           ))}
           <span className="ml-1 shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
             {picked.size >= TARGET
-              ? `${picked.size} picked — nice taste`
+              ? `${picked.size} picked. Nice taste.`
               : `${picked.size} of ${TARGET}`}
           </span>
         </div>

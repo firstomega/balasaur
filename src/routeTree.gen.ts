@@ -14,6 +14,7 @@ import { Route as TriageRouteImport } from './routes/triage'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SitemapTitlesDotxmlRouteImport } from './routes/sitemap-titles[.]xml'
+import { Route as SitemapPeopleDotxmlRouteImport } from './routes/sitemap-people[.]xml'
 import { Route as SitemapPagesDotxmlRouteImport } from './routes/sitemap-pages[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -59,6 +60,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SitemapTitlesDotxmlRoute = SitemapTitlesDotxmlRouteImport.update({
   id: '/sitemap-titles.xml',
   path: '/sitemap-titles.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapPeopleDotxmlRoute = SitemapPeopleDotxmlRouteImport.update({
+  id: '/sitemap-people.xml',
+  path: '/sitemap-people.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapPagesDotxmlRoute = SitemapPagesDotxmlRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-people.xml': typeof SitemapPeopleDotxmlRoute
   '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-people.xml': typeof SitemapPeopleDotxmlRoute
   '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap-pages.xml': typeof SitemapPagesDotxmlRoute
+  '/sitemap-people.xml': typeof SitemapPeopleDotxmlRoute
   '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/robots.txt'
     | '/sitemap-pages.xml'
+    | '/sitemap-people.xml'
     | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/robots.txt'
     | '/sitemap-pages.xml'
+    | '/sitemap-people.xml'
     | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/robots.txt'
     | '/sitemap-pages.xml'
+    | '/sitemap-people.xml'
     | '/sitemap-titles.xml'
     | '/sitemap.xml'
     | '/terms'
@@ -356,6 +368,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapPagesDotxmlRoute: typeof SitemapPagesDotxmlRoute
+  SitemapPeopleDotxmlRoute: typeof SitemapPeopleDotxmlRoute
   SitemapTitlesDotxmlRoute: typeof SitemapTitlesDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
@@ -405,6 +418,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap-titles.xml'
       fullPath: '/sitemap-titles.xml'
       preLoaderRoute: typeof SitemapTitlesDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap-people.xml': {
+      id: '/sitemap-people.xml'
+      path: '/sitemap-people.xml'
+      fullPath: '/sitemap-people.xml'
+      preLoaderRoute: typeof SitemapPeopleDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap-pages.xml': {
@@ -573,6 +593,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapPagesDotxmlRoute: SitemapPagesDotxmlRoute,
+  SitemapPeopleDotxmlRoute: SitemapPeopleDotxmlRoute,
   SitemapTitlesDotxmlRoute: SitemapTitlesDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
