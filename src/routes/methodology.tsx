@@ -56,6 +56,11 @@ function MethodologyPage() {
                 vote confidence adjustment. Display order within the collection is strictly
                 determined by the Balasaur Score.
               </p>
+              <p>
+                A list ends where its quality falls off. Every collection keeps at least its top 12,
+                no title makes the page scoring more than 25 points behind that collection's leader,
+                and no list runs past 60. Strong shelves run long, thin shelves stop short.
+              </p>
             </div>
           </section>
 
