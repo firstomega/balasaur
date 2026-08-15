@@ -14,8 +14,9 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
         const staticPaths = [
           "/",
           "/collections",
-          "/watched",
-          "/lists",
+          // /watched and /lists are personal tools: signed out they render an
+          // empty shell, which is exactly the thin page a crawler should never
+          // be handed. They carry noindex and stay out of the sitemap.
           "/privacy",
           "/terms",
           "/methodology",

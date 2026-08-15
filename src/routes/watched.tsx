@@ -23,6 +23,8 @@ export const Route = createFileRoute("/watched")({
           "Swipe through movies and TV to build your library: like, mark watched, save for later, or skip.",
       },
       { property: "og:url", content: SITE_ORIGIN + "/watched" },
+      // A personal rating tool has nothing to offer a search result.
+      { name: "robots", content: "noindex,follow" },
     ],
     links: [canonicalLink(SITE_ORIGIN + "/watched")],
   }),
