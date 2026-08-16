@@ -11,7 +11,7 @@ export const Route = createFileRoute("/methodology")({
     const url = `${SITE_ORIGIN}/methodology`;
     return {
       meta: buildMeta({
-        title: "Methodology | Balasaur",
+        title: "Methodology: How the Balasaur Score Is Built",
         description: "How the Balasaur Score works and how ranked collections are built.",
         url,
       }),

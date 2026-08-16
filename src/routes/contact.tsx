@@ -13,7 +13,7 @@ export const Route = createFileRoute("/contact")({
     const url = `${SITE_ORIGIN}/contact`;
     return {
       meta: buildMeta({
-        title: "Contact | Balasaur",
+        title: "Contact Balasaur: Corrections and Licensing",
         description: "How to reach the person who runs Balasaur.",
         url,
       }),

@@ -12,6 +12,7 @@ import {
   getViewerCountry,
   type CatalogQueryParams,
 } from "@/lib/catalog.functions";
+import { listHomeCollections } from "@/lib/collections.functions";
 import type { FilterState } from "@/types/filters";
 import { YEAR_BOUNDS, defaultFilterState } from "@/types/filters";
 
@@ -117,6 +118,14 @@ export function homeRailsOptions(boostCountry = "") {
     queryKey: ["home-rails", boostCountry] as const,
     queryFn: () => getHomeRails({ data: { boostCountry: boostCountry || undefined } }),
     staleTime: 15 * 60 * 1000,
+  });
+}
+
+export function homeCollectionsOptions() {
+  return queryOptions({
+    queryKey: ["home-collections"] as const,
+    queryFn: () => listHomeCollections(),
+    staleTime: 30 * 60 * 1000,
   });
 }
 
