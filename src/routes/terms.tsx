@@ -4,13 +4,13 @@ import { TopBar } from "@/components/balasaur/TopBar";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms & Conditions · Balasaur" },
+      { title: "Terms and Conditions of Use for Balasaur.com" },
       {
         name: "description",
         content:
           "The terms that govern your use of balasaur.com, including acceptable use, accounts, and third-party data.",
       },
-      { property: "og:title", content: "Terms & Conditions · Balasaur" },
+      { property: "og:title", content: "Terms and Conditions of Use for Balasaur.com" },
       {
         property: "og:description",
         content:

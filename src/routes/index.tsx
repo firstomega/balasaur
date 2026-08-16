@@ -22,10 +22,12 @@ import {
   catalogInfiniteOptions,
   catalogFacetsOptions,
   homeRailsOptions,
+  homeCollectionsOptions,
   filtersToParams,
   withBoost,
 } from "@/hooks/useCatalog";
 import { HomeRails } from "@/components/balasaur/HomeRails";
+import { CollectionRail } from "@/components/balasaur/CollectionRail";
 import { WatchlistNudge } from "@/components/balasaur/WatchlistNudge";
 import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
@@ -85,6 +87,7 @@ export const Route = createFileRoute("/")({
         ),
         context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
         context.queryClient.ensureQueryData(homeRailsOptions(boost)),
+        context.queryClient.ensureQueryData(homeCollectionsOptions()),
       ]),
       1500,
     );
@@ -691,6 +694,9 @@ function GridWithControls({
           <div
             className={"min-h-0 overflow-hidden" + (activeCount > 0 ? " pointer-events-none" : "")}
           >
+            {/* Collections first: "what am I in the mood for" is the question
+                people arrive with, and it outranks "what is popular". */}
+            <CollectionRail />
             <HomeRails
               boostCountry={boostCountry}
               onQuickAction={onQuickAction}

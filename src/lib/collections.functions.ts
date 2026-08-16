@@ -63,6 +63,83 @@ export const listCollections = createServerFn({ method: "GET" }).handler(
   },
 );
 
+export interface HomeCollection {
+  slug: string;
+  title: string;
+  item_count: number;
+  kind: string;
+  posters: string[];
+  inSeason: boolean;
+}
+
+/** How many collections the homepage rail carries. */
+const HOME_RAIL_SIZE = 14;
+
+/**
+ * Collections for the homepage rail. Occasions lead, and any occasion whose
+ * season covers the current month leads those, so October opens with the
+ * Halloween list and nobody schedules anything. Services fill the tail.
+ *
+ * Deliberately lean: three poster ids per card, not the hub's five, and a
+ * hard cap, because this rides the homepage loader.
+ */
+export const listHomeCollections = createServerFn({ method: "GET" }).handler(
+  async (): Promise<HomeCollection[]> => {
+    const { data, error } = await supabaseAdmin
+      .from("collections")
+      .select("slug, title, item_count, kind, poster_ids, season_months")
+      .in("kind", ["occasion", "service", "discovery"])
+      .order("item_count", { ascending: false });
+    if (error || !data) {
+      // Fail soft: the homepage grid stands on its own without the rail.
+      if (error) console.error("[collections] home rail failed:", error.message);
+      return [];
+    }
+
+    const month = new Date().getMonth() + 1;
+    const rows = data as unknown as {
+      slug: string;
+      title: string;
+      item_count: number;
+      kind: string;
+      poster_ids: string[] | null;
+      season_months: number[] | null;
+    }[];
+
+    const rank = (r: (typeof rows)[number]) => {
+      if (r.kind === "occasion" && r.season_months?.includes(month)) return 0;
+      if (r.kind === "occasion") return 1;
+      if (r.kind === "service") return 2;
+      return 3;
+    };
+    const picked = rows.sort((a, b) => rank(a) - rank(b)).slice(0, HOME_RAIL_SIZE);
+
+    const ids = [...new Set(picked.flatMap((r) => (r.poster_ids ?? []).slice(0, 3)))];
+    const posterById = new Map<string, string>();
+    if (ids.length > 0) {
+      const { data: posters } = await supabaseAdmin
+        .from("media")
+        .select("media_id, poster_url")
+        .in("media_id", ids);
+      for (const p of (posters ?? []) as { media_id: string; poster_url: string | null }[]) {
+        if (p.poster_url) posterById.set(p.media_id, p.poster_url);
+      }
+    }
+
+    return picked.map((r) => ({
+      slug: r.slug,
+      title: r.title,
+      item_count: r.item_count,
+      kind: r.kind,
+      inSeason: r.kind === "occasion" && !!r.season_months?.includes(month),
+      posters: (r.poster_ids ?? [])
+        .slice(0, 3)
+        .map((id) => posterById.get(id))
+        .filter(Boolean) as string[],
+    }));
+  },
+);
+
 export interface CollectionDetail {
   row: CollectionRow;
   items: MediaItem[];

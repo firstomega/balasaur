@@ -4,7 +4,7 @@ import { TopBar } from "@/components/balasaur/TopBar";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy · Balasaur" },
+      { title: "Privacy Policy: What Balasaur Stores and Why" },
       {
         name: "description",
         content:

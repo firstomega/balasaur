@@ -11,7 +11,7 @@ export const Route = createFileRoute("/about")({
     const url = `${SITE_ORIGIN}/about`;
     return {
       meta: buildMeta({
-        title: "About | Balasaur",
+        title: "About Balasaur, a Movie and TV Score Database",
         description: "What Balasaur is, who runs it, and where the data comes from.",
         url,
       }),
