@@ -1,27 +1,24 @@
 import { describe, expect, it } from "bun:test";
-import { CORROBORATION_MIN_VOTES, isCorroborated, isIndexableDetail } from "./indexability";
+import { hasSubstance, substanceFacts, isIndexableDetail } from "./indexability";
 
 const indexable = {
   overview: "A synopsis long enough to stand alone in a search result.",
   posterUrl: "https://image.tmdb.org/t/p/w500/poster.jpg",
-  voteCount: 40732,
+  streaming: ["Netflix"],
+  cast: [1, 2, 3],
+  runtime: 169,
   ratings: { balasaur: 81, imdb: 8.7, rottenTomatoes: 73, metacritic: 74 },
 };
 
-describe("isCorroborated", () => {
-  it("admits a title once enough people have rated it", () => {
-    expect(isCorroborated({ voteCount: CORROBORATION_MIN_VOTES })).toBe(true);
-    expect(isCorroborated({ voteCount: CORROBORATION_MIN_VOTES - 1 })).toBe(false);
+describe("substanceFacts", () => {
+  it("counts each independent thing the page can say", () => {
+    expect(substanceFacts(indexable)).toBe(5);
+    expect(substanceFacts({ ratings: { imdb: 7.1 }, runtime: 100 })).toBe(2);
+    expect(substanceFacts({})).toBe(0);
   });
 
-  it("admits a title with a critic score even when few people rated it", () => {
-    expect(isCorroborated({ voteCount: 3, ratings: { rottenTomatoes: 96 } })).toBe(true);
-    expect(isCorroborated({ voteCount: 3, ratings: { metacritic: 74 } })).toBe(true);
-  });
-
-  it("rejects a title nobody rated and no critic reviewed", () => {
-    expect(isCorroborated({})).toBe(false);
-    expect(isCorroborated({ voteCount: 19, ratings: {} })).toBe(false);
+  it("treats a critic pair as one fact, not two", () => {
+    expect(substanceFacts({ ratings: { rottenTomatoes: 90, metacritic: 80 } })).toBe(1);
   });
 });
 
@@ -30,31 +27,52 @@ describe("isIndexableDetail", () => {
     expect(isIndexableDetail(indexable)).toBe(true);
   });
 
-  it("still requires art, a synopsis, and a score", () => {
+  it("still requires art, a synopsis and a score", () => {
     expect(isIndexableDetail({ ...indexable, overview: "" })).toBe(false);
     expect(isIndexableDetail({ ...indexable, posterUrl: "" })).toBe(false);
     expect(isIndexableDetail({ ...indexable, ratings: {} })).toBe(false);
   });
 
-  it("rejects the thin tail: complete metadata, but nobody has seen it", () => {
-    // This is the shape that filled 7,811 of the old sitemap's 10,000 slots.
+  it("rejects a poster and a borrowed blurb with nothing else", () => {
     expect(
       isIndexableDetail({
         overview: "A synopsis.",
         posterUrl: "https://image.tmdb.org/t/p/w500/poster.jpg",
-        voteCount: 19,
         ratings: { balasaur: 68, tmdb: 6.8 },
       }),
     ).toBe(false);
   });
 
-  it("treats a missing rating count as uncorroborated rather than assuming the best", () => {
+  // The regression this file exists to prevent. Every title below ranked on
+  // Google while carrying noindex under the old popularity gate.
+  it("keeps pages that rank despite few or unknown ratings", () => {
+    // Be My Guest with Ina Garten: 3 votes, ranked position 7.1
     expect(
       isIndexableDetail({
-        overview: "A synopsis.",
-        posterUrl: "https://image.tmdb.org/t/p/w500/poster.jpg",
-        ratings: { balasaur: 77 },
+        overview: "Ina Garten hosts.",
+        posterUrl: "https://image.tmdb.org/t/p/w500/p.jpg",
+        ratings: { balasaur: 70, imdb: 7.4 },
+        streaming: ["Max"],
+        numberOfSeasons: 2,
       }),
-    ).toBe(false);
+    ).toBe(true);
+
+    // The Patient: no vote count fetched at all, ranked position 7.5
+    expect(
+      isIndexableDetail({
+        overview: "A therapist is held captive.",
+        posterUrl: "https://image.tmdb.org/t/p/w500/p.jpg",
+        ratings: { balasaur: 72, imdb: 7.3 },
+        streaming: ["Hulu"],
+        cast: [1, 2, 3],
+        numberOfSeasons: 1,
+      }),
+    ).toBe(true);
+  });
+
+  it("never treats missing data as evidence against a page", () => {
+    const known = { ...indexable, voteCount: 3 };
+    const unknown = { ...indexable };
+    expect(isIndexableDetail(known)).toBe(isIndexableDetail(unknown));
   });
 });

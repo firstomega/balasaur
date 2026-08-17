@@ -70,6 +70,7 @@ export interface HomeCollection {
   kind: string;
   posters: string[];
   inSeason: boolean;
+  media_type: string | null;
 }
 
 /** How many collections the homepage rail carries. */
@@ -87,8 +88,8 @@ export const listHomeCollections = createServerFn({ method: "GET" }).handler(
   async (): Promise<HomeCollection[]> => {
     const { data, error } = await supabaseAdmin
       .from("collections")
-      .select("slug, title, item_count, kind, poster_ids, season_months")
-      .in("kind", ["occasion", "service", "discovery"])
+      .select("slug, title, item_count, kind, poster_ids, season_months, media_type")
+      .in("kind", ["occasion", "discovery", "service"])
       .order("item_count", { ascending: false });
     if (error || !data) {
       // Fail soft: the homepage grid stands on its own without the rail.
@@ -104,13 +105,18 @@ export const listHomeCollections = createServerFn({ method: "GET" }).handler(
       kind: string;
       poster_ids: string[] | null;
       season_months: number[] | null;
+      media_type: string | null;
     }[];
 
+    // Seasonal occasions first, then the discovery shelves that used to be
+    // their own homepage rails, then everything else.
+    const PROMOTED = new Set(["new-and-noteworthy", "hidden-gems"]);
     const rank = (r: (typeof rows)[number]) => {
       if (r.kind === "occasion" && r.season_months?.includes(month)) return 0;
-      if (r.kind === "occasion") return 1;
-      if (r.kind === "service") return 2;
-      return 3;
+      if (PROMOTED.has(r.slug)) return 1;
+      if (r.kind === "occasion") return 2;
+      if (r.kind === "discovery") return 3;
+      return 4;
     };
     const picked = rows.sort((a, b) => rank(a) - rank(b)).slice(0, HOME_RAIL_SIZE);
 
@@ -132,6 +138,7 @@ export const listHomeCollections = createServerFn({ method: "GET" }).handler(
       item_count: r.item_count,
       kind: r.kind,
       inSeason: r.kind === "occasion" && !!r.season_months?.includes(month),
+      media_type: r.media_type,
       posters: (r.poster_ids ?? [])
         .slice(0, 3)
         .map((id) => posterById.get(id))
@@ -139,6 +146,21 @@ export const listHomeCollections = createServerFn({ method: "GET" }).handler(
     }));
   },
 );
+
+/** Where a retired collection slug now points, or null if it was never used. */
+export const getCollectionRedirect = createServerFn({ method: "GET" })
+  .inputValidator((p: { slug: string }) => p)
+  .handler(async ({ data: p }): Promise<string | null> => {
+    const slug = (p.slug ?? "").toLowerCase();
+    if (!/^[a-z0-9-]{3,80}$/.test(slug)) return null;
+    const { data, error } = await supabaseAdmin
+      .from("collection_redirects")
+      .select("to_slug")
+      .eq("from_slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    return (data as { to_slug: string }).to_slug;
+  });
 
 export interface CollectionDetail {
   row: CollectionRow;

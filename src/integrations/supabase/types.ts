@@ -74,8 +74,15 @@ export type Database = {
         };
         Relationships: [];
       };
+      collection_redirects: {
+        Row: { from_slug: string; to_slug: string };
+        Insert: { from_slug: string; to_slug: string };
+        Update: { from_slug?: string; to_slug?: string };
+        Relationships: [];
+      };
       collections: {
         Row: {
+          media_type: string | null;
           season_months: number[] | null;
           item_count: number;
           kind: string;
@@ -90,6 +97,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          media_type?: string | null;
           season_months?: number[] | null;
           item_count: number;
           kind: string;
@@ -104,6 +112,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          media_type?: string | null;
           season_months?: number[] | null;
           item_count?: number;
           kind?: string;
@@ -456,7 +465,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Titles eligible for search indexing: the SQL mirror of isCorroborated()
+      // Titles eligible for search indexing: the SQL mirror of hasSubstance()
       // in src/lib/indexability.ts. Every column of a view is nullable, which is
       // what the generator emits column by column; expressed as a mapped type so
       // it cannot drift from `media` when a column is added.

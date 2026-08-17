@@ -108,7 +108,7 @@ export function noindexMeta(): MetaTag {
 
 // The index gate lives in indexability.ts so it stays pure and testable, and
 // so media.server.ts can share the same rule without importing this module.
-export { CORROBORATION_MIN_VOTES, isCorroborated, isIndexableDetail } from "./indexability";
+export { MIN_SUBSTANCE_FACTS, hasSubstance, isIndexableDetail } from "./indexability";
 
 /** Intent-tuned title/description for movie & TV detail pages: front-load what
  *  searchers type ("watch X", "X streaming") plus the score. */

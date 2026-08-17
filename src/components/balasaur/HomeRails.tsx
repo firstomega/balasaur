@@ -1,4 +1,4 @@
-import { CalendarClock, Flame, Gem, Sparkles } from "lucide-react";
+import { Flame } from "lucide-react";
 import { useHomeRails } from "@/hooks/useCatalog";
 import type { MediaItem } from "@/types/media";
 import { MediaCard, type QuickAction } from "./MediaCard";
@@ -14,27 +14,6 @@ import { ScrollRail } from "./ScrollRail";
 // panel band, each with an accent icon, and carry per-rail poster overlays —
 // rank numerals on Trending, release-date chips on New & Noteworthy / Coming
 // Soon — so they read as editorial shelves, not more grid.
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "2026-08-28" → "Aug 28" (with year when it isn't the current year). */
-function shortDate(iso?: string): string | null {
-  if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
-  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
-  if (!y || !m || !d) return null;
-  const label = `${MONTHS[m - 1]} ${d}`;
-  return y === new Date().getFullYear() ? label : `${label} ${y}`;
-}
-
-function DateChip({ iso }: { iso?: string }) {
-  const label = shortDate(iso);
-  if (!label) return null;
-  return (
-    <span className="rounded-[4px] bg-background/85 px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-text-bright backdrop-blur-sm">
-      {label}
-    </span>
-  );
-}
 
 /** Big translucent rank numeral, Netflix-top-10 style. */
 function RankNumeral({ n }: { n: number }) {
@@ -55,42 +34,21 @@ const RAILS: Array<{
   iconClass: string;
   overlay?: (item: MediaItem, index: number) => React.ReactNode;
 }> = [
+  // Trending is the only title rail left. New & Noteworthy, Coming Soon and
+  // Hidden Gems became real collection pages in v8 and are reached from the
+  // collections rail above, which took three scrollers off the homepage and
+  // turned them into indexable pages.
   {
     key: "trending",
     title: "Trending This Week",
     Icon: Flame,
-    iconClass: "text-orange-400",
+    iconClass: "text-[#e8b552]",
     overlay: (_item, i) => <RankNumeral n={i + 1} />,
-  },
-  {
-    key: "newAndNoteworthy",
-    title: "New & Noteworthy",
-    Icon: Sparkles,
-    iconClass: "text-primary",
-    overlay: (item) => <DateChip iso={item.releaseDate} />,
-  },
-  {
-    key: "comingSoon",
-    title: "Coming Soon",
-    Icon: CalendarClock,
-    iconClass: "text-media-tv",
-    overlay: (item) => <DateChip iso={item.releaseDate} />,
-  },
-  {
-    key: "hiddenGems",
-    title: "Hidden Gems",
-    Icon: Gem,
-    iconClass: "text-rating",
   },
 ];
 
 function emptyRails() {
-  return {
-    trending: [] as MediaItem[],
-    newAndNoteworthy: [] as MediaItem[],
-    comingSoon: [] as MediaItem[],
-    hiddenGems: [] as MediaItem[],
-  };
+  return { trending: [] as MediaItem[] };
 }
 
 export function HomeRails({
@@ -112,7 +70,7 @@ export function HomeRails({
   if (!data) return null; // loading or failed — the grid stands on its own
 
   return (
-    <div className="mb-6 space-y-5 rounded-[6px] border border-border bg-panel/40 p-3 sm:p-4">
+    <div className="space-y-5">
       {RAILS.map(({ key, title, Icon, iconClass, overlay }) => {
         // Cheap client-side personalization: a title the viewer hard-rejected
         // never shows up in a rail again.
