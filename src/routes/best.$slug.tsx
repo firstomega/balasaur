@@ -1,8 +1,12 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaCard } from "@/components/balasaur/MediaCard";
 import { useEffect, useState } from "react";
-import { getCollection, getRelatedCollections } from "@/lib/collections.functions";
+import {
+  getCollection,
+  getCollectionRedirect,
+  getRelatedCollections,
+} from "@/lib/collections.functions";
 import type { MediaItem } from "@/types/media";
 import { collectionDek } from "@/lib/collectionsProse";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse, jsonLdScript } from "@/lib/seo";
@@ -15,7 +19,14 @@ export const Route = createFileRoute("/best/$slug")({
   loader: async ({ params }) => {
     await cacheSsrResponse();
     const data = await getCollection({ data: { slug: params.slug } });
-    if (!data) throw notFound();
+    if (!data) {
+      // The v8 media-type split renamed ~200 slugs that Google already knows.
+      // A retired slug permanently redirects rather than 404ing, so the
+      // indexing those URLs earned transfers instead of evaporating.
+      const to = await getCollectionRedirect({ data: { slug: params.slug } });
+      if (to) throw redirect({ to: "/best/$slug", params: { slug: to }, statusCode: 301 });
+      throw notFound();
+    }
     const related = await getRelatedCollections({
       data: { slug: params.slug, kind: data.row.kind },
     });

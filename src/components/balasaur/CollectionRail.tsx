@@ -41,7 +41,7 @@ export function CollectionRail() {
   if (!data || data.length === 0) return null;
 
   return (
-    <section aria-label="Collections" className="mb-6">
+    <section aria-label="Collections">
       <h2 className="mb-2 flex items-center gap-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-text-bright">
         <Layers className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         What are you in the mood for
@@ -65,7 +65,14 @@ export function CollectionRail() {
                 </span>
               )}
             </div>
-            <div className="mt-0.5 font-mono text-[10px] text-text-dim">{c.item_count} picks</div>
+            <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-text-dim">
+              {c.media_type && (
+                <span className={c.media_type === "tv" ? "text-media-tv" : "text-media-movie"}>
+                  {c.media_type === "tv" ? "Shows" : "Movies"}
+                </span>
+              )}
+              <span>{c.item_count} picks</span>
+            </div>
           </Link>
         ))}
         <Link

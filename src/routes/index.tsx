@@ -694,17 +694,22 @@ function GridWithControls({
           <div
             className={"min-h-0 overflow-hidden" + (activeCount > 0 ? " pointer-events-none" : "")}
           >
-            {/* Collections first: "what am I in the mood for" is the question
-                people arrive with, and it outranks "what is popular". */}
-            <CollectionRail />
-            <HomeRails
-              boostCountry={boostCountry}
-              onQuickAction={onQuickAction}
-              onOpenActions={onOpenActions}
-              savedIds={wantIds}
-              watchedIds={seenIds}
-              rejectedIds={rejectedIds}
-            />
+            {/* Two rails, one band. Collections first: "what am I in the mood
+                for" is the question people arrive with, and it outranks "what
+                is popular". New & Noteworthy, Coming Soon and Hidden Gems are
+                collection pages now, reached from the rail rather than eating
+                three more scrollers before the grid. */}
+            <div className="mb-6 space-y-5 rounded-[6px] border border-border bg-panel/40 p-3 sm:p-4">
+              <CollectionRail />
+              <HomeRails
+                boostCountry={boostCountry}
+                onQuickAction={onQuickAction}
+                onOpenActions={onOpenActions}
+                savedIds={wantIds}
+                watchedIds={seenIds}
+                rejectedIds={rejectedIds}
+              />
+            </div>
           </div>
         </div>
       )}

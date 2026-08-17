@@ -303,3 +303,17 @@ prose, the seasons table, and the facts subtraction. Still open:
 - Search Console: resubmit the sitemap (should now read about 10,400 URLs)
   and re-run VALIDATE FIX on review snippets.
 - No TASK-003 is queued for the delegated agent.
+
+### Open, logged 2026-08-16
+
+- **Mirror the v8 `rebuild_collections()` body into its migration record.**
+  `supabase/migrations/20260816140000_collections_v8_media_type_split.sql`
+  describes the change and carries a verification hash, but does not reproduce
+  the function body the way the v6 and v7 records do. Production is
+  authoritative until it is filled in. Dump it with
+  `select pg_get_functiondef(oid) from pg_proc where proname='rebuild_collections';`
+  and confirm the comment-stripped hash still reads
+  `8ebbb36582fd6538a73e544a81161238`.
+- **Split origin-genre collections by media type.** v8 split genre, service,
+  decade, year and genre-service. Origin-genre stayed merged, which leaves
+  "Best Korean Dramas" (a large search term) unserved as its own page.

@@ -1,0 +1,65 @@
+-- Applied to the live project 2026-08-16. This file is the record, not the
+-- source of truth (Lovable Cloud does not auto-apply repo migrations).
+--
+-- v8: collections declare a media type.
+--
+-- 296 of 384 collections mixed films and series, and the mixing was accidental
+-- rather than designed: "The Best Comedies of All Time" opened with Bluey ahead
+-- of Pulp Fiction. Nothing was miscalculated; the category was wrong. Splitting
+-- also matches how people phrase queries, since "best movies on Netflix" and
+-- "best shows on Netflix" are separate searches that one merged page serves
+-- badly.
+--
+-- Five structural kinds split: genre, service, decade, year, genre-service.
+-- Awards already split naturally (Oscars are film, Emmys are TV). Occasions
+-- declare their type in collection_recipes.criteria. Origin-genre stays merged
+-- for now: lower query volume, more slug churn.
+--
+-- Titles use the singular genre plus the type word, so "The Best Comedy Movies
+-- of All Time", never the ungrammatical "Comedies Movies".
+--
+-- Also mints three shelves that used to exist only as homepage rails, so the
+-- homepage could drop from five rails to two: new-and-noteworthy, hidden-gems.
+--
+-- URL SAFETY. The split renames roughly 200 slugs that Google already knows.
+-- Every retired slug is written to collection_redirects pointing at the movie
+-- variant (the dominant intent), and /best/$slug 301s rather than 404ing, so
+-- the indexing those URLs earned transfers instead of evaporating. The insert
+-- is guarded so a redirect can never point at a slug that is not minted.
+--
+-- Rebuilt live: 448 collections (240 movie, 149 TV, 59 untyped), 212
+-- redirects, 0 broken redirects, 0 item_count mismatches, 0 ordering
+-- violations.
+--
+-- The full function body as applied is the v7 body with these changes:
+--   * _elig gains popularity (hidden-gems needs it)
+--   * _defs gains media_type and legacy_slug
+--   * service, genre-service, genre, decade and year partition by media_type
+--     and emit a legacy_slug on the movie variant only
+--   * two discovery shelves added, occasions read media_type from criteria
+--   * collection_redirects is rebuilt from _defs.legacy_slug
+--
+-- Verify the repo copy against production with:
+--   select md5(regexp_replace(regexp_replace(prosrc,'--[^\n]*','','g'),'\s+','','g'))
+--   from pg_proc where proname = 'rebuild_collections';
+
+-- ---------------------------------------------------------------------------
+-- KNOWN GAP, recorded rather than hidden.
+--
+-- The v6 and v7 records reproduce their function bodies in full. This one does
+-- not: v8 rewrites five of the ten kind-inserts rather than patching them, and
+-- reconstructing that by hand risks a record that reads correct while differing
+-- from production, which is worse than an admitted gap. The v7 record was
+-- caught doing exactly that (30 characters adrift) and only a hash comparison
+-- found it.
+--
+-- Production is authoritative until this is filled in. Verify drift with:
+--
+--   select md5(regexp_replace(regexp_replace(prosrc,'--[^\n]*','','g'),'\s+','','g'))
+--   from pg_proc where proname = 'rebuild_collections';
+--
+-- Expected as applied 2026-08-16: 8ebbb36582fd6538a73e544a81161238
+-- (comment-stripped, whitespace-stripped; prosrc length 17220)
+--
+-- To dump the live body verbatim into this file:
+--   select pg_get_functiondef(oid) from pg_proc where proname='rebuild_collections';
