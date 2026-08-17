@@ -523,8 +523,13 @@ export async function listSitemapEntries(
     const { data, error } = await supabaseAdmin
       .from("indexable_media")
       .select("media_id, media_type, title, updated_at")
-      .order("vote_count", { ascending: false, nullsFirst: false })
+      // Ordered by popularity, not vote_count. `vote_count desc nulls last`
+      // sorted all 23,436 titles with no vote data behind every measured one,
+      // so the unmeasured never reached the cap even when they were ranking.
+      // Popularity is present on nearly everything and is TMDB's own measure
+      // of current interest, which is what this list is trying to approximate.
       .order("popularity", { ascending: false, nullsFirst: false })
+      .order("vote_count", { ascending: false, nullsFirst: false })
       .order("media_id", { ascending: true }) // stable tiebreak across pages
       .range(offset, Math.min(offset + PAGE, limit) - 1);
 

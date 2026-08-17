@@ -465,7 +465,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Titles eligible for search indexing: the SQL mirror of isCorroborated()
+      // Titles eligible for search indexing: the SQL mirror of hasSubstance()
       // in src/lib/indexability.ts. Every column of a view is nullable, which is
       // what the generator emits column by column; expressed as a mapped type so
       // it cannot drift from `media` when a column is added.
