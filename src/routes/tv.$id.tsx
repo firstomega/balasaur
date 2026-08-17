@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect, useRouter } from "@tanstack/react-router";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
@@ -21,6 +21,10 @@ export const Route = createFileRoute("/tv/$id")({
     // Six-hour CDN cache on the SSR'd HTML — detail pages change at most daily.
     await cacheSsrResponse();
     const id = parseMediaId(params.id);
+    // A segment with no numeric id can never resolve. Without this the server
+    // function's validator throws and the route answers 500; Googlebot found
+    // the literal "/tv/$id" and logged a server error. A bad URL is a 404.
+    if (!/^\d+$/.test(id)) throw notFound();
     const data = await context.queryClient.ensureQueryData(mediaDetailQueryOptions("tv", id));
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
     if (data?.title) {

@@ -58,8 +58,11 @@ export function MediaCard({
   /** Show vote counts under the Balasaur score. */
   showVotes?: boolean;
 }) {
-  const isLinkable = item.mediaType === "movie" || item.mediaType === "tv";
   const rawId = item.id.replace(/^(movie|tv)-/, "");
+  // An id-less item must not render a link: an empty route param leaves the
+  // raw "/tv/$id" pattern in the href, which Googlebot crawled and got a
+  // server error from.
+  const isLinkable = (item.mediaType === "movie" || item.mediaType === "tv") && /^\d+$/.test(rawId);
   const slug = mediaSlug(rawId, item.title);
 
   return (
