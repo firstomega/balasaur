@@ -81,13 +81,18 @@
   --foreground: #d4d8e0;
   --text-bright: #ffffff;
   --text-muted: #9aa2b1;
-  --text-dim: #69707d;
+  /* 3.76 against the ground, below the 4.5 floor. 5.28 passes; one step
+     lighter, still clearly quieter than muted. */
+  --text-dim: #818899;
   --card: #171b21;
   --card-foreground: #d4d8e0;
   --popover: #171b21;
   --popover-foreground: #d4d8e0;
   --primary: #3b82f6;
-  --primary-foreground: #ffffff;
+  /* Dark text on the blue fill: white measured 3.68 against #3b82f6, below
+     the 4.5 accessibility floor. The near-ground dark measures 5.19 and keeps
+     the brand hue untouched. */
+  --primary-foreground: #0b0e13;
   --secondary: #1f242c;
   --secondary-foreground: #d4d8e0;
   --muted: #1f242c;

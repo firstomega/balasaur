@@ -4,6 +4,18 @@ import { cn } from "@/lib/utils";
 // text, color is a *supplementary* cue, and the two extremes get a dinosaur-themed
 // icon (a non-color second cue) — an asteroid below 60, a bite mark at 85+.
 
+/** Named tiers make the score quotable. The names travel in tooltips and
+ *  aria-labels, so a screen reader hears "92, Apex" and a hover explains
+ *  what the color already implies. */
+export function tierName(score: number): string {
+  if (score >= 90) return "Apex";
+  if (score >= 85) return "Balasaur Approved";
+  if (score >= 70) return "Worth a look";
+  if (score >= 60) return "Mixed";
+  if (score >= 40) return "Rough";
+  return "Extinction event";
+}
+
 function tierClasses(score: number): { text: string; ring: string } {
   if (score >= 85) return { text: "text-emerald-300", ring: "ring-emerald-400/40" };
   if (score >= 70) return { text: "text-lime-200", ring: "ring-lime-400/40" };
@@ -45,8 +57,8 @@ export function ScoreBadge({
   const iconCls = size === "sm" ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
   return (
     <span
-      aria-label={`Balasaur Score ${score} out of 100`}
-      title={`Balasaur Score ${score}/100: IMDb, Rotten Tomatoes, Metacritic, and TMDB blended into one number`}
+      aria-label={`Balasaur Score ${score} out of 100. ${tierName(score)}`}
+      title={`${score}/100 · ${tierName(score)}. IMDb, Rotten Tomatoes, Metacritic, and TMDB blended into one number.`}
       className={cn(
         "inline-flex items-center gap-1 rounded-[4px] bg-background/90 font-mono font-semibold tabular-nums ring-1 backdrop-blur-sm",
         size === "sm" ? "h-[18px] px-1.5 text-[10px]" : "px-2 py-1 text-[13px]",
