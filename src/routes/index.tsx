@@ -348,7 +348,7 @@ function HomePage() {
           </div>
         )}
 
-        <main className="min-w-0 flex-1">
+        <main id="main" className="min-w-0 flex-1">
           {!user && (
             <LandingHero onBrowse={scrollToGrid} onPickFavorites={() => setRampOpen(true)} />
           )}
@@ -890,7 +890,7 @@ function HomeError({ error }: { error: Error }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
-      <main className="mx-auto max-w-[1600px] px-4 py-10">
+      <main id="main" className="mx-auto max-w-[1600px] px-4 py-10">
         <div className="rounded-[5px] border border-border bg-panel p-6">
           <h2 className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
             Couldn't load the firehose

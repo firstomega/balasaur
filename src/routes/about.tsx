@@ -25,7 +25,7 @@ function AboutPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <TopBar />
-      <main className="mx-auto w-full max-w-[760px] flex-1 px-4 py-12">
+      <main id="main" className="mx-auto w-full max-w-[760px] flex-1 px-4 py-12">
         <h1 className="text-[28px] font-bold tracking-tight text-text-bright">About Balasaur</h1>
         <p className="mt-2 text-[15px] text-text-muted">
           A movie and TV database built around one number.

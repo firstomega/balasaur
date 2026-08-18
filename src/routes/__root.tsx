@@ -137,6 +137,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      // Brand mark in the tab and on home screens. Served from public/ so the
+      // URLs are stable.
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       // Every poster/backdrop loads from TMDB's CDN — warming the connection
       // before the first <img> shaves the LCP handshake.
       { rel: "preconnect", href: "https://image.tmdb.org" },
@@ -172,6 +176,14 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        {/* Keyboard and screen-reader users skip the nav instead of tabbing
+            through it on every page. Visible only when focused. */}
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-[5px] bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+        >
+          Skip to content
+        </a>
         {children}
         <Scripts />
       </body>

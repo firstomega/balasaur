@@ -13,10 +13,9 @@ export const SITE_ORIGIN = RAW_ORIGIN.replace(/\/+$/, "");
 
 export const SITE_NAME = "Balasaur";
 export const SITE_TAGLINE = "Your personal entertainment database";
-// Fallback share image. Currently the Lovable-hosted preview (a real, working
-// URL). TODO: replace with a branded /og-default.png once one is added to public/.
-export const DEFAULT_OG_IMAGE =
-  "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9ee233a8-7a22-41f0-ac0e-85e583add70d/id-preview-7121fac2--60ec2541-7775-4350-a822-2caaf26ce83a.lovable.app-1780089925441.png";
+// Fallback share image: the branded card in public/og-default.png. Pages with
+// real art (posters, backdrops) pass their own image; this covers the rest.
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-default.png`;
 
 /** Build an absolute URL from a route path (e.g. "/movie/27205"). */
 export function absoluteUrl(path: string): string {
@@ -97,8 +96,13 @@ const setSsrCacheControl = createIsomorphicFn()
     }
   });
 
-export async function cacheSsrResponse(seconds = 21600): Promise<void> {
-  await setSsrCacheControl(`public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=86400`);
+export async function cacheSsrResponse(seconds = 21600, swrSeconds = 86400): Promise<void> {
+  // swrSeconds matters when the content flips on a schedule: a hardcoded
+  // 24-hour stale window let the CDN serve yesterday's daily puzzle past
+  // midnight, which is exactly what the page's short TTL tried to prevent.
+  await setSsrCacheControl(
+    `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=${swrSeconds}`,
+  );
 }
 
 /** Meta tag asking crawlers to skip this page (tiered indexation). */
