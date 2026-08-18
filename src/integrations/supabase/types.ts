@@ -172,8 +172,10 @@ export type Database = {
           streaming: string[];
           streaming_regions: string[];
           sub_genres: string[];
+          suggestive: boolean;
           themes: string[];
           title: string;
+          tmdb_collection_id: number | null;
           updated_at: string;
           vote_count: number | null;
           year: string | null;
@@ -215,8 +217,10 @@ export type Database = {
           streaming?: string[];
           streaming_regions?: string[];
           sub_genres?: string[];
+          suggestive?: boolean;
           themes?: string[];
           title: string;
+          tmdb_collection_id?: number | null;
           updated_at?: string;
           vote_count?: number | null;
           year?: string | null;
@@ -258,8 +262,10 @@ export type Database = {
           streaming?: string[];
           streaming_regions?: string[];
           sub_genres?: string[];
+          suggestive?: boolean;
           themes?: string[];
           title?: string;
+          tmdb_collection_id?: number | null;
           updated_at?: string;
           vote_count?: number | null;
           year?: string | null;
@@ -503,6 +509,33 @@ export type Database = {
         }[];
       };
       rebuild_collections: { Args: never; Returns: undefined };
+      related_titles: {
+        Args: { p_media_id: string; p_target_type: string };
+        Returns: {
+          media_id: string;
+          media_type: string;
+          title: string;
+          year: string | null;
+          poster_url: string | null;
+          popularity: number | null;
+          rating_imdb: number | null;
+          rating_rotten_tomatoes: number | null;
+          rating_metacritic: number | null;
+          rating_tmdb: number | null;
+          rating_balasaur: number | null;
+          genres: string[];
+          seasons: Json | null;
+          award_winner: boolean;
+          award_nominee: boolean;
+          match_score: number;
+          same_franchise: boolean | null;
+          shared_people: string[] | null;
+          shared_sub_genres: string[] | null;
+          shared_themes: string[] | null;
+          shared_genres: string[] | null;
+          era_match: boolean | null;
+        }[];
+      };
       search_cast: {
         Args: { p_exclude?: string[]; p_q: string };
         Returns: {

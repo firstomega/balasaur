@@ -79,6 +79,12 @@ export interface MediaItem {
   seasonCount?: number;
   /** TMDB community vote count. */
   voteCount?: number;
+  /**
+   * Why this card is in a related rail — the facets it shares with the anchor
+   * title ("Same series", a person, a sub-genre, a theme, a decade). Set only
+   * by the similarity engine.
+   */
+  matchReasons?: string[];
 }
 
 export interface MediaDetail extends MediaItem {
@@ -110,6 +116,8 @@ export interface MediaDetail extends MediaItem {
   related?: MediaItem[];
   /** Cross-category "more like this" — titles of the OTHER media type. */
   relatedCross?: MediaItem[];
+  /** Version of the similarity engine that built the rails (cache healing). */
+  relatedVersion?: number;
   keywords?: string[];
   providers?: WatchProviders;
   providersAll?: WatchProvidersAllRegions;

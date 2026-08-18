@@ -99,6 +99,9 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   });
   const [exit, setExit] = useState<Dir | null>(null);
   const [done, setDone] = useState(false);
+  // Mobile only: tapping the card reveals the full synopsis/genres overlay.
+  // Desktop and tablet show that panel beside the poster permanently.
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const current = deck[index];
   const next = deck[index + 1];
@@ -135,6 +138,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
       setExit(dir);
       window.setTimeout(() => {
         setExit(null);
+        setInfoOpen(false);
         setIndex((i) => {
           const ni = i + 1;
           if (ni >= deck.length) setDone(true);
@@ -156,6 +160,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
     setExit("down");
     window.setTimeout(() => {
       setExit(null);
+      setInfoOpen(false);
       setIndex((i) => {
         const ni = i + 1;
         if (ni >= deck.length) setDone(true);
@@ -218,7 +223,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   }
 
   return (
-    <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-between gap-4 px-4 py-4">
+    <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-between gap-4 px-4 py-4 md:max-w-3xl">
       <div className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
         {index + 1} / {deck.length} · sorted {summary.total}
       </div>
@@ -246,7 +251,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         </div>
       )}
 
-      <div className="relative h-[560px] w-full max-w-[360px]">
+      <div className="relative h-[560px] w-full max-w-[360px] md:h-[480px] md:max-w-[680px]">
         {/* Next card behind, peek */}
         {next && (
           <div className="absolute inset-0 scale-[0.96] opacity-50">
@@ -259,6 +264,8 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
           item={current}
           forcedExit={exit}
           onCommit={(dir) => advance(dir)}
+          onTap={() => setInfoOpen((o) => !o)}
+          infoOpen={infoOpen}
         />
       </div>
 
@@ -293,10 +300,14 @@ function DraggableCard({
   item,
   forcedExit,
   onCommit,
+  onTap,
+  infoOpen = false,
 }: {
   item: MediaItem;
   forcedExit: Dir | null;
   onCommit: (dir: Dir) => void;
+  onTap?: () => void;
+  infoOpen?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [dx, setDx] = useState(0);
@@ -331,6 +342,9 @@ function DraggableCard({
     if (dir) {
       onCommit(dir);
     } else {
+      // A press that never became a drag is a tap: toggle the info overlay
+      // (mobile only — desktop shows the info panel permanently).
+      if (Math.max(ax, ay) < 8) onTap?.();
       setDx(0);
       setDy(0);
     }
@@ -376,8 +390,43 @@ function DraggableCard({
         cursor: dragging ? "grabbing" : "grab",
       }}
     >
-      <CardFace item={item} cue={cue} cueIntensity={cueIntensity} />
+      <CardFace item={item} cue={cue} cueIntensity={cueIntensity} infoOpen={infoOpen} />
     </div>
+  );
+}
+
+function DeckInfo({ item }: { item: MediaItem }) {
+  const score = item.ratings.balasaur;
+  const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+        <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
+        {item.year && <span>· {item.year}</span>}
+        {seasons > 0 && (
+          <span>
+            · {seasons} Season{seasons === 1 ? "" : "s"}
+          </span>
+        )}
+        {score !== undefined && <ScoreBadge score={score} />}
+      </div>
+      <h2 className="text-[20px] font-semibold leading-tight text-text-bright">{item.title}</h2>
+      {item.genres.length > 0 && (
+        <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          {item.genres.slice(0, 4).join(" · ")}
+        </div>
+      )}
+      {item.overview && (
+        <p className="line-clamp-[9] text-[13px] leading-relaxed text-text-bright/90">
+          {item.overview}
+        </p>
+      )}
+      {item.streaming.length > 0 && (
+        <div className="mt-auto font-mono text-[10px] uppercase tracking-wider text-text-muted">
+          On {item.streaming.slice(0, 3).join(", ")}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -385,48 +434,74 @@ function CardFace({
   item,
   cue,
   cueIntensity = 0,
+  infoOpen = false,
 }: {
   item: MediaItem;
   cue?: Dir | null;
   cueIntensity?: number;
+  infoOpen?: boolean;
 }) {
   const score = item.ratings.balasaur;
   const cueColor = cue ? ACTION_HEX[cue] : null;
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]">
-      {item.posterUrl ? (
-        <img
-          src={tmdbImage(item.posterUrl, "w780")}
-          srcSet={tmdbSrcSet(item.posterUrl, [
-            { w: 500, size: "w500" },
-            { w: 780, size: "w780" },
-          ])}
-          sizes="(max-width: 768px) 100vw, 420px"
-          alt={item.title}
-          draggable={false}
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-accent text-text-dim">
-          <span className="font-mono text-[12px] uppercase">No art</span>
-        </div>
-      )}
+      <div className="flex h-full">
+        {/* Poster — full card on mobile, left pane on md+. */}
+        <div className="relative h-full w-full md:w-[45%] md:shrink-0">
+          {item.posterUrl ? (
+            <img
+              src={tmdbImage(item.posterUrl, "w780")}
+              srcSet={tmdbSrcSet(item.posterUrl, [
+                { w: 500, size: "w500" },
+                { w: 780, size: "w780" },
+              ])}
+              sizes="(max-width: 768px) 100vw, 320px"
+              alt={item.title}
+              draggable={false}
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-accent text-text-dim">
+              <span className="font-mono text-[12px] uppercase">No art</span>
+            </div>
+          )}
 
-      {/* Bottom gradient + text */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4">
-        <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-white/80">
-          <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
-          {item.year && <span>· {item.year}</span>}
-          {score !== undefined && <ScoreBadge score={score} />}
+          {/* Mobile bottom gradient: title + meta, and the tap hint. Hidden
+              while the detail overlay is up so text never doubles through it. */}
+          <div
+            className={
+              "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 md:hidden" +
+              (infoOpen ? " invisible" : "")
+            }
+          >
+            <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-white/80">
+              <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
+              {item.year && <span>· {item.year}</span>}
+              {score !== undefined && <ScoreBadge score={score} />}
+            </div>
+            <h2 className="text-[20px] font-semibold leading-tight text-white">{item.title}</h2>
+            <p className="mt-1.5 font-mono text-[9.5px] uppercase tracking-wider text-white/60">
+              Tap for details
+            </p>
+          </div>
+
+          {/* Mobile tap-to-reveal detail overlay. */}
+          {infoOpen && (
+            <div className="absolute inset-0 flex flex-col gap-2.5 overflow-hidden bg-black/95 p-4 md:hidden">
+              <DeckInfo item={item} />
+              <p className="font-mono text-[9.5px] uppercase tracking-wider text-white/50">
+                Tap to close
+              </p>
+            </div>
+          )}
         </div>
-        <h2 className="text-[20px] font-semibold leading-tight text-white">{item.title}</h2>
-        {item.overview && (
-          <p className="mt-2 line-clamp-3 text-[12.5px] leading-snug text-white/85">
-            {item.overview}
-          </p>
-        )}
+
+        {/* Desktop/tablet info pane — always visible beside the poster. */}
+        <div className="hidden min-w-0 flex-1 flex-col gap-2.5 overflow-hidden p-4 md:flex">
+          <DeckInfo item={item} />
+        </div>
       </div>
 
       {/* Directional cue overlay */}

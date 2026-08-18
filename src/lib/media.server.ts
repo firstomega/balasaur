@@ -859,6 +859,13 @@ function extractVoteCount(rawTmdb: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
 }
 
+/** TMDB franchise membership (movies only) — feeds the similarity engine. */
+function extractCollectionId(rawTmdb: unknown): number | null {
+  const c = (rawTmdb as { belongs_to_collection?: { id?: unknown } | null } | null)
+    ?.belongs_to_collection;
+  return c && typeof c.id === "number" && Number.isFinite(c.id) ? c.id : null;
+}
+
 function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown): MediaRow {
   const awards = parseAwards((rawOmdb as OmdbResponse | null)?.Awards);
   const awardDetail = parseAwardDetail((rawOmdb as OmdbResponse | null)?.Awards);
@@ -898,6 +905,8 @@ function rowFromEnrichedItem(item: MediaItem, rawTmdb: unknown, rawOmdb: unknown
       voteCount,
     }),
     sensitive: deriveSensitive(rawTmdb),
+    suggestive: facets.suggestive,
+    tmdb_collection_id: item.mediaType === "movie" ? extractCollectionId(rawTmdb) : null,
     genres: item.genres,
     origins: item.origins ?? [],
     streaming: item.streaming,
@@ -1004,7 +1013,7 @@ export async function backfillFromRaw(opts?: {
     let query = supabaseAdmin
       .from("media")
       .select(
-        "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, popularity, release_date, rating_balasaur, vote_count, rank_score, quality_score, sensitive, raw_tmdb, raw_omdb",
+        "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, popularity, release_date, rating_balasaur, vote_count, rank_score, quality_score, sensitive, suggestive, tmdb_collection_id, raw_tmdb, raw_omdb",
       )
       .gt("media_id", cursor);
     if (useMissingFilter) query = query.is("facets_derived_at", null);
@@ -1124,9 +1133,13 @@ export async function backfillFromRaw(opts?: {
           JSON.stringify(facets.audience) !== JSON.stringify(row.audience ?? []) ||
           (facets.film_length_minutes ?? null) !== (row.film_length_minutes ?? null) ||
           (facets.completion_status ?? null) !== (row.completion_status ?? null);
+        const newCollectionId =
+          row.media_type === "movie" ? extractCollectionId(row.raw_tmdb) : null;
         const rankChanged =
           (row.vote_count ?? null) !== newVoteCount ||
           (row.sensitive ?? false) !== newSensitive ||
+          (row.suggestive ?? false) !== facets.suggestive ||
+          (row.tmdb_collection_id ?? null) !== newCollectionId ||
           (row.rank_score ?? null) !== newRankScore ||
           (row.quality_score ?? null) !== newQualityScore;
 
@@ -1177,6 +1190,8 @@ export async function backfillFromRaw(opts?: {
             rank_score: newRankScore,
             quality_score: newQualityScore,
             sensitive: newSensitive,
+            suggestive: facets.suggestive,
+            tmdb_collection_id: newCollectionId,
             award_winner: awards.winner,
             award_nominee: awards.nominee,
             award_wins: awards.wins ?? null,
@@ -2031,64 +2046,98 @@ function buildDetailFromRaw(
 
 // ---------- Read-through cache (media_cache + trending_cache) ----------
 
-/**
- * Attach cross-category "more like this": titles of the OTHER media type sharing
- * genres (genres are unified across movie/tv). Popularity-ranked, cheap + indexed.
- * Runs in the async build paths (not the sync builder) so the result is cached.
- */
-async function attachCrossRelated(detail: MediaDetail): Promise<void> {
-  if (!detail.genres || detail.genres.length === 0) return;
-  const otherType = detail.mediaType === "tv" ? "movie" : "tv";
-  const { data, error } = await supabaseAdmin
-    .from("media")
-    .select(
-      "media_id,media_type,title,year,poster_url,popularity,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,seasons,award_winner,award_nominee",
-    )
-    .eq("media_type", otherType)
-    .overlaps("genres", detail.genres)
-    .order("popularity", { ascending: false, nullsFirst: false })
-    .limit(12);
-  if (error) {
-    console.error("[detail] cross-type related failed:", error.message);
-    return;
-  }
-  const cross = ((data ?? []) as unknown as CrossRow[]).map(crossRowToItem);
-  if (cross.length > 0) detail.relatedCross = cross;
+// ---------- Related rails (the similarity engine) ----------
+//
+// Both "more like this" rails come from the `related_titles` Postgres function:
+// franchise membership and shared people count most, then sub-genres, themes,
+// genres, with a small same-era bonus; the Balasaur Score is a quality floor.
+// Audience compatibility is a hard wall and the fan-service tier (`suggestive`)
+// never appears. Each returned row carries WHICH facets it shares, so every
+// card can say why it is here — and a rail with fewer than 6 real matches is
+// refused outright rather than padded with filler.
+
+interface RelatedRow extends CrossRow {
+  rating_balasaur: number | null;
+  match_score: number;
+  same_franchise: boolean | null;
+  shared_people: string[] | null;
+  shared_sub_genres: string[] | null;
+  shared_themes: string[] | null;
+  shared_genres: string[] | null;
+  era_match: boolean | null;
 }
 
-/**
- * Replace TMDB's recommendation list with our own: same type, at least one
- * shared genre, Balasaur Score within 6 points, best confidence first. Every
- * competitor mirrors TMDB's `similar` endpoint; this list only we can make,
- * and unlike TMDB's it is explainable from what the page already shows.
- * Falls back to the TMDB list when the catalog gives fewer than 6 matches.
- */
-async function attachScoreProximityRelated(detail: MediaDetail): Promise<void> {
-  const score = detail.ratings.balasaur;
-  if (typeof score !== "number" || !detail.genres || detail.genres.length === 0) return;
-  const { data, error } = await supabaseAdmin
-    .from("media")
-    .select(
-      "media_id,media_type,title,year,poster_url,popularity,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,seasons,award_winner,award_nominee",
-    )
-    .eq("media_type", detail.mediaType)
-    .eq("sensitive", false)
-    .neq("media_id", detail.id)
-    .overlaps("genres", detail.genres)
-    .gte("rating_balasaur", score - 6)
-    .lte("rating_balasaur", score + 6)
-    .not("poster_url", "is", null)
-    // Ordered by the score PRINTED on each card, so the rail's order is
-    // reconstructable from what the reader sees; confidence only breaks ties.
-    .order("rating_balasaur", { ascending: false, nullsFirst: false })
-    .order("quality_score", { ascending: false, nullsFirst: false })
-    .limit(12);
-  if (error) {
-    console.error("[detail] score-proximity related failed:", error.message);
-    return;
+/** Bump when the rail logic changes shape — cached payloads below this version
+ *  get their rails rebuilt once on read, then persisted. */
+const RELATED_ENGINE_VERSION = 2;
+const MIN_RELATED_MATCHES = 6;
+
+/** A candidate that only shares one broad genre is not a match, it is a
+ *  coincidence. Strong = franchise, a person, a sub-genre, a theme, or at
+ *  least two shared genres. */
+function isStrongMatch(r: RelatedRow): boolean {
+  return (
+    r.same_franchise === true ||
+    (r.shared_people?.length ?? 0) > 0 ||
+    (r.shared_sub_genres?.length ?? 0) > 0 ||
+    (r.shared_themes?.length ?? 0) > 0 ||
+    (r.shared_genres?.length ?? 0) >= 2
+  );
+}
+
+/** Up to three reason chips, most specific first. Skips a label already
+ *  covered by a stronger one ("Spy / Espionage" already says "Espionage"). */
+function matchReasons(r: RelatedRow): string[] {
+  const out: string[] = [];
+  const add = (label: string) => {
+    if (!out.some((x) => x.includes(label) || label.includes(x))) out.push(label);
+  };
+  if (r.same_franchise) out.push("Same series");
+  for (const p of r.shared_people ?? []) add(p);
+  for (const s of r.shared_sub_genres ?? []) add(s);
+  for (const t of r.shared_themes ?? []) add(t);
+  if (out.length < 3) for (const g of r.shared_genres ?? []) add(g);
+  if (out.length < 3 && r.era_match && r.year && /^\d{4}/.test(r.year)) {
+    out.push(`${r.year.slice(0, 3)}0s`);
   }
-  const ours = ((data ?? []) as unknown as CrossRow[]).map(crossRowToItem);
-  if (ours.length >= 6) detail.related = ours;
+  return out.slice(0, 3);
+}
+
+async function fetchRelatedRail(
+  anchorId: string,
+  targetType: "movie" | "tv",
+): Promise<MediaItem[] | undefined> {
+  const { data, error } = await supabaseAdmin.rpc("related_titles", {
+    p_media_id: anchorId,
+    p_target_type: targetType,
+  });
+  if (error) {
+    console.error("[detail] related_titles failed:", error.message);
+    return undefined;
+  }
+  const rows = ((data ?? []) as unknown as RelatedRow[]).filter(isStrongMatch);
+  if (rows.length < MIN_RELATED_MATCHES) return undefined;
+  return rows.slice(0, 12).map((r) => {
+    const item = crossRowToItem(r);
+    // The DB-generated score is canonical when present.
+    if (typeof r.rating_balasaur === "number") item.ratings.balasaur = r.rating_balasaur;
+    item.matchReasons = matchReasons(r);
+    return item;
+  });
+}
+
+async function attachRelatedRails(detail: MediaDetail): Promise<void> {
+  if (detail.mediaType !== "movie" && detail.mediaType !== "tv") return;
+  const other = detail.mediaType === "tv" ? "movie" : "tv";
+  const [own, cross] = await Promise.all([
+    fetchRelatedRail(detail.id, detail.mediaType),
+    fetchRelatedRail(detail.id, other),
+  ]);
+  // No weak rail: fewer than 6 real matches means no rail at all. This also
+  // drops TMDB's raw recommendation list, which had no content filters.
+  detail.related = own;
+  detail.relatedCross = cross;
+  detail.relatedVersion = RELATED_ENGINE_VERSION;
 }
 
 export async function fetchMediaDetail(
@@ -2126,10 +2175,14 @@ export async function fetchMediaDetail(
               // best-effort — the page still renders without ratingCount
             }
           }
-          // Cached payloads carry TMDB's recommendation list from before the
-          // score-proximity swap; refresh it on read rather than waiting out
-          // the 7-day TTL. One indexed query, and the CDN caches the page.
-          await attachScoreProximityRelated(cached);
+          // Payloads written before the similarity engine carry a rail with
+          // no reasons (or TMDB's unfiltered list). Rebuild both rails once
+          // and persist, so the hot path pays the engine cost a single time
+          // per cached payload instead of on every read.
+          if (cached.relatedVersion !== RELATED_ENGINE_VERSION) {
+            await attachRelatedRails(cached);
+            await writeDetailCache(cacheId, type, id, cached);
+          }
           return cached;
         }
       }
@@ -2154,8 +2207,7 @@ export async function fetchMediaDetail(
           data.raw_tmdb as unknown as TmdbDetailRaw,
           (data.raw_omdb as unknown as OmdbResponse | null) ?? null,
         );
-        await attachCrossRelated(built);
-        await attachScoreProximityRelated(built);
+        await attachRelatedRails(built);
         await writeDetailCache(cacheId, type, id, built);
         return built;
       }
@@ -2165,8 +2217,7 @@ export async function fetchMediaDetail(
   }
 
   const detail = await fetchMediaDetailLive(type, id);
-  await attachCrossRelated(detail);
-  await attachScoreProximityRelated(detail);
+  await attachRelatedRails(detail);
   await writeDetailCache(cacheId, type, id, detail);
   return detail;
 }

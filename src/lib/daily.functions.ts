@@ -39,7 +39,10 @@ async function pinnedMediaId(day: number): Promise<string | null> {
   const { count, error: countErr } = await supabaseAdmin
     .from("media")
     .select("media_id", { count: "exact", head: true })
-    .eq("sensitive", false)
+    // suggestive covers the whole fan-service tier (superset of sensitive);
+    // past answers are pinned in daily_challenges, so pool changes only
+    // affect future days.
+    .eq("suggestive", false)
     .gte("vote_count", POOL_MIN_VOTES)
     .not("poster_url", "is", null)
     .not("year", "is", null);
@@ -51,7 +54,7 @@ async function pinnedMediaId(day: number): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("media")
     .select("media_id")
-    .eq("sensitive", false)
+    .eq("suggestive", false)
     .gte("vote_count", POOL_MIN_VOTES)
     .not("poster_url", "is", null)
     .not("year", "is", null)

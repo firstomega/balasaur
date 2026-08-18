@@ -55,7 +55,9 @@ export const getReleaseCalendar = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(CARD_COLS)
-      .eq("sensitive", false)
+      // The calendar is the site presenting premieres unprompted, so the whole
+      // fan-service tier (`suggestive`, superset of `sensitive`) stays out.
+      .eq("suggestive", false)
       .not("poster_url", "is", null)
       .gte("release_date", start)
       .lt("release_date", end)

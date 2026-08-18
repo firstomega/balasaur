@@ -65,3 +65,33 @@ export function deriveSensitive(rawTmdb: unknown): boolean {
   }
   return weakHits >= 2;
 }
+
+// ---- Suggestive: the fan-service tier ---------------------------------------
+//
+// A second, wider net below `sensitive`. Titles built around titillation
+// (ecchi, harem, fan-service anime) are not hard-adult, but they have no
+// business appearing in recommendation rails, collections, or the rate deck,
+// and especially not next to kids' titles. They remain fully browsable and
+// searchable — this flag only gates the surfaces where the SITE is doing the
+// recommending. Adult-themed cinema (an R-rated drama about a relationship
+// with an AI, an erotic thriller) is deliberately NOT caught here: the terms
+// below only land on content whose point is the titillation itself.
+//
+// One hit is enough — "harem" or "fan service" does not land on a title by
+// accident the way a lone "erotic" can.
+
+const SUGGESTIVE_TERMS = [
+  "ecchi",
+  "harem",
+  "fan service",
+  "fanservice",
+  "sexual fantasy",
+  "gravure",
+  "seduction comedy",
+];
+
+export function deriveSuggestive(rawTmdb: unknown): boolean {
+  if (deriveSensitive(rawTmdb)) return true;
+  const keywords = extractKeywordNames(rawTmdb);
+  return keywords.some((kw) => SUGGESTIVE_TERMS.some((t) => kw.includes(t)));
+}

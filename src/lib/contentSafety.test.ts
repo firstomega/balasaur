@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { deriveSensitive } from "./contentSafety";
+import { deriveSensitive, deriveSuggestive } from "./contentSafety";
 
 const withKeywords = (names: string[], extra: Record<string, unknown> = {}) => ({
   keywords: { keywords: names.map((name, id) => ({ id, name })) },
@@ -31,5 +31,28 @@ describe("deriveSensitive", () => {
     expect(deriveSensitive(null)).toBe(false);
     expect(deriveSensitive({})).toBe(false);
     expect(deriveSensitive(withKeywords(["based on novel or book", "friendship"]))).toBe(false);
+  });
+});
+
+describe("deriveSuggestive", () => {
+  it("is a superset of sensitive", () => {
+    expect(deriveSuggestive({ adult: true })).toBe(true);
+    expect(deriveSuggestive(withKeywords(["softcore"]))).toBe(true);
+  });
+
+  it("flags fan-service keywords on a single hit", () => {
+    expect(deriveSuggestive(withKeywords(["harem", "comedy"]))).toBe(true);
+    expect(deriveSuggestive(withKeywords(["fan service"]))).toBe(true);
+    expect(deriveSuggestive(withKeywords(["sexual fantasy"]))).toBe(true);
+  });
+
+  it("leaves adult-themed cinema alone — one 'erotic thriller' is not fan service", () => {
+    expect(deriveSuggestive(withKeywords(["erotic thriller", "neo-noir"]))).toBe(false);
+    expect(deriveSuggestive(withKeywords(["artificial intelligence", "loneliness"]))).toBe(false);
+  });
+
+  it("fails open on missing raw data", () => {
+    expect(deriveSuggestive(null)).toBe(false);
+    expect(deriveSuggestive({})).toBe(false);
   });
 });

@@ -187,6 +187,13 @@ export function MediaCard({
               return seasons > 0 ? ` · ${seasons} Season${seasons === 1 ? "" : "s"}` : "";
             })()}
           </p>
+          {item.matchReasons && item.matchReasons.length > 0 && (
+            <p className="mt-0.5 line-clamp-2 text-[10px] leading-tight text-text-dim">
+              {item.matchReasons[0] === "Same series"
+                ? item.matchReasons.join(" · ")
+                : `Shares: ${item.matchReasons.join(" · ")}`}
+            </p>
+          )}
         </div>
         {onOpenActions && (
           <button
