@@ -184,7 +184,15 @@ async function main() {
       return null;
     };
 
-    const routes = ["/", "/collections", "/methodology", "/about", "/contact", "/calendar", "/play"];
+    const routes = [
+      "/",
+      "/collections",
+      "/methodology",
+      "/about",
+      "/contact",
+      "/calendar",
+      "/play",
+    ];
     for (const [from, prefix] of [
       ["/collections", "/best/"],
       ["/", "/movie/"],
