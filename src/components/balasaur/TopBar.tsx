@@ -41,6 +41,8 @@ export function TopBar() {
         <nav aria-label="Primary" className="hidden items-center gap-0.5 md:flex">
           <NavPlace to="/" label="Browse" exact />
           <NavPlace to="/collections" label="Collections" />
+          <NavPlace to="/calendar" label="Calendar" />
+          <NavPlace to="/play" label="Play" />
         </nav>
 
         {/* Center search (desktop only; mobile gets a full-width row below) */}
@@ -172,6 +174,8 @@ export function TopBar() {
         <nav aria-label="Primary" className="flex shrink-0 items-center gap-0.5">
           <NavPlace to="/" label="Browse" exact compact />
           <NavPlace to="/collections" label="Collections" compact />
+          <NavPlace to="/calendar" label="Calendar" compact />
+          <NavPlace to="/play" label="Play" compact />
         </nav>
         <div className="min-w-0 flex-1">
           <TopBarSearch />

@@ -19,12 +19,14 @@ import { Route as SitemapPagesDotxmlRouteImport } from './routes/sitemap-pages[.
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PlayRouteImport } from './routes/play'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as ListsRouteImport } from './routes/lists'
 import { Route as D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport } from './routes/d50e38be1b86ef6ef1079ff766aa2079[.]txt'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CollectionsRouteImport } from './routes/collections'
+import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as HandleRouteImport } from './routes/$handle'
@@ -87,6 +89,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayRoute = PlayRouteImport.update({
+  id: '/play',
+  path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
   path: '/methodology',
@@ -116,6 +123,11 @@ const ContactRoute = ContactRouteImport.update({
 const CollectionsRoute = CollectionsRouteImport.update({
   id: '/collections',
   path: '/collections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRoute = AccountRouteImport.update({
@@ -180,12 +192,14 @@ export interface FileRoutesByFullPath {
   '/$handle': typeof HandleRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/calendar': typeof CalendarRoute
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
   '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
+  '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -209,12 +223,14 @@ export interface FileRoutesByTo {
   '/$handle': typeof HandleRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/calendar': typeof CalendarRoute
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
   '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
+  '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -239,12 +255,14 @@ export interface FileRoutesById {
   '/$handle': typeof HandleRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/calendar': typeof CalendarRoute
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
   '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
+  '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -270,12 +288,14 @@ export interface FileRouteTypes {
     | '/$handle'
     | '/about'
     | '/account'
+    | '/calendar'
     | '/collections'
     | '/contact'
     | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
     | '/lists'
     | '/llms.txt'
     | '/methodology'
+    | '/play'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -299,12 +319,14 @@ export interface FileRouteTypes {
     | '/$handle'
     | '/about'
     | '/account'
+    | '/calendar'
     | '/collections'
     | '/contact'
     | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
     | '/lists'
     | '/llms.txt'
     | '/methodology'
+    | '/play'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -328,12 +350,14 @@ export interface FileRouteTypes {
     | '/$handle'
     | '/about'
     | '/account'
+    | '/calendar'
     | '/collections'
     | '/contact'
     | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
     | '/lists'
     | '/llms.txt'
     | '/methodology'
+    | '/play'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -358,12 +382,14 @@ export interface RootRouteChildren {
   HandleRoute: typeof HandleRoute
   AboutRoute: typeof AboutRoute
   AccountRoute: typeof AccountRoute
+  CalendarRoute: typeof CalendarRoute
   CollectionsRoute: typeof CollectionsRoute
   ContactRoute: typeof ContactRoute
   D50e38be1b86ef6ef1079ff766aa2079DottxtRoute: typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
   ListsRoute: typeof ListsRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   MethodologyRoute: typeof MethodologyRoute
+  PlayRoute: typeof PlayRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -455,6 +481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/play': {
+      id: '/play'
+      path: '/play'
+      fullPath: '/play'
+      preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/methodology': {
       id: '/methodology'
       path: '/methodology'
@@ -495,6 +528,13 @@ declare module '@tanstack/react-router' {
       path: '/collections'
       fullPath: '/collections'
       preLoaderRoute: typeof CollectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -582,6 +622,7 @@ const rootRouteChildren: RootRouteChildren = {
   HandleRoute: HandleRoute,
   AboutRoute: AboutRoute,
   AccountRoute: AccountRoute,
+  CalendarRoute: CalendarRoute,
   CollectionsRoute: CollectionsRoute,
   ContactRoute: ContactRoute,
   D50e38be1b86ef6ef1079ff766aa2079DottxtRoute:
@@ -589,6 +630,7 @@ const rootRouteChildren: RootRouteChildren = {
   ListsRoute: ListsRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   MethodologyRoute: MethodologyRoute,
+  PlayRoute: PlayRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
