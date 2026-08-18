@@ -3,9 +3,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { Footer } from "@/components/balasaur/Footer";
 import { MediaCard } from "@/components/balasaur/MediaCard";
+import { useEffect, useState } from "react";
 import {
   getReleaseCalendar,
   nextMonth,
+  clampMonth,
+  calendarMaxMonth,
   CALENDAR_MIN_MONTH,
   type CalendarMonth,
 } from "@/lib/calendar.functions";
@@ -54,7 +57,7 @@ export const Route = createFileRoute("/calendar")({
   loaderDeps: ({ search }) => ({ m: search.m }),
   loader: async ({ deps }) => {
     await cacheSsrResponse();
-    const month = deps.m ?? currentMonth();
+    const month = clampMonth(deps.m ?? currentMonth());
     return getReleaseCalendar({ data: { month } });
   },
   head: ({ loaderData }) => {
@@ -63,7 +66,7 @@ export const Route = createFileRoute("/calendar")({
     return {
       meta: buildMeta({
         title: `${monthLabel(m)} Movie and TV Release Calendar`,
-        description: `Every movie and TV premiere in ${monthLabel(m)}, day by day, with the Balasaur Score where one exists.`,
+        description: `${monthLabel(m)} movie and TV premieres, day by day, with the Balasaur Score where one exists.`,
         url,
       }),
       links: [{ rel: "canonical", href: url }],
@@ -75,9 +78,16 @@ export const Route = createFileRoute("/calendar")({
 function CalendarPage() {
   const data = Route.useLoaderData() as CalendarMonth;
   const m = data.month;
-  const today = new Date().toISOString().slice(0, 10);
+  // Client-only: the SSR HTML is CDN-cached for six hours across date lines
+  // and time zones, so a server-rendered "today" would be wrong for some
+  // viewers and trip a hydration mismatch. The badge appears after mount.
+  const [today, setToday] = useState<string | null>(null);
+  useEffect(() => {
+    setToday(new Date().toISOString().slice(0, 10));
+  }, []);
   const prev = nextMonth(m, -1);
   const next = nextMonth(m, 1);
+  const nextAllowed = next <= calendarMaxMonth();
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -103,20 +113,22 @@ function CalendarPage() {
                 {monthLabel(prev)}
               </Link>
             ) : null}
-            <Link
-              to="/calendar"
-              search={{ m: next }}
-              className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-primary hover:text-primary"
-            >
-              {monthLabel(next)}
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
+            {nextAllowed ? (
+              <Link
+                to="/calendar"
+                search={{ m: next }}
+                className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-primary hover:text-primary"
+              >
+                {monthLabel(next)}
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            ) : null}
           </nav>
         </div>
 
         {data.days.length === 0 ? (
           <p className="mt-10 text-[14px] text-text-muted">
-            No catalogued premieres in {monthLabel(m)} yet. Dates arrive with the nightly sync.
+            No catalogued premieres in {monthLabel(m)} yet.
           </p>
         ) : (
           <div className="mt-8 space-y-8">

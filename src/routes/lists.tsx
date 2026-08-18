@@ -145,7 +145,7 @@ function ListsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
-      <main className="mx-auto max-w-[1600px] px-4 py-6">
+      <main id="main" className="mx-auto max-w-[1600px] px-4 py-6">
         <h1 className="mb-4 font-mono text-[14px] uppercase tracking-[0.18em] text-text-bright">
           My lists
         </h1>

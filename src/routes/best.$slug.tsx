@@ -93,7 +93,7 @@ function CollectionPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
-      <main className="mx-auto max-w-[1160px] px-4 py-6">
+      <main id="main" className="mx-auto max-w-[1160px] px-4 py-6">
         <nav
           aria-label="Breadcrumb"
           className="mb-3 font-mono text-[10.5px] uppercase tracking-wider text-text-dim"

@@ -69,7 +69,7 @@ function AccountPage() {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <TopBar />
-        <main className="mx-auto max-w-[860px] px-5 py-12">
+        <main id="main" className="mx-auto max-w-[860px] px-5 py-12">
           <p className="font-mono text-[12px] uppercase tracking-wider text-text-dim">Loading…</p>
         </main>
       </div>
@@ -79,7 +79,7 @@ function AccountPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
-      <main className="mx-auto max-w-[860px] px-5 py-10">
+      <main id="main" className="mx-auto max-w-[860px] px-5 py-10">
         <header className="mb-8 border-b border-border pb-5">
           <h1 className="font-sans text-3xl font-semibold tracking-tight text-text-bright">
             Account

@@ -23,6 +23,21 @@ const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 /** Clamp navigation to a sane window: catalog history is thin before this. */
 export const CALENDAR_MIN_MONTH = "2020-01";
 
+/** Furthest month ahead worth a page; also stops an unbounded crawl of
+ *  /calendar?m=2099-12 style URLs, since the next-month link would otherwise
+ *  walk forward forever. */
+export function calendarMaxMonth(now = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 18, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export function clampMonth(m: string): string {
+  const max = calendarMaxMonth();
+  if (m < CALENDAR_MIN_MONTH) return CALENDAR_MIN_MONTH;
+  if (m > max) return max;
+  return m;
+}
+
 export function nextMonth(m: string, delta: 1 | -1): string {
   const [y, mo] = m.split("-").map(Number);
   const d = new Date(Date.UTC(y, mo - 1 + delta, 1));
@@ -46,7 +61,11 @@ export const getReleaseCalendar = createServerFn({ method: "GET" })
       .lt("release_date", end)
       .order("release_date", { ascending: true })
       .order("popularity", { ascending: false, nullsFirst: false })
-      .limit(300);
+      // The busiest catalogued month holds 497 qualifying premieres; 300 was
+      // silently amputating the back half of such months while the header
+      // claimed a full count. 1000 is PostgREST's per-request ceiling and
+      // covers the maximum with headroom.
+      .limit(1000);
     if (error) {
       console.error("[calendar] query failed:", error.message);
       return { month: p.month, days: [], total: 0 };

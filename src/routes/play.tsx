@@ -7,7 +7,14 @@ import { Footer } from "@/components/balasaur/Footer";
 import { ScoreBadge } from "@/components/balasaur/ScoreBadge";
 import { getDailyChallenge, type DailyChallenge } from "@/lib/daily.functions";
 import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
-import { MAX_GUESSES, loadDaily, saveDaily, shareText, type DailyState } from "@/lib/daily";
+import {
+  MAX_GUESSES,
+  dayNumber,
+  loadDaily,
+  saveDaily,
+  shareText,
+  type DailyState,
+} from "@/lib/daily";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { mediaSlug } from "@/lib/slug";
 import { SITE_ORIGIN, buildMeta, cacheSsrResponse } from "@/lib/seo";
@@ -18,9 +25,10 @@ import { SITE_ORIGIN, buildMeta, cacheSsrResponse } from "@/lib/seo";
 
 export const Route = createFileRoute("/play")({
   loader: async () => {
-    // Cache for an hour, not six: the puzzle flips at midnight UTC and a
-    // six-hour CDN hold could serve yesterday's game into the morning.
-    await cacheSsrResponse(3600);
+    // Short fresh window AND short stale window: the puzzle flips at midnight
+    // UTC, and the default 24-hour stale-while-revalidate would let the CDN
+    // hand out yesterday's game long past the flip.
+    await cacheSsrResponse(3600, 300);
     return getDailyChallenge();
   },
   head: () => {
@@ -90,10 +98,20 @@ function GuessInput({
         />
         <input
           type="search"
+          role="combobox"
+          aria-expanded={hits.length > 0}
+          aria-controls="guess-listbox"
+          aria-autocomplete="list"
+          aria-activedescendant={hits.length > 0 ? `guess-opt-${active}` : undefined}
           value={q}
           disabled={disabled}
           onChange={(e) => setQ(e.target.value)}
+          onBlur={() => setTimeout(() => setHits([]), 150)}
           onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setHits([]);
+              return;
+            }
             if (e.key === "ArrowDown") {
               e.preventDefault();
               setActive((a) => Math.min(a + 1, hits.length - 1));
@@ -112,12 +130,13 @@ function GuessInput({
       </label>
       {hits.length > 0 && (
         <ul
+          id="guess-listbox"
           role="listbox"
           aria-label="Matches"
           className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 overflow-hidden rounded-[5px] border border-border bg-panel shadow-lg"
         >
           {hits.map((h, i) => (
-            <li key={h.id} role="option" aria-selected={i === active}>
+            <li key={h.id} id={`guess-opt-${i}`} role="option" aria-selected={i === active}>
               <button
                 type="button"
                 onMouseEnter={() => setActive(i)}
@@ -142,12 +161,32 @@ function GuessInput({
 
 function PlayPage() {
   const challenge = Route.useLoaderData() as DailyChallenge | null;
-  const [state, setState] = useState<DailyState | null>(null);
+  // Synchronous default so the server renders a playable page (crawlers see
+  // clue one, not a skeleton); localStorage state replaces it after mount.
+  const [state, setState] = useState<DailyState | null>(() =>
+    challenge
+      ? {
+          day: challenge.number,
+          guessedIds: [],
+          solved: false,
+          gaveUp: false,
+          streak: 0,
+          best: 0,
+          played: 0,
+          wins: 0,
+        }
+      : null,
+  );
   const [wrongTitles, setWrongTitles] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [staleDay, setStaleDay] = useState(false);
 
   useEffect(() => {
-    if (challenge) setState(loadDaily(challenge.number));
+    if (!challenge) return;
+    setState(loadDaily(challenge.number));
+    // The CDN can hand the first post-midnight visitors yesterday's page.
+    // Say so instead of letting them play a mislabeled game.
+    if (dayNumber() !== challenge.number) setStaleDay(true);
   }, [challenge]);
 
   const finished =
@@ -226,6 +265,21 @@ function PlayPage() {
           One title a day. Six clues. Guess it in as few as you can.
         </p>
 
+        {staleDay && (
+          <p
+            role="status"
+            className="mt-4 rounded-[5px] border border-border bg-panel px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-text-muted"
+          >
+            A new game is out.{" "}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="text-primary underline"
+            >
+              Load it
+            </button>
+          </p>
+        )}
         {!challenge ? (
           <p className="mt-8 text-[14px] text-text-muted">
             Today's game did not load. Try again in a minute.
@@ -246,6 +300,13 @@ function PlayPage() {
               ))}
             </ol>
 
+            <p aria-live="polite" className="sr-only">
+              {state.solved
+                ? `Correct. Solved in ${state.guessedIds.length} guesses.`
+                : state.guessedIds.length > 0
+                  ? `Wrong. Clue ${Math.min(state.guessedIds.length + 1, MAX_GUESSES)} revealed.`
+                  : ""}
+            </p>
             {wrongTitles.length > 0 && !finished && (
               <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Wrong guesses">
                 {wrongTitles.map((t, i) => (

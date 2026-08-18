@@ -57,8 +57,8 @@ export function ScoreBadge({
   const iconCls = size === "sm" ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
   return (
     <span
-      aria-label={`Balasaur Score ${score} out of 100. ${tierName(score)}`}
-      title={`${score}/100 · ${tierName(score)}. IMDb, Rotten Tomatoes, Metacritic, and TMDB blended into one number.`}
+      aria-label={`Balasaur Score ${score} out of 100. ${tierName(score)}${score >= 90 ? ". Balasaur Approved" : ""}`}
+      title={`${score}/100 · ${tierName(score)}${score >= 90 ? " · Balasaur Approved" : ""}. IMDb, Rotten Tomatoes, Metacritic, and TMDB blended into one number.`}
       className={cn(
         "inline-flex items-center gap-1 rounded-[4px] bg-background/90 font-mono font-semibold tabular-nums ring-1 backdrop-blur-sm",
         size === "sm" ? "h-[18px] px-1.5 text-[10px]" : "px-2 py-1 text-[13px]",

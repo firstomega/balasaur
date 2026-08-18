@@ -461,7 +461,7 @@ function CollectionsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
-      <main className="mx-auto max-w-[1240px] px-5 py-7">
+      <main id="main" className="mx-auto max-w-[1240px] px-5 py-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-[29px] font-bold leading-tight tracking-tight text-text-bright">

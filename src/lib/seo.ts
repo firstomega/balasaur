@@ -96,8 +96,13 @@ const setSsrCacheControl = createIsomorphicFn()
     }
   });
 
-export async function cacheSsrResponse(seconds = 21600): Promise<void> {
-  await setSsrCacheControl(`public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=86400`);
+export async function cacheSsrResponse(seconds = 21600, swrSeconds = 86400): Promise<void> {
+  // swrSeconds matters when the content flips on a schedule: a hardcoded
+  // 24-hour stale window let the CDN serve yesterday's daily puzzle past
+  // midnight, which is exactly what the page's short TTL tried to prevent.
+  await setSsrCacheControl(
+    `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=${swrSeconds}`,
+  );
 }
 
 /** Meta tag asking crawlers to skip this page (tiered indexation). */

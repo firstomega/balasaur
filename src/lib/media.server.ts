@@ -2078,6 +2078,9 @@ async function attachScoreProximityRelated(detail: MediaDetail): Promise<void> {
     .gte("rating_balasaur", score - 6)
     .lte("rating_balasaur", score + 6)
     .not("poster_url", "is", null)
+    // Ordered by the score PRINTED on each card, so the rail's order is
+    // reconstructable from what the reader sees; confidence only breaks ties.
+    .order("rating_balasaur", { ascending: false, nullsFirst: false })
     .order("quality_score", { ascending: false, nullsFirst: false })
     .limit(12);
   if (error) {

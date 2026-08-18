@@ -41,6 +41,12 @@ export type Database = {
           },
         ];
       };
+      daily_challenges: {
+        Row: { day: number; media_id: string; created_at: string };
+        Insert: { day: number; media_id: string; created_at?: string };
+        Update: { day?: number; media_id?: string; created_at?: string };
+        Relationships: [];
+      };
       collection_recipes: {
         Row: {
           slug: string;
