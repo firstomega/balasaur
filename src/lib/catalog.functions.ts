@@ -55,6 +55,10 @@ export interface CatalogQueryParams {
   sort: string;
   limit: number;
   offset: number;
+  /** Also exclude the fan-service tier (`suggestive`, a superset of
+   *  `sensitive`). Set by surfaces where the site is recommending (the rate
+   *  deck); the browse grid leaves it off so those titles stay browsable. */
+  excludeSuggestive?: boolean;
 }
 
 // Card-only columns — note we do NOT select people/overview here (the grid doesn't
@@ -157,6 +161,7 @@ function applyCatalogFilters(q: MediaQuery, p: CatalogQueryParams): MediaQuery {
   // in the browse grid, facet counts, or rails. Deliberately NOT applied to
   // searchTitles below — flagged titles stay findable by name and by direct link.
   q = q.eq("sensitive", false);
+  if (p.excludeSuggestive) q = q.eq("suggestive", false);
   if (p.types.length === 1) q = q.eq("media_type", p.types[0]);
   if (p.genres.length) q = q.overlaps("genres", p.genres);
   if (p.origins.length) q = q.overlaps("origins", p.origins);
@@ -342,6 +347,68 @@ export const queryCatalog = createServerFn({ method: "GET" })
       total = Math.max(estimated, loaded + 1);
     }
     return { items, total };
+  });
+
+/**
+ * The rate-deck query. Separate from queryCatalog for two reasons: the deck
+ * card shows the synopsis (the grid deliberately never selects `overview` —
+ * it is most of the payload), and the deck is the site recommending, so the
+ * fan-service tier is excluded. Ordering matches the grid's blended rank with
+ * the same home-country lean as the rails: local titles plus proven global
+ * crossovers, so people see titles they have most likely already watched.
+ */
+/** Neutral filter params: both media types, no constraints. */
+function defaultCatalogParams(region?: string): CatalogQueryParams {
+  return {
+    types: ["movie", "tv"],
+    genres: [],
+    origins: [],
+    streaming: [],
+    imdbMin: IMDB_BOUNDS[0],
+    imdbMax: IMDB_BOUNDS[1],
+    imdbUnrated: true,
+    rtMin: RT_BOUNDS[0],
+    rtMax: RT_BOUNDS[1],
+    rtUnrated: true,
+    metaMin: META_BOUNDS[0],
+    metaMax: META_BOUNDS[1],
+    metaUnrated: true,
+    people: [],
+    awardWinners: false,
+    nominated: false,
+    awardsWon: [],
+    awardsNominated: [],
+    subGenres: [],
+    themes: [],
+    audience: [],
+    completion: [],
+    filmLength: [],
+    region,
+    sort: "popular",
+    limit: 0,
+    offset: 0,
+  };
+}
+
+export const queryDeck = createServerFn({ method: "GET" })
+  .inputValidator((p: { limit: number; region?: string; boostCountry?: string }) => p)
+  .handler(async ({ data: p }): Promise<MediaItem[]> => {
+    const params = { ...defaultCatalogParams(p.region), excludeSuggestive: true };
+    let q = supabaseAdmin.from("media").select(CARD_COLS + ",overview") as unknown as MediaQuery;
+    q = applyCatalogFilters(q, params);
+    const buckets = originsForCountry(p.boostCountry);
+    if (buckets.length > 0) {
+      q = q.or(`origins.ov.${arrayLiteral(buckets)},vote_count.gte.${CROSSOVER_VOTES}`);
+    }
+    const { data, error } = await applyOrder(q, "popular").range(0, Math.min(p.limit, 500) - 1);
+    if (error) {
+      console.error("[deck] query failed:", error.message);
+      throw new Error("deck query failed");
+    }
+    return ((data ?? []) as unknown as (CardRow & { overview: string | null })[]).map((r) => ({
+      ...rowToCardItem(r),
+      overview: r.overview ?? "",
+    }));
   });
 
 /**
@@ -616,7 +683,9 @@ export const getHomeRails = createServerFn({ method: "GET" })
       .slice(0, 10);
     const buckets = originsForCountry(p.boostCountry);
     const base = () => {
-      let q = buildBase().eq("sensitive", false).not("poster_url", "is", null);
+      // Rails are the site recommending, so the fan-service tier stays out
+      // (`suggestive` is a superset of `sensitive`).
+      let q = buildBase().eq("suggestive", false).not("poster_url", "is", null);
       if (buckets.length > 0) {
         q = q.or(`origins.ov.${arrayLiteral(buckets)},vote_count.gte.${CROSSOVER_VOTES}`);
       }

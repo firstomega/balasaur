@@ -329,6 +329,15 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
     () => sortByCount(UNIFIED_GENRES, globalFacets?.genres),
     [globalFacets?.genres],
   );
+  // Top eight genres by default; the expander shows the full list. Selected
+  // genres outside the top eight never disappear while active.
+  const [genresExpanded, setGenresExpanded] = useState(false);
+  const visibleGenres = useMemo(() => {
+    if (genresExpanded) return genreOrder;
+    const top = genreOrder.slice(0, 8);
+    for (const g of genreOrder) if (filters.genres.has(g) && !top.includes(g)) top.push(g);
+    return top;
+  }, [genresExpanded, genreOrder, filters.genres]);
   const originOrder = useMemo(
     () => sortByCount(ORIGIN_OPTIONS, globalFacets?.origins),
     [globalFacets?.origins],
@@ -643,73 +652,10 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
           </AccordionContent>
         </AccordionItem>
 
-        {/* Genre */}
-        <AccordionItem value="genre" className="border-border">
-          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-            <TriggerLabel active={activeGroups.has("genre")} summary={groupSummary["genre"]}>
-              Genre
-            </TriggerLabel>
-          </AccordionTrigger>
-          <AccordionContent className="pb-3 pt-1">
-            <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
-            <div className="flex flex-wrap gap-1.5">
-              {genreOrder.map((g) => {
-                const count = genreCounts[g] ?? 0;
-                const active = filters.genres.has(g);
-                return (
-                  <Pill
-                    key={g}
-                    active={active}
-                    count={count}
-                    disabled={count === 0 && !active}
-                    onClick={() => toggleGenre(g)}
-                  >
-                    {g}
-                  </Pill>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Sub-Genre — only once a parent genre is selected AND it has options to offer
-            (or a live selection to keep visible), so it never renders an empty shell. */}
-        {showSubGenre && (
-          <AccordionItem value="sub-genre" className="border-border">
-            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
-              <TriggerLabel
-                active={activeGroups.has("sub-genre")}
-                summary={groupSummary["sub-genre"]}
-              >
-                Sub-Genre
-              </TriggerLabel>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3 pt-1">
-              <GroupClear
-                show={activeGroups.has("sub-genre")}
-                onClear={() => clearGroup("sub-genre")}
-              />
-              <div className="flex flex-wrap gap-1.5">
-                {visibleSubGenres.map((sg) => {
-                  const active = filters.subGenres.has(sg);
-                  return (
-                    <Pill
-                      key={sg}
-                      active={active}
-                      count={subGenreCounts[sg] ?? 0}
-                      onClick={() => toggleSet<string>("subGenres", sg)}
-                    >
-                      {sg}
-                    </Pill>
-                  );
-                })}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
         {/* Score — the unified Balasaur Score, the headline rating filter. The
-            per-source sliders (IMDb/RT/MC) moved to Source Ratings under More. */}
+            per-source sliders (IMDb/RT/MC) moved to Source Ratings under More.
+            Sits above Genre: this is the site's differentiated filter and was
+            invisible below the genre wall. */}
         <AccordionItem value="score" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
             <TriggerLabel active={activeGroups.has("score")} summary={groupSummary["score"]}>
@@ -754,7 +700,7 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
           </AccordionContent>
         </AccordionItem>
 
-        {/* Released — promoted into Essentials, with decade shortcuts. */}
+        {/* Released — above Genre for the same reason, with decade shortcuts. */}
         <AccordionItem value="released" className="border-border">
           <AccordionTrigger className={groupLabelClass + " py-2.5"}>
             <TriggerLabel active={activeGroups.has("released")} summary={groupSummary["released"]}>
@@ -802,8 +748,86 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
           </AccordionContent>
         </AccordionItem>
 
-        {/* The long tail collapses behind one row. */}
-        <div className="border-b border-border">
+        {/* Genre — the eight most-populated genres up front; the full list one
+            tap away. Selected genres outside the top eight stay visible. */}
+        <AccordionItem value="genre" className="border-border">
+          <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+            <TriggerLabel active={activeGroups.has("genre")} summary={groupSummary["genre"]}>
+              Genre
+            </TriggerLabel>
+          </AccordionTrigger>
+          <AccordionContent className="pb-3 pt-1">
+            <GroupClear show={activeGroups.has("genre")} onClear={() => clearGroup("genre")} />
+            <div className="flex flex-wrap gap-1.5">
+              {visibleGenres.map((g) => {
+                const count = genreCounts[g] ?? 0;
+                const active = filters.genres.has(g);
+                return (
+                  <Pill
+                    key={g}
+                    active={active}
+                    count={count}
+                    disabled={count === 0 && !active}
+                    onClick={() => toggleGenre(g)}
+                  >
+                    {g}
+                  </Pill>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setGenresExpanded(!genresExpanded)}
+                aria-expanded={genresExpanded}
+                className={
+                  pillBase +
+                  " border-dashed border-border text-text-dim hover:border-border-strong hover:text-text-bright"
+                }
+              >
+                {genresExpanded ? "Fewer genres" : `All ${UNIFIED_GENRES.length} genres`}
+              </button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Sub-Genre — only once a parent genre is selected AND it has options to offer
+            (or a live selection to keep visible), so it never renders an empty shell. */}
+        {showSubGenre && (
+          <AccordionItem value="sub-genre" className="border-border">
+            <AccordionTrigger className={groupLabelClass + " py-2.5"}>
+              <TriggerLabel
+                active={activeGroups.has("sub-genre")}
+                summary={groupSummary["sub-genre"]}
+              >
+                Sub-Genre
+              </TriggerLabel>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 pt-1">
+              <GroupClear
+                show={activeGroups.has("sub-genre")}
+                onClear={() => clearGroup("sub-genre")}
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {visibleSubGenres.map((sg) => {
+                  const active = filters.subGenres.has(sg);
+                  return (
+                    <Pill
+                      key={sg}
+                      active={active}
+                      count={subGenreCounts[sg] ?? 0}
+                      onClick={() => toggleSet<string>("subGenres", sg)}
+                    >
+                      {sg}
+                    </Pill>
+                  );
+                })}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* The long tail collapses behind one row, pinned to the rail's bottom
+            edge so it is discoverable without scrolling to the end. */}
+        <div className="sticky bottom-0 z-10 border-b border-border bg-background">
           <button
             type="button"
             onClick={() => setMoreToggled(!moreOpen)}

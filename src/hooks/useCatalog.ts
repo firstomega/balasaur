@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import {
   queryCatalog,
+  queryDeck,
   getCatalogFacets,
   getHomeRails,
   getViewerCountry,
@@ -141,11 +142,11 @@ export function useHomeRails(boostCountry = "") {
 export const DECK_SIZE = 500;
 
 export function deckMediaOptions(region = "US", boostCountry = "") {
-  const base = withBoost(filtersToParams(defaultFilterState(), region), boostCountry);
   return queryOptions({
     queryKey: ["catalog-deck", region, boostCountry || "", DECK_SIZE] as const,
-    queryFn: async () =>
-      (await queryCatalog({ data: { ...base, limit: DECK_SIZE, offset: 0 } })).items,
+    // Deck-specific server fn: same blended rank and home-country lean as the
+    // grid, plus the synopsis the deck card shows, minus the fan-service tier.
+    queryFn: () => queryDeck({ data: { limit: DECK_SIZE, region, boostCountry } }),
     staleTime: 5 * 60 * 1000,
   });
 }

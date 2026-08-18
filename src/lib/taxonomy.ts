@@ -7,6 +7,8 @@
 // keyword-frequency export can layer in more entries (and stable keyword IDs) later.
 // Unmapped keywords simply don't surface — safe and deterministic.
 
+import { deriveSuggestive } from "./contentSafety";
+
 export type Keyword = { id?: number; name: string };
 
 const norm = (s: string): string => s.trim().toLowerCase();
@@ -279,6 +281,8 @@ export function deriveAudience(opts: {
   certification?: string;
   genres: string[];
   mediaType: string;
+  /** Sensitive or suggestive content — such a title is never Kids/Family. */
+  matureContent?: boolean;
 }): string[] {
   const out = new Set<string>();
   const cert = opts.certification?.trim().toUpperCase();
@@ -286,9 +290,18 @@ export function deriveAudience(opts: {
     const mapped = opts.mediaType === "tv" ? TV_CERT_AUDIENCE[cert] : MOVIE_CERT_AUDIENCE[cert];
     if (mapped) out.add(mapped);
   }
-  // Animation with no mature/adult signal skews family.
-  if (opts.genres.includes("Animation") && !out.has("Mature") && !out.has("Adult")) {
+  // Animation says nothing about audience by itself — uncertified adult anime
+  // was landing in "Family" through exactly this assumption. The family lean
+  // now requires the Family genre to actually be present, and only fills in
+  // when certification gave no answer.
+  if (out.size === 0 && opts.genres.includes("Animation") && opts.genres.includes("Family")) {
     out.add("Family");
+  }
+  // A title flagged sensitive/suggestive can still carry a stale or wrong
+  // family-tier certification; the content flag wins.
+  if (opts.matureContent) {
+    out.delete("Kids");
+    out.delete("Family");
   }
   return Array.from(out);
 }
@@ -341,6 +354,8 @@ export interface DerivedFacets {
   sub_genres: string[];
   themes: string[];
   audience: string[];
+  /** Fan-service tier (superset of sensitive) — see contentSafety.ts. */
+  suggestive: boolean;
   film_length_minutes: number | null;
   completion_status: string | null;
 }
@@ -359,10 +374,17 @@ export function deriveFacets(
   const keywords = extractKeywords(rawTmdb);
   const cert = extractUsCertification(rawTmdb, mediaType);
   const runtime = typeof raw.runtime === "number" && raw.runtime > 0 ? raw.runtime : null;
+  const suggestive = deriveSuggestive(rawTmdb);
   return {
     sub_genres: deriveSubGenres(unifiedGenres, keywords),
     themes: deriveThemes(keywords),
-    audience: deriveAudience({ certification: cert, genres: unifiedGenres, mediaType }),
+    audience: deriveAudience({
+      certification: cert,
+      genres: unifiedGenres,
+      mediaType,
+      matureContent: suggestive,
+    }),
+    suggestive,
     film_length_minutes: mediaType === "movie" ? runtime : null,
     completion_status: mediaType === "tv" ? deriveCompletionStatus(raw.status) : null,
   };
