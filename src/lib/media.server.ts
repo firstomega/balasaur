@@ -2056,6 +2056,38 @@ async function attachCrossRelated(detail: MediaDetail): Promise<void> {
   if (cross.length > 0) detail.relatedCross = cross;
 }
 
+/**
+ * Replace TMDB's recommendation list with our own: same type, at least one
+ * shared genre, Balasaur Score within 6 points, best confidence first. Every
+ * competitor mirrors TMDB's `similar` endpoint; this list only we can make,
+ * and unlike TMDB's it is explainable from what the page already shows.
+ * Falls back to the TMDB list when the catalog gives fewer than 6 matches.
+ */
+async function attachScoreProximityRelated(detail: MediaDetail): Promise<void> {
+  const score = detail.ratings.balasaur;
+  if (typeof score !== "number" || !detail.genres || detail.genres.length === 0) return;
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select(
+      "media_id,media_type,title,year,poster_url,popularity,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,seasons,award_winner,award_nominee",
+    )
+    .eq("media_type", detail.mediaType)
+    .eq("sensitive", false)
+    .neq("media_id", detail.id)
+    .overlaps("genres", detail.genres)
+    .gte("rating_balasaur", score - 6)
+    .lte("rating_balasaur", score + 6)
+    .not("poster_url", "is", null)
+    .order("quality_score", { ascending: false, nullsFirst: false })
+    .limit(12);
+  if (error) {
+    console.error("[detail] score-proximity related failed:", error.message);
+    return;
+  }
+  const ours = ((data ?? []) as unknown as CrossRow[]).map(crossRowToItem);
+  if (ours.length >= 6) detail.related = ours;
+}
+
 export async function fetchMediaDetail(
   type: "movie" | "tv",
   id: string,
@@ -2091,6 +2123,10 @@ export async function fetchMediaDetail(
               // best-effort — the page still renders without ratingCount
             }
           }
+          // Cached payloads carry TMDB's recommendation list from before the
+          // score-proximity swap; refresh it on read rather than waiting out
+          // the 7-day TTL. One indexed query, and the CDN caches the page.
+          await attachScoreProximityRelated(cached);
           return cached;
         }
       }
@@ -2116,6 +2152,7 @@ export async function fetchMediaDetail(
           (data.raw_omdb as unknown as OmdbResponse | null) ?? null,
         );
         await attachCrossRelated(built);
+        await attachScoreProximityRelated(built);
         await writeDetailCache(cacheId, type, id, built);
         return built;
       }
@@ -2126,6 +2163,7 @@ export async function fetchMediaDetail(
 
   const detail = await fetchMediaDetailLive(type, id);
   await attachCrossRelated(detail);
+  await attachScoreProximityRelated(detail);
   await writeDetailCache(cacheId, type, id, detail);
   return detail;
 }
