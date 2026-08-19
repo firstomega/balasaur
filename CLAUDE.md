@@ -236,7 +236,14 @@ Run through this before saying a change is done.
    page titles, and meta descriptions.
 5. **Number check.** Every visible number is reconstructable from the page.
 6. **Data check.** Looked at actual output rows, not just the query. Ranked
-   output was eyeballed for titles a real person would recognize.
+   output was eyeballed for titles a real person would recognize. **When the
+   change hides, filters, or gates anything, eyeball what it REMOVED, sorted
+   by popularity, and read the top twenty by name.** A filter is judged by
+   its false positives, and those are invisible from the output side.
+   _The fan-service flag shipped excluding The Wolf of Wall Street, American
+   Beauty, and the most famous K-dramas there are. Every one of them would
+   have been obvious in ten seconds of reading the excluded list, which was
+   never opened because the included list looked fine._
 7. **Gates.** `bunx prettier --write` on changed files, `bun test src`,
    `bunx tsc --noEmit`, and CI green before merge.
 
