@@ -411,15 +411,132 @@ function genreDecadePairs(rows: CollectionSummary[]) {
   return out;
 }
 
+// Origin-genre shelves are split by media type (v10), so one (origin, genre)
+// cell can hold a Movies list and a Shows list. K-Dramas is Korean tv drama
+// under its real category name.
 function originGenrePairs(rows: CollectionSummary[]) {
-  const out: { row: string; col: string; c: CollectionSummary }[] = [];
+  const out: { row: string; col: string; type: "movie" | "tv"; c: CollectionSummary }[] = [];
   for (const c of rows) {
-    const rest = c.title.replace(/^The Best /, "");
-    const [origin, ...genre] = rest.split(" ");
-    if (genre.length === 0) continue;
-    out.push({ row: origin, col: genre.join(" "), c });
+    if (c.slug === "best-k-dramas") {
+      out.push({ row: "Korean", col: "Drama", type: "tv", c });
+      continue;
+    }
+    const m = c.title.match(/^The Best (\S+) (.+) (Movies|Shows)$/);
+    if (!m) continue;
+    out.push({ row: m[1], col: m[2], type: m[3] === "Movies" ? "movie" : "tv", c });
   }
   return out;
+}
+
+interface DualCell {
+  movie?: CollectionSummary;
+  tv?: CollectionSummary;
+}
+interface DualMatrixRow {
+  label: string;
+  cells: (DualCell | null)[];
+}
+
+function buildDualMatrix(
+  pairs: { row: string; col: string; type: "movie" | "tv"; c: CollectionSummary }[],
+  cols: string[],
+): DualMatrixRow[] {
+  const rowLabels = [...new Set(pairs.map((p) => p.row))].sort();
+  return rowLabels.map((label) => ({
+    label,
+    cells: cols.map((col) => {
+      const movie = pairs.find((p) => p.row === label && p.col === col && p.type === "movie")?.c;
+      const tv = pairs.find((p) => p.row === label && p.col === col && p.type === "tv")?.c;
+      return movie || tv ? { movie, tv } : null;
+    }),
+  }));
+}
+
+// The origin matrix with type-colored dots: gold for a Movies list, blue for
+// a Shows list, matching the media tags on every poster card.
+function DualIndexMatrix({
+  label,
+  cols,
+  rows,
+}: {
+  label: string;
+  cols: string[];
+  rows: DualMatrixRow[];
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-8">
+      <div className="mb-2.5 flex items-center gap-4">
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">{label}</h3>
+        <span className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-[2px] bg-media-movie" /> Movies
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-[2px] bg-media-tv" /> Shows
+          </span>
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] border-collapse">
+          <thead>
+            <tr>
+              <th className="w-36 pb-1.5 pr-3" />
+              {cols.map((col) => (
+                <th
+                  key={col}
+                  className="px-1 pb-1.5 text-center font-mono text-[9px] font-normal uppercase tracking-wider text-text-dim"
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label} className="border-t border-border/60">
+                <td className="py-0.5 pr-3 text-[12.5px] leading-tight text-text-muted">
+                  {r.label}
+                </td>
+                {r.cells.map((cell, i) => (
+                  <td key={i} className="px-0.5 py-0.5 text-center">
+                    {cell ? (
+                      <span className="inline-flex h-6 items-center justify-center gap-1">
+                        {cell.movie && (
+                          <Link
+                            to="/best/$slug"
+                            params={{ slug: cell.movie.slug }}
+                            aria-label={cell.movie.title}
+                            title={cell.movie.title}
+                            className="inline-flex h-6 w-4 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                          >
+                            <span className="h-2 w-2 rounded-[2px] bg-media-movie/80 transition-colors hover:bg-media-movie" />
+                          </Link>
+                        )}
+                        {cell.tv && (
+                          <Link
+                            to="/best/$slug"
+                            params={{ slug: cell.tv.slug }}
+                            aria-label={cell.tv.title}
+                            title={cell.tv.title}
+                            className="inline-flex h-6 w-4 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                          >
+                            <span className="h-2 w-2 rounded-[2px] bg-media-tv/80 transition-colors hover:bg-media-tv" />
+                          </Link>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="mx-auto block h-[3px] w-[3px] rounded-full bg-border-strong" />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function CollectionsPage() {
@@ -452,6 +569,9 @@ function CollectionsPage() {
     b.slug.localeCompare(a.slug),
   );
   const acclaim = [...byKind("awards"), ...byKind("discovery")];
+  const people = byKind("person").sort((a: CollectionSummary, b: CollectionSummary) =>
+    a.title.localeCompare(b.title),
+  );
   const years = byKind("year").sort((a: CollectionSummary, b: CollectionSummary) =>
     b.slug.localeCompare(a.slug),
   );
@@ -499,7 +619,7 @@ function CollectionsPage() {
               </div>
             ) : (
               <p className="mt-3 text-[13px] text-text-muted">
-                Nothing matches "{q.trim()}". Try a genre, service, decade, or year.
+                Nothing matches "{q.trim()}". Try a name, genre, service, decade, or year.
               </p>
             )}
           </section>
@@ -554,11 +674,33 @@ function CollectionsPage() {
             </Shelf>
           )}
           {acclaim.length > 0 && (
-            <Shelf title="Acclaimed & curated" meta={`${acclaim.length} lists`}>
+            <Shelf title="Awards & discovery" meta={`${acclaim.length} lists`}>
               {acclaim.map((c: CollectionSummary) => (
                 <ShelfCard key={c.slug} c={c} />
               ))}
             </Shelf>
+          )}
+          {people.length > 0 && (
+            <section className="mt-11">
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-[17px] font-semibold tracking-tight text-text-bright">
+                  People
+                </h2>
+                <span className="font-mono text-[10.5px] text-text-dim">{people.length} lists</span>
+              </div>
+              <div className="mt-3.5 flex flex-wrap gap-1.5">
+                {people.map((c: CollectionSummary) => (
+                  <Link
+                    key={c.slug}
+                    to="/best/$slug"
+                    params={{ slug: c.slug }}
+                    className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] text-text-muted transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {c.title.replace(/^The Best /, "")}
+                  </Link>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* Tier 3: the full index */}
@@ -582,10 +724,10 @@ function CollectionsPage() {
                 rows={buildMatrix(genreDecadePairs(byKind("genre-decade")), DECADE_COLS)}
               />
             </div>
-            <IndexMatrix
+            <DualIndexMatrix
               label="Origin × genre"
               cols={originCols}
-              rows={buildMatrix(originPairs, originCols)}
+              rows={buildDualMatrix(originPairs, originCols)}
             />
             <YearIndex years={years} />
 
