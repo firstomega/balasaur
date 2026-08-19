@@ -136,7 +136,9 @@ describe("titleProse cohort and franchise claims", () => {
       ...base,
       cohort: { label: "2010s action movies", size: 2072, percentile: 99 },
     });
-    expect(high).toContain("Scores higher than 99% of the 2,072 2010s action movies in this catalog.");
+    expect(high).toContain(
+      "Scores higher than 99% of the 2,072 2010s action movies in this catalog.",
+    );
 
     const mid = titleProse({
       ...base,

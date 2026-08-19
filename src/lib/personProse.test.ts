@@ -40,8 +40,6 @@ describe("personProse", () => {
   });
 
   it("stays quiet on a thin filmography", () => {
-    expect(
-      personProse("X", { titles: 2, scored: 2, medianScore: 50, collaborators: [] }),
-    ).toBe("");
+    expect(personProse("X", { titles: 2, scored: 2, medianScore: 50, collaborators: [] })).toBe("");
   });
 });
