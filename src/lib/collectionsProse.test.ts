@@ -78,3 +78,42 @@ describe("collectionDek", () => {
     expect(dek).toStartWith("3,147 titles made the cut");
   });
 });
+
+import { collectionComposition } from "./collectionsProse";
+
+describe("collectionComposition", () => {
+  const item = (score: number, year: string, streaming: string[] = []) => ({
+    score,
+    year,
+    streaming,
+  });
+
+  it("states the spread, decade concentration, and service overlap as exact counts", () => {
+    const items = [
+      item(94, "2014", ["Netflix"]),
+      item(90, "2015", ["Netflix"]),
+      item(88, "2016", ["Netflix"]),
+      item(85, "2017", ["Max"]),
+      item(82, "2018", []),
+      item(79, "2019", []),
+      item(75, "1999", []),
+      item(71, "1998", []),
+    ];
+    const out = collectionComposition(items);
+    expect(out).toContain("Scores run 94 down to 71.");
+    expect(out).toContain("6 of the 8 are from the 2010s.");
+    expect(out).toContain("3 of the 8 stream on Netflix.");
+    expect(out).not.toContain("—");
+  });
+
+  it("stays silent on tiny lists and unremarkable spreads", () => {
+    expect(collectionComposition([item(80, "2020"), item(80, "2021")])).toBe("");
+  });
+
+  it("omits the decade line when one decade IS the whole list", () => {
+    const items = Array.from({ length: 10 }, (_, i) => item(90 - i, `201${i % 10}`));
+    const out = collectionComposition(items);
+    expect(out).toContain("Scores run 90 down to 81.");
+    expect(out).not.toContain("are from the");
+  });
+});

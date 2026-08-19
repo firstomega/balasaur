@@ -5,6 +5,7 @@ import { MediaCard } from "./MediaCard";
 import { usePersonDetail } from "@/hooks/usePersonDetail";
 import type { PersonDetail as PersonDetailType } from "@/types/media";
 import { tmdbImage } from "@/lib/tmdbImage";
+import { personProse } from "@/lib/personProse";
 
 function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -95,6 +96,14 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
           )}
         </div>
       </header>
+
+      {/* Catalog statistics: claims only this database can make about the
+          filmography rendered below. */}
+      {detail.stats && personProse(detail.name, detail.stats) && (
+        <p className="mt-6 max-w-3xl text-[14px] leading-relaxed text-text">
+          {personProse(detail.name, detail.stats)}
+        </p>
+      )}
 
       {detail.biography && (
         <div className="mt-8 max-w-3xl">

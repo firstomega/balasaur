@@ -29,6 +29,10 @@ export interface TitleProseInput {
     metacritic?: number;
     tmdb?: number;
   };
+  /** Where the score sits inside its genre-and-decade cohort (title_context). */
+  cohort?: { label: string; size: number; percentile: number };
+  /** Franchise standing by score (title_context). */
+  franchise?: { size: number; rank: number };
 }
 
 /** Catalog-wide typical Balasaur Score (mirrors rank.ts). */
@@ -108,7 +112,31 @@ export function titleProse(d: TitleProseInput): string {
     }
   }
 
-  // 3. Do the sources agree? The most interesting thing we can say.
+  // 3. The cohort claim: the strongest originality line available, printed
+  //    only when the cohort is big enough for the percentile to mean something
+  //    and the position is actually notable.
+  if (d.cohort && d.cohort.size >= 50) {
+    if (d.cohort.percentile >= 70) {
+      parts.push(
+        `Scores higher than ${d.cohort.percentile}% of the ${d.cohort.size.toLocaleString("en-US")} ${d.cohort.label} in this catalog.`,
+      );
+    } else if (d.cohort.percentile <= 30) {
+      parts.push(
+        `Most of the ${d.cohort.size.toLocaleString("en-US")} ${d.cohort.label} in this catalog score higher.`,
+      );
+    }
+  }
+
+  // 4. Franchise standing, when there is a series to stand in.
+  if (d.franchise && d.franchise.size >= 2) {
+    parts.push(
+      d.franchise.rank === 1
+        ? `The highest scoring of the ${d.franchise.size} titles in its series.`
+        : `Number ${d.franchise.rank} of ${d.franchise.size} in its series by score.`,
+    );
+  }
+
+  // 5. Do the sources agree? The most interesting thing we can say.
   const div = divergenceNote(d.ratings);
   if (div) parts.push(div);
 

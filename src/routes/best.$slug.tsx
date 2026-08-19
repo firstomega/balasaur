@@ -8,7 +8,7 @@ import {
   getRelatedCollections,
 } from "@/lib/collections.functions";
 import type { MediaItem } from "@/types/media";
-import { collectionDek } from "@/lib/collectionsProse";
+import { collectionComposition, collectionDek } from "@/lib/collectionsProse";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse, jsonLdScript } from "@/lib/seo";
 import { useUserStatus } from "@/hooks/useUserStatus";
 
@@ -80,6 +80,15 @@ function CollectionPage() {
     row,
     items.slice(0, 3).map((i: MediaItem) => ({ title: i.title, score: i.ratings.balasaur })),
   );
+  // What the list is made of: spread, decade concentration, service overlap.
+  // Every number is countable from the rows below it.
+  const composition = collectionComposition(
+    items.map((i: MediaItem) => ({
+      score: i.ratings.balasaur,
+      year: i.year,
+      streaming: i.streaming,
+    })),
+  );
   // The shelf's own refresh stamp (nightly rebuild), not the render date.
   const updated = (row.updated_at ?? "").slice(0, 10);
 
@@ -109,6 +118,11 @@ function CollectionPage() {
           {row.title}
         </h1>
         <p className="mt-2 max-w-[76ch] text-[14px] leading-relaxed text-text">{dek}</p>
+        {composition && (
+          <p className="mt-1.5 max-w-[76ch] text-[13px] leading-relaxed text-text-muted">
+            {composition}
+          </p>
+        )}
 
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <MetaChip>{row.item_count.toLocaleString("en-US")} titles</MetaChip>

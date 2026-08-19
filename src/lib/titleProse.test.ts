@@ -123,3 +123,49 @@ describe("titleProse", () => {
     expect(titleProse({ mediaType: "movie", title: "Unknown", ratings: {} })).toBe("");
   });
 });
+
+describe("titleProse cohort and franchise claims", () => {
+  const base = {
+    mediaType: "movie",
+    title: "X",
+    ratings: { balasaur: 84, imdb: 8.4 },
+  };
+
+  it("prints the percentile claim only for big-enough cohorts and notable positions", () => {
+    const high = titleProse({
+      ...base,
+      cohort: { label: "2010s action movies", size: 2072, percentile: 99 },
+    });
+    expect(high).toContain("Scores higher than 99% of the 2,072 2010s action movies in this catalog.");
+
+    const mid = titleProse({
+      ...base,
+      cohort: { label: "2010s action movies", size: 2072, percentile: 55 },
+    });
+    expect(mid).not.toContain("in this catalog");
+
+    const tiny = titleProse({
+      ...base,
+      cohort: { label: "1960s family shows", size: 30, percentile: 99 },
+    });
+    expect(tiny).not.toContain("in this catalog");
+  });
+
+  it("states the low end flatly", () => {
+    const low = titleProse({
+      ...base,
+      ratings: { balasaur: 40 },
+      cohort: { label: "1990s comedy movies", size: 800, percentile: 12 },
+    });
+    expect(low).toContain("Most of the 800 1990s comedy movies in this catalog score higher.");
+  });
+
+  it("names franchise standing", () => {
+    const first = titleProse({ ...base, franchise: { size: 3, rank: 1 } });
+    expect(first).toContain("The highest scoring of the 3 titles in its series.");
+    const second = titleProse({ ...base, franchise: { size: 6, rank: 3 } });
+    expect(second).toContain("Number 3 of 6 in its series by score.");
+    const solo = titleProse({ ...base, franchise: { size: 1, rank: 1 } });
+    expect(solo).not.toContain("its series");
+  });
+});

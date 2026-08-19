@@ -277,6 +277,8 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
     awardNominee: detail.awardNominee,
     voteCount: detail.voteCount,
     ratings,
+    cohort: detail.context?.cohort,
+    franchise: detail.context?.franchise,
   });
   const sourceBars = normalizedSources(ratings);
   const divergence = divergenceNote(ratings);
