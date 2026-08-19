@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Zap, LogOut, User, Pencil, Settings, Library } from "lucide-react";
+import { Zap, LogOut, User, Pencil, Settings, Library, Menu } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { DinoMark } from "./DinoMark";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,15 +15,66 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 export function TopBar() {
   const { user, signOut } = useAuth();
   const { data: profile } = useMyProfile();
   const [authOpen, setAuthOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
+        {/* Mobile menu — the phone bar can't fit four nav links beside search,
+            so places live in a drawer and the search row breathes. */}
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              aria-label="Menu"
+              className="-ml-1 inline-flex h-8 w-8 items-center justify-center rounded-[5px] text-text-bright hover:text-primary md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </SheetTrigger>
+          {/* aria-describedby is explicitly cleared: the drawer is a nav list
+              with no description, and Radix warns loudly when the prop is
+              simply absent. */}
+          <SheetContent
+            side="left"
+            aria-describedby={undefined}
+            className="w-[260px] border-border bg-background p-0"
+          >
+            <SheetTitle className="px-4 pb-1 pt-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+              Menu
+            </SheetTitle>
+            <nav aria-label="Primary" className="flex flex-col">
+              <MenuLink to="/" label="Browse" exact onNavigate={() => setMenuOpen(false)} />
+              <MenuLink
+                to="/collections"
+                label="Collections"
+                onNavigate={() => setMenuOpen(false)}
+              />
+              <MenuLink to="/calendar" label="Calendar" onNavigate={() => setMenuOpen(false)} />
+              <MenuLink to="/play" label="Play" onNavigate={() => setMenuOpen(false)} />
+              <div className="mx-4 my-2 border-t border-border" />
+              <MenuLink
+                to="/watched"
+                label="Rate titles"
+                icon={<Zap className="h-3.5 w-3.5" />}
+                onNavigate={() => setMenuOpen(false)}
+              />
+              <MenuLink
+                to="/lists"
+                label="My Lists"
+                icon={<Library className="h-3.5 w-3.5" />}
+                onNavigate={() => setMenuOpen(false)}
+              />
+            </nav>
+          </SheetContent>
+        </Sheet>
+
         {/* Wordmark */}
         <a href="/" className="flex shrink-0 items-center gap-2 text-text-bright">
           <DinoMark className="h-5 w-5 text-primary" />
@@ -63,7 +114,7 @@ export function TopBar() {
           <Link
             to="/lists"
             aria-label="My lists"
-            className="inline-flex items-center gap-1.5 rounded-[5px] px-2 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:px-2.5"
+            className="hidden items-center gap-1.5 rounded-[5px] px-2 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:px-2.5 md:inline-flex"
           >
             <Library className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">My Lists</span>
@@ -168,18 +219,10 @@ export function TopBar() {
         </nav>
       </div>
 
-      {/* Mobile second row: the primary nav plus search. Both live here because
-          neither fits beside the wordmark and personal actions on a phone. */}
-      <div className="mx-auto flex max-w-[1600px] items-center gap-2 px-4 pb-2 md:hidden">
-        <nav aria-label="Primary" className="flex shrink-0 items-center gap-0.5">
-          <NavPlace to="/" label="Browse" exact compact />
-          <NavPlace to="/collections" label="Collections" compact />
-          <NavPlace to="/calendar" label="Calendar" compact />
-          <NavPlace to="/play" label="Play" compact />
-        </nav>
-        <div className="min-w-0 flex-1">
-          <TopBarSearch />
-        </div>
+      {/* Mobile second row: search alone, full width. The places moved into
+          the drawer, which is what lets search breathe on a phone. */}
+      <div className="mx-auto max-w-[1600px] px-4 pb-2 md:hidden">
+        <TopBarSearch />
       </div>
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </header>
@@ -188,28 +231,44 @@ export function TopBar() {
 
 // A primary-nav "place" link with an active underline. `exact` keeps Browse
 // from lighting up on every route (it only owns "/").
-function NavPlace({
-  to,
-  label,
-  exact = false,
-  compact = false,
-}: {
-  to: string;
-  label: string;
-  exact?: boolean;
-  /** Tighter type and padding for the mobile row, where it shares space with search. */
-  compact?: boolean;
-}) {
+function NavPlace({ to, label, exact = false }: { to: string; label: string; exact?: boolean }) {
   return (
     <Link
       to={to}
       activeOptions={{ exact }}
       activeProps={{ className: "text-text-bright border-primary" }}
       inactiveProps={{ className: "text-text-muted border-transparent hover:text-text-bright" }}
-      className={`whitespace-nowrap border-b-2 uppercase tracking-wide transition-colors ${
-        compact ? "px-1.5 py-1 font-mono text-[11px]" : "px-2 py-1 font-mono text-[12px]"
-      }`}
+      className="whitespace-nowrap border-b-2 px-2 py-1 font-mono text-[12px] uppercase tracking-wide transition-colors"
     >
+      {label}
+    </Link>
+  );
+}
+
+// A drawer row: same place, bigger touch target, active edge on the left.
+function MenuLink({
+  to,
+  label,
+  exact = false,
+  icon,
+  onNavigate,
+}: {
+  to: string;
+  label: string;
+  exact?: boolean;
+  icon?: React.ReactNode;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      to={to}
+      onClick={onNavigate}
+      activeOptions={{ exact }}
+      activeProps={{ className: "border-primary bg-panel text-text-bright" }}
+      inactiveProps={{ className: "border-transparent text-text-muted hover:text-text-bright" }}
+      className="flex items-center gap-2 border-l-2 px-4 py-2.5 font-mono text-[13px] uppercase tracking-wide transition-colors"
+    >
+      {icon}
       {label}
     </Link>
   );
