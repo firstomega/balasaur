@@ -374,7 +374,7 @@ export function deriveFacets(
   const keywords = extractKeywords(rawTmdb);
   const cert = extractUsCertification(rawTmdb, mediaType);
   const runtime = typeof raw.runtime === "number" && raw.runtime > 0 ? raw.runtime : null;
-  const suggestive = deriveSuggestive(rawTmdb);
+  const suggestive = deriveSuggestive(rawTmdb, unifiedGenres);
   return {
     sub_genres: deriveSubGenres(unifiedGenres, keywords),
     themes: deriveThemes(keywords),
