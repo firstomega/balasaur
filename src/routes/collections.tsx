@@ -272,8 +272,6 @@ const MATRIX_COLS: { slug: string; label: string; short: string }[] = [
   { slug: "tubi", label: "Tubi", short: "TUBI" },
 ];
 
-const DECADE_COLS = ["1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"];
-
 interface MatrixRow {
   label: string;
   cells: (CollectionSummary | null)[];
@@ -346,15 +344,18 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
   );
 }
 
-// All 67 year lists at once, grouped by decade. A year label is the year;
-// repeating "Best of" 67 times said nothing.
+// All year lists at once, grouped by decade. Since the v8 media-type split
+// each year comes as a movie list and a show list, so a chip is the year plus
+// a type dot in the site's media colors (same key as the origin matrix).
 function YearIndex({ years }: { years: CollectionSummary[] }) {
   if (years.length === 0) return null;
-  const byDecade = new Map<string, CollectionSummary[]>();
-  for (const c of years) {
-    const y = c.slug.replace("best-of-", "");
-    const dec = `${y.slice(0, 3)}0s`;
-    byDecade.set(dec, [...(byDecade.get(dec) ?? []), c]);
+  const parsed = years
+    .map((c) => ({ c, year: c.slug.match(/-of-(\d{4})$/)?.[1] }))
+    .filter((p): p is { c: CollectionSummary; year: string } => !!p.year);
+  const byDecade = new Map<string, typeof parsed>();
+  for (const p of parsed) {
+    const dec = `${p.year.slice(0, 3)}0s`;
+    byDecade.set(dec, [...(byDecade.get(dec) ?? []), p]);
   }
   const decades = [...byDecade.keys()].sort().reverse();
   return (
@@ -370,16 +371,24 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
             </span>
             <div className="flex flex-wrap gap-x-1 gap-y-0.5">
               {(byDecade.get(dec) ?? [])
-                .sort((a: CollectionSummary, b: CollectionSummary) => b.slug.localeCompare(a.slug))
-                .map((c: CollectionSummary) => (
+                .sort(
+                  (a, b) =>
+                    b.year.localeCompare(a.year) ||
+                    (a.c.media_type ?? "").localeCompare(b.c.media_type ?? ""),
+                )
+                .map(({ c, year }) => (
                   <Link
                     key={c.slug}
                     to="/best/$slug"
                     params={{ slug: c.slug }}
                     aria-label={c.title}
-                    className="rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
+                    title={c.title}
+                    className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
                   >
-                    {c.slug.replace("best-of-", "")}
+                    <span
+                      className={`h-1.5 w-1.5 rounded-[2px] ${c.media_type === "tv" ? "bg-media-tv" : "bg-media-movie"}`}
+                    />
+                    {year}
                   </Link>
                 ))}
             </div>
@@ -400,39 +409,144 @@ function genreServicePairs(rows: CollectionSummary[]) {
   return out;
 }
 
-function genreDecadePairs(rows: CollectionSummary[]) {
-  const out: { row: string; col: string; c: CollectionSummary }[] = [];
+// Origin-genre shelves are split by media type (v10), so one (origin, genre)
+// cell can hold a Movies list and a Shows list. K-Dramas is Korean tv drama
+// under its real category name.
+function originGenrePairs(rows: CollectionSummary[]) {
+  const out: { row: string; col: string; type: "movie" | "tv"; c: CollectionSummary }[] = [];
   for (const c of rows) {
-    const m = c.slug.match(/^best-(\d{4}s)-/);
+    if (c.slug === "best-k-dramas") {
+      out.push({ row: "Korean", col: "Drama", type: "tv", c });
+      continue;
+    }
+    const m = c.title.match(/^The Best (\S+) (.+) (Movies|Shows)$/);
     if (!m) continue;
-    const genre = c.title.replace(/^\d{4}s /, "").replace(/, Ranked$/, "");
-    out.push({ row: genre, col: m[1], c });
+    out.push({ row: m[1], col: m[2], type: m[3] === "Movies" ? "movie" : "tv", c });
   }
   return out;
 }
 
-function originGenrePairs(rows: CollectionSummary[]) {
-  const out: { row: string; col: string; c: CollectionSummary }[] = [];
-  for (const c of rows) {
-    const rest = c.title.replace(/^The Best /, "");
-    const [origin, ...genre] = rest.split(" ");
-    if (genre.length === 0) continue;
-    out.push({ row: origin, col: genre.join(" "), c });
-  }
-  return out;
+interface DualCell {
+  movie?: CollectionSummary;
+  tv?: CollectionSummary;
+}
+interface DualMatrixRow {
+  label: string;
+  cells: (DualCell | null)[];
+}
+
+function buildDualMatrix(
+  pairs: { row: string; col: string; type: "movie" | "tv"; c: CollectionSummary }[],
+  cols: string[],
+): DualMatrixRow[] {
+  const rowLabels = [...new Set(pairs.map((p) => p.row))].sort();
+  return rowLabels.map((label) => ({
+    label,
+    cells: cols.map((col) => {
+      const movie = pairs.find((p) => p.row === label && p.col === col && p.type === "movie")?.c;
+      const tv = pairs.find((p) => p.row === label && p.col === col && p.type === "tv")?.c;
+      return movie || tv ? { movie, tv } : null;
+    }),
+  }));
+}
+
+// The origin matrix with type-colored dots: gold for a Movies list, blue for
+// a Shows list, matching the media tags on every poster card.
+function DualIndexMatrix({
+  label,
+  cols,
+  rows,
+}: {
+  label: string;
+  cols: string[];
+  rows: DualMatrixRow[];
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-8">
+      <div className="mb-2.5 flex items-center gap-4">
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">{label}</h3>
+        <span className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-[2px] bg-media-movie" /> Movies
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-[2px] bg-media-tv" /> Shows
+          </span>
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] border-collapse">
+          <thead>
+            <tr>
+              <th className="w-36 pb-1.5 pr-3" />
+              {cols.map((col) => (
+                <th
+                  key={col}
+                  className="px-1 pb-1.5 text-center font-mono text-[9px] font-normal uppercase tracking-wider text-text-dim"
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label} className="border-t border-border/60">
+                <td className="py-0.5 pr-3 text-[12.5px] leading-tight text-text-muted">
+                  {r.label}
+                </td>
+                {r.cells.map((cell, i) => (
+                  <td key={i} className="px-0.5 py-0.5 text-center">
+                    {cell ? (
+                      <span className="inline-flex h-6 items-center justify-center gap-1">
+                        {cell.movie && (
+                          <Link
+                            to="/best/$slug"
+                            params={{ slug: cell.movie.slug }}
+                            aria-label={cell.movie.title}
+                            title={cell.movie.title}
+                            className="inline-flex h-6 w-7 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                          >
+                            <span className="h-2 w-2 rounded-[2px] bg-media-movie/80 transition-colors hover:bg-media-movie" />
+                          </Link>
+                        )}
+                        {cell.tv && (
+                          <Link
+                            to="/best/$slug"
+                            params={{ slug: cell.tv.slug }}
+                            aria-label={cell.tv.title}
+                            title={cell.tv.title}
+                            className="inline-flex h-6 w-7 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                          >
+                            <span className="h-2 w-2 rounded-[2px] bg-media-tv/80 transition-colors hover:bg-media-tv" />
+                          </Link>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="mx-auto block h-[3px] w-[3px] rounded-full bg-border-strong" />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function CollectionsPage() {
   const collections = Route.useLoaderData();
   const [q, setQ] = useState("");
+  const [peopleExpanded, setPeopleExpanded] = useState(false);
 
   const query = q.trim().toLowerCase();
   const matches = useMemo(
     () =>
       query
-        ? collections
-            .filter((c: CollectionSummary) => c.title.toLowerCase().includes(query))
-            .slice(0, 40)
+        ? collections.filter((c: CollectionSummary) => c.title.toLowerCase().includes(query))
         : null,
     [query, collections],
   );
@@ -452,6 +566,11 @@ function CollectionsPage() {
     b.slug.localeCompare(a.slug),
   );
   const acclaim = [...byKind("awards"), ...byKind("discovery")];
+  // Locale pinned so the CDN-cached SSR order and every client's hydration
+  // order agree on names with diacritics.
+  const people = byKind("person").sort((a: CollectionSummary, b: CollectionSummary) =>
+    a.title.localeCompare(b.title, "en"),
+  );
   const years = byKind("year").sort((a: CollectionSummary, b: CollectionSummary) =>
     b.slug.localeCompare(a.slug),
   );
@@ -499,7 +618,7 @@ function CollectionsPage() {
               </div>
             ) : (
               <p className="mt-3 text-[13px] text-text-muted">
-                Nothing matches "{q.trim()}". Try a genre, service, decade, or year.
+                Nothing matches "{q.trim()}". Try a name, genre, service, decade, or year.
               </p>
             )}
           </section>
@@ -546,7 +665,7 @@ function CollectionsPage() {
           {decades.length > 0 && (
             <Shelf
               title="Through the decades"
-              meta={`${decades.length} decades · ${years.length} years`}
+              meta={`${new Set(decades.map((c: CollectionSummary) => decadeWord(c.title))).size} decades · ${new Set(years.map((c: CollectionSummary) => c.slug.match(/-of-(\d{4})$/)?.[1])).size} years`}
             >
               {decades.map((c: CollectionSummary) => (
                 <ShelfCard key={c.slug} c={c} />
@@ -554,11 +673,53 @@ function CollectionsPage() {
             </Shelf>
           )}
           {acclaim.length > 0 && (
-            <Shelf title="Acclaimed & curated" meta={`${acclaim.length} lists`}>
+            <Shelf title="Awards & discovery" meta={`${acclaim.length} lists`}>
               {acclaim.map((c: CollectionSummary) => (
                 <ShelfCard key={c.slug} c={c} />
               ))}
             </Shelf>
+          )}
+          {people.length > 0 && (
+            <section className="mt-11">
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-[17px] font-semibold tracking-tight text-text-bright">
+                  People
+                </h2>
+                <span className="font-mono text-[10.5px] text-text-dim">{people.length} lists</span>
+              </div>
+              {/* The largest filmographies up front; the full alphabetical
+                  list one tap away (same pattern as the genre rail). */}
+              <div className="mt-3.5 flex flex-wrap gap-1.5">
+                {(peopleExpanded
+                  ? people
+                  : [...people]
+                      .sort(
+                        (a: CollectionSummary, b: CollectionSummary) => b.item_count - a.item_count,
+                      )
+                      .slice(0, 24)
+                ).map((c: CollectionSummary) => (
+                  <Link
+                    key={c.slug}
+                    to="/best/$slug"
+                    params={{ slug: c.slug }}
+                    className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] text-text-muted transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {c.title.replace(/^The Best /, "")}
+                    <span className="ml-1 tabular-nums opacity-70">{c.item_count}</span>
+                  </Link>
+                ))}
+                {people.length > 24 && (
+                  <button
+                    type="button"
+                    onClick={() => setPeopleExpanded(!peopleExpanded)}
+                    aria-expanded={peopleExpanded}
+                    className="cursor-pointer rounded-[4px] border border-dashed border-border px-2.5 py-1 font-mono text-[11px] text-text-dim transition-colors hover:border-border-strong hover:text-text-bright"
+                  >
+                    {peopleExpanded ? "Fewer people" : `All ${people.length} people`}
+                  </button>
+                )}
+              </div>
+            </section>
           )}
 
           {/* Tier 3: the full index */}
@@ -576,16 +737,11 @@ function CollectionsPage() {
                   MATRIX_COLS.map((c) => c.short),
                 )}
               />
-              <IndexMatrix
-                label="Genre × decade"
-                cols={DECADE_COLS}
-                rows={buildMatrix(genreDecadePairs(byKind("genre-decade")), DECADE_COLS)}
-              />
             </div>
-            <IndexMatrix
+            <DualIndexMatrix
               label="Origin × genre"
               cols={originCols}
-              rows={buildMatrix(originPairs, originCols)}
+              rows={buildDualMatrix(originPairs, originCols)}
             />
             <YearIndex years={years} />
 

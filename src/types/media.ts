@@ -118,6 +118,12 @@ export interface MediaDetail extends MediaItem {
   relatedCross?: MediaItem[];
   /** Version of the similarity engine that built the rails (cache healing). */
   relatedVersion?: number;
+  /** Catalog context from title_context(): cohort percentile + franchise
+   *  standing, feeding the data-prose layer. */
+  context?: {
+    cohort?: { label: string; size: number; percentile: number };
+    franchise?: { size: number; rank: number };
+  };
   keywords?: string[];
   providers?: WatchProviders;
   providersAll?: WatchProvidersAllRegions;
@@ -139,4 +145,15 @@ export interface PersonDetail {
   profileUrl?: string;
   imdbId?: string;
   groups: PersonCreditGroup[];
+  /** Catalog statistics from person_stats(): counts, median, best decade,
+   *  frequent collaborators. Attached at read time, never cached stale. */
+  stats?: {
+    titles: number;
+    scored: number;
+    medianScore?: number;
+    bestDecade?: string;
+    bestDecadeMedian?: number;
+    bestDecadeTitles?: number;
+    collaborators: { name: string; together: number }[];
+  };
 }

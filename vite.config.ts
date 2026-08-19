@@ -12,4 +12,13 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    build: {
+      // Production source maps so a console error names a component instead of
+      // a minified symbol. This is what stands between us and identifying the
+      // second hydration error. Maps are separate files; they add nothing to
+      // what a visitor downloads unless devtools ask for them.
+      sourcemap: true,
+    },
+  },
 });

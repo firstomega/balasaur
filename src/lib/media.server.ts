@@ -1267,7 +1267,7 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
   }
   if (failedChunks > 0) {
     throw new Error(
-      `${failedChunks}/${totalChunks} media upsert chunks failed — first error: ${firstError}`,
+      `${failedChunks}/${totalChunks} media upsert chunks failed; first error: ${firstError}`,
     );
   }
   // Belt-and-braces: a write can "succeed" without landing (wrong project in a
@@ -1480,7 +1480,7 @@ export async function syncCatalog(opts?: {
 
   if (budgetHit) {
     console.log(
-      `[sync] time budget (${timeBudgetMs}ms) reached — enriched ${refreshed} this pass; more remain for the next call`,
+      `[sync] time budget (${timeBudgetMs}ms) reached, enriched ${refreshed} this pass; more remain for the next call`,
     );
   }
 
@@ -2068,8 +2068,9 @@ interface RelatedRow extends CrossRow {
 }
 
 /** Bump when the rail logic changes shape — cached payloads below this version
- *  get their rails rebuilt once on read, then persisted. */
-const RELATED_ENGINE_VERSION = 2;
+ *  get their rails rebuilt once on read, then persisted.
+ *  v3: also attaches title_context (cohort percentile + franchise standing). */
+const RELATED_ENGINE_VERSION = 3;
 const MIN_RELATED_MATCHES = 6;
 
 /** A candidate that only shares one broad genre is not a match, it is a
@@ -2129,14 +2130,35 @@ async function fetchRelatedRail(
 async function attachRelatedRails(detail: MediaDetail): Promise<void> {
   if (detail.mediaType !== "movie" && detail.mediaType !== "tv") return;
   const other = detail.mediaType === "tv" ? "movie" : "tv";
-  const [own, cross] = await Promise.all([
+  const [own, cross, ctx] = await Promise.all([
     fetchRelatedRail(detail.id, detail.mediaType),
     fetchRelatedRail(detail.id, other),
+    supabaseAdmin.rpc("title_context", { p_media_id: detail.id }).then(
+      (r) => (r.error ? null : (r.data?.[0] ?? null)),
+      () => null,
+    ),
   ]);
   // No weak rail: fewer than 6 real matches means no rail at all. This also
   // drops TMDB's raw recommendation list, which had no content filters.
   detail.related = own;
   detail.relatedCross = cross;
+  // Cohort percentile + franchise standing for the data-prose layer.
+  if (ctx) {
+    const cohort =
+      ctx.cohort_label &&
+      typeof ctx.percentile === "number" &&
+      typeof ctx.cohort_size === "number" &&
+      ctx.cohort_size > 0
+        ? { label: ctx.cohort_label, size: ctx.cohort_size, percentile: ctx.percentile }
+        : undefined;
+    const franchise =
+      typeof ctx.franchise_rank === "number" &&
+      typeof ctx.franchise_size === "number" &&
+      ctx.franchise_size >= 2
+        ? { size: ctx.franchise_size, rank: ctx.franchise_rank }
+        : undefined;
+    detail.context = cohort || franchise ? { cohort, franchise } : undefined;
+  }
   detail.relatedVersion = RELATED_ENGINE_VERSION;
 }
 
@@ -2305,7 +2327,7 @@ export async function fetchTrendingMedia(opts?: { fresh?: boolean }): Promise<Me
     const lastKnownGood = await loadCatalogFromCache();
     if (lastKnownGood.length > 0) {
       console.error(
-        `[catalog] live read empty — serving ${lastKnownGood.length} last-known-good items from media_cache`,
+        `[catalog] live read empty, serving ${lastKnownGood.length} last-known-good items from media_cache`,
       );
       return lastKnownGood;
     }
@@ -2434,6 +2456,31 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
   };
 }
 
+/** Catalog statistics for the person page's data-prose line. Additive and
+ *  fail-soft: the page renders without them. Attached on every read (the
+ *  person_stats scan rides the people GIN index) so they track the nightly
+ *  catalog instead of the cached payload's age. */
+async function attachPersonStats(detail: PersonDetail): Promise<void> {
+  try {
+    const { data, error } = await supabaseAdmin.rpc("person_stats", { p_name: detail.name });
+    const s = data?.[0];
+    if (error || !s || (s.titles ?? 0) < 3) return;
+    detail.stats = {
+      titles: s.titles,
+      scored: s.scored,
+      medianScore: s.median_score ?? undefined,
+      bestDecade: s.best_decade ?? undefined,
+      bestDecadeMedian: s.best_decade_median ?? undefined,
+      bestDecadeTitles: s.best_decade_titles ?? undefined,
+      collaborators: Array.isArray(s.collaborators)
+        ? (s.collaborators as { name: string; together: number }[])
+        : [],
+    };
+  } catch {
+    // stats are additive; the page stands without them
+  }
+}
+
 export async function fetchPersonDetail(
   id: string,
   opts?: { fresh?: boolean },
@@ -2450,7 +2497,9 @@ export async function fetchPersonDetail(
       if (!error && data?.payload && data.fetched_at) {
         const age = Date.now() - new Date(data.fetched_at).getTime();
         if (age < PERSON_TTL_MS) {
-          return data.payload as unknown as PersonDetail;
+          const cached = data.payload as unknown as PersonDetail;
+          await attachPersonStats(cached);
+          return cached;
         }
       }
     } catch (e) {
@@ -2466,6 +2515,7 @@ export async function fetchPersonDetail(
     language: "en-US",
   });
   const detail = buildPersonFromRaw(raw);
+  await attachPersonStats(detail);
 
   try {
     if (Number.isFinite(personIdNum)) {

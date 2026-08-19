@@ -1,0 +1,59 @@
+-- v11: person lists carry only titles whose stored credits contain the
+-- roster person's TMDB person id, so namesakes never merge. Verified live:
+-- "The Best Tom Holland Movies" had absorbed the Fright Night director's
+-- films (Fright Night 1985, Child's Play 1988) through the bare name match;
+-- after v11 the list is the actor's filmography alone. The identity check
+-- runs per roster person over their containment-indexed titles: a roster row
+-- without a resolvable person_id falls back to the name match; a row with an
+-- id fails closed when a title's credits do not confirm it. Also: an
+-- already-published person list survives down to 8 titles (mint threshold
+-- stays 10), so URLs do not churn at the gate's edge.
+--
+-- Applied live 2026-08-19 as collections_v11_person_identity plus
+-- collections_v11_alias_fix (a _person_titles alias collided with the
+-- plpgsql loop record "r" and was renamed "rr"); the canary ran green after
+-- the rebuild. 610 collections, 131 person lists.
+--
+-- The full live function differs from 20260819050000's text only in the
+-- people section, reproduced here as the delta:
+--
+--   create temporary table _person_titles on commit drop as
+--   select rr.person_name, m.media_id
+--   from public.person_collection_roster rr
+--   join public.media m
+--     on m.people @> jsonb_build_array(jsonb_build_object('name', rr.person_name))
+--   where rr.person_id is null
+--      or exists (
+--        select 1 from jsonb_array_elements(
+--          coalesce(m.raw_tmdb->'credits'->'cast','[]'::jsonb)
+--          || coalesce(m.raw_tmdb->'credits'->'crew','[]'::jsonb)) c
+--        where (c->>'id')::bigint = rr.person_id);
+--
+--   insert into _defs (slug, kind, title, media_type, media_id, item_count)
+--   select z.slug, 'person', z.title, z.mt, z.ids, z.cnt
+--   from (
+--     select case when x.mt = 'movie' then 'best-' || slugify(unaccent(x.name)) || '-movies'
+--                 else 'best-' || slugify(unaccent(x.name)) || '-shows' end as slug,
+--            'The Best ' || x.name || case when x.mt = 'movie' then ' Movies' else ' Shows' end as title,
+--            x.mt,
+--            array_agg(x.media_id order by x.rating_balasaur desc, x.quality_score desc, x.media_id) as ids,
+--            max(x.cnt)::int as cnt
+--     from (
+--       select e.media_id, e.media_type mt, e.rating_balasaur, e.quality_score, pt.person_name as name,
+--              row_number() over (partition by pt.person_name, e.media_type order by e.quality_score desc) rn,
+--              count(*) over (partition by pt.person_name, e.media_type) cnt
+--       from _elig e
+--       join _person_titles pt on pt.media_id = e.media_id
+--     ) x where x.rn <= 60
+--     group by 1, 3, x.name
+--   ) z
+--   where z.cnt >= 10
+--      or (z.cnt >= 8 and exists (select 1 from public.collections pc where pc.slug = z.slug))
+--   on conflict (slug) do nothing;
+--
+-- Schema completeness (the review found these had no DDL record anywhere):
+create table if not exists public.collection_redirects (
+  from_slug text primary key,
+  to_slug text not null
+);
+alter table public.collections add column if not exists media_type text;

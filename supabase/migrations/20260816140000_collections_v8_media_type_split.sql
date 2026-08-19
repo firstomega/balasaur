@@ -63,3 +63,10 @@
 --
 -- To dump the live body verbatim into this file:
 --   select pg_get_functiondef(oid) from pg_proc where proname='rebuild_collections';
+
+-- Postscript (2026-08-19): the function body this record omitted is now
+-- reproduced in full by 20260819050000_collections_v10_people_and_origin_split.sql,
+-- which superseded the v8 text in production. The v8-era verification hash
+-- above (8ebbb36582fd6538a73e544a81161238) no longer matches the live
+-- function; the v10 chain (plus person_slugs_unaccent) is authoritative,
+-- with live hash 370f8a981aae2ef13e73f1b1371488bf recorded there.

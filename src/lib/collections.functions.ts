@@ -22,6 +22,8 @@ export interface CollectionSummary extends CollectionRow {
   top_titles: TopTitle[];
   /** Months (1-12) this collection is promoted in; null for evergreen ones. */
   season_months: number[] | null;
+  /** "movie" | "tv" for single-type shelves; null for mixed ones. */
+  media_type: string | null;
 }
 
 export const listCollections = createServerFn({ method: "GET" }).handler(
@@ -29,7 +31,7 @@ export const listCollections = createServerFn({ method: "GET" }).handler(
     const { data, error } = await supabaseAdmin
       .from("collections")
       .select(
-        "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids, top_titles, season_months",
+        "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids, top_titles, season_months, media_type",
       )
       .order("item_count", { ascending: false });
     if (error || !data) {
@@ -40,6 +42,7 @@ export const listCollections = createServerFn({ method: "GET" }).handler(
       poster_ids: string[];
       top_titles: TopTitle[] | null;
       season_months: number[] | null;
+      media_type: string | null;
     })[];
 
     // One lookup for every collage poster (~4 ids × N collections).

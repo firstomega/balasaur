@@ -508,7 +508,29 @@ export type Database = {
           titles: number;
         }[];
       };
+      person_stats: {
+        Args: { p_name: string };
+        Returns: {
+          titles: number;
+          scored: number;
+          median_score: number | null;
+          best_decade: string | null;
+          best_decade_median: number | null;
+          best_decade_titles: number | null;
+          collaborators: Json;
+        }[];
+      };
       rebuild_collections: { Args: never; Returns: undefined };
+      title_context: {
+        Args: { p_media_id: string };
+        Returns: {
+          cohort_label: string | null;
+          cohort_size: number | null;
+          percentile: number | null;
+          franchise_size: number | null;
+          franchise_rank: number | null;
+        }[];
+      };
       related_titles: {
         Args: { p_media_id: string; p_target_type: string };
         Returns: {

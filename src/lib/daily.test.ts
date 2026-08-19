@@ -66,3 +66,19 @@ describe("shareText", () => {
     expect(shareText(1, 1, true)).toBe("Balasaurdle #1 1/6\n🟩\nbalasaur.com/play");
   });
 });
+
+describe("redactTitle word boundaries", () => {
+  it("never garbles words that merely contain a title word", () => {
+    expect(redactTitle("There is something out there.", "The Thing")).toBe(
+      "There is something out there.",
+    );
+    expect(redactTitle("What is that thing?", "The Thing")).toBe("What is that ___?");
+    expect(redactTitle("They said it was over.", "It")).toBe("They said it was over.");
+  });
+
+  it("still blanks the full title and its standalone words", () => {
+    expect(redactTitle("The Thing returns: the thing is back.", "The Thing")).toBe(
+      "___ returns: ___ is back.",
+    );
+  });
+});
