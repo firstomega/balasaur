@@ -5,15 +5,17 @@ sessions (Claude reads repo docs at session start — point it here and say
 "build X"). Shipped work is deliberately absent; this is only what's still
 open. Newest thinking wins: prune freely when an idea dies.
 
-_Last groomed: 2026-08-11 (the seven-PR UX day, #138–#144)._
+_Last groomed: 2026-08-19 (overnight session). Shipped since the last groom
+and removed from this file: Balasaurdle, /calendar, layout CI, copy lint,
+ranking canary, production source maps, the v8 record mirror, origin-genre
+split + K-dramas, person collections, sitemap sharding + IndexNow, person
+sitemap, llms.txt fix, the em-dash purge, explainable More-like-this (the
+full similarity engine), score percentiles and franchise context, collection
+composition prose, person-page statistics, /about + /contact, the mobile
+hamburger menu._
 
 ## Now / next (high conviction, scoped)
 
-- **Daily guessing game ("Balasaurdle")** — Wordle-loop: one title per day for
-  everyone, guess from a progressively revealed poster (or facts: year → genre
-  → actor → tagline), 6 tries, shareable emoji-grid result. Daily ritual +
-  built-in social share = the strongest single growth idea on this list. All
-  data already in `media`. Self-contained; shippable in one session.
 - **Taste Card / "Balasaur Wrapped"** — after ~20 ratings, a gorgeous
   shareable image: top genres, score distribution vs the crowd, favorites
   poster wall, and a dinosaur taste archetype ("Nocturnal Horror Raptor").
@@ -222,23 +224,13 @@ why it is still open.
 - **Contrast failures**: the primary "Sign in" button and several footer
   strings fail WCAG contrast.
 
-### Mechanisms proposed and agreed, not built
+### Mechanisms proposed and agreed
 
-These exist to stop the same feedback recurring; see `/CLAUDE.md`.
-
-- **Copy lint across all of `src`.** The em-dash test guards exactly one file
-  (`collectionsProse.ts`), which is why the 7 above survived. Should fail CI
-  on em-dashes in any user-visible string plus banned explainer phrasing.
-- **Layout CI job.** Playwright plus Chromium in GitHub Actions: load the key
-  routes at 390 / 768 / 1440, assert `scrollWidth <= innerWidth` (this alone
-  catches the mobile overflow class of bug automatically), upload screenshots
-  as artifacts. This is the mechanical answer to "judge the rendered page";
-  the sandbox cannot run the app, so CI has to.
-- **Ranking canary in the nightly job.** Same shape as the existing freshness
-  canary: fail red when any collection's top item is uncorroborated or when
-  displayed order is not monotonic in the displayed score.
-- **Source maps** in the production build, so console errors name a component
-  instead of a minified symbol.
+All four shipped: copy lint (`src/lib/copyLint.test.ts`, rides `bun test`),
+layout CI (`scripts/layout-check.ts` + workflow), the ranking canary
+(`collections_canary()`, chained after the nightly rebuild), and production
+source maps (vite.config.ts). This section stays only until the next groom
+confirms nothing regressed.
 
 ### Monetization plumbing, designed not built
 

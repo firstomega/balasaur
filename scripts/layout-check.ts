@@ -192,6 +192,7 @@ async function main() {
       "/contact",
       "/calendar",
       "/play",
+      "/watched",
     ];
     for (const [from, prefix] of [
       ["/collections", "/best/"],
@@ -201,6 +202,16 @@ async function main() {
       const href = await firstHref(from, prefix);
       if (href) routes.push(href);
       else skipped.push(`no ${prefix}* link found on ${from}, that route was not checked`);
+    }
+    // Person pages hang off detail-page credits, so the crawl goes one hop
+    // deeper: home -> a movie -> a person.
+    const movieHref = routes.find((r) => r.startsWith("/movie/"));
+    if (movieHref) {
+      const personHref = await firstHref(movieHref, "/person/");
+      if (personHref) routes.push(personHref);
+      else skipped.push(`no /person/* link found on ${movieHref}, that route was not checked`);
+    } else {
+      skipped.push("no movie page reached, so no /person/* route was checked");
     }
     await scout.close();
 

@@ -25,7 +25,12 @@ export function redactTitle(text: string, title: string): string {
   let out = text;
   for (const w of [title, ...words]) {
     const esc = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    out = out.replace(new RegExp(esc, "gi"), "___");
+    // Word boundaries, so "The Thing" blanks "the" and "thing" but never
+    // garbles "there" into "___re". Skipped at an edge that is not a word
+    // character ("WALL·E"), where \b would stop the match entirely.
+    const lead = /^\w/.test(w) ? "\\b" : "";
+    const tail = /\w$/.test(w) ? "\\b" : "";
+    out = out.replace(new RegExp(`${lead}${esc}${tail}`, "gi"), "___");
   }
   return out;
 }
