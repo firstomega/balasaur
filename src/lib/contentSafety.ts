@@ -69,29 +69,45 @@ export function deriveSensitive(rawTmdb: unknown): boolean {
 // ---- Suggestive: the fan-service tier ---------------------------------------
 //
 // A second, wider net below `sensitive`. Titles built around titillation
-// (ecchi, harem, fan-service anime) are not hard-adult, but they have no
-// business appearing in recommendation rails, collections, or the rate deck,
-// and especially not next to kids' titles. They remain fully browsable and
-// searchable — this flag only gates the surfaces where the SITE is doing the
+// (ecchi, fan-service anime) are not hard-adult, but they have no business
+// appearing in recommendation rails, collections, or the rate deck, and
+// especially not next to kids' titles. They remain fully browsable and
+// searchable: this flag only gates the surfaces where the SITE is doing the
 // recommending. Adult-themed cinema (an R-rated drama about a relationship
-// with an AI, an erotic thriller) is deliberately NOT caught here: the terms
-// below only land on content whose point is the titillation itself.
+// with an AI, an erotic thriller) is deliberately NOT caught here.
 //
-// One hit is enough — "harem" or "fan service" does not land on a title by
-// accident the way a lone "erotic" can.
+// Three rules learned by getting each one wrong on live data:
+//
+//   1. Match whole words. Substring matching flagged The Wolf of Wall Street,
+//      because "sharemarket fraud" contains "harem".
+//   2. "sexual fantasy" is not a fan-service marker. As a single hit it took
+//      out American Beauty, Barbarella, and Cashback. It stays a WEAK term
+//      for `sensitive`, where two independent signals are required.
+//   3. "harem" only means the anime subgenre inside Animation. On live action
+//      it is a romance structure, and it was excluding the most famous
+//      K-dramas there are: Boys Over Flowers, Coffee Prince, You're Beautiful.
 
-const SUGGESTIVE_TERMS = [
-  "ecchi",
-  "harem",
-  "fan service",
-  "fanservice",
-  "sexual fantasy",
-  "gravure",
-  "seduction comedy",
-];
+/** Unambiguous fan-service markers: one whole-word hit is enough. */
+const SUGGESTIVE_TERMS = ["ecchi", "fan service", "fanservice", "gravure", "seduction comedy"];
 
-export function deriveSuggestive(rawTmdb: unknown): boolean {
+/** Only inside Animation, where it names the subgenre rather than a plot shape. */
+const ANIMATION_ONLY_TERMS = ["harem"];
+
+/** Whole-word test, so a term never matches inside a longer word. */
+function hasTerm(keywords: string[], terms: string[]): boolean {
+  return terms.some((t) => {
+    const re = new RegExp(
+      `(^|[^a-z0-9])${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`,
+      "i",
+    );
+    return keywords.some((kw) => re.test(kw));
+  });
+}
+
+export function deriveSuggestive(rawTmdb: unknown, genres: string[] = []): boolean {
   if (deriveSensitive(rawTmdb)) return true;
   const keywords = extractKeywordNames(rawTmdb);
-  return keywords.some((kw) => SUGGESTIVE_TERMS.some((t) => kw.includes(t)));
+  if (keywords.length === 0) return false;
+  if (hasTerm(keywords, SUGGESTIVE_TERMS)) return true;
+  return genres.includes("Animation") && hasTerm(keywords, ANIMATION_ONLY_TERMS);
 }
