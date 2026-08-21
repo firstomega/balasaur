@@ -66,23 +66,32 @@ export function withBoost(base: CatalogBaseParams, boostCountry?: string): Catal
   return { ...base, boostCountry: boostCountry || undefined };
 }
 
-export function catalogInfiniteOptions(base: CatalogBaseParams) {
+/** `startOffset` lets a crawlable ?page=N URL begin partway through the catalog.
+ *  Infinite scroll then continues from there, so people see no difference while
+ *  a crawler gets a followable chain instead of a dead end after 60 titles. */
+export function catalogInfiniteOptions(base: CatalogBaseParams, startOffset = 0) {
   return infiniteQueryOptions({
-    queryKey: ["catalog", base] as const,
+    queryKey: ["catalog", base, startOffset] as const,
     queryFn: ({ pageParam }) =>
       queryCatalog({ data: { ...base, limit: PAGE_SIZE, offset: pageParam } }),
-    initialPageParam: 0,
+    initialPageParam: startOffset,
     getNextPageParam: (lastPage, allPages) => {
       const loaded = allPages.reduce((n, pg) => n + pg.items.length, 0);
-      return loaded < lastPage.total ? loaded : undefined;
+      const next = startOffset + loaded;
+      return next < lastPage.total ? next : undefined;
     },
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useCatalogInfinite(filters: FilterState, region = "US", boostCountry = "") {
+export function useCatalogInfinite(
+  filters: FilterState,
+  region = "US",
+  boostCountry = "",
+  startOffset = 0,
+) {
   return useInfiniteQuery(
-    catalogInfiniteOptions(withBoost(filtersToParams(filters, region), boostCountry)),
+    catalogInfiniteOptions(withBoost(filtersToParams(filters, region), boostCountry), startOffset),
   );
 }
 

@@ -2414,7 +2414,11 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
   const add = (dept: string, c: TmdbPersonCredit) => {
     const t = c.media_type === "tv" ? "tv" : c.media_type === "movie" ? "movie" : null;
     if (!t || !c.poster_path) return; // only catalogued media types, skip art-less
-    const item = mapCardRaw(c as TmdbCardRaw, t);
+    // Drop the synopsis. A person page renders MediaCards, which never show
+    // it, so every credit's overview was being serialized into the HTML for
+    // nothing: prolific filmographies measured 1.1MB of document, the heaviest
+    // pages on the site, and person pages are the ones that rank best.
+    const item = { ...mapCardRaw(c as TmdbCardRaw, t), overview: "" };
     let g = buckets.get(dept);
     if (!g) {
       g = new Map<string, MediaItem>();

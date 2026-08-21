@@ -497,6 +497,7 @@ export type Database = {
       };
       catalog_facets: { Args: never; Returns: Json };
       catalog_facets_filtered: { Args: { p: Json }; Returns: Json };
+      catalog_facets_cached: { Args: { p: Json }; Returns: Json };
       genre_plural: { Args: { g: string }; Returns: string };
       ping_indexnow: { Args: { p_full?: boolean }; Returns: Json };
       search_persons: {
