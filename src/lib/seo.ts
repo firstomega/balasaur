@@ -5,6 +5,8 @@
 // even if the env var is missing in a given environment.
 
 import { createIsomorphicFn } from "@tanstack/react-start";
+import { titleProse, type TitleProseInput } from "./titleProse";
+import { personProse } from "./personProse";
 
 const RAW_ORIGIN = (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://balasaur.com";
 
@@ -23,11 +25,49 @@ export function absoluteUrl(path: string): string {
   return `${SITE_ORIGIN}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
-/** Truncate to a clean meta-description length on a word boundary. */
+/** Truncate to a clean meta-description length.
+ *
+ *  Whole sentences first: the source text here is composed prose, and cutting
+ *  it mid-clause produced descriptions ending "across…" and "in…", which spend
+ *  the most valuable line in a search result on half a fact. Falls back to a
+ *  word-boundary cut only when even the first sentence is too long. */
 export function clampDescription(text: string | undefined, max = 160): string {
   if (!text) return `${SITE_TAGLINE}. Discover, track, and rate movies and TV.`;
   const t = text.trim();
   if (t.length <= max) return t;
+
+  // Split only at a terminator followed by whitespace and the start of a new
+  // sentence. A naive /[.!?]/ split cuts "IMDb 5.8/10" in half, which is how
+  // an earlier version produced descriptions beginning "8/10, Rotten Tomatoes".
+  // The digit in the lookahead matters too: "5 seasons across 62 episodes"
+  // is a real sentence opening here.
+  const sentences = t.split(/(?<=[.!?])\s+(?=[A-Z0-9])/);
+  let out = "";
+  let stoppedAt = -1;
+  for (let i = 0; i < sentences.length; i++) {
+    const next = out ? `${out} ${sentences[i]}` : sentences[i];
+    if (next.length > max) {
+      stoppedAt = i;
+      break;
+    }
+    out = next;
+  }
+  if (out.length > 0) {
+    // Whole sentences can leave a lot of the snippet unused: "A Balasaur Score
+    // of 81 out of 100, drawn from IMDb 7.5/10, Rotten Tomatoes 97%, Metacritic
+    // 84/100." spends 98 of 160 characters and the next sentence does not fit.
+    // Sixty empty characters in the one line a searcher reads is worth more
+    // than a clean full stop, so a wide gap gets filled with the start of the
+    // next sentence, cut on a word boundary.
+    const room = max - out.length - 1;
+    if (stoppedAt >= 0 && room >= 40) {
+      const cut = sentences[stoppedAt].slice(0, room - 1);
+      const lastSpace = cut.lastIndexOf(" ");
+      if (lastSpace > 20) return `${out} ${cut.slice(0, lastSpace).trimEnd()}…`;
+    }
+    return out;
+  }
+
   const cut = t.slice(0, max);
   const lastSpace = cut.lastIndexOf(" ");
   return (lastSpace > 60 ? cut.slice(0, lastSpace) : cut).trimEnd() + "…";
@@ -116,25 +156,88 @@ export { MIN_SUBSTANCE_FACTS, hasSubstance, isIndexableDetail } from "./indexabi
 
 /** Intent-tuned title/description for movie & TV detail pages: front-load what
  *  searchers type ("watch X", "X streaming") plus the score. */
-export function detailMeta(d: {
+// A title tag has roughly 60 characters of display width in Google's results
+// before it is truncated, and what survives the cut has to carry the words a
+// person types. Segments are therefore dropped from the least valuable end:
+//
+//   title and year > the rating > where to watch > the brand
+//
+// The brand goes last on purpose. Balasaur has not been announced, so nobody
+// searches for it; a brand suffix on a site nobody knows is spent width. It
+// stays whenever it fits, because it costs nothing then.
+const TITLE_BUDGET = 60;
+const BRAND_SUFFIX = ` | ${SITE_NAME}`;
+
+/** Keep as many optional tails as the budget allows, then add the brand only
+ *  if it still fits. Written this way round on purpose: an earlier version
+ *  reserved room for the brand first, which dropped "rating 89/100" from
+ *  "Little Amélie or the Character of Rain" to make space for a brand nobody
+ *  is searching for. */
+export function composeTitle(head: string, optional: string[]): string {
+  for (let take = optional.length; take >= 0; take--) {
+    const body = head + optional.slice(0, take).join("");
+    if (body.length > TITLE_BUDGET) continue;
+    return body.length + BRAND_SUFFIX.length <= TITLE_BUDGET ? body + BRAND_SUFFIX : body;
+  }
+  return head;
+}
+
+/**
+ * Title tag and meta description for a movie or TV detail page.
+ *
+ * The description used to open with the score and then paste TMDB's synopsis.
+ * That synopsis is on every site that mirrors the same API, so it was the one
+ * piece of text here guaranteed not to be ours. It is replaced by the page's
+ * own data-prose, which no competitor holds, and only falls back to the
+ * synopsis when there is not enough data to say anything at all.
+ */
+export function detailMeta(d: TitleProseInput & { overview?: string }): {
   title: string;
-  year?: string;
-  overview?: string;
-  streaming?: string[];
-  ratings?: { balasaur?: number };
-}): { title: string; description: string } {
+  description: string;
+} {
   const year = d.year ? ` (${d.year})` : "";
   const score = d.ratings?.balasaur;
-  const providers = (d.streaming ?? []).slice(0, 3);
-  const title =
-    `${d.title}${year}: ` +
-    (providers.length > 0 ? `Watch on ${providers.join(", ")}` : "Where to Watch") +
-    (typeof score === "number" ? ` · Score ${score}` : "") +
-    ` | ${SITE_NAME}`;
-  const lead =
-    (typeof score === "number" ? `Balasaur Score ${score}/100. ` : "") +
-    (providers.length > 0 ? `Streaming on ${providers.join(", ")}. ` : "");
-  return { title, description: clampDescription(lead + (d.overview ?? ""), 160) };
+  const hasStreaming = (d.streaming ?? []).length > 0;
+
+  const optional: string[] = [];
+  if (typeof score === "number") optional.push(` rating ${score}/100`);
+  if (hasStreaming) optional.push(optional.length ? `, where to watch` : ` where to watch`);
+
+  const prose = titleProse(d);
+  const fallback =
+    (typeof score === "number" ? `Balasaur Score ${score}/100. ` : "") + (d.overview ?? "");
+
+  return {
+    title: composeTitle(`${d.title}${year}`, optional),
+    description: clampDescription(prose || fallback, 160),
+  };
+}
+
+/** Title tag and meta description for a person page. Same trade as above: the
+ *  TMDB biography is shared with every site on the internet, the catalog stats
+ *  are not. */
+export function personMeta(d: {
+  name: string;
+  biography?: string;
+  knownForDepartment?: string;
+  stats?: Parameters<typeof personProse>[1];
+}): { title: string; description: string } {
+  const titles = d.stats?.titles;
+  const optional: string[] = [];
+  if (typeof titles === "number" && titles >= 3) {
+    optional.push(`: ${titles} movies and TV shows, ranked`);
+  } else {
+    optional.push(`: movies and TV shows`);
+  }
+
+  const prose = d.stats ? personProse(d.name, d.stats) : "";
+  return {
+    title: composeTitle(d.name, optional),
+    description: clampDescription(
+      prose || d.biography || `${d.name}'s movies and TV shows in the Balasaur catalog.`,
+      160,
+    ),
+  };
 }
 
 /**

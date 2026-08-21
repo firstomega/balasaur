@@ -19,12 +19,19 @@ const top: DekTopItem[] = [
 ];
 
 describe("collectionDek", () => {
-  it("opens with the count and explains the score in plain words", () => {
+  it("opens with the leaders, which are the only part that differs page to page", () => {
     const dek = collectionDek(base, top);
-    expect(dek).toStartWith(
+    expect(dek).toStartWith("Alpha leads at 92,");
+    expect(dek).toContain(
       "60 streaming titles made the cut, ordered from highest Balasaur Score to lowest.",
     );
-    expect(dek).toContain("IMDb, Rotten Tomatoes, Metacritic, and TMDB");
+    // The score explanation is word for word identical on all 635 collection
+    // pages, so it sits last where it cannot crowd the meta description.
+    expect(
+      dek.endsWith(
+        "The score blends IMDb, Rotten Tomatoes, Metacritic, and TMDB ratings into one 0 to 100 number.",
+      ),
+    ).toBe(true);
   });
 
   it("never contains an em-dash", () => {
@@ -66,16 +73,16 @@ describe("collectionDek", () => {
   });
 
   it("picks the subject noun from the kind", () => {
-    expect(collectionDek({ ...base, kind: "awards" }, top)).toStartWith("60 winners made the cut");
-    expect(collectionDek({ ...base, kind: "decade" }, top)).toStartWith("60 titles made the cut");
-    expect(collectionDek({ ...base, kind: "genre-service" }, top)).toStartWith(
+    expect(collectionDek({ ...base, kind: "awards" }, top)).toContain("60 winners made the cut");
+    expect(collectionDek({ ...base, kind: "decade" }, top)).toContain("60 titles made the cut");
+    expect(collectionDek({ ...base, kind: "genre-service" }, top)).toContain(
       "60 streaming titles made the cut",
     );
   });
 
   it("formats large counts with separators", () => {
     const dek = collectionDek({ ...base, item_count: 3147, kind: "genre" }, top);
-    expect(dek).toStartWith("3,147 titles made the cut");
+    expect(dek).toContain("3,147 titles made the cut");
   });
 });
 

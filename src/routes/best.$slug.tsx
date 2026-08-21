@@ -9,7 +9,15 @@ import {
 } from "@/lib/collections.functions";
 import type { MediaItem } from "@/types/media";
 import { collectionComposition, collectionDek } from "@/lib/collectionsProse";
-import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse, jsonLdScript } from "@/lib/seo";
+import {
+  SITE_ORIGIN,
+  canonicalLink,
+  buildMeta,
+  cacheSsrResponse,
+  jsonLdScript,
+  composeTitle,
+  clampDescription,
+} from "@/lib/seo";
 import { useUserStatus } from "@/hooks/useUserStatus";
 
 // /best/<slug> — one programmatically minted ranked collection. SSR'd,
@@ -55,8 +63,11 @@ export const Route = createFileRoute("/best/$slug")({
     };
     return {
       meta: buildMeta({
-        title: `${d.row.title} (${d.row.item_count}) | Balasaur`,
-        description: dek.slice(0, 158),
+        // The item count used to ride in the title as "(60)", which reads as a
+        // stray UI artifact in a search result and repeats the dek's opening
+        // sentence. The title now spends its width on the words people type.
+        title: composeTitle(d.row.title, []),
+        description: clampDescription(dek, 160),
         url,
       }),
       links: [canonicalLink(url)],
