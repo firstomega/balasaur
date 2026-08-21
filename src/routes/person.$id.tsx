@@ -5,7 +5,7 @@ import { TopBar } from "@/components/balasaur/TopBar";
 import {
   buildMeta,
   canonicalLink,
-  clampDescription,
+  personMeta,
   absoluteUrl,
   jsonLdScript,
   cacheSsrResponse,
@@ -22,10 +22,9 @@ export const Route = createFileRoute("/person/$id")({
   head: ({ loaderData, params }) => {
     const d = loaderData;
     const url = absoluteUrl(`/person/${params.id}`);
-    const title = d ? `${d.name} | Balasaur` : "Balasaur";
-    const description = d
-      ? clampDescription(d.biography || `${d.name}'s movies and TV on Balasaur.`)
-      : "Person details on Balasaur.";
+    const { title, description } = d
+      ? personMeta(d)
+      : { title: "Balasaur", description: "Person details on Balasaur." };
     // Half a million people are reachable through credits links, most with a
     // couple of rows to their name. Only a real filmography earns an index
     // slot; the rest stay crawlable with noindex, mirroring the title gate.
