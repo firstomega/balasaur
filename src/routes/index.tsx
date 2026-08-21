@@ -12,7 +12,6 @@ import { SortControl } from "@/components/balasaur/SortControl";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
-import { TasteRamp } from "@/components/balasaur/TasteRamp";
 import { ShareButton } from "@/components/balasaur/ShareButton";
 import {
   PAGE_SIZE,
@@ -262,7 +261,7 @@ function HomePage() {
         toast(`Restored · ${item.title}`, { duration: 1400 });
       } else {
         recordStatus(item.id, recordForNotInterested(), item);
-        toast(`Not interested · ${item.title}`, {
+        toast(`Never · ${item.title}`, {
           duration: 3500,
           action: { label: "Undo", onClick: () => recordStatus(item.id, null) },
         });
@@ -302,29 +301,10 @@ function HomePage() {
     [statuses],
   );
 
-  // "Ranked for <country>" escape hatch: geo-personalized ranking is visible
-  // and reversible instead of silent (visibility of system status). Persisted
-  // per device.
-  const [globalRank, setGlobalRank] = useState(false);
-  useEffect(() => {
-    try {
-      setGlobalRank(localStorage.getItem("balasaur:globalRank") === "1");
-    } catch {
-      // storage unavailable — non-fatal
-    }
-  }, []);
-  const toggleGlobalRank = () => {
-    setGlobalRank((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem("balasaur:globalRank", next ? "1" : "0");
-      } catch {
-        // non-fatal
-      }
-      return next;
-    });
-  };
-  const effectiveBoost = globalRank ? "" : boostCountry;
+  // Geo-personalized ranking is silent. It ran with a "Ranked for <country>"
+  // chip that let you flip to global; the chip was a label for something the
+  // ranking already does well, so it went and the boost stayed.
+  const effectiveBoost = boostCountry;
 
   // Mobile bottom action sheet for a card (hover quick-actions don't exist on touch).
   const [actionItem, setActionItem] = useState<MediaItem | null>(null);
@@ -334,7 +314,6 @@ function HomePage() {
   // search before they had been given anything, and put a pop-up over the
   // content on mobile, which search engines treat as a demotion signal. It
   // stays one tap away from the hero button.
-  const [rampOpen, setRampOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -378,9 +357,7 @@ function HomePage() {
         )}
 
         <main id="main" className="min-w-0 flex-1">
-          {!user && (
-            <LandingHero onBrowse={scrollToGrid} onPickFavorites={() => setRampOpen(true)} />
-          )}
+          {!user && <LandingHero onBrowse={scrollToGrid} />}
           <WatchlistNudge wantIds={wantIds} region={region} />
           <div ref={gridRef} tabIndex={-1} className="scroll-mt-16">
             <Suspense fallback={<MediaGridSkeleton />}>
@@ -392,9 +369,6 @@ function HomePage() {
                 rejectedIds={rejectedIds}
                 region={region}
                 boostCountry={effectiveBoost}
-                geoBase={boostCountry}
-                globalRank={globalRank}
-                onToggleGlobalRank={toggleGlobalRank}
                 onOpenMobileFilters={() => setMobileOpen(true)}
                 onQuickAction={handleQuickAction}
                 onOpenActions={setActionItem}
@@ -423,7 +397,7 @@ function HomePage() {
                     { action: "watched", label: "Watched", active: seenIds.has(actionItem.id) },
                     {
                       action: "notInterested",
-                      label: "Not interested",
+                      label: "Never show this",
                       active: rejectedIds.has(actionItem.id),
                     },
                   ] as const
@@ -451,19 +425,6 @@ function HomePage() {
           )}
         </SheetContent>
       </Sheet>
-
-      <TasteRamp
-        open={rampOpen}
-        onOpenChange={setRampOpen}
-        boostCountry={boostCountry}
-        recordStatus={recordStatus}
-        onComplete={(n) => {
-          if (n > 0) {
-            toast.success(`Saved ${n} favorite${n === 1 ? "" : "s"}`, { duration: 2000 });
-            if (!user) setAuthOpen(true);
-          }
-        }}
-      />
 
       <AuthDialog
         open={authOpen}
@@ -514,17 +475,6 @@ function HomePage() {
       </Sheet>
     </div>
   );
-}
-
-// Region code -> readable name for the geo-ranking indicator ("US" -> "United States").
-let regionNames: Intl.DisplayNames | null = null;
-function countryName(code: string): string {
-  try {
-    regionNames ??= new Intl.DisplayNames(["en"], { type: "region" });
-    return regionNames.of(code.toUpperCase()) ?? code.toUpperCase();
-  } catch {
-    return code.toUpperCase();
-  }
 }
 
 // Peak-end for infinite scroll: every N cards, a landmark breaks the wall and
@@ -717,9 +667,6 @@ function GridWithControls({
   rejectedIds,
   region,
   boostCountry,
-  geoBase,
-  globalRank,
-  onToggleGlobalRank,
   onOpenMobileFilters,
   onQuickAction,
   onOpenActions,
@@ -734,9 +681,6 @@ function GridWithControls({
   region: string;
   boostCountry: string;
   /** The viewer's detected country (pre-toggle) for the geo indicator label. */
-  geoBase: string;
-  globalRank: boolean;
-  onToggleGlobalRank: () => void;
   onOpenMobileFilters: () => void;
   onQuickAction: (item: MediaItem, action: QuickAction) => void;
   onOpenActions: (item: MediaItem) => void;
@@ -862,22 +806,6 @@ function GridWithControls({
           >
             Updating…
           </span>
-        )}
-
-        {/* Geo-personalized ranking is visible and one tap reversible, not silent. */}
-        {geoBase && activeCount === 0 && filters.sort === "popular" && (
-          <button
-            type="button"
-            onClick={onToggleGlobalRank}
-            title={
-              globalRank
-                ? "Showing the global ranking. Click to switch back to your local one"
-                : `Home-country titles ranked first for ${countryName(geoBase)}. Click to switch to global`
-            }
-            className="cursor-pointer rounded-[4px] border border-border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-wider text-text-dim transition-colors hover:border-border-strong hover:text-text-muted"
-          >
-            {globalRank ? "\u{1F310} Global ranking" : `Ranked for ${countryName(geoBase)}`}
-          </button>
         )}
 
         {/* Sort lives at the right end of the results bar — where every catalog

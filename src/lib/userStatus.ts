@@ -14,8 +14,8 @@ import type { UserStatusRecord } from "@/hooks/useUserStatus";
 // button model changed, so no data migration was needed.
 //
 // Off-list signals (file into no bucket):
-//   Skip           — deck-only soft "not now", resurfaces later, deprioritized.
-//   Not interested — hard "won't watch"; never resurfaces in the deck.
+//   Not now ("skipped") is a deck-only soft pass: resurfaces later, deprioritized.
+//   Never ("not_interested") is a hard reject: never resurfaces in the deck.
 
 export type PrimaryKey = "want" | "watched";
 export type SentimentKey = "liked" | "disliked";
@@ -66,12 +66,12 @@ export function recordForSentiment(
   return { status: "seen", sentiment: clearing ? undefined : sentiment, ts: Date.now() };
 }
 
-/** Skip: a soft "not now" that resurfaces later, deprioritized. Files into no list. */
+/** Not now: a soft pass that resurfaces later, deprioritized. Files into no list. */
 export function recordForSkip(): UserStatusRecord {
   return { status: "skipped", ts: Date.now() };
 }
 
-/** Not interested: a hard "won't watch" — files into NO list, and (unlike Skip) never
+/** Never: a hard "won't watch". Files into NO list, and unlike Not now it never
  *  resurfaces in the deck. Distinct from Want to Watch, which is a positive intent. */
 export function recordForNotInterested(): UserStatusRecord {
   return { status: "unseen", intent: "not_interested", ts: Date.now() };

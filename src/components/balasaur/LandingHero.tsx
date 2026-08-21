@@ -4,12 +4,9 @@ import { AuthDialog } from "./AuthDialog";
 
 interface Props {
   onBrowse: () => void;
-  /** Opens the taste ramp ("pick 5 you loved") — the hero's primary CTA, so the
-   *  hero and the ramp are one onboarding story instead of two competing ones. */
-  onPickFavorites?: () => void;
 }
 
-export function LandingHero({ onBrowse, onPickFavorites }: Props) {
+export function LandingHero({ onBrowse }: Props) {
   const [authOpen, setAuthOpen] = useState(false);
 
   return (
@@ -45,29 +42,12 @@ export function LandingHero({ onBrowse, onPickFavorites }: Props) {
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-nowrap">
-            {onPickFavorites ? (
-              <button
-                type="button"
-                onClick={onPickFavorites}
-                className="cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Pick 5 you love
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAuthOpen(true)}
-                className="cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Sign in to save your picks
-              </button>
-            )}
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="cursor-pointer rounded-[5px] border border-border-strong bg-background px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-text-bright transition-colors hover:border-primary hover:text-primary"
+              className="cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Sign in
+              Sign in to save your picks
             </button>
             <button
               type="button"
