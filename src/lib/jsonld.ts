@@ -15,28 +15,24 @@ function dropEmpty<T extends Record<string, unknown>>(obj: T): T {
   return obj;
 }
 
-/** The Balasaur Score (0–100 blend) with TMDB's community vote count — an
- *  aggregator marking up its aggregate, Metacritic-style. Google wants a
- *  ratingCount, so without one we fall back to the old count-less IMDb shape
- *  (harmless; simply not eligible for stars). */
+/** The Balasaur Score (0-100 blend) with TMDB's community vote count: an
+ *  aggregator marking up its aggregate, Metacritic-style.
+ *
+ *  Schema.org requires ratingCount or reviewCount on an AggregateRating, and
+ *  Search Console reports the block as an invalid item without one. A
+ *  count-less fallback used to ship for titles with no vote count, which put
+ *  11,366 pages in the invalid pile for no gain: an invalid block earns
+ *  nothing an absent block would not. So no count, no aggregateRating. */
 function aggregateRating(d: MediaDetail) {
   const balasaur = d.ratings.balasaur ?? computeBalasaurScore(d.ratings);
-  if (typeof balasaur === "number" && typeof d.voteCount === "number" && d.voteCount > 0) {
-    return {
-      "@type": "AggregateRating",
-      ratingValue: balasaur,
-      bestRating: 100,
-      worstRating: 0,
-      ratingCount: d.voteCount,
-    };
-  }
-  const imdb = d.ratings.imdb ?? d.ratings.tmdb;
-  if (typeof imdb !== "number") return undefined;
+  if (typeof balasaur !== "number") return undefined;
+  if (typeof d.voteCount !== "number" || d.voteCount <= 0) return undefined;
   return {
     "@type": "AggregateRating",
-    ratingValue: imdb,
-    bestRating: 10,
+    ratingValue: balasaur,
+    bestRating: 100,
     worstRating: 0,
+    ratingCount: d.voteCount,
   };
 }
 

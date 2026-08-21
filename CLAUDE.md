@@ -74,6 +74,22 @@ order reads as broken and costs trust that the score cannot afford.
 visible? If ordering uses a hidden value, either show the value or order by
 the shown one.
 
+A number must also be a number someone wanted. True, reconstructable, and
+irrelevant is still noise, and it is the failure mode a data-driven writer
+falls into first, because the numbers that are easiest to compute are the ones
+nobody asked for. Nobody wonders where Inception ranks out of 66,000. They
+wonder whether it is worth two hours, whether it beats the other thing they
+were considering, and whether the good reviews and the audience agree.
+
+**Check:** Write the question this number answers, as a person would type it.
+If the question only makes sense to someone who already knows how the catalog
+is built, cut the number and find the comparison a viewer actually makes.
+
+_"Ranks 412th of 66,000 by Balasaur Score" was proposed as the model sentence
+for 610 title pages. It passes every other check on this page: it is true,
+reconstructable, free of adjectives, and unavailable anywhere else. It is also
+about a scale no viewer holds in their head._
+
 ### 4. State the fact, do not explain the mechanism
 
 Copy asserts something only this database knows. It never narrates the
