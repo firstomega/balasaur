@@ -25,7 +25,20 @@ export const Route = createFileRoute("/movie/$id")({
     // function's validator throws and the route answers 500; Googlebot found
     // the literal "/movie/$id" and logged a server error. A bad URL is a 404.
     if (!/^\d+$/.test(id)) throw notFound();
-    const data = await context.queryClient.ensureQueryData(mediaDetailQueryOptions("movie", id));
+    // A numeric id TMDB does not know threw straight out of the loader, and the
+    // route answered 500. Google reads a 500 as "this site is unwell" and slows
+    // its crawl of the whole domain, which is the exact resource this site is
+    // short of. A missing title is a 404. Anything else, including a real TMDB
+    // outage, still raises: turning an outage into 404s would invite Google to
+    // drop pages that do exist.
+    let data;
+    try {
+      data = await context.queryClient.ensureQueryData(mediaDetailQueryOptions("movie", id));
+    } catch (e) {
+      if (/\b404\b/.test(e instanceof Error ? e.message : String(e))) throw notFound();
+      throw e;
+    }
+    if (!data) throw notFound();
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
     if (data?.title) {
       const canonical = mediaSlug(id, data.title);

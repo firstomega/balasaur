@@ -2180,21 +2180,48 @@ export async function fetchMediaDetail(
         const age = Date.now() - new Date(data.detail_fetched_at).getTime();
         if (age < DETAIL_TTL_MS) {
           const cached = data.detail_payload as unknown as MediaDetail;
-          // Cache-shape healing: payloads written before `voteCount` existed
-          // lack it, which silently drops AggregateRating.ratingCount from the
-          // JSON-LD (GSC's live validation failed on exactly this). Patch the
-          // field from the catalog row instead of purging ~190k cached details
-          // (a purge would also stampede TMDB with rebuild fetches).
-          if (cached.voteCount === undefined) {
+          // Cache-shape healing. Three fields the catalog row holds and the
+          // cached detail payload does not, each one silently costing something
+          // that is invisible from the code alone:
+          //
+          //   voteCount  drops AggregateRating.ratingCount, which is what made
+          //              Search Console call the rating markup invalid.
+          //   balasaur   is computed at render time on the page but never
+          //              written to the payload, so the head() that builds the
+          //              title tag and meta description could not see it.
+          //              Inception shipped as "Inception (2010) | Balasaur"
+          //              with no rating, and its description opened on the
+          //              second sentence.
+          //   streaming  is derived only on a fresh TMDB fetch, so cached
+          //              payloads carry an empty array while the catalog row
+          //              says Disney+. Every title page lost both the "where
+          //              to watch" half of its title tag and the streaming
+          //              line, which is the one sentence exempt from the
+          //              length cap because it is why most visitors arrived.
+          //
+          // Healed from the catalog row rather than by purging ~190k cached
+          // details, which would also stampede TMDB with rebuild fetches.
+          const needsVotes = cached.voteCount === undefined;
+          const needsScore = cached.ratings?.balasaur === undefined;
+          const needsStreaming = (cached.streaming ?? []).length === 0;
+          if (needsVotes || needsScore || needsStreaming) {
             try {
               const { data: row } = await supabaseAdmin
                 .from("media")
-                .select("vote_count")
+                .select("vote_count, rating_balasaur, streaming")
                 .eq("media_id", cacheId)
                 .maybeSingle();
-              if (typeof row?.vote_count === "number") cached.voteCount = row.vote_count;
+              if (needsVotes && typeof row?.vote_count === "number") {
+                cached.voteCount = row.vote_count;
+              }
+              if (needsScore && typeof row?.rating_balasaur === "number") {
+                cached.ratings = { ...(cached.ratings ?? {}), balasaur: row.rating_balasaur };
+              }
+              if (needsStreaming && Array.isArray(row?.streaming) && row.streaming.length > 0) {
+                cached.streaming = row.streaming;
+              }
             } catch {
-              // best-effort — the page still renders without ratingCount
+              // best-effort — the page still renders without these
             }
           }
           // Payloads written before the similarity engine carry a rail with
