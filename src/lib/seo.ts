@@ -7,6 +7,7 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { titleProse, type TitleProseInput } from "./titleProse";
 import { personProse } from "./personProse";
+import { computeBalasaurScore } from "./score";
 
 const RAW_ORIGIN = (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://balasaur.com";
 
@@ -196,14 +197,19 @@ export function detailMeta(d: TitleProseInput & { overview?: string }): {
   description: string;
 } {
   const year = d.year ? ` (${d.year})` : "";
-  const score = d.ratings?.balasaur;
+  // Same fallback the JSON-LD builder uses. Detail payloads do not carry the
+  // blended score; the page computes it at render time, so without this the
+  // title tag and the description both lost it.
+  const score = d.ratings?.balasaur ?? computeBalasaurScore(d.ratings ?? {});
   const hasStreaming = (d.streaming ?? []).length > 0;
 
   const optional: string[] = [];
   if (typeof score === "number") optional.push(` rating ${score}/100`);
   if (hasStreaming) optional.push(optional.length ? `, where to watch` : ` where to watch`);
 
-  const prose = titleProse(d);
+  const prose = titleProse(
+    typeof score === "number" ? { ...d, ratings: { ...d.ratings, balasaur: score } } : d,
+  );
   const fallback =
     (typeof score === "number" ? `Balasaur Score ${score}/100. ` : "") + (d.overview ?? "");
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { getPublicProfile, type PublicMediaItem } from "@/lib/profile.functions";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
@@ -16,16 +16,22 @@ import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 export const Route = createFileRoute("/$handle")({
   loader: async ({ params }) => {
     const handle = params.handle;
-    if (!handle.startsWith("@")) {
-      return { kind: "not-handle" as const, username: "" };
-    }
+    // Any single-segment path that is not a real route lands here, and this used
+    // to answer HTTP 200 with a "Profile not found" page. Google calls that a
+    // soft 404: it crawls the page, finds nothing, and the fetch is charged
+    // against a crawl budget this site cannot spare. It also meant /ads.txt
+    // returned an HTML page, which would break the AdSense crawler once that
+    // file matters. A path with no profile behind it is a 404.
+    if (!handle.startsWith("@")) throw notFound();
     const username = handle.slice(1);
     const data = await getPublicProfile({ data: { username } });
+    if (!data?.found) throw notFound();
     return { kind: "profile" as const, username, data };
   },
+  notFoundComponent: HandleNotFound,
   head: ({ loaderData }) => {
     const noindex = { name: "robots", content: "noindex,nofollow" };
-    if (!loaderData || loaderData.kind !== "profile" || !loaderData.data.found) {
+    if (!loaderData) {
       return { meta: [{ title: "Profile not found · Balasaur" }, noindex] };
     }
     const p = loaderData.data.profile!;
@@ -140,19 +146,19 @@ function Stat({ n, label }: { n: number; label: string }) {
   );
 }
 
+function HandleNotFound() {
+  return (
+    <Centered
+      title="Profile not found"
+      sub="This handle doesn't exist (yet). Check the spelling?"
+    />
+  );
+}
+
 function ProfilePage() {
   const loaderData = Route.useLoaderData();
   const { data: me } = useMyProfile();
   const [tab, setTab] = useState<"watched" | "liked">("watched");
-
-  if (loaderData.kind !== "profile" || !loaderData.data.found) {
-    return (
-      <Centered
-        title="Profile not found"
-        sub="This handle doesn't exist (yet). Check the spelling?"
-      />
-    );
-  }
 
   const { data } = loaderData;
   const p = data.profile!;
