@@ -63,13 +63,11 @@ function subject(row: CollectionRow): string {
 export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
   const parts: string[] = [];
 
-  parts.push(
-    `${row.item_count.toLocaleString("en-US")} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
-  );
-  parts.push(
-    `The score blends IMDb, Rotten Tomatoes, Metacritic, and TMDB ratings into one 0 to 100 number.`,
-  );
-
+  // The names lead. Every sentence in this paragraph except this one is nearly
+  // identical across all 635 collections, differing only in a count; the
+  // leaders are what a reader searching for a "best" list wants first, and
+  // they are the only part of the meta description that distinguishes one
+  // collection page from another in a search result.
   const scored = top.filter((t) => typeof t.score === "number").slice(0, 3);
   if (scored.length === 1) {
     parts.push(`${scored[0].title} leads at ${scored[0].score}.`);
@@ -82,6 +80,10 @@ export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
       `${scored[0].title} leads at ${scored[0].score}, ahead of ${scored[1].title} (${scored[1].score}) and ${scored[2].title} (${scored[2].score}).`,
     );
   }
+
+  parts.push(
+    `${row.item_count.toLocaleString("en-US")} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
+  );
 
   if (typeof row.median_score === "number" && row.median_score >= CATALOG_MEDIAN + 5) {
     parts.push(
@@ -97,6 +99,14 @@ export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
       );
     }
   }
+
+  // What the score is made of, last on purpose. It is word for word identical
+  // on all 635 collection pages, so while it sat second it filled the meta
+  // description of every one of them with the same sentence. Down here it is
+  // still on the page and no longer crowds out the names that differ.
+  parts.push(
+    `The score blends IMDb, Rotten Tomatoes, Metacritic, and TMDB ratings into one 0 to 100 number.`,
+  );
 
   return parts.join(" ");
 }
