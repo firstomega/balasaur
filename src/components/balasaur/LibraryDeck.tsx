@@ -22,7 +22,7 @@ const NUDGE_AFTER = 5;
 
 type Dir = "up" | "down" | "left" | "right";
 
-// Direction → meaning ("down" is Skip: soft, resurfaces; the rest file & leave).
+// Direction → meaning ("down" is Not now: soft, resurfaces; the rest file & leave).
 // Same two-axis model as the detail page: "up" is watched+liked, "right" is
 // watched (neutral), "left" is Want to Watch (the watchlist).
 type FiledDir = Exclude<Dir, "down">;
@@ -37,21 +37,21 @@ const ACTION_LABEL: Record<Dir, string> = {
   up: "Loved it",
   right: "Watched",
   left: "Want to Watch",
-  down: "Skip",
+  down: "Not now",
 };
 
 const ACTION_HEX: Record<Dir, string> = {
   up: "#9fe6a0", // favorites
   right: "#3b82f6", // history
   left: "#e8b84b", // watchlist
-  down: "#9aa2b1", // skip (neutral grey)
+  down: "#9aa2b1", // not now (neutral grey)
 };
 
 const ACTION_SUBLABEL: Record<Dir, string> = {
   up: "Favorites + History",
   right: "History",
   left: "Watchlist",
-  down: "Resurfaces later",
+  down: "Comes back later",
 };
 
 interface Summary {
@@ -149,13 +149,13 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
     [current, deck.length, recordStatus, user],
   );
 
-  // Not interested: a hard reject (won't watch). Files into no list and — unlike Skip —
+  // Never: a hard reject (won't watch). Files into no list and, unlike Not now,
   // never comes back in the deck. Reuses the downward dismiss animation.
   const markNotInterested = useCallback(() => {
     if (!current) return;
     recordStatus(current.id, recordForNotInterested(), current);
     setSummary((s) => ({ ...s, total: s.total + 1, notInterested: s.notInterested + 1 }));
-    if (user) toast(`Not interested · hidden`, { duration: 1400 });
+    if (user) toast(`Never · hidden`, { duration: 1400 });
     setSessionPicks((n) => n + 1);
     setExit("down");
     window.setTimeout(() => {
@@ -278,16 +278,16 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-border-strong"
         >
           <SkipForward className="h-3.5 w-3.5" />
-          Skip
+          Not now
         </button>
         <button
           type="button"
           onClick={markNotInterested}
-          title="Won't watch: hide for good (key: X)"
+          title="Never show this title again (key: X)"
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
         >
           <X className="h-3.5 w-3.5" />
-          Not interested
+          Never
         </button>
       </div>
 
@@ -545,7 +545,7 @@ function Legend() {
   return (
     <div className="w-full max-w-[360px] space-y-1.5 rounded-[5px] border border-border bg-panel/60 p-2">
       <div className="text-center font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
-        Swipe to sort · only Skip comes back
+        Swipe to sort · only Not now comes back
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {rows.map((r) => (
@@ -587,8 +587,8 @@ function LibrarySummary({
     { label: "Loved it", value: summary.liked, color: ACTION_HEX.up },
     { label: "Watched", value: summary.watched, color: ACTION_HEX.right },
     { label: "Want to Watch", value: summary.want, color: ACTION_HEX.left },
-    { label: "Skipped", value: summary.skip, color: ACTION_HEX.down },
-    { label: "Not interested", value: summary.notInterested, color: "#c75d6e" },
+    { label: "Not now", value: summary.skip, color: ACTION_HEX.down },
+    { label: "Never", value: summary.notInterested, color: "#c75d6e" },
   ];
 
   return (

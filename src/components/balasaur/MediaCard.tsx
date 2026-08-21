@@ -144,9 +144,9 @@ export function MediaCard({
                 e.stopPropagation();
                 onQuickAction(item, "notInterested");
               }}
-              aria-label={rejected ? "Not interested (click to undo)" : "Not interested"}
+              aria-label={rejected ? "Never show this (click to undo)" : "Never show this"}
               aria-pressed={rejected}
-              title={rejected ? "Not interested (click to undo)" : "Not interested"}
+              title={rejected ? "Never show this (click to undo)" : "Never show this"}
               className={cn(
                 "flex items-center rounded-[5px] border p-1 backdrop-blur-sm transition-all",
                 rejected

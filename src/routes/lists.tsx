@@ -49,7 +49,7 @@ const BUCKET_META: Record<
     iconClass: "text-primary",
   },
   notInterested: {
-    label: "Not interested",
+    label: "Never",
     hint: "Hidden from the deck for good",
     Icon: EyeOff,
     iconClass: "text-[#c75d6e]",
@@ -74,7 +74,7 @@ const BUCKET_EMPTY: Record<Bucket, { text: string; cta: string; to: string }> = 
     to: "/rate",
   },
   notInterested: {
-    text: "Nothing hidden. Press X in the deck (or “Not interested” on a title page) to keep the junk out of your recommendations.",
+    text: "Nothing hidden. Press X in the deck (or “Never show this” on a title page) to keep the junk out of your recommendations.",
     cta: "Rate titles",
     to: "/rate",
   },

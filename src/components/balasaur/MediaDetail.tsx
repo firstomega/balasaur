@@ -121,7 +121,7 @@ function MicroLabel({ children }: { children: React.ReactNode }) {
 
 // Two-axis status UI: pick a primary state (Want to Watch | Watched), and once
 // something is Watched a sentiment row appears (Liked it / Not for me). Sentiment
-// is never clobbered by re-tapping Watched. "Not interested" is the quiet escape
+// is never clobbered by re-tapping Watched. "Never show this" is the quiet escape
 // hatch underneath — a hard "won't watch" that keeps the deck honest.
 function StatusControls({ detail }: { detail: MediaDetailType }) {
   const { statuses, recordStatus } = useUserStatus();
@@ -222,7 +222,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
             (rejected ? "text-[#c75d6e]" : "text-text-dim hover:text-text-muted")
           }
         >
-          {rejected ? "✕ Not interested (undo)" : "Not interested"}
+          {rejected ? "✕ Never show this (undo)" : "Never show this"}
         </button>
         {(primary || rejected) && (
           <button
