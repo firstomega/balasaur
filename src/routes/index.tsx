@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { Filter, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
@@ -15,6 +15,7 @@ import { AuthDialog } from "@/components/balasaur/AuthDialog";
 import { TasteRamp } from "@/components/balasaur/TasteRamp";
 import { ShareButton } from "@/components/balasaur/ShareButton";
 import {
+  PAGE_SIZE,
   useCatalogInfinite,
   useCatalogFacets,
   useViewerCountry,
@@ -60,6 +61,17 @@ import { Switch } from "@/components/ui/switch";
 import { SITE_ORIGIN, canonicalLink, jsonLdScript } from "@/lib/seo";
 import { websiteJsonLd } from "@/lib/jsonld";
 
+/** ?page=N to a row offset. Anything junk reads as page 1, and the ceiling
+ *  stops a crawler wandering into an unbounded range of empty pages. */
+const MAX_PAGE = 400;
+function pageNumber(raw: string | undefined): number {
+  const n = Number.parseInt(raw ?? "1", 10);
+  return Number.isFinite(n) && n >= 1 && n <= MAX_PAGE ? n : 1;
+}
+function pageOffset(raw: string | undefined): number {
+  return (pageNumber(raw) - 1) * PAGE_SIZE;
+}
+
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): FilterSearch => parseFilterSearch(search),
   loaderDeps: ({ search }) => search,
@@ -76,16 +88,22 @@ export const Route = createFileRoute("/")({
       (await ssrBudget(context.queryClient.ensureQueryData(viewerCountryOptions()), 400)) ?? "";
     const boost = boostBucketsForCountry(country).length > 0 ? country : "";
     // Prefetch the URL's filters (so a shared/filtered link is server-rendered, not just
-    // the default grid) + facet stats. allSettled so a prefetch failure can never reject
+    // the default grid). allSettled so a prefetch failure can never reject
     // the loader, and ssrBudget so a HANGING backend can't stop the document from
     // streaming — the client refetches whatever the prefetch didn't finish.
+    //
+    // Facet counts are deliberately NOT awaited here. catalog_facets() measured
+    // 2,673ms against the live catalog, so it could never finish inside this
+    // budget: every request paid the full wait and then rendered without it
+    // anyway. That single query was the whole reason the homepage answered in
+    // 1.6 to 1.8 seconds while every other page answered in under 300ms. The
+    // filter rail fills its counts client-side after mount instead.
     const params = filtersToParams(searchToFilters(deps));
     await ssrBudget(
       Promise.allSettled([
         context.queryClient.ensureInfiniteQueryData(
-          catalogInfiniteOptions(withBoost(params, boost)),
+          catalogInfiniteOptions(withBoost(params, boost), pageOffset(deps.page)),
         ),
-        context.queryClient.ensureQueryData(catalogFacetsOptions(params)),
         context.queryClient.ensureQueryData(homeRailsOptions(boost)),
         context.queryClient.ensureQueryData(homeCollectionsOptions()),
       ]),
@@ -100,7 +118,7 @@ export const Route = createFileRoute("/")({
       rails?.trending?.[0]?.posterUrl || rails?.newAndNoteworthy?.[0]?.posterUrl || null;
     return { lcpPoster };
   },
-  head: ({ loaderData }) => ({
+  head: ({ loaderData, match }) => ({
     meta: [
       { title: "Balasaur: Your Personal Entertainment Database" },
       {
@@ -117,7 +135,15 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: SITE_ORIGIN + "/" },
     ],
     links: [
-      canonicalLink(SITE_ORIGIN + "/"),
+      // Page 2 and beyond self-canonicalise: each is a distinct slice of the
+      // catalog, not a duplicate of the homepage, and pointing them all at "/"
+      // would tell Google to ignore the very links the trail exists to offer.
+      canonicalLink(
+        SITE_ORIGIN +
+          (pageNumber((match?.search as FilterSearch | undefined)?.page) > 1
+            ? `/?page=${pageNumber((match?.search as FilterSearch | undefined)?.page)}`
+            : "/"),
+      ),
       // The first rail poster is the LCP element on mobile. Without this the
       // browser only discovers it after parsing the document, which measured
       // as ~2.9s of "resource load delay" on slow 4G. srcset and sizes mirror
@@ -176,6 +202,9 @@ function HomePage() {
       return;
     }
     saveFilters(filters);
+    // Changing a filter starts the result set over, so the page resets to 1
+    // and ?page drops out of the URL rather than stranding you on page 7 of a
+    // list that no longer exists.
     navigate({ search: filtersToSearch(filters), replace: true });
   }, [filters, navigate]);
 
@@ -369,6 +398,8 @@ function HomePage() {
                 onOpenMobileFilters={() => setMobileOpen(true)}
                 onQuickAction={handleQuickAction}
                 onOpenActions={setActionItem}
+                startOffset={pageOffset(search.page)}
+                pageNo={pageNumber(search.page)}
               />
             </Suspense>
           </div>
@@ -507,6 +538,86 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+// The crawl trail: real links a search engine can follow.
+//
+// The grid is infinite scroll, and a crawler does not scroll. Before this,
+// Googlebot could reach exactly the 60 titles rendered on the homepage and had
+// no path to the 61st, which left most of the catalog reachable only through
+// the sitemap and no internal link pointing at it at all.
+//
+// These are ordinary links in the server-rendered HTML. People never need them
+// (scrolling still works exactly as before), so they sit quietly at the end of
+// the grid rather than announcing themselves.
+function CrawlTrail({
+  page,
+  hasNext,
+  total,
+  filters,
+}: {
+  page: number;
+  hasNext: boolean;
+  total: number;
+  filters: FilterState;
+}) {
+  const lastPage = Math.min(MAX_PAGE, Math.max(1, Math.ceil(total / PAGE_SIZE)));
+  if (lastPage <= 1) return null;
+  const base = filtersToSearch(filters);
+  const to = (n: number): FilterSearch => (n <= 1 ? base : { ...base, page: String(n) });
+
+  // A window around the current page, plus the last one, so a crawler can walk
+  // forward without following a chain hundreds of pages long.
+  const nums = new Set<number>([1, page - 1, page, page + 1, lastPage]);
+  const shown = [...nums].filter((n) => n >= 1 && n <= lastPage).sort((a, b) => a - b);
+
+  return (
+    <nav
+      aria-label="Catalog pages"
+      className="mt-8 flex flex-wrap items-center justify-center gap-1.5 border-t border-border pt-5"
+    >
+      {page > 1 && (
+        <Link
+          to="/"
+          search={to(page - 1)}
+          rel="prev"
+          className="rounded-[4px] border border-border px-2.5 py-1 font-mono text-[11px] text-text-muted hover:border-primary hover:text-primary"
+        >
+          Previous
+        </Link>
+      )}
+      {shown.map((n, i) => (
+        <span key={n} className="flex items-center gap-1.5">
+          {i > 0 && shown[i - 1] !== n - 1 && (
+            <span className="font-mono text-[11px] text-text-dim">…</span>
+          )}
+          <Link
+            to="/"
+            search={to(n)}
+            aria-current={n === page ? "page" : undefined}
+            className={
+              "rounded-[4px] border px-2.5 py-1 font-mono text-[11px] " +
+              (n === page
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border text-text-muted hover:border-primary hover:text-primary")
+            }
+          >
+            {n}
+          </Link>
+        </span>
+      ))}
+      {hasNext && page < lastPage && (
+        <Link
+          to="/"
+          search={to(page + 1)}
+          rel="next"
+          className="rounded-[4px] border border-border px-2.5 py-1 font-mono text-[11px] text-text-muted hover:border-primary hover:text-primary"
+        >
+          Next
+        </Link>
+      )}
+    </nav>
+  );
+}
+
 function BrowseBreak({
   browsed,
   filters,
@@ -612,6 +723,8 @@ function GridWithControls({
   onOpenMobileFilters,
   onQuickAction,
   onOpenActions,
+  startOffset,
+  pageNo,
 }: {
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
@@ -627,9 +740,13 @@ function GridWithControls({
   onOpenMobileFilters: () => void;
   onQuickAction: (item: MediaItem, action: QuickAction) => void;
   onOpenActions: (item: MediaItem) => void;
+  /** Row offset from a crawlable ?page=N URL. */
+  startOffset: number;
+  /** Current 1-based page, for the pagination trail. */
+  pageNo: number;
 }) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } =
-    useCatalogInfinite(filters, region, boostCountry);
+    useCatalogInfinite(filters, region, boostCountry, startOffset);
 
   // Flatten loaded pages. "Hide seen" is applied to what's loaded (client-side),
   // so the headline count stays the catalog total for the active filters.
@@ -820,6 +937,12 @@ function GridWithControls({
             </div>
           ))}
           {hasNextPage && <div ref={sentinelRef} className="h-12" />}
+          <CrawlTrail
+            page={pageNo}
+            hasNext={hasNextPage}
+            total={data?.pages?.[0]?.total ?? 0}
+            filters={filters}
+          />
           {isFetchingNextPage && (
             <div className="py-6 text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">
               Loading more…

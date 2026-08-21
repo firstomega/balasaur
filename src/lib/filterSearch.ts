@@ -41,6 +41,8 @@ export interface FilterSearch {
   nom?: string;
   sort?: string;
   hideSeen?: string;
+  /** 1-based page for the crawlable pagination trail. */
+  page?: string;
 }
 
 const csv = (s: Iterable<string>): string => [...s].join(",");
@@ -84,6 +86,9 @@ const SEARCH_KEYS: (keyof FilterSearch)[] = [
   "nom",
   "sort",
   "hideSeen",
+  // Crawlable pagination: ?page=N lets a search engine walk the catalog
+  // instead of stopping at the 60 titles infinite scroll renders first.
+  "page",
 ];
 
 /** Coerce raw router search into our typed shape — keep only known string params.

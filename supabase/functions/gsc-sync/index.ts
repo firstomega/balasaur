@@ -169,7 +169,15 @@ Deno.serve(async (req) => {
           rowLimit: 25000,
           startRow,
           dataState: "final",
-        })) as { rows?: { keys: string[]; clicks: number; impressions: number; ctr: number; position: number }[] };
+        })) as {
+          rows?: {
+            keys: string[];
+            clicks: number;
+            impressions: number;
+            ctr: number;
+            position: number;
+          }[];
+        };
         const batch = r.rows ?? [];
         for (const row of batch) {
           rows.push({
