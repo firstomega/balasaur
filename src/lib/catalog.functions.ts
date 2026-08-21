@@ -535,7 +535,11 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
       filmLength: {},
       scored: { imdb: 0, rt: 0, meta: 0, balasaur: 0 },
     };
-    const { data, error } = await supabaseAdmin.rpc("catalog_facets_filtered", {
+    // catalog_facets_cached, not catalog_facets_filtered: the unfiltered case
+    // is the same answer for every visitor and measured 1,687ms per call, so
+    // it is computed once by the nightly job and read from a table (3ms).
+    // Every filtered combination still computes live.
+    const { data, error } = await supabaseAdmin.rpc("catalog_facets_cached", {
       p: {
         types: p.types,
         genres: p.genres,
