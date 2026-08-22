@@ -27,7 +27,7 @@ import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
 import { titleProse, normalizedSources, divergenceNote } from "@/lib/titleProse";
-import { getAppearsIn } from "@/lib/collections.functions";
+import { appearsInQueryOptions } from "@/hooks/useMediaDetail";
 import { themeForKeyword } from "@/lib/taxonomy";
 import { deriveOrigins } from "@/lib/origins";
 import {
@@ -768,11 +768,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 // shelf network. Fail-soft: nothing renders while loading, on error, or when
 // the title hasn't earned a shelf spot.
 function AppearsIn({ mediaId }: { mediaId: string }) {
-  const { data } = useQuery({
-    queryKey: ["appears-in", mediaId],
-    queryFn: () => getAppearsIn({ data: { mediaId } }),
-    staleTime: 60 * 60 * 1000,
-  });
+  const { data } = useQuery(appearsInQueryOptions(mediaId));
   if (!data || data.length === 0) return null;
   return (
     <div className="rounded-[5px] border border-border bg-panel p-3">

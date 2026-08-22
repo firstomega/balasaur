@@ -15,6 +15,7 @@
 //   {"action":"sites"}   list properties this service account can read
 //   {"action":"sync","days":N}  pull the last N days of performance rows
 //   {"action":"inspect","urls":[...]}  per-URL index status
+//   {"action":"totals","days":N}  same window at date+page grain, unfiltered
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -204,6 +205,67 @@ Deno.serve(async (req) => {
         const { error } = await supabase
           .from("gsc_performance")
           .upsert(chunk, { onConflict: "date,page,query" });
+        if (error) throw new Error(`upsert: ${error.message}`);
+        written += chunk.length;
+      }
+      return Response.json({ ok: true, site, start, end, rows: rows.length, written });
+    }
+
+    // Same window, no query dimension. Search Console withholds query-level
+    // rows for rare or personally-identifying searches, so summing the
+    // date+page+query table undercounts badly: five impressions a day where
+    // the page report says thirty. Trending on that number would have us
+    // reading the wrong one every night. Without the query dimension nothing
+    // is withheld, so this is the table to judge progress by.
+    if (action === "totals") {
+      const days = Math.min(Number(params.days ?? 480), 480);
+      const end = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
+      const start = new Date(Date.now() - (days + 3) * 86_400_000).toISOString().slice(0, 10);
+
+      const rows: Record<string, unknown>[] = [];
+      let startRow = 0;
+      for (let page = 0; page < 20; page++) {
+        const r = (await gsc(token, `webmasters/v3/sites/${enc}/searchAnalytics/query`, {
+          startDate: start,
+          endDate: end,
+          dimensions: ["date", "page"],
+          rowLimit: 25000,
+          startRow,
+          dataState: "final",
+        })) as {
+          rows?: {
+            keys: string[];
+            clicks: number;
+            impressions: number;
+            ctr: number;
+            position: number;
+          }[];
+        };
+        const batch = r.rows ?? [];
+        for (const row of batch) {
+          rows.push({
+            date: row.keys[0],
+            page: row.keys[1],
+            clicks: Math.round(row.clicks),
+            impressions: Math.round(row.impressions),
+            ctr: row.ctr,
+            position: row.position,
+          });
+        }
+        if (batch.length < 25000) break;
+        startRow += batch.length;
+      }
+
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      let written = 0;
+      for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        const { error } = await supabase
+          .from("gsc_page_daily")
+          .upsert(chunk, { onConflict: "date,page" });
         if (error) throw new Error(`upsert: ${error.message}`);
         written += chunk.length;
       }
