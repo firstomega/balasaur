@@ -27,25 +27,32 @@ export function CookieBanner() {
     >
       <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
         <p className="font-mono text-[12px] leading-relaxed text-text-muted">
-          We use cookies to keep you signed in and, with your consent, to measure usage and improve
-          Balasaur.{" "}
+          Cookies keep you signed in. With your consent they also measure which pages get used,
+          which is how Balasaur gets better.{" "}
           <Link to="/privacy" className="text-text-bright underline-offset-2 hover:underline">
             Learn more
           </Link>
           .
         </p>
         <div className="flex shrink-0 items-center gap-2">
+          {/* The two choices are deliberately identical in weight, size and
+              position. Refusing has to be exactly as easy as accepting: that
+              is the requirement regulators actually enforce, and a filled
+              button next to an outline one is the nudge they name. It is also
+              what fails certification with the consent platform this banner
+              will hand over to when ads go live, so a thumb on the scale here
+              would cost the ad revenue it was meant to protect. */}
           <button
             type="button"
             onClick={() => choose("required")}
-            className="rounded-[5px] border border-border bg-background px-3 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-bright hover:border-border-strong"
+            className="rounded-[5px] border border-border-strong bg-background px-3 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary"
           >
             Required only
           </button>
           <button
             type="button"
             onClick={() => choose("all")}
-            className="rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[12px] font-medium uppercase tracking-wide text-primary-foreground hover:bg-primary/90"
+            className="rounded-[5px] border border-border-strong bg-background px-3 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary"
           >
             Accept all
           </button>
