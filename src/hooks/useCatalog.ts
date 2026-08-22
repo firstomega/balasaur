@@ -9,7 +9,6 @@ import {
   queryCatalog,
   queryDeck,
   getCatalogFacets,
-  getHomeRails,
   getViewerCountry,
   type CatalogQueryParams,
 } from "@/lib/catalog.functions";
@@ -123,24 +122,12 @@ export function useCatalogFacets(filters: FilterState, region = "US") {
 /** Curated homepage rails (Trending / New & Noteworthy / Coming Soon / Hidden
  *  Gems). Cached per boost country — rails are geo-scoped (home-country titles
  *  plus proven global crossovers) but not filter-dependent. */
-export function homeRailsOptions(boostCountry = "") {
-  return queryOptions({
-    queryKey: ["home-rails", boostCountry] as const,
-    queryFn: () => getHomeRails({ data: { boostCountry: boostCountry || undefined } }),
-    staleTime: 15 * 60 * 1000,
-  });
-}
-
 export function homeCollectionsOptions() {
   return queryOptions({
     queryKey: ["home-collections"] as const,
     queryFn: () => listHomeCollections(),
     staleTime: 30 * 60 * 1000,
   });
-}
-
-export function useHomeRails(boostCountry = "") {
-  return useQuery(homeRailsOptions(boostCountry));
 }
 
 /** Bounded, popularity-ordered deck for the "Rate" (swipe) page. Loads a few hundred

@@ -390,6 +390,11 @@ function defaultCatalogParams(region?: string): CatalogQueryParams {
   };
 }
 
+/** TMDB votes at which a foreign title counts as a mainstream crossover
+ *  (Squid Game-class), so a geo-scoped list keeps it everywhere rather than
+ *  showing it only to its home country. */
+const CROSSOVER_VOTES = 2000;
+
 export const queryDeck = createServerFn({ method: "GET" })
   .inputValidator((p: { limit: number; region?: string; boostCountry?: string }) => p)
   .handler(async ({ data: p }): Promise<MediaItem[]> => {
@@ -638,125 +643,6 @@ export const searchPersons = createServerFn({ method: "GET" })
       profileUrl: r.profile_path ? `https://image.tmdb.org/t/p/w185${r.profile_path}` : undefined,
       titles: r.titles,
     }));
-  });
-
-export interface HomeRails {
-  trending: MediaItem[];
-  newAndNoteworthy: MediaItem[];
-  comingSoon: MediaItem[];
-  hiddenGems: MediaItem[];
-}
-
-const RAIL_SIZE = 24;
-const NOTEWORTHY_WINDOW_DAYS = 75;
-const COMING_SOON_WINDOW_DAYS = 120;
-/** TMDB votes at which a foreign title counts as a mainstream crossover
- *  (Squid Game-class) and appears in geo-scoped rails everywhere. */
-const CROSSOVER_VOTES = 2000;
-
-/**
- * Curated homepage rails, shown above the grid on the unfiltered view:
- *  - Trending This Week: the blended-rank top (buzz + quality + recency),
- *    released titles only — hype for the unreleased belongs in Coming Soon.
- *  - New & Noteworthy: released in the last ~2.5 months with real traction,
- *    minus anything already in Trending.
- *  - Coming Soon: unreleased titles with real pre-release buzz, soonest first.
- *  - Hidden Gems: little buzz, external-critic-validated high scores (an IMDb
- *    rating is required so a handful of TMDB self-votes can't mint a "gem").
- *
- * Geo scoping: when the viewer's country maps to an origin bucket, each rail
- * keeps home-country titles plus PROVEN global crossovers (vote_count ≥
- * CROSSOVER_VOTES) — so a US visitor sees American titles and Squid Game, not
- * every regionally-hyped release worldwide. Unknown geo → global rails,
- * unchanged. Rails are discovery, not inventory: the full catalog is always one
- * scroll away in the grid, so scoping here hides nothing permanently.
- *
- * All rails respect the content-safety flag and need a poster (a rail of "No
- * art" cards sells nothing). Fail-soft per rail: a failed query renders as an
- * absent rail, never an error page.
- */
-export const getHomeRails = createServerFn({ method: "GET" })
-  .inputValidator((p: { boostCountry?: string }) => p)
-  .handler(async ({ data: p }): Promise<HomeRails> => {
-    const today = new Date().toISOString().slice(0, 10);
-    const since = new Date(Date.now() - NOTEWORTHY_WINDOW_DAYS * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    const horizon = new Date(Date.now() + COMING_SOON_WINDOW_DAYS * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    const buckets = originsForCountry(p.boostCountry);
-    const base = () => {
-      // Rails are the site recommending, so the fan-service tier stays out
-      // (`suggestive` is a superset of `sensitive`).
-      let q = buildBase().eq("suggestive", false).not("poster_url", "is", null);
-      if (buckets.length > 0) {
-        q = q.or(`origins.ov.${arrayLiteral(buckets)},vote_count.gte.${CROSSOVER_VOTES}`);
-      }
-      return q;
-    };
-
-    const [trendingRes, newRes, soonRes, gemsRes] = await Promise.all([
-      base()
-        .lte("release_date", today)
-        .order("rank_score", DESC)
-        .order("popularity", DESC)
-        .limit(RAIL_SIZE)
-        .then(
-          (r) => r,
-          () => null,
-        ),
-      base()
-        .gte("release_date", since)
-        .lte("release_date", today)
-        .gte("popularity", 3)
-        .order("rank_score", DESC)
-        .limit(RAIL_SIZE * 2) // over-fetch: some of these are also in Trending
-        .then(
-          (r) => r,
-          () => null,
-        ),
-      base()
-        .gt("release_date", today)
-        .lte("release_date", horizon)
-        .gte("popularity", 5)
-        .order("release_date", ASC)
-        .order("rank_score", DESC)
-        .limit(RAIL_SIZE)
-        .then(
-          (r) => r,
-          () => null,
-        ),
-      base()
-        .not("rating_imdb", "is", null)
-        .gte("rating_balasaur", 75)
-        .lt("popularity", 15)
-        .order("rating_balasaur", DESC)
-        .order("popularity", DESC)
-        .limit(RAIL_SIZE)
-        .then(
-          (r) => r,
-          () => null,
-        ),
-    ]);
-
-    const toItems = (res: { data: unknown; error: unknown } | null): MediaItem[] => {
-      if (!res || res.error || !res.data) {
-        if (res?.error) console.error("[rails] query failed:", (res.error as Error).message);
-        return [];
-      }
-      return (res.data as unknown as CardRow[]).map(rowToCardItem);
-    };
-
-    const trending = toItems(trendingRes);
-    const trendingIds = new Set(trending.map((i) => i.id));
-    const newAndNoteworthy = toItems(newRes)
-      .filter((i) => !trendingIds.has(i.id))
-      .slice(0, RAIL_SIZE);
-    const shownIds = new Set([...trendingIds, ...newAndNoteworthy.map((i) => i.id)]);
-    const hiddenGems = toItems(gemsRes).filter((i) => !shownIds.has(i.id));
-
-    return { trending, newAndNoteworthy, comingSoon: toItems(soonRes), hiddenGems };
   });
 
 export interface WatchlistAvailability {
