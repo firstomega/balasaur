@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, redirect, useRouter } from "@tanstack/react-router";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
-import { mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
+import { appearsInQueryOptions, mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
 import {
   buildMeta,
@@ -39,6 +39,12 @@ export const Route = createFileRoute("/tv/$id")({
       throw e;
     }
     if (!data) throw notFound();
+    // Warm the "Appears in" shelf links so they land in the server-rendered
+    // HTML. As a client-only query they existed for people and not for a
+    // crawler, which left the 635 /best/ pages reachable from one hub and
+    // nowhere else. Inception ranks in ten shelves and linked to none of them.
+    // Non-blocking: a slow shelf lookup must not hold the page up.
+    void context.queryClient.prefetchQuery(appearsInQueryOptions(`tv-${id}`));
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
     if (data?.title) {
       const canonical = mediaSlug(id, data.title);
