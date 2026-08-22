@@ -21,18 +21,15 @@ import {
   viewerCountryOptions,
   catalogInfiniteOptions,
   catalogFacetsOptions,
-  homeRailsOptions,
   homeCollectionsOptions,
   filtersToParams,
   withBoost,
 } from "@/hooks/useCatalog";
-import { HomeRails } from "@/components/balasaur/HomeRails";
 import { CollectionRail } from "@/components/balasaur/CollectionRail";
 import { WatchlistNudge } from "@/components/balasaur/WatchlistNudge";
 import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
-import type { HomeRails as HomeRailsData } from "@/lib/catalog.functions";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -103,19 +100,16 @@ export const Route = createFileRoute("/")({
         context.queryClient.ensureInfiniteQueryData(
           catalogInfiniteOptions(withBoost(params, boost), pageOffset(deps.page)),
         ),
-        context.queryClient.ensureQueryData(homeRailsOptions(boost)),
         context.queryClient.ensureQueryData(homeCollectionsOptions()),
       ]),
       1500,
     );
 
-    // Hand head() the above-the-fold poster so it can be preloaded. Read from
-    // the cache the prefetch just filled; null when the prefetch was skipped
-    // or timed out, in which case no preload is emitted.
-    const rails = context.queryClient.getQueryData<HomeRailsData>(homeRailsOptions(boost).queryKey);
-    const lcpPoster =
-      rails?.trending?.[0]?.posterUrl || rails?.newAndNoteworthy?.[0]?.posterUrl || null;
-    return { lcpPoster };
+    // The Trending rail used to sit above the fold and its first poster was
+    // preloaded as the LCP element. The rail is gone (it ran the grid's exact
+    // query), and the grid's own first card is rendered from data the loader
+    // does not hold, so there is nothing to preload here any more.
+    return { lcpPoster: null };
   },
   head: ({ loaderData, match }) => ({
     meta: [
@@ -755,21 +749,17 @@ function GridWithControls({
           <div
             className={"min-h-0 overflow-hidden" + (activeCount > 0 ? " pointer-events-none" : "")}
           >
-            {/* Two rails, one band. Collections first: "what am I in the mood
-                for" is the question people arrive with, and it outranks "what
-                is popular". New & Noteworthy, Coming Soon and Hidden Gems are
-                collection pages now, reached from the rail rather than eating
-                three more scrollers before the grid. */}
-            <div className="mb-6 space-y-5 rounded-[6px] border border-border bg-panel/40 p-3 sm:p-4">
+            {/* One rail: collections. "What am I in the mood for" is the
+                question people arrive with, and a collection is an answer the
+                grid cannot give.
+
+                A "Trending This Week" rail sat here and is gone. It ran the
+                grid's exact query, rank_score then popularity, so it was the
+                first two dozen rows of the grid directly below it, wearing
+                rank numerals. A first-time visitor read the same seven posters
+                twice and had to work out whether the site was broken. */}
+            <div className="mb-6 rounded-[6px] border border-border bg-panel/40 p-3 sm:p-4">
               <CollectionRail />
-              <HomeRails
-                boostCountry={boostCountry}
-                onQuickAction={onQuickAction}
-                onOpenActions={onOpenActions}
-                savedIds={wantIds}
-                watchedIds={seenIds}
-                rejectedIds={rejectedIds}
-              />
             </div>
           </div>
         </div>
