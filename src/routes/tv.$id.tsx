@@ -15,6 +15,7 @@ import {
 } from "@/lib/seo";
 import { breadcrumbJsonLd, tvJsonLd } from "@/lib/jsonld";
 import { mediaSlug, parseMediaId } from "@/lib/slug";
+import { ssrBudget } from "@/lib/ssrBudget";
 
 export const Route = createFileRoute("/tv/$id")({
   loader: async ({ context, params }) => {
@@ -39,12 +40,19 @@ export const Route = createFileRoute("/tv/$id")({
       throw e;
     }
     if (!data) throw notFound();
-    // Warm the "Appears in" shelf links so they land in the server-rendered
-    // HTML. As a client-only query they existed for people and not for a
-    // crawler, which left the 635 /best/ pages reachable from one hub and
-    // nowhere else. Inception ranks in ten shelves and linked to none of them.
-    // Non-blocking: a slow shelf lookup must not hold the page up.
-    void context.queryClient.prefetchQuery(appearsInQueryOptions(`tv-${id}`));
+    // Fill the "Appears in" shelf links before the page renders, so they exist
+    // in the server-rendered HTML. As a client-only query they existed for
+    // people and not for a crawler, which left the 635 /best/ pages reachable
+    // from one hub and nowhere else: Inception ranks in ten shelves and its
+    // HTML linked to none of them.
+    //
+    // This has to be awaited. A fire-and-forget prefetch returns before the
+    // query resolves, the render finds nothing, and the links are missing from
+    // the HTML exactly as before, which is how the first attempt at this fix
+    // shipped and did nothing. The budget keeps a slow shelf lookup from
+    // holding the page up: on a timeout the module simply renders client-side,
+    // which is where it started.
+    await ssrBudget(context.queryClient.prefetchQuery(appearsInQueryOptions(`tv-${id}`)), 800);
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
     if (data?.title) {
       const canonical = mediaSlug(id, data.title);
