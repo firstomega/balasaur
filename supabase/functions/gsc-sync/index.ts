@@ -14,7 +14,7 @@
 // Actions:
 //   {"action":"sites"}   list properties this service account can read
 //   {"action":"sync","days":N}  pull the last N days of performance rows
-//   {"action":"inspect","urls":[...]}  per-URL index status
+//   {"action":"inspect","urls":[...],"store":bool}  per-URL index status
 //   {"action":"totals","days":N}  same window at date+page grain, unfiltered
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -136,21 +136,64 @@ Deno.serve(async (req) => {
     const site = await resolveSite(token, params.site);
     const enc = encodeURIComponent(site);
 
+    // {"action":"inspect","urls":[...]}          read index status, return it
+    // {"action":"inspect","urls":[...],"store":true}  also write a snapshot
+    //
+    // Whether Google has crawled a page moves in days; impressions take weeks
+    // and at this volume are mostly noise. Storing the snapshot is how a change
+    // gets judged before the impression data catches up.
     if (action === "inspect") {
       const urls = (params.urls ?? []) as string[];
       const out: unknown[] = [];
+      const rows: Record<string, unknown>[] = [];
+      const checkedAt = new Date().toISOString();
       for (const url of urls.slice(0, 25)) {
         try {
-          const r = await gsc(token, "v1/urlInspection/index:inspect", {
+          const r = (await gsc(token, "v1/urlInspection/index:inspect", {
             inspectionUrl: url,
             siteUrl: site,
-          });
+          })) as {
+            inspectionResult?: {
+              indexStatusResult?: Record<string, string | undefined>;
+            };
+          };
           out.push({ url, result: r });
+          const s = r.inspectionResult?.indexStatusResult ?? {};
+          rows.push({
+            checked_at: checkedAt,
+            url,
+            family: url.includes("/best/")
+              ? "collection"
+              : url.includes("/person/")
+                ? "person"
+                : url.includes("/movie/")
+                  ? "movie"
+                  : url.includes("/tv/")
+                    ? "tv"
+                    : "page",
+            verdict: s.verdict ?? null,
+            coverage_state: s.coverageState ?? null,
+            last_crawl: s.lastCrawlTime ?? null,
+            robots_state: s.robotsTxtState ?? null,
+            google_canonical: s.googleCanonical ?? null,
+          });
         } catch (e) {
           out.push({ url, error: String(e) });
         }
       }
-      return Response.json({ ok: true, site, inspections: out });
+
+      if (params.store && rows.length > 0) {
+        const supabase = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const { error } = await supabase.from("index_status").upsert(rows, {
+          onConflict: "checked_at,url",
+        });
+        if (error) throw new Error(`upsert: ${error.message}`);
+      }
+
+      return Response.json({ ok: true, site, stored: !!params.store, inspections: out });
     }
 
     if (action === "sync") {
@@ -219,8 +262,11 @@ Deno.serve(async (req) => {
     // is withheld, so this is the table to judge progress by.
     if (action === "totals") {
       const days = Math.min(Number(params.days ?? 480), 480);
-      const end = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
-      const start = new Date(Date.now() - (days + 3) * 86_400_000).toISOString().slice(0, 10);
+      // Yesterday, not three days ago: with dataState "all" there is data to
+      // read that recently, and the whole point of this action is to see
+      // whether a change did anything without waiting most of a week.
+      const end = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+      const start = new Date(Date.now() - (days + 1) * 86_400_000).toISOString().slice(0, 10);
 
       const rows: Record<string, unknown>[] = [];
       let startRow = 0;
@@ -231,7 +277,11 @@ Deno.serve(async (req) => {
           dimensions: ["date", "page"],
           rowLimit: 25000,
           startRow,
-          dataState: "final",
+          // "all" includes the last day or two that Google has not finalized.
+          // Those numbers can still move, but waiting three days to see whether
+          // a change did anything is worse than reading a provisional figure
+          // and knowing it is provisional.
+          dataState: "all",
         })) as {
           rows?: {
             keys: string[];
