@@ -84,8 +84,15 @@ function PrivacyPage() {
               </li>
               <li>
                 We use third-party infrastructure to host the Service, store data, and authenticate
-                users (including Supabase). We may use analytics and, in the future, advertising and
-                payment providers, which process data per their own policies.
+                users (including Supabase). With your consent we use Google Analytics and PostHog to
+                measure usage, and in the future we may use advertising and payment providers. Each
+                processes data per its own policies.
+              </li>
+              <li>
+                PostHog records anonymous session replays: the pages visited and where on them you
+                clicked or scrolled. Anything you type is masked and never recorded, and replays are
+                not linked to your account. Recording happens only with your consent and stops the
+                moment you withdraw it.
               </li>
             </ul>
           </Section>
@@ -94,9 +101,9 @@ function PrivacyPage() {
             <p>
               We use cookies and similar technologies. Strictly necessary cookies are required for
               the Service to function (e.g., keeping you signed in and remembering your cookie
-              choices). With your consent, we also use non-essential cookies for analytics and, in
-              the future, advertising. You can manage your choices through our cookie banner at any
-              time.
+              choices). With your consent, we also use non-essential cookies for analytics, which
+              includes recognising you as a returning visitor, and in the future for advertising.
+              You can manage your choices through our cookie banner at any time.
             </p>
           </Section>
 
