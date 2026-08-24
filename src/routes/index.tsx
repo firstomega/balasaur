@@ -117,13 +117,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+          "Movies and TV scored 0 to 100 by blending IMDb, Rotten Tomatoes, Metacritic and TMDB. Filter by service, genre, year or score to find what to watch tonight.",
       },
       { property: "og:title", content: "Balasaur: Your Personal Entertainment Database" },
       {
         property: "og:description",
         content:
-          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+          "Movies and TV scored 0 to 100 by blending IMDb, Rotten Tomatoes, Metacritic and TMDB. Filter by service, genre, year or score to find what to watch tonight.",
       },
       { property: "og:url", content: SITE_ORIGIN + "/" },
     ],
