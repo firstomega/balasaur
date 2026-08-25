@@ -107,3 +107,14 @@ export function stopPostHog(): void {
   window.posthog?.opt_out_capturing();
   lastTrackedPath = null;
 }
+
+/** Record a product event. No-ops without consent; loads PostHog on the first
+ *  eligible call, exactly like page views. Event names are the funnel:
+ *  night_room_created, night_member_joined, night_prefs_ready, night_rolled,
+ *  night_marked_watched, night_winner_picked, night_signup_nudge_shown. */
+export function capturePostHogEvent(event: string, props?: Record<string, unknown>): void {
+  if (typeof window === "undefined") return;
+  if (getConsent() !== "all") return;
+  injectPostHog();
+  window.posthog?.capture(event, props);
+}

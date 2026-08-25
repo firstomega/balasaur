@@ -20,6 +20,7 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as NightRouteImport } from './routes/night'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as ListsRouteImport } from './routes/lists'
@@ -33,6 +34,7 @@ import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TvIdRouteImport } from './routes/tv.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
+import { Route as NightCodeRouteImport } from './routes/night.$code'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
 import { Route as BestSlugRouteImport } from './routes/best.$slug'
 import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
@@ -92,6 +94,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PlayRoute = PlayRouteImport.update({
   id: '/play',
   path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NightRoute = NightRouteImport.update({
+  id: '/night',
+  path: '/night',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MethodologyRoute = MethodologyRouteImport.update({
@@ -160,6 +167,11 @@ const PersonIdRoute = PersonIdRouteImport.update({
   path: '/person/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NightCodeRoute = NightCodeRouteImport.update({
+  id: '/$code',
+  path: '/$code',
+  getParentRoute: () => NightRoute,
+} as any)
 const MovieIdRoute = MovieIdRouteImport.update({
   id: '/movie/$id',
   path: '/movie/$id',
@@ -199,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
+  '/night': typeof NightRouteWithChildren
   '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -212,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
   '/movie/$id': typeof MovieIdRoute
+  '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
@@ -230,6 +244,7 @@ export interface FileRoutesByTo {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
+  '/night': typeof NightRouteWithChildren
   '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -243,6 +258,7 @@ export interface FileRoutesByTo {
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
   '/movie/$id': typeof MovieIdRoute
+  '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
@@ -262,6 +278,7 @@ export interface FileRoutesById {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
+  '/night': typeof NightRouteWithChildren
   '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -275,6 +292,7 @@ export interface FileRoutesById {
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
   '/movie/$id': typeof MovieIdRoute
+  '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
@@ -295,6 +313,7 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
+    | '/night'
     | '/play'
     | '/privacy'
     | '/profile'
@@ -308,6 +327,7 @@ export interface FileRouteTypes {
     | '/watched'
     | '/best/$slug'
     | '/movie/$id'
+    | '/night/$code'
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
@@ -326,6 +346,7 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
+    | '/night'
     | '/play'
     | '/privacy'
     | '/profile'
@@ -339,6 +360,7 @@ export interface FileRouteTypes {
     | '/watched'
     | '/best/$slug'
     | '/movie/$id'
+    | '/night/$code'
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
@@ -357,6 +379,7 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
+    | '/night'
     | '/play'
     | '/privacy'
     | '/profile'
@@ -370,6 +393,7 @@ export interface FileRouteTypes {
     | '/watched'
     | '/best/$slug'
     | '/movie/$id'
+    | '/night/$code'
     | '/person/$id'
     | '/tv/$id'
     | '/api/public/hooks/backfill-media'
@@ -389,6 +413,7 @@ export interface RootRouteChildren {
   ListsRoute: typeof ListsRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   MethodologyRoute: typeof MethodologyRoute
+  NightRoute: typeof NightRouteWithChildren
   PlayRoute: typeof PlayRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -488,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/night': {
+      id: '/night'
+      path: '/night'
+      fullPath: '/night'
+      preLoaderRoute: typeof NightRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/methodology': {
       id: '/methodology'
       path: '/methodology'
@@ -579,6 +611,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PersonIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/night/$code': {
+      id: '/night/$code'
+      path: '/$code'
+      fullPath: '/night/$code'
+      preLoaderRoute: typeof NightCodeRouteImport
+      parentRoute: typeof NightRoute
+    }
     '/movie/$id': {
       id: '/movie/$id'
       path: '/movie/$id'
@@ -617,6 +656,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface NightRouteChildren {
+  NightCodeRoute: typeof NightCodeRoute
+}
+
+const NightRouteChildren: NightRouteChildren = {
+  NightCodeRoute: NightCodeRoute,
+}
+
+const NightRouteWithChildren = NightRoute._addFileChildren(NightRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HandleRoute: HandleRoute,
@@ -630,6 +679,7 @@ const rootRouteChildren: RootRouteChildren = {
   ListsRoute: ListsRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   MethodologyRoute: MethodologyRoute,
+  NightRoute: NightRouteWithChildren,
   PlayRoute: PlayRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,

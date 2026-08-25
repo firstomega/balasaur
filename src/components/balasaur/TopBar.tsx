@@ -26,14 +26,15 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
-        {/* Mobile menu — the phone bar can't fit four nav links beside search,
-            so places live in a drawer and the search row breathes. */}
+        {/* Mobile and tablet menu — below 1024px the bar can't fit five nav
+            links beside search, so places live in a drawer and the search row
+            breathes. */}
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
             <button
               type="button"
               aria-label="Menu"
-              className="-ml-1 inline-flex h-8 w-8 items-center justify-center rounded-[5px] text-text-bright hover:text-primary md:hidden"
+              className="-ml-1 inline-flex h-8 w-8 items-center justify-center rounded-[5px] text-text-bright hover:text-primary lg:hidden"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -58,6 +59,7 @@ export function TopBar() {
               />
               <MenuLink to="/calendar" label="Calendar" onNavigate={() => setMenuOpen(false)} />
               <MenuLink to="/play" label="Play" onNavigate={() => setMenuOpen(false)} />
+              <MenuLink to="/night" label="Movie Night" onNavigate={() => setMenuOpen(false)} />
               <div className="mx-4 my-2 border-t border-border" />
               <MenuLink
                 to="/watched"
@@ -86,18 +88,21 @@ export function TopBar() {
         </a>
 
         {/* Primary nav — places (content spaces). Personal actions stay right.
-            Hidden here on mobile: the bar can't fit wordmark + nav + actions on
-            a phone, and forcing it made the whole PAGE scroll sideways. It
-            moves to the second row instead. */}
-        <nav aria-label="Primary" className="hidden items-center gap-0.5 md:flex">
+            Hidden below 1024px: five places plus wordmark, search, and actions
+            outgrow a tablet row, and forcing it made the whole PAGE scroll
+            sideways. The places move to the drawer instead. */}
+        <nav aria-label="Primary" className="hidden items-center gap-0.5 lg:flex">
           <NavPlace to="/" label="Browse" exact />
           <NavPlace to="/collections" label="Collections" />
           <NavPlace to="/calendar" label="Calendar" />
           <NavPlace to="/play" label="Play" />
+          <NavPlace to="/night" label="Movie Night" />
         </nav>
 
-        {/* Center search (desktop only; mobile gets a full-width row below) */}
-        <div className="mx-auto hidden w-full max-w-md md:block">
+        {/* Center search (tablet and up; phones get a full-width row below).
+            min-w-0 lets it give ground first, so the bar itself can never push
+            the page wider than the screen. */}
+        <div className="mx-auto hidden w-full min-w-0 max-w-md md:block">
           <TopBarSearch />
         </div>
 
