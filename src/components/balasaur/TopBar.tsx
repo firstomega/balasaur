@@ -58,6 +58,7 @@ export function TopBar() {
               />
               <MenuLink to="/calendar" label="Calendar" onNavigate={() => setMenuOpen(false)} />
               <MenuLink to="/play" label="Play" onNavigate={() => setMenuOpen(false)} />
+              <MenuLink to="/night" label="Movie Night" onNavigate={() => setMenuOpen(false)} />
               <div className="mx-4 my-2 border-t border-border" />
               <MenuLink
                 to="/watched"
@@ -94,6 +95,7 @@ export function TopBar() {
           <NavPlace to="/collections" label="Collections" />
           <NavPlace to="/calendar" label="Calendar" />
           <NavPlace to="/play" label="Play" />
+          <NavPlace to="/night" label="Movie Night" />
         </nav>
 
         {/* Center search (desktop only; mobile gets a full-width row below) */}
