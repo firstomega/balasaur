@@ -64,12 +64,23 @@ function NightRoomPage() {
   const { user } = useAuth();
   const { statuses, ready: statusesReady, recordStatus } = useUserStatus();
 
-  const [token, setToken] = useState<string | null>(() => getNightToken(upper));
+  // The token lives in localStorage, which the server cannot read. Reading it
+  // during the first render made the server send the invite gate and the
+  // browser draw the room, so every refresh flashed "You are invited" at
+  // someone already in the room. It is read once, after mount, instead.
+  const [token, setToken] = useState<string | null>(null);
+  const [tokenRead, setTokenRead] = useState(false);
   const [state, setState] = useState<NightState | null>(null);
   const [gone, setGone] = useState(false);
+  const [lost, setLost] = useState(false);
   const [online, setOnline] = useState<string[]>([]);
   const channelRef = useRef<ReturnType<typeof joinNightChannel> | null>(null);
   const submittedHistory = useRef(false);
+
+  useEffect(() => {
+    setToken(getNightToken(upper));
+    setTokenRead(true);
+  }, [upper]);
 
   const refetch = useCallback(async () => {
     if (!token) return;
@@ -79,9 +90,25 @@ function NightRoomPage() {
         setGone(true);
         return;
       }
-      if (!s.error) setState(s);
+      // The stored token is not a member of this room: a cleared database, an
+      // expired room, or a code reused. Silently retrying leaves the page on
+      // "Opening the room" forever, so say so and offer the way back in.
+      if (s.error === "not_member") {
+        setLost(true);
+        return;
+      }
+      if (!s.error) {
+        setLost(false);
+        setState(s);
+      }
     } catch {
-      // transient; the interval and pokes will retry
+      // A throw here used to be swallowed whole, which left a first load stuck
+      // on "Opening the room" with no message. Keep retrying, but only claim
+      // to be lost once nothing has ever loaded.
+      setState((prev) => {
+        if (!prev) setLost(true);
+        return prev;
+      });
     }
   }, [upper, token]);
 
@@ -132,9 +159,16 @@ function NightRoomPage() {
     });
   }, [token, statusesReady, statuses, refetch]);
 
+  // Every caller fires this without awaiting, so an unhandled rejection used to
+  // skip the poke and the refetch and leave the tapped chip un-lit with no
+  // explanation. Failure now says so and still re-syncs.
   const write = useCallback(
     async (fn: () => Promise<unknown>) => {
-      await fn();
+      try {
+        await fn();
+      } catch {
+        toast("That did not save. Check your connection.", { duration: 2400 });
+      }
       channelRef.current?.poke();
       await refetch();
     },
@@ -160,15 +194,29 @@ function NightRoomPage() {
     );
   }
 
-  if (!token) {
+  // Until the stored token has been read, the server and this browser must
+  // agree on what to draw, so both draw the same neutral line.
+  if (!tokenRead) {
+    return (
+      <Shell>
+        <p className="py-16 text-center font-mono text-[12px] uppercase tracking-wider text-text-muted">
+          Opening the room
+        </p>
+      </Shell>
+    );
+  }
+
+  if (!token || lost) {
     return (
       <Shell>
         <JoinGate
           code={upper}
           isSignedIn={!!user}
+          lost={lost}
           onJoined={(t) => {
             setNightToken(upper, t);
             setToken(t);
+            setLost(false);
           }}
         />
       </Shell>
@@ -228,10 +276,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 function JoinGate({
   code,
   isSignedIn,
+  lost = false,
   onJoined,
 }: {
   code: string;
   isSignedIn: boolean;
+  lost?: boolean;
   onJoined: (token: string) => void;
 }) {
   const [name, setName] = useState(() => getSavedNightName());
@@ -274,10 +324,14 @@ function JoinGate({
       <div className="mb-5 flex items-center gap-2.5">
         <DinoMark className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-[17px] font-semibold text-text-bright">You are invited</h1>
+          <h1 className="text-[17px] font-semibold text-text-bright">
+            {lost ? "Back in you go" : "You are invited"}
+          </h1>
           <p className="text-[12.5px] text-text-muted">
-            Room <span className="font-mono tracking-widest text-text-bright">{code}</span>. Pick a
-            name and jump in.
+            Room <span className="font-mono tracking-widest text-text-bright">{code}</span>.{" "}
+            {lost
+              ? "Your spot in this room expired. Rejoin with a name."
+              : "Pick a name and jump in."}
           </p>
         </div>
       </div>
@@ -412,19 +466,26 @@ function Wizard({
   collapsed: boolean;
 }) {
   const { you, members, room } = state;
-  const [open, setOpen] = useState(!collapsed);
+  // Someone who joins after the host has rolled has answered nothing, so
+  // collapsing their wizard hands them "Adjust answers" over a form they never
+  // filled in. Only fold it away once they have actually said something.
+  const hasAnswered =
+    you.genres_want.length > 0 ||
+    you.genres_less.length > 0 ||
+    Object.keys(you.signals ?? {}).length > 0;
+  const [open, setOpen] = useState(!collapsed || !hasAnswered);
   useEffect(() => {
     // Collapse when results arrive; a re-roll adjustment reopens by hand.
-    if (collapsed) setOpen(false);
-  }, [collapsed]);
+    if (collapsed && hasAnswered) setOpen(false);
+  }, [collapsed, hasAnswered]);
 
-  const others = members.filter((m) => !m.is_you);
-  const memberIndex = new Map(members.map((m, i) => [m.display_name, i] as const));
+  // Colour comes from each member's own position in the room, not from their
+  // name. Two guests who both left the name blank are both "Anonymous Raptor",
+  // and a name-keyed map collapsed them onto one colour.
+  const others = members.map((m, i) => ({ ...m, seat: i })).filter((m) => !m.is_you);
 
   const ringsFor = (genre: string, list: "genres_want" | "genres_less") =>
-    others
-      .filter((m) => m[list].includes(genre))
-      .map((m) => nightColor(memberIndex.get(m.display_name) ?? 0));
+    others.filter((m) => m[list].includes(genre)).map((m) => nightColor(m.seat));
 
   const toggleGenre = (genre: string, list: "want" | "less") => {
     const current = list === "want" ? you.genres_want : you.genres_less;
@@ -525,7 +586,7 @@ function Wizard({
           const mine = you.signals[key] === o.value;
           const pickedBy = others
             .filter((m) => m.signals?.[key] === o.value)
-            .map((m) => nightColor(memberIndex.get(m.display_name) ?? 0));
+            .map((m) => nightColor(m.seat));
           return (
             <button
               key={o.value}
@@ -713,7 +774,13 @@ function RollButton({
           toast("The reveal is still running.", { duration: 1800 });
         } else if (res.error === "roll_limit") {
           toast("That is a lot of rolls. Start a fresh room.", { duration: 2400 });
-        } else if (!res.error) {
+        } else if (res.error === "host_only") {
+          toast("Only the host can roll.", { duration: 2000 });
+        } else if (res.error) {
+          // not_member and anything else the server grows later. Silence here
+          // just re-enabled the button and looked broken.
+          toast("Could not roll. Try again.", { duration: 2000 });
+        } else {
           capturePostHogEvent("night_rolled", {
             mode: room.mode,
             roll_seq: res.roll_seq,
@@ -758,9 +825,13 @@ function Calculating({ state, onDone }: { state: NightState; onDone: () => void 
 
   useEffect(() => {
     const lineTimer = window.setInterval(() => setLine((l) => (l + 1) % CALC_LINES.length), 900);
+    // reveal_at is the server's clock; this is the phone's. A phone running
+    // behind would animate for the whole difference while everyone else is
+    // already looking at the picks, so the wait is capped locally.
+    const at = state.room.reveal_at ? new Date(state.room.reveal_at).getTime() : 0;
+    const deadline = Date.now() + Math.min(Math.max(at - Date.now(), 0), 12_000);
     const tick = window.setInterval(() => {
-      const at = state.room.reveal_at ? new Date(state.room.reveal_at).getTime() : 0;
-      if (!doneRef.current && Date.now() >= at) {
+      if (!doneRef.current && Date.now() >= deadline) {
         doneRef.current = true;
         onDone();
       }
@@ -849,6 +920,20 @@ function Results({
             {/* Naming the picker only means something when there is more than
                 one person who could have picked. */}
             {!solo && <span className="text-text-muted"> picked by {room.winner_name}</span>}
+          </p>
+        </div>
+      )}
+
+      {/* The recommender can legitimately come back empty: a narrow service
+          list plus a media type plus everything already rolled. Without this
+          the reveal lands on a blank gap. */}
+      {items.length === 0 && (
+        <div className="rounded-[6px] border border-border bg-panel px-4 py-6 text-center">
+          <p className="text-[13px] text-text-bright">Nothing left that fits.</p>
+          <p className="mt-1 text-[12.5px] text-text-muted">
+            {room.services.length > 0
+              ? "Widen the services or the type above, then roll again."
+              : "Widen the type above, then roll again."}
           </p>
         </div>
       )}
