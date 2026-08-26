@@ -50,7 +50,9 @@ function NightEntry() {
   const { data: me } = useMyProfile();
   const [path, setPath] = useState<Path | null>(null);
   const [name, setName] = useState(() => getSavedNightName());
-  const [mediaType, setMediaType] = useState<"movie" | "tv" | "either">("either");
+  // The feature is called Movie Night, so it starts on movies. "Either" is one
+  // tap away and now comes back as a blend rather than five TV series.
+  const [mediaType, setMediaType] = useState<"movie" | "tv" | "either">("movie");
   const [services, setServices] = useState<string[]>([]);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
