@@ -18,7 +18,12 @@ import { DinoMark } from "@/components/balasaur/DinoMark";
 // Movie Night entry. Rooms are private and ephemeral, so everything under
 // /night carries noindex: a crawler has no business in someone's lobby, and
 // the crawl budget this site fought for should not be spent here.
-export const Route = createFileRoute("/night")({
+//
+// This is an INDEX route ("/night/"), not "/night". The room lives at
+// /night/$code, which makes /night its parent; a parent route renders its
+// child inside an <Outlet />. As a plain "/night" route this component had no
+// outlet, so opening a room changed the URL and rendered this page again.
+export const Route = createFileRoute("/night/")({
   head: () => {
     const url = absoluteUrl("/night");
     return {
@@ -171,19 +176,22 @@ function NightEntry() {
 
         {path && (
           <div className="mt-5 space-y-5 rounded-[6px] border border-border bg-panel p-4">
-            <label className="block">
-              <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
-                Your name in the room
-              </span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={me?.username || "Anonymous Raptor"}
-                maxLength={24}
-                className="w-full rounded-[5px] border border-border bg-background px-3 py-2 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
-              />
-            </label>
+            {/* Solo has no room to be named in, so it does not ask. */}
+            {path !== "solo" && (
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+                  Your name in the room
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={me?.username || "Anonymous Raptor"}
+                  maxLength={24}
+                  className="w-full rounded-[5px] border border-border bg-background px-3 py-2 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
+                />
+              </label>
+            )}
 
             {path === "join" ? (
               <label className="block">

@@ -20,7 +20,6 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PlayRouteImport } from './routes/play'
-import { Route as NightRouteImport } from './routes/night'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as ListsRouteImport } from './routes/lists'
@@ -32,6 +31,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NightIndexRouteImport } from './routes/night.index'
 import { Route as TvIdRouteImport } from './routes/tv.$id'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as NightCodeRouteImport } from './routes/night.$code'
@@ -96,11 +96,6 @@ const PlayRoute = PlayRouteImport.update({
   path: '/play',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NightRoute = NightRouteImport.update({
-  id: '/night',
-  path: '/night',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
   path: '/methodology',
@@ -157,6 +152,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NightIndexRoute = NightIndexRouteImport.update({
+  id: '/night/',
+  path: '/night/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TvIdRoute = TvIdRouteImport.update({
   id: '/tv/$id',
   path: '/tv/$id',
@@ -168,9 +168,9 @@ const PersonIdRoute = PersonIdRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const NightCodeRoute = NightCodeRouteImport.update({
-  id: '/$code',
-  path: '/$code',
-  getParentRoute: () => NightRoute,
+  id: '/night/$code',
+  path: '/night/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MovieIdRoute = MovieIdRouteImport.update({
   id: '/movie/$id',
@@ -211,7 +211,6 @@ export interface FileRoutesByFullPath {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
-  '/night': typeof NightRouteWithChildren
   '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -228,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
+  '/night/': typeof NightIndexRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
   '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
@@ -244,7 +244,6 @@ export interface FileRoutesByTo {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
-  '/night': typeof NightRouteWithChildren
   '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -261,6 +260,7 @@ export interface FileRoutesByTo {
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
+  '/night': typeof NightIndexRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
   '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
@@ -278,7 +278,6 @@ export interface FileRoutesById {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
-  '/night': typeof NightRouteWithChildren
   '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -295,6 +294,7 @@ export interface FileRoutesById {
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/tv/$id': typeof TvIdRoute
+  '/night/': typeof NightIndexRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
   '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
@@ -313,7 +313,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
-    | '/night'
     | '/play'
     | '/privacy'
     | '/profile'
@@ -330,6 +329,7 @@ export interface FileRouteTypes {
     | '/night/$code'
     | '/person/$id'
     | '/tv/$id'
+    | '/night/'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
     | '/api/public/v1/score'
@@ -346,7 +346,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
-    | '/night'
     | '/play'
     | '/privacy'
     | '/profile'
@@ -363,6 +362,7 @@ export interface FileRouteTypes {
     | '/night/$code'
     | '/person/$id'
     | '/tv/$id'
+    | '/night'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
     | '/api/public/v1/score'
@@ -379,7 +379,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
-    | '/night'
     | '/play'
     | '/privacy'
     | '/profile'
@@ -396,6 +395,7 @@ export interface FileRouteTypes {
     | '/night/$code'
     | '/person/$id'
     | '/tv/$id'
+    | '/night/'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
     | '/api/public/v1/score'
@@ -413,7 +413,6 @@ export interface RootRouteChildren {
   ListsRoute: typeof ListsRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   MethodologyRoute: typeof MethodologyRoute
-  NightRoute: typeof NightRouteWithChildren
   PlayRoute: typeof PlayRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -427,8 +426,10 @@ export interface RootRouteChildren {
   WatchedRoute: typeof WatchedRoute
   BestSlugRoute: typeof BestSlugRoute
   MovieIdRoute: typeof MovieIdRoute
+  NightCodeRoute: typeof NightCodeRoute
   PersonIdRoute: typeof PersonIdRoute
   TvIdRoute: typeof TvIdRoute
+  NightIndexRoute: typeof NightIndexRoute
   ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
   ApiPublicV1ScoreRoute: typeof ApiPublicV1ScoreRoute
@@ -513,13 +514,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/night': {
-      id: '/night'
-      path: '/night'
-      fullPath: '/night'
-      preLoaderRoute: typeof NightRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/methodology': {
       id: '/methodology'
       path: '/methodology'
@@ -597,6 +591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/night/': {
+      id: '/night/'
+      path: '/night'
+      fullPath: '/night/'
+      preLoaderRoute: typeof NightIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tv/$id': {
       id: '/tv/$id'
       path: '/tv/$id'
@@ -613,10 +614,10 @@ declare module '@tanstack/react-router' {
     }
     '/night/$code': {
       id: '/night/$code'
-      path: '/$code'
+      path: '/night/$code'
       fullPath: '/night/$code'
       preLoaderRoute: typeof NightCodeRouteImport
-      parentRoute: typeof NightRoute
+      parentRoute: typeof rootRouteImport
     }
     '/movie/$id': {
       id: '/movie/$id'
@@ -656,16 +657,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface NightRouteChildren {
-  NightCodeRoute: typeof NightCodeRoute
-}
-
-const NightRouteChildren: NightRouteChildren = {
-  NightCodeRoute: NightCodeRoute,
-}
-
-const NightRouteWithChildren = NightRoute._addFileChildren(NightRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HandleRoute: HandleRoute,
@@ -679,7 +670,6 @@ const rootRouteChildren: RootRouteChildren = {
   ListsRoute: ListsRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   MethodologyRoute: MethodologyRoute,
-  NightRoute: NightRouteWithChildren,
   PlayRoute: PlayRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
@@ -693,8 +683,10 @@ const rootRouteChildren: RootRouteChildren = {
   WatchedRoute: WatchedRoute,
   BestSlugRoute: BestSlugRoute,
   MovieIdRoute: MovieIdRoute,
+  NightCodeRoute: NightCodeRoute,
   PersonIdRoute: PersonIdRoute,
   TvIdRoute: TvIdRoute,
+  NightIndexRoute: NightIndexRoute,
   ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
   ApiPublicV1ScoreRoute: ApiPublicV1ScoreRoute,

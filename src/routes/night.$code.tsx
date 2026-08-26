@@ -573,7 +573,9 @@ function Wizard({
           Less in the mood for
         </span>
         <p className="mb-2 text-[11.5px] text-text-dim">
-          Not a ban. If someone else wants it badly enough, it can still win.
+          {room.mode === "solo"
+            ? "Not a ban. It drops down the list, it does not disappear."
+            : "Not a ban. If someone else wants it badly enough, it can still win."}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {UNIFIED_GENRES.map((g) => genreChip(g, "less"))}
@@ -800,6 +802,7 @@ function Results({
   recordStatus: (id: string, record: ReturnType<typeof recordForWatched>, item?: MediaItem) => void;
 }) {
   const { room, roll } = state;
+  const solo = room.mode === "solo";
   const [authOpen, setAuthOpen] = useState(false);
   const [seenIds, setSeenIds] = useState<string[]>([]);
   const nudgeShown = useRef(false);
@@ -843,7 +846,9 @@ function Results({
         <div className="rounded-[6px] border border-[#9fe6a0]/60 bg-[#9fe6a0]/10 px-4 py-3">
           <p className="text-[13.5px] text-text-bright">
             Tonight: <span className="font-semibold">{winner.title}</span>
-            <span className="text-text-muted"> picked by {room.winner_name}</span>
+            {/* Naming the picker only means something when there is more than
+                one person who could have picked. */}
+            {!solo && <span className="text-text-muted"> picked by {room.winner_name}</span>}
           </p>
         </div>
       )}
@@ -852,6 +857,7 @@ function Results({
         <ResultCard
           key={item.media_id}
           item={item}
+          solo={solo}
           isWinner={item.media_id === room.winner_media_id}
           seen={seenIds.includes(item.media_id)}
           onSeen={() => markSeen(item)}
@@ -880,12 +886,14 @@ function Results({
 
 function ResultCard({
   item,
+  solo,
   isWinner,
   seen,
   onSeen,
   onPick,
 }: {
   item: NightRollItem;
+  solo: boolean;
   isWinner: boolean;
   seen: boolean;
   onSeen: () => void;
@@ -895,19 +903,27 @@ function ResultCard({
   const href = `/${item.media_type === "tv" ? "tv" : "movie"}/${slug}`;
   const r = item.reasons;
 
+  // The reasons come back keyed by member name, which is the right shape for a
+  // room and the wrong one for a person sitting alone: "on Anonymous Raptor's
+  // watchlist" is nobody's idea of a reason. Solo says "you".
   const chips: { text: string; tone: "want" | "info" | "held" }[] = [];
   if (r.wanted_by.length > 0) {
-    chips.push({ text: `On ${r.wanted_by.join(" and ")}'s watchlist`, tone: "want" });
+    chips.push({
+      text: solo ? "On your watchlist" : `On ${r.wanted_by.join(" and ")}'s watchlist`,
+      tone: "want",
+    });
   }
   for (const g of r.genres.slice(0, 2)) {
     chips.push({
-      text: `${g.genre}, for ${g.members.join(" and ")}`,
+      text: solo ? `${g.genre}, for you` : `${g.genre}, for ${g.members.join(" and ")}`,
       tone: "info",
     });
   }
   for (const h of r.held_back.slice(0, 1)) {
     chips.push({
-      text: `${h.genre}, which ${h.count === 1 ? "one of you" : `${h.count} of you`} preferred less`,
+      text: solo
+        ? `${h.genre}, which you preferred less`
+        : `${h.genre}, which ${h.count === 1 ? "one of you" : `${h.count} of you`} preferred less`,
       tone: "held",
     });
   }
