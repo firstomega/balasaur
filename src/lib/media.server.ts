@@ -502,11 +502,16 @@ export async function listSitemapEntries(
   //
   // Ordered by RATING COUNT, not TMDB popularity. Popularity measures what is
   // trending on TMDB this week, which is uncorrelated with what people search
-  // for: under it, sitemap position 500 was a title with 19 ratings, 7,811 of
-  // the 10,000 slots went to titles under 50 ratings, and 683 titles with
-  // 1,000+ ratings were left out of the sitemap entirely. Rating count is a
-  // direct proxy for how many people have seen a title, so it approximates
-  // search demand. Measured 2026-08-14.
+  // for: under it, 896 of the 2,500 submitted URLs went to titles with under
+  // 50 ratings, while 4,749 titles with 1,000+ ratings were left out of the
+  // sitemap entirely, Guardians of the Galaxy and John Wick among them. Rating
+  // count is a direct proxy for how many people have seen a title, so it
+  // approximates search demand. Under it every one of the 2,500 slots goes to
+  // a title with 1,000+ ratings and the weakest submitted has 2,426. Measured
+  // against production 2026-08-27.
+  //
+  // The order clause below is the single decision this whole function exists
+  // to get right. Do not change it without re-running those counts.
   //
   // Paged in 1,000-row chunks: PostgREST clamps any single request to its
   // max-rows setting (default 1000), which silently capped the old
@@ -523,12 +528,13 @@ export async function listSitemapEntries(
     const { data, error } = await supabaseAdmin
       .from("indexable_media")
       .select("media_id, media_type, title, updated_at")
-      // Ordered by popularity, not vote_count. `vote_count desc nulls last`
-      // sorted all 23,436 titles with no vote data behind every measured one,
-      // so the unmeasured never reached the cap even when they were ranking.
-      // Popularity is present on nearly everything and is TMDB's own measure
-      // of current interest, which is what this list is trying to approximate.
-      .order("popularity", { ascending: false, nullsFirst: false })
+      // Ordered by RATING COUNT. This was briefly reverted to popularity on the
+      // grounds that "vote_count desc nulls last sorted all 23,436 titles with
+      // no vote data behind every measured one". That count is from the media
+      // table, not from this view: indexable_media requires corroboration, so
+      // only 43 of its 61,673 rows have a null vote_count and 1,347 have none
+      // or zero. The objection does not apply here and the revert cost more
+      // than it saved. Measured 2026-08-27.
       .order("vote_count", { ascending: false, nullsFirst: false })
       .order("media_id", { ascending: true }) // stable tiebreak across pages
       .range(offset, Math.min(offset + PAGE, limit) - 1);
