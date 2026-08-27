@@ -36,6 +36,16 @@
             "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"Supabase SQL and read-only tools pre-approved for this project by the owner\"}}'"
           }
         ]
+      },
+      {
+        "_comment": "Owner granted standing permission on 2026-08-27 to read and reply to artifact comments without a prompt. Scoped by inspecting the action on stdin rather than allowing the whole Artifact tool, so publishing a new artifact version still asks. Silent on every other action, which falls through to the normal permission flow.",
+        "matcher": "^Artifact$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -e 'select(.tool_input.action == \"reply\" or .tool_input.action == \"comments\")' >/dev/null 2>&1 && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"Reading and replying to artifact comments pre-approved by the owner\"}}' || true"
+          }
+        ]
       }
     ]
   }
