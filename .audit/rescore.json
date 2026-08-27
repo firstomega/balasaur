@@ -1,0 +1,82 @@
+{
+ "AdSense readiness": {
+  "before": 3.0,
+  "now": 3.5,
+  "since": "Operator named, duplicate footers gone, weights published, the false median corrected. But the blocker is untouched: /privacy and /terms still render six literal template placeholders, the published contact address is a domain nobody owns, and 24,797 of 61,673 title pages still carry a synopsis under 200 characters."
+ },
+ "Discovery and growth": {
+  "before": 3.0,
+  "now": 3.5,
+  "since": "The headline now names the score, and a guest can finally see the library they built. Nothing else moved: no email capture, Movie Night still noindex by design, and 2 accounts with 109 ratings between them."
+ },
+ "Legal and privacy compliance": {
+  "before": 4.0,
+  "now": 5.0,
+  "since": "Sentire Labs LLC is now named as operator and data controller, which was an outright GDPR failure before. Consent version bumped when the banner wording changed. Still capped by the placeholders and by a contact address that cannot receive an erasure request."
+ },
+ "User flow and friction": {
+  "before": 4.0,
+  "now": 6.5,
+  "since": "All three named defects are fixed: the cookie bar no longer covers the primary button or the footer links, the My Lists empty states point at a route that exists, and a guest sees their own library instead of a sign-in wall. The 360x800 mis-tap remains."
+ },
+ "UI consistency": {
+  "before": 5.0,
+  "now": 5.5,
+  "since": "Five pages stopped printing the footer twice. The rest of the category was not touched."
+ },
+ "Responsiveness and mobile": {
+  "before": 5.0,
+  "now": 6.0,
+  "since": "The consent bar now reserves its own height, so nothing is trapped underneath it at full scroll, and the layout gate can actually run in a remote session for the first time. At 360x800 the primary button is still under the bar."
+ },
+ "Edge case resilience and observability": {
+  "before": 5.0,
+  "now": 5.5,
+  "since": "The cache-repair path now heals per-source ratings, which stops a rolling few percent of top pages silently losing their rating markup. Error boundaries and pipeline alerting are unchanged."
+ },
+ "Database and API scalability": {
+  "before": 5.0,
+  "now": 6.0,
+  "since": "Two SECURITY DEFINER maintenance functions, each doing a full-table pass, are no longer callable by anyone holding the key in the site's JavaScript. That was the cheapest way to make the single shared database slow."
+ },
+ "SEO and crawlability": {
+  "before": 4.5,
+  "now": 7.0,
+  "since": "The largest movement in the audit. The sitemap now ranks by rating count, so all 2,500 slots go to titles with 1,000+ ratings instead of 896 going to titles under 50. 1,467 accented titles became announceable. 19 duplicate collection pairs are gone. All 182 person collections are in the crawlable hub. Filtered views stopped claiming to be paginated views they are not, and the structured data points at canonical URLs. What holds it back from higher: the person sitemap loop still stops at 5,000, and the title budget of 2,500 now under-serves the 5,450 titles that clear the bar."
+ },
+ "State persistence and recovery": {
+  "before": 5.5,
+  "now": 6.0,
+  "since": "A guest's library is now reachable rather than hidden, which was the visible half of this category. The storage layer itself is unchanged."
+ },
+ "Dependency health and code bloat": {
+  "before": 5.5,
+  "now": 5.5,
+  "since": "Untouched. No dependency was added or removed; Playwright is still installed per-run rather than shipped."
+ },
+ "Content and copy consistency": {
+  "before": 5.5,
+  "now": 6.5,
+  "since": "The false catalog median is gone from 633 pages and now carries the query that produced it. The homepage headline says something no competitor could say. /methodology publishes the weights it had only promised. Still open: the page title contradicts the new headline, and 'Balasaur learns your taste' ships against 109 ratings."
+ },
+ "Performance and perceived latency": {
+  "before": 6.5,
+  "now": 6.5,
+  "since": "Untouched by this work."
+ },
+ "Code quality and correctness": {
+  "before": 6.5,
+  "now": 7.0,
+  "since": "131 tests, up from 121, and the new ones assert rules rather than literals. Two tests that would have stayed green while wrong values shipped were rewritten against their constants, and the sitemap ordering now has a test proven to fail when the revert is reintroduced."
+ },
+ "Security": {
+  "before": 5.5,
+  "now": 7.5,
+  "since": "Both findings closed. 14 catalog and infrastructure tables no longer grant anon or authenticated anything, so DELETE across 77,672 rows and 6.8 GB of pageable cache are gone, and the two maintenance functions are revoked. Verified the browser only ever needed user_media_status."
+ },
+ "Accessibility": {
+  "before": 7.0,
+  "now": 7.0,
+  "since": "Untouched by this work."
+ }
+}

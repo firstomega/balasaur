@@ -42,10 +42,7 @@ tr:last-child td{border-bottom:none}
 .ef{font-family:"JetBrains Mono",monospace;color:var(--mut);text-align:center;width:34px}
 .chip{font-family:"JetBrains Mono",monospace;font-size:11px;padding:2px 6px;border-radius:3px;font-weight:500}
 .s5,.s4{background:var(--critbg);color:var(--crit)}.s3{background:var(--weakbg);color:var(--weak)}.s2{background:var(--surf2);color:var(--mut)}
-.stc{white-space:nowrap}
-.st{font-family:"JetBrains Mono",monospace;font-size:10.5px;padding:2px 7px;border-radius:3px;font-weight:500;letter-spacing:.03em}
 .done{background:var(--okbg);color:var(--ok)}.todo{background:var(--surf2);color:var(--dim)}
-.sha{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim);margin-top:3px}
 details.cat{background:var(--surf);border:1px solid var(--rule);border-left:3px solid;border-radius:6px;margin-bottom:8px}
 details.cat summary{cursor:pointer;padding:13px 16px;display:flex;align-items:baseline;gap:13px;list-style:none}
 details.cat summary::-webkit-details-marker{display:none}
@@ -64,3 +61,8 @@ ul{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:6px;font-si
 .note{background:var(--surf);border:1px solid var(--rule);border-radius:8px;padding:18px 20px;font-size:14px}
 .note ul{font-size:13.5px;margin-top:8px}
 b{color:var(--ink);font-weight:600}
+.sc-d.up{color:var(--ok);font-style:normal;font-family:"JetBrains Mono",monospace;font-size:11px}
+.since{background:var(--okbg);border-left:3px solid var(--ok);padding:10px 13px;border-radius:0 5px 5px 0;font-size:14px;margin-bottom:12px}
+.orig{color:var(--mut);font-size:14px}
+
+.fine{font-size:12.5px;color:var(--dim);line-height:1.6;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
