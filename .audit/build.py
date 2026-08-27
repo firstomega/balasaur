@@ -86,7 +86,7 @@ open(os.path.join(D,'..','/tmp/audit.html'.lstrip('/')) if False else '/tmp/audi
 <section><h2>Scores</h2><div class="grid">{cards}</div></section>
 <div class="risk"><h2>The biggest risk</h2><p>{e(risk)}</p></div>
 <section><h2>What to do, in order</h2>
-<p class="lede" style="font-size:15px">What is left. Seventeen of the first pass’s twenty items are fixed and have been removed from this table rather than marked done; the pull request is the record of those. Two of the eleven below are carried over. Nine are new, found while re-measuring. Ranked by impact divided by effort. Effort S is under an hour.</p>
+<p class="lede" style="font-size:15px">What is left. Seventeen of the first pass’s twenty items are fixed and have been removed from this table rather than marked done; the pull request is the record of those. Two of the twelve below are carried over. Ten are new, found while re-measuring. Ranked by impact divided by effort. Effort S is under an hour.</p>
 <div class="tw"><table><thead><tr><th></th><th>Action</th><th>Sev</th><th>Eff</th><th>Area</th></tr></thead><tbody>{rows}</tbody></table></div></section>
 <section><h2>Category by category</h2>
 <p class="lede" style="font-size:15px">Each written by a specialist that read the code, queried your production database, or rendered the page. Open one for its evidence and its limits.</p>
