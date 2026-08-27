@@ -1,0 +1,22 @@
+SCORE_AGREE: yes
+
+SUMMARY:
+The site has almost no machinery for turning a visitor into a second visit, and the one growth feature that shipped this week cannot be found by search at all. Every route under /night carries a noindex tag (src/routes/night.index.tsx:37 and night.$code.tsx:51), so Movie Night sits in one of the five primary nav slots (src/components/balasaur/TopBar.tsx:99) while paying zero rent toward the only acquisition channel this project has. The "12 of 13 rooms never rolled" figure is real but it is not a funnel failure: I pulled the rooms from production and 12 of the 13 were created inside 11 minutes on 2026-08-26 between 00:11:47 and 00:22:35, which is a smoke test, and the single room with two people and two rolls came 13 hours later. There are 2 rows in profiles and 2 distinct users in user_media_status across the whole database, so nothing about Movie Night has been observed with a stranger. There is no email capture anywhere outside the sign-in dialog, no feed, and no notification, so a visitor who leaves has no thread back. The one genuine return ritual, Balasaurdle at /play, is indexed and ships a Wordle-style share string ending in balasaur.com/play (src/lib/daily.ts:39-43), which is the single best growth asset in the codebase and is buried behind a four-character nav label.
+
+STRENGTHS:
+- Balasaurdle is a real daily-return mechanism with a built-in share loop: one title a day for everyone, six clues, and a copyable result block that carries the URL (src/lib/daily.ts:39-43). It needs no owner attention, which is the only kind of growth work this project can afford.
+- Internal linking off a title page is done properly. A detail page links out to the ranked shelves the title appears in with its rank (src/components/balasaur/MediaDetail.tsx:770-790), plus genre facet links and two related rails. A search visitor landing cold has somewhere to go.
+- 678 collection rows in production, all emitted into /sitemap-pages.xml alongside the static pages. The shelf network is the acquisition surface and it exists at real scale.
+- Share links unfurl with the actual poster or backdrop, not a generic card: movie.$id.tsx:71 passes the backdrop into the og:image tag, with a branded fallback in src/lib/seo.ts:97.
+- /llms.txt is written for an answer engine deciding whether to cite the score, and leads with the critic-versus-audience gap rather than the catalog size. Cheap, and aimed at the one channel that might move before Google does.
+
+GAPS:
+- On a 390px phone, the primary button on /night is covered by the cookie consent bar. I measured it: "Find my pick" occupies y 724 to 764, the fixed consent bar occupies y 729 to 788. A first-time visitor, exactly the person Principle 2 names, cannot see or tap the thing the page exists for until they dismiss a banner that sits over it.
+- Nothing captures an address. The only email field on the site is the sign-in form in AuthDialog.tsx. With 144 impressions in 79 days, every visitor is a one-off, and there is no list to send anything to when the shelves update nightly.
+- Movie Night is noindex by design and needs 2 to 8 people who already know each other. It can only grow by word of mouth, and the site has no mouths yet. Principle 8 asks which of search, trust, or retention a surface pays; this one pays retention for an audience of two.
+- The room invite copies a link and a five-character code (night.$code.tsx:403-418), but rooms expire in 24 hours. A shared link that dies overnight cannot compound, and nothing indexable is left behind after a room resolves.
+- Two of five nav slots (Play, Movie Night) go to engagement features while Collections, the 678-page surface that is supposed to earn the search traffic, gets one slot and no promotion on the title pages a search visitor actually lands on.
+- No result of a Movie Night session becomes a public artifact. A finished room produces a private pick that nobody outside the room can see, so the feature generates no page, no link, and no share other than the invite.
+
+METHOD:
+I read the two night routes, TopBar, MediaDetail, ShareButton, seo.ts, daily.ts and the two sitemap routes; queried production for room, member, roll, profile and collection counts; and rendered /night at 390px in headless Chromium, measuring the bounding boxes of the primary button and the consent bar. I could not verify anything about live behavior on balasaur.com, PostHog event volume, or how the database-driven pages look with real rows, since this environment has no outbound network to Supabase.

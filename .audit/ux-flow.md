@@ -1,0 +1,22 @@
+SCORE_AGREE: yes
+
+SUMMARY:
+The path that currently pays the rent, land on a title page from search and read it, is intact. The two flows built on top of it are not. My Lists sends people to /rate from three of its four empty states (src/routes/lists.tsx lines 69, 74, 79) and /rate is not a route: it falls through the catch-all profile handler and renders "Profile not found. This handle doesn't exist (yet). Check the spelling?" I loaded /rate in a browser and read that text off the page. So a signed-in user with an empty watchlist taps "Rate titles" and is told their username is misspelled. Movie Night, live for 24 hours, has 13 rooms in the database and 12 of them are still sitting in status "lobby" with zero members ever marked ready; the 8 solo rooms are the damning ones, because a solo room has nobody to wait for and still never reached a pick. The reason is visible in the form: the solo lobby asks for 21 genre chips under "Tonight I want", the same 21 again under "Less in the mood for", and 14 more chips across four optional rows, 56 taps of surface above the "Find my pick" button. The cookie banner is real and it is worse on phones than on desktop: I measured it at 127.5px tall on a 390px viewport versus 57px at 1440px, because the copy wraps to three lines and the two buttons drop to their own row.
+
+STRENGTHS:
+- Guest work survives signup. src/hooks/useUserStatus.ts migrates localStorage ratings into the account once on sign-in, per-row so one corrupt entry cannot fail the batch, and keeps localStorage if the write errors so a later load retries. 109 status rows exist across 2 users, so the table is actually being written.
+- The rename from /triage to /watched left a permanent redirect behind (src/routes/triage.tsx), so old bookmarks do not 404. Someone thought about the person who saved the old link.
+- The cookie banner's two choices are identical in weight, size and position. Refusing is exactly as easy as accepting, which is the thing regulators enforce and the thing a consent platform will certify later.
+- Movie Night join errors are specific rather than generic: wrong code, expired after 24 hours, room is solo, room is full at 8 people, each get their own sentence (src/routes/night.index.tsx, the join handler).
+- Search sits in the top bar on every page at 390px, one tap, no second search box anywhere.
+
+GAPS:
+- Three dead CTAs in My Lists. Favorites, History and Never all point at /rate. The route does not exist, so the visitor lands on a profile-not-found page whose copy is about usernames. The working route is /watched. Verified by rendering /rate at 390px.
+- The Movie Night solo lobby has never produced a pick. 8 solo rooms, 8 still in "lobby". The form asks 56 chip taps before the button that does the thing. A solo pick should ask three questions and roll.
+- The cookie banner covers the bottom 127px of a 390px phone, and /watched is built as h-screen with overflow-hidden (src/routes/watched.tsx), so that page cannot scroll. The "Not now" and "Never" buttons are the last row in that column. On the deck the banner is not an annoyance you scroll past, it sits on the controls until dismissed.
+- The largest thing a signed-out search visitor sees on the homepage is an ask for an account: "Your personal entertainment database" over a "Sign in to save your picks" button. Nothing in that hero is a claim only this database can make, and the Balasaur Score, the one asset, is not named. Principle 2's named person thinks "why would I make an account", which is a question, so the design is not finished.
+- The hero carries a "Balasaur · v0" badge (src/components/balasaur/LandingHero.tsx line 33). A version number answers no question a viewer has.
+- Group Movie Night has never had a second person arrive. 5 group rooms, 14 members total across all 13 rooms, and only one room ever reached 2 people. The invite step is not pulling anyone through, and with zero traffic there is no way to tell whether the share step is broken or simply unused.
+
+METHOD:
+Read lists.tsx, watched.tsx, night.index.tsx, night.$code.tsx, LibraryDeck.tsx, CookieBanner.tsx, LandingHero.tsx and useUserStatus.ts; rendered /, /night, /lists, /watched, /rate and /play in headless Chromium at 390px and 1440px against a local dev server and measured the banner geometry in the DOM; queried production for room, member, roll and status counts. I could not see the deck, the room lobby or any grid with real rows, because this container has no route to Supabase and those pages render as shells.
