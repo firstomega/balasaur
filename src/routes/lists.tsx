@@ -152,81 +152,83 @@ function ListsPage() {
           My lists
         </h1>
 
-        {!loading && !user ? (
-          <div className="rounded-[5px] border border-border bg-panel p-8 text-center">
-            <p className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
-              Sign in to see your saved choices
-            </p>
-            <p className="mt-2 font-mono text-[10.5px] text-text-muted">
-              Your library travels with your account.
+        {/* A guest's picks are already here: useUserStatus reads them from this
+            browser. Hiding the whole page behind a sign-in wall threw away the
+            one moment an anonymous visitor has invested something, and the rate
+            deck sends them here promising their picks were saved. So the lists
+            always render and this offers to make them permanent. */}
+        {!loading && !user && (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[5px] border border-border bg-panel px-4 py-3">
+            <p className="font-mono text-[11px] text-text-muted">
+              These are saved on this device. An account keeps them when you switch browsers.
             </p>
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="mt-4 cursor-pointer rounded-[5px] bg-primary px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+              className="shrink-0 cursor-pointer rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
             >
-              Sign in
+              Keep them
             </button>
             <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
           </div>
-        ) : (
-          <>
-            {/* Tab bar with live counts */}
-            <div
-              role="tablist"
-              aria-label="Lists"
-              className="mb-5 flex flex-wrap gap-1 border-b border-border"
-            >
-              {BUCKET_ORDER.map((b) => {
-                const meta = BUCKET_META[b];
-                const selected = tab === b;
-                return (
-                  <button
-                    key={b}
-                    role="tab"
-                    aria-selected={selected}
-                    type="button"
-                    onClick={() => setTab(b)}
-                    className={
-                      "flex cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors " +
-                      (selected
-                        ? "border-primary text-text-bright"
-                        : "border-transparent text-text-muted hover:text-text-bright")
-                    }
-                  >
-                    <meta.Icon className={`h-3.5 w-3.5 ${selected ? meta.iconClass : ""}`} />
-                    {meta.label}
-                    <span className="font-mono text-[10px] text-text-dim">
-                      {showSkeleton ? "" : grouped[b].length}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-text-dim">
-              {active.hint} · newest first · open a title to change its status
-            </p>
-
-            {showSkeleton ? (
-              <MediaGridSkeleton count={12} />
-            ) : items.length === 0 ? (
-              <div className="rounded-[5px] border border-border bg-panel p-8 text-center">
-                <p className="mx-auto max-w-md font-mono text-[11px] leading-relaxed text-text-muted">
-                  {BUCKET_EMPTY[tab].text}
-                </p>
-                <Link
-                  to={BUCKET_EMPTY[tab].to}
-                  className="mt-4 inline-block rounded-[5px] bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
-                >
-                  {BUCKET_EMPTY[tab].cta}
-                </Link>
-              </div>
-            ) : (
-              <MediaGrid items={items} />
-            )}
-          </>
         )}
+
+        <>
+          {/* Tab bar with live counts */}
+          <div
+            role="tablist"
+            aria-label="Lists"
+            className="mb-5 flex flex-wrap gap-1 border-b border-border"
+          >
+            {BUCKET_ORDER.map((b) => {
+              const meta = BUCKET_META[b];
+              const selected = tab === b;
+              return (
+                <button
+                  key={b}
+                  role="tab"
+                  aria-selected={selected}
+                  type="button"
+                  onClick={() => setTab(b)}
+                  className={
+                    "flex cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors " +
+                    (selected
+                      ? "border-primary text-text-bright"
+                      : "border-transparent text-text-muted hover:text-text-bright")
+                  }
+                >
+                  <meta.Icon className={`h-3.5 w-3.5 ${selected ? meta.iconClass : ""}`} />
+                  {meta.label}
+                  <span className="font-mono text-[10px] text-text-dim">
+                    {showSkeleton ? "" : grouped[b].length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+            {active.hint} · newest first · open a title to change its status
+          </p>
+
+          {showSkeleton ? (
+            <MediaGridSkeleton count={12} />
+          ) : items.length === 0 ? (
+            <div className="rounded-[5px] border border-border bg-panel p-8 text-center">
+              <p className="mx-auto max-w-md font-mono text-[11px] leading-relaxed text-text-muted">
+                {BUCKET_EMPTY[tab].text}
+              </p>
+              <Link
+                to={BUCKET_EMPTY[tab].to}
+                className="mt-4 inline-block rounded-[5px] bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+              >
+                {BUCKET_EMPTY[tab].cta}
+              </Link>
+            </div>
+          ) : (
+            <MediaGrid items={items} />
+          )}
+        </>
       </main>
     </div>
   );
