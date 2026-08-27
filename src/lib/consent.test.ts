@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { getConsent, getConsentRecord, setConsent, clearConsent } from "./consent";
+import {
+  getConsent,
+  getConsentRecord,
+  setConsent,
+  clearConsent,
+  CONSENT_TEXT_VERSION,
+} from "./consent";
 
 // Minimal localStorage + window stand-in. The module guards on
 // `typeof window === "undefined"`, so without this every function no-ops and
@@ -33,7 +39,7 @@ describe("consent record", () => {
     setConsent("all");
     const rec = getConsentRecord();
     expect(rec?.choice).toBe("all");
-    expect(rec?.version).toBe(1);
+    expect(rec?.version).toBe(CONSENT_TEXT_VERSION);
     expect(Number.isFinite(new Date(rec!.at).getTime())).toBe(true);
     // A bare flag cannot demonstrate consent to anyone who asks.
     expect(store.get(KEY)).toContain('"at"');
@@ -53,14 +59,29 @@ describe("consent record", () => {
     expect(getConsent()).toBe(null);
   });
 
+  it("re-asks when the banner wording changed since the record was stored", () => {
+    // The whole point of CONSENT_TEXT_VERSION: a record that agreed to older
+    // wording is not consent to the current wording. Written against the
+    // constant minus one so a future bump cannot make this test stale.
+    clearConsent();
+    const recent = new Date().toISOString();
+    store.set(
+      KEY,
+      JSON.stringify({ choice: "all", at: recent, version: CONSENT_TEXT_VERSION - 1 }),
+    );
+    expect(getConsent()).toBe(null);
+    store.set(KEY, JSON.stringify({ choice: "all", at: recent, version: CONSENT_TEXT_VERSION }));
+    expect(getConsent()).toBe("all");
+  });
+
   it("expires consent after a year rather than relying on it forever", () => {
     setup();
     const old = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString();
-    store.set(KEY, JSON.stringify({ choice: "all", at: old, version: 1 }));
+    store.set(KEY, JSON.stringify({ choice: "all", at: old, version: CONSENT_TEXT_VERSION }));
     expect(getConsent()).toBe(null);
 
     const recent = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    store.set(KEY, JSON.stringify({ choice: "all", at: recent, version: 1 }));
+    store.set(KEY, JSON.stringify({ choice: "all", at: recent, version: CONSENT_TEXT_VERSION }));
     expect(getConsent()).toBe("all");
   });
 
@@ -74,9 +95,16 @@ describe("consent record", () => {
     setup();
     store.set(KEY, "{not json");
     expect(getConsent()).toBe(null);
-    store.set(KEY, JSON.stringify({ choice: "maybe", at: new Date().toISOString(), version: 1 }));
+    store.set(
+      KEY,
+      JSON.stringify({
+        choice: "maybe",
+        at: new Date().toISOString(),
+        version: CONSENT_TEXT_VERSION,
+      }),
+    );
     expect(getConsent()).toBe(null);
-    store.set(KEY, JSON.stringify({ choice: "all", version: 1 }));
+    store.set(KEY, JSON.stringify({ choice: "all", version: CONSENT_TEXT_VERSION }));
     expect(getConsent()).toBe(null);
   });
 

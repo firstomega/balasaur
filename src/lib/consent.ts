@@ -22,7 +22,7 @@ const EVENT = "balasaur:cookie-consent-change";
 
 /** Bump when the banner's wording or the set of purposes on offer changes, so
  *  a stored record says what was actually agreed to rather than just "all". */
-export const CONSENT_TEXT_VERSION = 1;
+export const CONSENT_TEXT_VERSION = 2;
 
 /** Re-ask after this long. Consent is not permanent, and regulators expect it
  *  to be refreshed rather than collected once and relied on forever. */

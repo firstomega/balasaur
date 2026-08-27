@@ -23,8 +23,27 @@ export interface DekTopItem {
   score?: number;
 }
 
-/** Catalog-wide typical Balasaur Score (mirrors the rank.ts prior). */
-const CATALOG_MEDIAN = 62;
+/**
+ * The real median Balasaur Score across the indexable catalog, printed on
+ * collection pages as a public claim.
+ *
+ * This is NOT the rank.ts PRIOR, which happens to be a similar number and was
+ * previously reused here. The prior is an internal smoothing constant chosen to
+ * damp low-vote titles; this is a measured fact about the catalog, and the two
+ * are free to drift apart. Reusing the prior put "the catalog median of 62" on
+ * 633 collection pages against a true median of 66.
+ *
+ * Measured 2026-08-27 against production: median 66.0 across 66,335 scored
+ * titles, excluding sensitive and suggestive rows. Re-measure when the catalog
+ * grows materially:
+ *   select percentile_cont(0.5) within group (order by rating_balasaur)
+ *   from media where rating_balasaur is not null
+ *     and sensitive is not true and suggestive is not true;
+ */
+export const CATALOG_MEDIAN = 66;
+
+/** A shelf only claims to beat the catalog once it clears this margin. */
+export const CATALOG_MEDIAN_MARGIN = 5;
 
 function monthWord(iso: string): string | null {
   const m = Number(iso.slice(5, 7));
@@ -85,7 +104,10 @@ export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
     `${row.item_count.toLocaleString("en-US")} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
   );
 
-  if (typeof row.median_score === "number" && row.median_score >= CATALOG_MEDIAN + 5) {
+  if (
+    typeof row.median_score === "number" &&
+    row.median_score >= CATALOG_MEDIAN + CATALOG_MEDIAN_MARGIN
+  ) {
     parts.push(
       `The typical pick here scores ${row.median_score}, well above the catalog median of ${CATALOG_MEDIAN}.`,
     );

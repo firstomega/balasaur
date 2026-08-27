@@ -3,7 +3,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Copy, Search } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
-import { Footer } from "@/components/balasaur/Footer";
 import { ScoreBadge } from "@/components/balasaur/ScoreBadge";
 import { getDailyChallenge, type DailyChallenge } from "@/lib/daily.functions";
 import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
@@ -388,7 +387,6 @@ function PlayPage() {
           </>
         )}
       </main>
-      <Footer />
     </div>
   );
 }

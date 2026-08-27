@@ -33,11 +33,24 @@ export function LandingHero({ onBrowse }: Props) {
                 Balasaur · v0
               </span>
             </div>
+            {/* The most-read line on the site, so it names the one thing no
+                competitor has. "Your personal entertainment database" was
+                equally true of Letterboxd and Trakt, and it left the number on
+                every poster unexplained for a first-time visitor from search.
+                No catalog count here on purpose: the grid below reports 76,351
+                rows while only 66,422 carry a score, so any figure in the hero
+                would contradict the count a reader can see. */}
             <h1 className="text-[22px] font-semibold leading-tight text-text-bright sm:text-[26px]">
-              Your personal entertainment database.
+              One number instead of four rating sites.
             </h1>
+            {/* No universal claim here. "Any two titles can be compared" was
+                false for the 9,929 catalogued titles that carry no score, and
+                naming four sources implies four per title when 14 of the first
+                60 cards on this page score from TMDB alone. This says what the
+                score does, not what every row has. */}
             <p className="mt-1.5 max-w-xl text-[13.5px] leading-relaxed text-text-muted">
-              Discover, track, and rate movies &amp; TV. Build a library that's yours.
+              The Balasaur Score puts IMDb, Rotten Tomatoes, Metacritic and TMDB on one 0 to 100
+              scale, and says so when the critics and the audience disagree.
             </p>
           </div>
 

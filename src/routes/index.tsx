@@ -68,6 +68,28 @@ function pageOffset(raw: string | undefined): number {
   return (pageNumber(raw) - 1) * PAGE_SIZE;
 }
 
+const BASE_TITLE = "Balasaur: Your Personal Entertainment Database";
+
+/** True when anything other than the page cursor is narrowing the catalog. */
+function isFiltered(search: FilterSearch | undefined): boolean {
+  if (!search) return false;
+  return Object.entries(search).some(([k, v]) => k !== "page" && v !== undefined && v !== "");
+}
+
+/** Where this view says it lives. Filtered slices consolidate to the root. */
+function canonicalPath(search: FilterSearch | undefined): string {
+  if (isFiltered(search)) return "/";
+  const n = pageNumber(search?.page);
+  return n > 1 ? `/?page=${n}` : "/";
+}
+
+/** Page 2 and beyond say so, rather than 400 URLs sharing one title. */
+function pageTitle(search: FilterSearch | undefined): string {
+  if (isFiltered(search)) return BASE_TITLE;
+  const n = pageNumber(search?.page);
+  return n > 1 ? `${BASE_TITLE} (Page ${n})` : BASE_TITLE;
+}
+
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): FilterSearch => parseFilterSearch(search),
   loaderDeps: ({ search }) => search,
@@ -113,13 +135,13 @@ export const Route = createFileRoute("/")({
   },
   head: ({ loaderData, match }) => ({
     meta: [
-      { title: "Balasaur: Your Personal Entertainment Database" },
+      { title: pageTitle(match?.search as FilterSearch | undefined) },
       {
         name: "description",
         content:
           "Movies and TV scored 0 to 100 by blending IMDb, Rotten Tomatoes, Metacritic and TMDB. Filter by service, genre, year or score to find what to watch tonight.",
       },
-      { property: "og:title", content: "Balasaur: Your Personal Entertainment Database" },
+      { property: "og:title", content: pageTitle(match?.search as FilterSearch | undefined) },
       {
         property: "og:description",
         content:
@@ -131,12 +153,17 @@ export const Route = createFileRoute("/")({
       // Page 2 and beyond self-canonicalise: each is a distinct slice of the
       // catalog, not a duplicate of the homepage, and pointing them all at "/"
       // would tell Google to ignore the very links the trail exists to offer.
-      canonicalLink(
-        SITE_ORIGIN +
-          (pageNumber((match?.search as FilterSearch | undefined)?.page) > 1
-            ? `/?page=${pageNumber((match?.search as FilterSearch | undefined)?.page)}`
-            : "/"),
-      ),
+      // Page 2 and beyond self-canonicalise: each is a distinct slice of the
+      // catalog, not a duplicate of the homepage, and pointing them all at "/"
+      // would tell Google to ignore the very links the trail exists to offer.
+      //
+      // A FILTERED view is the opposite case and used to be handled wrong.
+      // /?genre=Horror&page=3 canonicalised to /?page=3, which is a different
+      // set of titles, so the page claimed to be a page it was not. Filters
+      // produce hundreds of near-duplicate slices of one catalog and none of
+      // them is the canonical home for anything, so they all consolidate to "/"
+      // and the crawl budget goes to the 61,673 title pages instead.
+      canonicalLink(SITE_ORIGIN + canonicalPath(match?.search as FilterSearch | undefined)),
       // The first rail poster is the LCP element on mobile. Without this the
       // browser only discovers it after parsing the document, which measured
       // as ~2.9s of "resource load delay" on slow 4G. srcset and sizes mirror

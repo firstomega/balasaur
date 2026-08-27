@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
-import { Footer } from "@/components/balasaur/Footer";
 
 export const Route = createFileRoute("/methodology")({
   loader: async () => {
@@ -37,9 +36,56 @@ function MethodologyPage() {
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
                 The Balasaur Score is a 0 to 100 blend of ratings from IMDb, Rotten Tomatoes,
-                Metacritic, and TMDB. We combine these external scores using fixed weights. When a
-                source is missing data for a specific title, the remaining scores are renormalized
-                to preserve the 0 to 100 scale.
+                Metacritic, and TMDB. When a source has no rating for a title, the remaining sources
+                are renormalized so the scale still runs 0 to 100. These are the weights.
+              </p>
+              <table className="w-full max-w-[420px] border-collapse text-[14px]">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="py-2 pr-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                      Source
+                    </th>
+                    <th className="py-2 pr-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                      Weight
+                    </th>
+                    <th className="py-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                      Share when all four are present
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono tabular-nums">
+                  <tr className="border-b border-border">
+                    <td className="py-2 pr-4 font-sans">IMDb</td>
+                    <td className="py-2 pr-4">0.25</td>
+                    <td className="py-2">41.7%</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-2 pr-4 font-sans">Rotten Tomatoes</td>
+                    <td className="py-2 pr-4">0.125</td>
+                    <td className="py-2">20.8%</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="py-2 pr-4 font-sans">Metacritic</td>
+                    <td className="py-2 pr-4">0.125</td>
+                    <td className="py-2">20.8%</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-sans">TMDB</td>
+                    <td className="py-2 pr-4">0.10</td>
+                    <td className="py-2">16.7%</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p>
+                TMDB carries the smallest weight because it is an audience score with looser
+                standards than the others. It is also on nearly every title, which is why a card can
+                almost always show one score instead of falling back to a raw star rating.
+              </p>
+              <p>
+                A worked example. Inception holds 8.8 on IMDb, 87 on Rotten Tomatoes, 74 on
+                Metacritic and 8.4 on TMDB. The two ten-point scales become 88 and 84, then (88
+                times 0.25 plus 87 times 0.125 plus 74 times 0.125 plus 84 times 0.10) divided by
+                0.60 gives 84.
               </p>
             </div>
           </section>
@@ -86,7 +132,6 @@ function MethodologyPage() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

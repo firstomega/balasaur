@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
-import { Footer } from "@/components/balasaur/Footer";
 import { MediaCard } from "@/components/balasaur/MediaCard";
 import { useEffect, useState } from "react";
 import {
@@ -155,7 +154,6 @@ function CalendarPage() {
           </div>
         )}
       </main>
-      <Footer />
     </div>
   );
 }

@@ -1,0 +1,116 @@
+{
+ "note": "Re-scored 2026-08-27 after 17 of the original 20 items shipped. Completed items removed; what remains is what is still true, plus items found during the fixes.",
+ "actions": [
+  {
+   "rank": 1,
+   "name": "Fill the six legal placeholders and publish a contact address that works",
+   "area": "src/routes/privacy.tsx, terms.tsx, contact.tsx",
+   "category": "AdSense / Legal",
+   "severity": 4,
+   "effort": "S",
+   "status": "Not started",
+   "why": "A visitor to /privacy still reads 'EFFECTIVE DATE: [EFFECTIVE DATE]' and is told to write to '[CONTACT EMAIL]', while /contact publishes an address on ranklist.com, a domain nobody owns. Inadequate privacy policy is a named AdSense rejection reason and it is the first page a reviewer opens. Needs one decision from you: which address to publish."
+  },
+  {
+   "rank": 2,
+   "name": "Raise the person sitemap cap above 5,000",
+   "area": "src/routes/sitemap-people[.]xml.tsx:22",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "S",
+   "status": "Not started",
+   "why": "The loop stops at 5,000 while person_index holds 37,923 rows, and the audit measured 5,663 qualifying pages dropped. Person pages are the best-positioned family on the site at average position 8.9, so this is the same class of bug as the title sitemap and is still live."
+  },
+  {
+   "rank": 3,
+   "name": "Give the sitemap more than 2,500 slots now that the ordering is right",
+   "area": "src/lib/media.server.ts, SITEMAP_TITLE_BUDGET",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "S",
+   "status": "Not started",
+   "why": "5,450 titles now clear the 1,000-rating bar and only 2,500 fit, so 2,950 titles people actually search for are still unsubmitted. The 2,500 figure was chosen when the ordering was wrong and a focused list was the safer bet; that reasoning no longer holds."
+  },
+  {
+   "rank": 4,
+   "name": "Make the homepage title agree with the homepage headline",
+   "area": "src/routes/index.tsx BASE_TITLE",
+   "category": "Content / SEO",
+   "severity": 2,
+   "effort": "S",
+   "status": "Not started",
+   "why": "The hero now reads 'One number instead of four rating sites' while the page title still says 'Your Personal Entertainment Database', so the search result and the page a visitor lands on say different things. Introduced by the headline fix and not carried through."
+  },
+  {
+   "rank": 5,
+   "name": "Stop a mis-tap on the primary button recording 'Accept all'",
+   "area": "src/components/balasaur/CookieBanner.tsx, app shell",
+   "category": "UX flow / Legal",
+   "severity": 3,
+   "effort": "L",
+   "status": "Not started",
+   "why": "At 360x800, the most common Android viewport, the primary button sits under the consent bar and the hit test resolves to the 'Accept all' control. That is a recorded consent the person did not choose, not merely a swallowed tap. The real fix is an app-shell change with scroll-restoration risk, so it wants its own session."
+  },
+  {
+   "rank": 6,
+   "name": "Give The Halloween Binge its own cut",
+   "area": "collection recipes",
+   "category": "SEO / Content",
+   "severity": 2,
+   "effort": "M",
+   "status": "Not started",
+   "why": "best-horror-movies and the-halloween-binge now hold an identical 60. It was not an exact duplicate when the audit started, so catalogue drift converged two heavily overlapping lists and it will keep flickering until the occasion recipe stops being top-horror-by-another-name."
+  },
+  {
+   "rank": 7,
+   "name": "Thicken or gate the thin half of the catalogue",
+   "area": "src/lib/titleProse.ts, indexability.ts",
+   "category": "AdSense",
+   "severity": 3,
+   "effort": "L",
+   "status": "Not started",
+   "why": "24,797 of 61,673 indexable titles carry a synopsis under 200 characters, which with one or two generated sentences is the poster-plus-borrowed-blurb shape ad networks reject. This is the structural half of the AdSense problem and the only item here that is a quarter's work rather than an afternoon."
+  },
+  {
+   "rank": 8,
+   "name": "Stop announcing all 678 collections to Bing every night",
+   "area": "ping_indexnow",
+   "category": "SEO",
+   "severity": 2,
+   "effort": "S",
+   "status": "Not started",
+   "why": "rebuild_collections clears indexnow_hash on every row each night, so all 678 collection URLs are submitted daily whether or not anything changed. That is the batch-submission pattern the function's own comment says the site was flagged for and fixed on the media side only."
+  },
+  {
+   "rank": 9,
+   "name": "Stop claiming Balasaur learns your taste",
+   "area": "collection pages, onboarding copy",
+   "category": "Content",
+   "severity": 2,
+   "effort": "S",
+   "status": "Not started",
+   "why": "678 pages carry the claim against 109 ratings from 2 accounts. It is not true yet, and Principle 4 asks whether a sentence would be equally true on a competitor's site; this one is not even true here."
+  },
+  {
+   "rank": 10,
+   "name": "Collapse the Movie Night solo flow and add a share on the result",
+   "area": "src/routes/night.index.tsx, night.$code.tsx",
+   "category": "Growth / UX flow",
+   "severity": 2,
+   "effort": "M",
+   "status": "Not started",
+   "why": "Two buttons both say 'Find my pick' and only the second produces anything, and the one screen where a person would tell a friend has no share affordance. Worth doing after you have actually used the feature rather than before."
+  },
+  {
+   "rank": 11,
+   "name": "Add ads.txt",
+   "area": "public/ads.txt",
+   "category": "AdSense",
+   "severity": 1,
+   "effort": "S",
+   "status": "Not started",
+   "why": "Absent, and correctly so: it is the last mechanical step and only matters once an application is approved. Listed so it is not forgotten at the moment it does matter."
+  }
+ ],
+ "biggest_risk": "The engineering half of the problem is now largely fixed and the distribution half is not yet proven. The sitemap points at titles people search for, 1,467 accented titles became announceable, 19 duplicate pages are gone and the catalogue is no longer readable or deletable with the key that ships in the browser. None of that has produced a visitor yet, and it cannot for weeks: Google has to recrawl before any of it shows up in Search Console, so the next real signal is a crawl snapshot, not a number that moves tomorrow. The risk is spending that waiting period building rather than finishing. Two items stand between this site and an AdSense application, both under an hour, and both have been open since the audit began: the legal pages still show template placeholders and the published contact address is a domain nobody owns. Filing while those are live risks a rejection that is expensive to reverse, and shipping more features in the meantime spends the domain's early credibility on pages that still cannot rank."
+}

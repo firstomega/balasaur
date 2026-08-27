@@ -1,0 +1,39 @@
+{
+  "verified_by_me": [
+    {
+      "claim": "Six template placeholders ship in the live legal pages",
+      "status": "CONFIRMED",
+      "evidence": "privacy.tsx:35 'Effective date: [EFFECTIVE DATE]', :129 and :164 '[CONTACT EMAIL]'; terms.tsx:35 '[EFFECTIVE DATE]', :115 'laws of [YOUR STATE/COUNTRY]', :121 '[CONTACT EMAIL]'"
+    },
+    {
+      "claim": "The published contact address is a domain the owner does not control",
+      "status": "CONFIRMED AND WORSE THAN GRADED",
+      "evidence": "src/routes/contact.tsx:6 CONTACT_EMAIL = 'balasaur@ranklist.com'. The owner's domain is ranklist.io. The only contact address on the site is dead. Audit graded this severity 2; it is the sole channel for an AdSense decision, a DMCA notice and a GDPR erasure request."
+    },
+    {
+      "claim": "The title sitemap is ordered by TMDB weekly popularity",
+      "status": "CONFIRMED, and the code contradicts itself",
+      "evidence": "src/lib/media.server.ts:503-509 says 'Ordered by RATING COUNT, not TMDB popularity ... Measured 2026-08-14'. Lines 524-528 say the opposite, 'Ordered by popularity, not vote_count', and the actual call at :531 is .order('popularity'). The first comment describes a change that was later reverted and never removed, which is how the wrong ordering survived review."
+    },
+    {
+      "claim": "896 of 2,500 submitted URLs have under 50 ratings",
+      "status": "CONFIRMED by my own SQL against production",
+      "evidence": "35.8% of submitted URLs have under 50 ratings. Sharper: 5,450 titles have 1,000+ ratings and only 701 of them are submitted, so 4,749 genuinely known titles are absent from the sitemap."
+    },
+    {
+      "claim": "Famous titles are excluded from the sitemap",
+      "status": "CONFIRMED with names",
+      "evidence": "Not submitted: Guardians of the Galaxy (30,087 ratings, Balasaur 81), The Hunger Games (23,571), Captain America: The First Avenger (23,045), Jurassic World (21,840), John Wick (21,137, score 76), Wonder Woman (21,089, score 78), Logan (20,657, score 82), It (20,537). Each loses its slot because TMDB's weekly popularity for them is around 19."
+    },
+    {
+      "claim": "No ads.txt exists",
+      "status": "CONFIRMED",
+      "evidence": "no public/ads.txt. Only needed after AdSense approval, so low priority."
+    },
+    {
+      "claim": "CATALOG_MEDIAN is a hardcoded 62",
+      "status": "CONFIRMED in code",
+      "evidence": "src/lib/collectionsProse.ts:27 const CATALOG_MEDIAN = 62. The audit measured the true median at 66. I confirmed the constant exists but did not independently recompute the median."
+    }
+  ]
+}

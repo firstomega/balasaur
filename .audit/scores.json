@@ -1,0 +1,28 @@
+{
+  "overall_provisional": 4.2,
+  "note": "Overall score and ranked actions were computed from 8 of 16 categories (my input cap truncated the synthesis). Category scores below are all 16 and are complete.",
+  "categories": [
+    {"category":"AdSense readiness","score":3.0,"confidence":"high","actions":8,"refuted":2},
+    {"category":"Discovery and growth","score":3.0,"confidence":"medium","actions":10,"refuted":1},
+    {"category":"Legal and privacy compliance","score":4.0,"confidence":"high","actions":10,"refuted":0},
+    {"category":"User flow and friction","score":5.0,"confidence":"medium","actions":12,"refuted":0},
+    {"category":"UI consistency","score":5.0,"confidence":"medium","actions":11,"refuted":0},
+    {"category":"Responsiveness and mobile","score":5.0,"confidence":"medium","actions":8,"refuted":0},
+    {"category":"Edge case resilience and observability","score":5.0,"confidence":"high","actions":8,"refuted":0},
+    {"category":"Database and API scalability","score":5.0,"confidence":"high","actions":8,"refuted":2},
+    {"category":"SEO and crawlability","score":5.5,"confidence":"high","actions":10,"refuted":0},
+    {"category":"State persistence and recovery","score":5.5,"confidence":"high","actions":8,"refuted":0},
+    {"category":"Dependency health and code bloat","score":5.5,"confidence":"high","actions":5,"refuted":0},
+    {"category":"Content and copy consistency","score":6.5,"confidence":"high","actions":11,"refuted":0},
+    {"category":"Performance and perceived latency","score":6.5,"confidence":"medium","actions":9,"refuted":0},
+    {"category":"Code quality and correctness","score":6.5,"confidence":"high","actions":9,"refuted":0},
+    {"category":"Security","score":7.0,"confidence":"high","actions":6,"refuted":0},
+    {"category":"Accessibility","score":7.0,"confidence":"medium","actions":8,"refuted":0}
+  ],
+  "calibration": [
+    "Security 7 is too generous; 5.5. Two SECURITY DEFINER maintenance functions are callable by anyone with the key in the site JavaScript (~3s of full-table scan per 200-byte request), anon SELECT on 8GB of catalog and cache tables, and INSERT/UPDATE/DELETE grants on all 14 catalog tables held back only by RLS staying on.",
+    "SEO 5.5 is too generous; 4.5. Plumbing is above average but the two decisions that determine what Google sees are both wrong, and the measured outcome (0 clicks, 23 distinct URLs ever surfaced) is consistent with 4.5.",
+    "User flow 5 is too generous; 4. On the persona CLAUDE.md names, the cookie banner physically covers the primary call to action at 390px, three of four My Lists empty states link to a nonexistent route, and search says 'No matches' 128ms after the first keystroke before any request is sent.",
+    "Content and copy 6.5 is slightly generous; 5.5. A wrong number ships on 633 of 678 highest-value pages, catalog size is asserted four inconsistent ways, and 678 pages carry 'Balasaur learns your taste' against 0 user ratings and 2 accounts."
+  ]
+}

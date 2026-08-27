@@ -19,6 +19,7 @@ import {
   clampDescription,
 } from "@/lib/seo";
 import { useUserStatus } from "@/hooks/useUserStatus";
+import { mediaSlug } from "@/lib/slug";
 
 // /best/<slug> — one programmatically minted ranked collection. SSR'd,
 // CDN-cached, ItemList-marked-up: this leaf family is the SEO engine.
@@ -58,7 +59,10 @@ export const Route = createFileRoute("/best/$slug")({
         "@type": "ListItem",
         position: idx + 1,
         name: i.title,
-        url: `${SITE_ORIGIN}/${i.mediaType === "tv" ? "tv" : "movie"}/${i.id.replace(/^(movie|tv)-/, "")}`,
+        // The canonical URL carries the slug. Emitting the bare-id form handed
+        // Google 25 URLs per page that immediately 301 elsewhere, so the
+        // structured data and the visible links disagreed on every ranked page.
+        url: `${SITE_ORIGIN}/${i.mediaType === "tv" ? "tv" : "movie"}/${mediaSlug(i.id.replace(/^(movie|tv)-/, ""), i.title)}`,
       })),
     };
     return {

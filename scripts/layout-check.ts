@@ -45,7 +45,15 @@ interface Measurement {
 
 /** Boot `bun run dev` and wait until it prints a URL. */
 async function startServer(): Promise<{ url: string; stop: () => void }> {
-  const proc = Bun.spawn(["bun", "run", "dev"], {
+  // LAYOUT_DEV_HOST exists for sandboxes whose network stack has no IPv6: vite's
+  // own host detection picks "::" there and the server dies with EAFNOSUPPORT
+  // before printing a URL, so this gate could not run at all. Unset in CI, where
+  // the default is correct.
+  const devHost = process.env.LAYOUT_DEV_HOST;
+  const devArgs = devHost
+    ? ["bun", "run", "dev", "--host", devHost, "--port", "8080"]
+    : ["bun", "run", "dev"];
+  const proc = Bun.spawn(devArgs, {
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, BROWSER: "none", CI: "1" },
@@ -156,7 +164,13 @@ async function main() {
   const { url, stop } = await startServer();
   console.log(`\nDev server up at ${url}\n`);
 
-  const browser = await chromium.launch();
+  // CHROMIUM_PATH exists for images that preinstall browsers at a build number
+  // playwright does not expect: a bare launch() then looks for a chromium it
+  // cannot download offline. Unset in CI, where `playwright install` provides
+  // the matching build.
+  const browser = await chromium.launch(
+    process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
+  );
   const failures: string[] = [];
   const skipped: string[] = [];
   let checkedRoutes = 0;

@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
-import { Footer } from "@/components/balasaur/Footer";
 
 const CONTACT_EMAIL = "balasaur@ranklist.com";
 
@@ -63,7 +62,6 @@ function ContactPage() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

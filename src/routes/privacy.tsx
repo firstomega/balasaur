@@ -160,7 +160,13 @@ function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="12. Contact">
+          <Section title="12. Who operates Balasaur">
+            <p>
+              Balasaur is operated by Sentire Labs LLC, a limited liability company registered in
+              New Jersey, United States. Sentire Labs builds interactive experiences for the web,
+              and Balasaur is one of them. Sentire Labs is the data controller for the information
+              described in this Policy.
+            </p>
             <p>Questions: [CONTACT EMAIL].</p>
           </Section>
         </article>

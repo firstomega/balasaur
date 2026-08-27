@@ -15,24 +15,43 @@ function dropEmpty<T extends Record<string, unknown>>(obj: T): T {
   return obj;
 }
 
-/** The Balasaur Score (0-100 blend) with TMDB's community vote count: an
- *  aggregator marking up its aggregate, Metacritic-style.
+/** The Balasaur Score (0-100) with the count of published ratings it averages:
+ *  an aggregator marking up its aggregate, Metacritic-style.
  *
- *  Schema.org requires ratingCount or reviewCount on an AggregateRating, and
- *  Search Console reports the block as an invalid item without one. A
- *  count-less fallback used to ship for titles with no vote count, which put
- *  11,366 pages in the invalid pile for no gain: an invalid block earns
- *  nothing an absent block would not. So no count, no aggregateRating. */
+ *  ratingCount used to carry TMDB's vote count, which paired a four-source
+ *  blend with a one-source population. Inception went out as 84 out of 100
+ *  "from 39,857 ratings", when those 39,857 people rated the TMDB number that
+ *  carries a tenth of the weight. Google reads ratingValue and ratingCount as
+ *  one claim, so the two have to describe the same population. The count is
+ *  now the sources the blend averaged, which the score breakdown on the page
+ *  lists by name with each value.
+ *
+ *  Two rules keep the block honest, and both cost coverage on purpose.
+ *
+ *  Schema.org requires ratingCount or reviewCount, and Search Console reports
+ *  a block without one as an invalid item. A count-less fallback used to ship
+ *  for titles with no vote count, which put 11,366 pages in the invalid pile
+ *  for no gain. So no count, no aggregateRating.
+ *
+ *  And an AggregateRating is an average of MULTIPLE ratings. A title holding
+ *  one published rating has no average to report: its score is that single
+ *  source rescaled, so marking it up restates TMDB's or IMDb's rating as ours.
+ *  10,843 catalogued titles sit there today, nearly all TMDB-only, and they
+ *  get the block back the moment a second source lands. */
 function aggregateRating(d: MediaDetail) {
-  const balasaur = d.ratings.balasaur ?? computeBalasaurScore(d.ratings);
+  const r = d.ratings;
+  const ratingCount = [r.imdb, r.rottenTomatoes, r.metacritic, r.tmdb].filter(
+    (v) => typeof v === "number",
+  ).length;
+  if (ratingCount < 2) return undefined;
+  const balasaur = r.balasaur ?? computeBalasaurScore(r);
   if (typeof balasaur !== "number") return undefined;
-  if (typeof d.voteCount !== "number" || d.voteCount <= 0) return undefined;
   return {
     "@type": "AggregateRating",
     ratingValue: balasaur,
     bestRating: 100,
     worstRating: 0,
-    ratingCount: d.voteCount,
+    ratingCount,
   };
 }
 
