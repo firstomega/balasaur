@@ -22,7 +22,10 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git fetch:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "mcp__a3a3612d-f03a-4e52-bd9f-f715acb795ad__apply_migration",
+      "mcp__a3a3612d-f03a-4e52-bd9f-f715acb795ad__list_tables",
+      "mcp__a3a3612d-f03a-4e52-bd9f-f715acb795ad__get_advisors"
     ]
   },
   "hooks": {
