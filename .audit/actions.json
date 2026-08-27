@@ -73,7 +73,8 @@
    "severity": 3,
    "effort": "S",
    "why": "The three pages a reviewer clicks through consecutively each print the attribution block, all four legal links and the copyright line twice, which reads as a broken page at the moment the site is being judged.",
-   "status": "Not started"
+   "status": "Done",
+   "commit": "8a153c2"
   },
   {
    "rank": 8,
@@ -207,5 +208,5 @@
   }
  ],
  "biggest_risk": "The business has exactly one growth channel and it is currently pointed at the wrong pages. Search Console has recorded 144 impressions and zero clicks across 79 days, and only 23 distinct URLs have ever surfaced out of 61,673 eligible. The two mechanisms that decide what Google sees are both broken in ways the audit measured precisely: the sitemap ranks by TMDB's weekly trending number so a third of the 2,500 slots go to titles with under 50 ratings while Get Out and The Silence of the Lambs are left out, and 34 of the 678 collection pages are exact duplicates of each other. Against that, the most recent three commits are all Movie Night, a feature that is noindexed by design, absent from the sitemap, and has never once reached a result in 13 attempts. A new domain gets one shot at establishing quality signals, and an AdSense application filed in this state risks a rejection that is expensive to reverse. Fourteen of the top twenty fixes are under an hour, so the real risk is not difficulty but sequencing.",
- "status_note": "Rows 1, 3, 5 and 6 implemented 2026-08-27 and pushed to claude/ecstatic-albattani-OLO2a. Everything else untouched."
+ "status_note": "Rows 1, 3, 5, 6 and 7 implemented 2026-08-27 and pushed to claude/ecstatic-albattani-OLO2a. Everything else untouched."
 }
