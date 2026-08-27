@@ -68,9 +68,13 @@ function AboutPage() {
             <h2 className="text-[18px] font-semibold text-text-bright">Who runs it</h2>
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
-                One person. Balasaur is not a media company. There are no sponsored placements, no
-                paid rankings, and no AI written reviews. When a title sits first in a list, the
-                data put it there.
+                One person. Balasaur is a product of Sentire Labs LLC, a New Jersey company that
+                builds interactive experiences for the web.
+              </p>
+              <p>
+                Balasaur is not a media company. There are no sponsored placements, no paid
+                rankings, and no AI written reviews. When a title sits first in a list, the data put
+                it there.
               </p>
             </div>
           </section>

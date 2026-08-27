@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { collectionDek, type CollectionRow, type DekTopItem } from "./collectionsProse";
+import {
+  collectionDek,
+  type CollectionRow,
+  type DekTopItem,
+  CATALOG_MEDIAN,
+  CATALOG_MEDIAN_MARGIN,
+} from "./collectionsProse";
 
 const base: CollectionRow = {
   slug: "best-on-netflix",
@@ -53,12 +59,19 @@ describe("collectionDek", () => {
     expect(dek).not.toContain("leads at");
   });
 
-  it("only claims an above-catalog median when it clears the +5 margin", () => {
-    expect(collectionDek({ ...base, median_score: 67 }, top)).toContain(
-      "typical pick here scores 67",
+  it("only claims an above-catalog median when it clears the margin", () => {
+    // Written against the constants rather than literals: the catalog median is
+    // a measured fact that moves as the catalog grows, and hardcoding it here
+    // is what let a stale 62 sit on 633 live pages while the tests stayed green.
+    const clears = CATALOG_MEDIAN + CATALOG_MEDIAN_MARGIN;
+    expect(collectionDek({ ...base, median_score: clears }, top)).toContain(
+      `typical pick here scores ${clears}`,
     );
-    // 66 is above the catalog 62 but inside noise, so no sentence.
-    expect(collectionDek({ ...base, median_score: 66 }, top)).not.toContain("typical pick");
+    expect(collectionDek({ ...base, median_score: clears }, top)).toContain(
+      `catalog median of ${CATALOG_MEDIAN}`,
+    );
+    // Above the catalog but inside the noise margin, so no sentence.
+    expect(collectionDek({ ...base, median_score: clears - 1 }, top)).not.toContain("typical pick");
     expect(collectionDek({ ...base, median_score: null }, top)).not.toContain("typical pick");
   });
 
