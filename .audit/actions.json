@@ -1,26 +1,211 @@
 {
-  "note": "Ranked by business impact divided by effort, for a pre-revenue site chasing search traffic then AdSense. Drawn from the AdSense, SEO, Legal, Security, Content, UX-flow and Growth categories. Severity 1-5, effort S=<1h M=hours L=day+.",
-  "actions": [
-    {"rank":1,"name":"Stop ordering the title sitemap by TMDB trending score","area":"src/lib/media.server.ts, listSitemapEntries","category":"SEO","severity":3,"effort":"S","why":"896 of the 2,500 URLs submitted to Google go to titles with under 50 ratings while Guardians of the Galaxy, John Wick, Get Out and The Silence of the Lambs are not submitted at all, so the only acquisition channel points at pages nobody searches for."},
-    {"rank":2,"name":"Fill the six legal placeholders and add a placeholder rule to the copy lint","area":"src/routes/privacy.tsx, src/routes/terms.tsx, src/lib/copyLint.test.ts","category":"AdSense / Legal / UI","severity":4,"effort":"S","why":"Every visitor to /privacy reads 'EFFECTIVE DATE: [EFFECTIVE DATE]' and is told to write to '[CONTACT EMAIL]'. A named AdSense rejection reason on the first page a reviewer opens, and a GDPR erasure request with no address to go to."},
-    {"rank":3,"name":"Revoke public EXECUTE on rebuild_collections and refresh_catalog_facets_cache","area":"Database, PostgREST RPC surface","category":"Security","severity":3,"effort":"S","why":"Anyone can call these with the key that ships in the site JavaScript, and each 200-byte request buys about three seconds of full-table-scan IO on the single database every page depends on."},
-    {"rank":4,"name":"Confirm the contact inbox actually receives mail","area":"src/routes/contact.tsx:6","category":"Legal / AdSense","severity":3,"effort":"S","why":"The only published contact address is balasaur@ranklist.com while the owner's domain is ranklist.io, so an AdSense decision, a takedown notice and a deletion request may all be going nowhere."},
-    {"rank":5,"name":"Say who operates Balasaur and where","area":"src/routes/privacy.tsx section 12, src/routes/about.tsx","category":"Legal","severity":3,"effort":"S","why":"No legal or trading name and no country appears anywhere on the site, which fails the GDPR controller-identity requirement and is what an ad reviewer looks for to decide whether a site is a real publisher."},
-    {"rank":6,"name":"Fix the wrong catalog median printed on 633 collection pages","area":"src/lib/collectionsProse.ts","category":"Content","severity":3,"effort":"S","why":"An internal ranking constant (62) was reused as a public claim against a true median of 66, so a verifiably false number appears on 93% of the pages meant to prove the site's originality."},
-    {"rank":7,"name":"Delete the duplicate footer on About, Contact and Methodology","area":"src/routes/about.tsx, contact.tsx, methodology.tsx, calendar.tsx, play.tsx","category":"Legal / Content","severity":3,"effort":"S","why":"The three pages a reviewer clicks through consecutively each print the attribution block, all four legal links and the copyright line twice, which reads as a broken page at the moment the site is being judged."},
-    {"rank":8,"name":"Keep the cookie banner off the primary button","area":"src/components/balasaur/CookieBanner.tsx","category":"UX flow","severity":3,"effort":"S","why":"Measured at 390x844 the banner wins the hit test over the primary button, so every first-time phone visitor sees a form that appears to have no submit button."},
-    {"rank":9,"name":"Point the My Lists empty states at /watched, not /rate","area":"src/routes/lists.tsx","category":"UX flow","severity":3,"effort":"S","why":"Three of the four empty states link to a route that does not exist and the site answers 'Profile not found', so the main recovery path from an empty library dead-ends."},
-    {"rank":10,"name":"Stop dropping every accented title from the Bing ping","area":"canonical_media_path (Postgres), ping_indexnow","category":"SEO","severity":3,"effort":"S","why":"1,467 indexable titles including WALL-E, Leon: The Professional, Amelie and Naruto Shippuden are silently skipped by the only automated crawl notification the site has, because the SQL function rejects non-ASCII while the TypeScript slugifier handles it."},
-    {"rank":11,"name":"Merge the 17 collection pairs that are byte-identical apart from one headline word","area":"collection recipes, src/lib/genres.ts, src/routes/best.$slug.tsx","category":"SEO","severity":3,"effort":"M","why":"34 of the 678 pages the code calls the SEO engine hold the same titles in the same order with the same description, which is the template-similar-at-volume pattern that gets a new domain demoted."},
-    {"rank":12,"name":"Stop labelling TMDB's vote count as the rating count for the Balasaur Score","area":"src/lib/jsonld.ts, aggregateRating","category":"SEO","severity":3,"effort":"S","why":"Every title page tells Google N people gave an average of X out of 100 when the value is a four-source blend and the count is TMDB's, and this markup is already under scrutiny after Search Console flagged 11,366 invalid items."},
-    {"rank":13,"name":"Put all 182 person collections in the collections hub server HTML","area":"src/routes/collections.tsx","category":"SEO","severity":3,"effort":"S","why":"158 of 182 person links exist only after a click, on one of the few URLs Google has actually crawled, starving the best-positioned page family (average position 8.9) of internal links."},
-    {"rank":14,"name":"Make the homepage headline say what the site is for","area":"src/components/balasaur/LandingHero.tsx","category":"Growth / Content","severity":3,"effort":"S","why":"The most-read line on the site is 'Your personal entertainment database', equally true on Letterboxd and Trakt, while the meta description and share card already carry the real claim."},
-    {"rank":15,"name":"Give paginated and filtered homepage URLs their own title and a correct canonical","area":"src/routes/index.tsx head()","category":"SEO","severity":3,"effort":"S","why":"Up to 400 filtered pagination URLs share one title, one description and a canonical pointing at the wrong page, spending crawl budget on near-duplicates."},
-    {"rank":16,"name":"Revoke anon SELECT and the dangling write grants on the catalog tables","area":"Database, table privileges","category":"Security","severity":3,"effort":"M","why":"Anyone can page through PostgREST and copy the entire Balasaur Score dataset plus 8GB of cached vendor data on the owner's bandwidth, and DELETE on all 77,672 catalog rows is held back only by RLS staying enabled."},
-    {"rank":17,"name":"Show a guest their own library on /lists instead of a sign-in wall","area":"src/routes/lists.tsx","category":"UX flow","severity":3,"effort":"M","why":"The rate deck tells a guest their picks are saved and links to a page that hides them behind a sign-in prompt, destroying the one moment where an anonymous visitor has invested something."},
-    {"rank":18,"name":"Point the collection ItemList markup at canonical title URLs","area":"src/routes/best.$slug.tsx head()","category":"SEO","severity":2,"effort":"S","why":"All 678 collection pages hand Google 25 structured-data URLs that immediately 301 elsewhere, so the markup and the visible links disagree on every ranked page."},
-    {"rank":19,"name":"Publish the score weights on /methodology","area":"src/routes/methodology.tsx","category":"AdSense / Content","severity":2,"effort":"S","why":"Both /about and /llms.txt promise the exact weights are on that page and it never names one, even though every title page already renders the four-row table."},
-    {"rank":20,"name":"Collapse the Movie Night solo flow to one action and add a share on the result","area":"src/routes/night.index.tsx, night.$code.tsx","category":"Growth / UX flow","severity":2,"effort":"M","why":"Two buttons both say 'Find my pick' and only the second produces anything, which is why 12 of 13 rooms sit at zero rolls, and the one screen where a person would tell a friend has no share affordance."}
-  ],
-  "biggest_risk": "The business has exactly one growth channel and it is currently pointed at the wrong pages. Search Console has recorded 144 impressions and zero clicks across 79 days, and only 23 distinct URLs have ever surfaced out of 61,673 eligible. The two mechanisms that decide what Google sees are both broken in ways the audit measured precisely: the sitemap ranks by TMDB's weekly trending number so a third of the 2,500 slots go to titles with under 50 ratings while Get Out and The Silence of the Lambs are left out, and 34 of the 678 collection pages are exact duplicates of each other. Against that, the most recent three commits are all Movie Night, a feature that is noindexed by design, absent from the sitemap, and has never once reached a result in 13 attempts. A new domain gets one shot at establishing quality signals, and an AdSense application filed in this state risks a rejection that is expensive to reverse. Fourteen of the top twenty fixes are under an hour, so the real risk is not difficulty but sequencing."
+ "note": "Ranked by business impact divided by effort, for a pre-revenue site chasing search traffic then AdSense. Drawn from the AdSense, SEO, Legal, Security, Content, UX-flow and Growth categories. Severity 1-5, effort S=<1h M=hours L=day+.",
+ "actions": [
+  {
+   "rank": 1,
+   "name": "Stop ordering the title sitemap by TMDB trending score",
+   "area": "src/lib/media.server.ts, listSitemapEntries",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "S",
+   "why": "896 of the 2,500 URLs submitted to Google go to titles with under 50 ratings while Guardians of the Galaxy, John Wick, Get Out and The Silence of the Lambs are not submitted at all, so the only acquisition channel points at pages nobody searches for.",
+   "status": "Done",
+   "commit": "c89aa5b"
+  },
+  {
+   "rank": 2,
+   "name": "Fill the six legal placeholders and add a placeholder rule to the copy lint",
+   "area": "src/routes/privacy.tsx, src/routes/terms.tsx, src/lib/copyLint.test.ts",
+   "category": "AdSense / Legal / UI",
+   "severity": 4,
+   "effort": "S",
+   "why": "Every visitor to /privacy reads 'EFFECTIVE DATE: [EFFECTIVE DATE]' and is told to write to '[CONTACT EMAIL]'. A named AdSense rejection reason on the first page a reviewer opens, and a GDPR erasure request with no address to go to.",
+   "status": "Not started"
+  },
+  {
+   "rank": 3,
+   "name": "Revoke public EXECUTE on rebuild_collections and refresh_catalog_facets_cache",
+   "area": "Database, PostgREST RPC surface",
+   "category": "Security",
+   "severity": 3,
+   "effort": "S",
+   "why": "Anyone can call these with the key that ships in the site JavaScript, and each 200-byte request buys about three seconds of full-table-scan IO on the single database every page depends on.",
+   "status": "Done",
+   "commit": "465c7a7"
+  },
+  {
+   "rank": 4,
+   "name": "Confirm the contact inbox actually receives mail",
+   "area": "src/routes/contact.tsx:6",
+   "category": "Legal / AdSense",
+   "severity": 3,
+   "effort": "S",
+   "why": "The only published contact address is balasaur@ranklist.com while the owner's domain is ranklist.io, so an AdSense decision, a takedown notice and a deletion request may all be going nowhere.",
+   "status": "Not started"
+  },
+  {
+   "rank": 5,
+   "name": "Say who operates Balasaur and where",
+   "area": "src/routes/privacy.tsx section 12, src/routes/about.tsx",
+   "category": "Legal",
+   "severity": 3,
+   "effort": "S",
+   "why": "No legal or trading name and no country appears anywhere on the site, which fails the GDPR controller-identity requirement and is what an ad reviewer looks for to decide whether a site is a real publisher.",
+   "status": "Done",
+   "commit": "465c7a7"
+  },
+  {
+   "rank": 6,
+   "name": "Fix the wrong catalog median printed on 633 collection pages",
+   "area": "src/lib/collectionsProse.ts",
+   "category": "Content",
+   "severity": 3,
+   "effort": "S",
+   "why": "An internal ranking constant (62) was reused as a public claim against a true median of 66, so a verifiably false number appears on 93% of the pages meant to prove the site's originality.",
+   "status": "Done",
+   "commit": "465c7a7"
+  },
+  {
+   "rank": 7,
+   "name": "Delete the duplicate footer on About, Contact and Methodology",
+   "area": "src/routes/about.tsx, contact.tsx, methodology.tsx, calendar.tsx, play.tsx",
+   "category": "Legal / Content",
+   "severity": 3,
+   "effort": "S",
+   "why": "The three pages a reviewer clicks through consecutively each print the attribution block, all four legal links and the copyright line twice, which reads as a broken page at the moment the site is being judged.",
+   "status": "Not started"
+  },
+  {
+   "rank": 8,
+   "name": "Keep the cookie banner off the primary button",
+   "area": "src/components/balasaur/CookieBanner.tsx",
+   "category": "UX flow",
+   "severity": 3,
+   "effort": "S",
+   "why": "Measured at 390x844 the banner wins the hit test over the primary button, so every first-time phone visitor sees a form that appears to have no submit button.",
+   "status": "Not started"
+  },
+  {
+   "rank": 9,
+   "name": "Point the My Lists empty states at /watched, not /rate",
+   "area": "src/routes/lists.tsx",
+   "category": "UX flow",
+   "severity": 3,
+   "effort": "S",
+   "why": "Three of the four empty states link to a route that does not exist and the site answers 'Profile not found', so the main recovery path from an empty library dead-ends.",
+   "status": "Not started"
+  },
+  {
+   "rank": 10,
+   "name": "Stop dropping every accented title from the Bing ping",
+   "area": "canonical_media_path (Postgres), ping_indexnow",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "S",
+   "why": "1,467 indexable titles including WALL-E, Leon: The Professional, Amelie and Naruto Shippuden are silently skipped by the only automated crawl notification the site has, because the SQL function rejects non-ASCII while the TypeScript slugifier handles it.",
+   "status": "Not started"
+  },
+  {
+   "rank": 11,
+   "name": "Merge the 17 collection pairs that are byte-identical apart from one headline word",
+   "area": "collection recipes, src/lib/genres.ts, src/routes/best.$slug.tsx",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "M",
+   "why": "34 of the 678 pages the code calls the SEO engine hold the same titles in the same order with the same description, which is the template-similar-at-volume pattern that gets a new domain demoted.",
+   "status": "Not started"
+  },
+  {
+   "rank": 12,
+   "name": "Stop labelling TMDB's vote count as the rating count for the Balasaur Score",
+   "area": "src/lib/jsonld.ts, aggregateRating",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "S",
+   "why": "Every title page tells Google N people gave an average of X out of 100 when the value is a four-source blend and the count is TMDB's, and this markup is already under scrutiny after Search Console flagged 11,366 invalid items.",
+   "status": "Not started"
+  },
+  {
+   "rank": 13,
+   "name": "Put all 182 person collections in the collections hub server HTML",
+   "area": "src/routes/collections.tsx",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "S",
+   "why": "158 of 182 person links exist only after a click, on one of the few URLs Google has actually crawled, starving the best-positioned page family (average position 8.9) of internal links.",
+   "status": "Not started"
+  },
+  {
+   "rank": 14,
+   "name": "Make the homepage headline say what the site is for",
+   "area": "src/components/balasaur/LandingHero.tsx",
+   "category": "Growth / Content",
+   "severity": 3,
+   "effort": "S",
+   "why": "The most-read line on the site is 'Your personal entertainment database', equally true on Letterboxd and Trakt, while the meta description and share card already carry the real claim.",
+   "status": "Not started"
+  },
+  {
+   "rank": 15,
+   "name": "Give paginated and filtered homepage URLs their own title and a correct canonical",
+   "area": "src/routes/index.tsx head()",
+   "category": "SEO",
+   "severity": 3,
+   "effort": "S",
+   "why": "Up to 400 filtered pagination URLs share one title, one description and a canonical pointing at the wrong page, spending crawl budget on near-duplicates.",
+   "status": "Not started"
+  },
+  {
+   "rank": 16,
+   "name": "Revoke anon SELECT and the dangling write grants on the catalog tables",
+   "area": "Database, table privileges",
+   "category": "Security",
+   "severity": 3,
+   "effort": "M",
+   "why": "Anyone can page through PostgREST and copy the entire Balasaur Score dataset plus 8GB of cached vendor data on the owner's bandwidth, and DELETE on all 77,672 catalog rows is held back only by RLS staying enabled.",
+   "status": "Not started"
+  },
+  {
+   "rank": 17,
+   "name": "Show a guest their own library on /lists instead of a sign-in wall",
+   "area": "src/routes/lists.tsx",
+   "category": "UX flow",
+   "severity": 3,
+   "effort": "M",
+   "why": "The rate deck tells a guest their picks are saved and links to a page that hides them behind a sign-in prompt, destroying the one moment where an anonymous visitor has invested something.",
+   "status": "Not started"
+  },
+  {
+   "rank": 18,
+   "name": "Point the collection ItemList markup at canonical title URLs",
+   "area": "src/routes/best.$slug.tsx head()",
+   "category": "SEO",
+   "severity": 2,
+   "effort": "S",
+   "why": "All 678 collection pages hand Google 25 structured-data URLs that immediately 301 elsewhere, so the markup and the visible links disagree on every ranked page.",
+   "status": "Not started"
+  },
+  {
+   "rank": 19,
+   "name": "Publish the score weights on /methodology",
+   "area": "src/routes/methodology.tsx",
+   "category": "AdSense / Content",
+   "severity": 2,
+   "effort": "S",
+   "why": "Both /about and /llms.txt promise the exact weights are on that page and it never names one, even though every title page already renders the four-row table.",
+   "status": "Not started"
+  },
+  {
+   "rank": 20,
+   "name": "Collapse the Movie Night solo flow to one action and add a share on the result",
+   "area": "src/routes/night.index.tsx, night.$code.tsx",
+   "category": "Growth / UX flow",
+   "severity": 2,
+   "effort": "M",
+   "why": "Two buttons both say 'Find my pick' and only the second produces anything, which is why 12 of 13 rooms sit at zero rolls, and the one screen where a person would tell a friend has no share affordance.",
+   "status": "Not started"
+  }
+ ],
+ "biggest_risk": "The business has exactly one growth channel and it is currently pointed at the wrong pages. Search Console has recorded 144 impressions and zero clicks across 79 days, and only 23 distinct URLs have ever surfaced out of 61,673 eligible. The two mechanisms that decide what Google sees are both broken in ways the audit measured precisely: the sitemap ranks by TMDB's weekly trending number so a third of the 2,500 slots go to titles with under 50 ratings while Get Out and The Silence of the Lambs are left out, and 34 of the 678 collection pages are exact duplicates of each other. Against that, the most recent three commits are all Movie Night, a feature that is noindexed by design, absent from the sitemap, and has never once reached a result in 13 attempts. A new domain gets one shot at establishing quality signals, and an AdSense application filed in this state risks a rejection that is expensive to reverse. Fourteen of the top twenty fixes are under an hour, so the real risk is not difficulty but sequencing.",
+ "status_note": "Rows 1, 3, 5 and 6 implemented 2026-08-27 and pushed to claude/ecstatic-albattani-OLO2a. Everything else untouched."
 }
