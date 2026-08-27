@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
-import { Footer } from "@/components/balasaur/Footer";
 
 export const Route = createFileRoute("/about")({
   loader: async () => {
@@ -97,7 +96,6 @@ function AboutPage() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }
