@@ -399,6 +399,47 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
   );
 }
 
+// Every filmography link ships in the HTML. This section is the only place on
+// the site that links a person list, so anything held back behind a tap was
+// unreachable. A-Z rows, the same row shape the year index uses.
+function PeopleIndex({ people }: { people: CollectionSummary[] }) {
+  const byInitial = new Map<string, CollectionSummary[]>();
+  for (const c of people) {
+    const initial = c.title
+      .replace(/^The Best /, "")
+      .slice(0, 1)
+      .toUpperCase();
+    byInitial.set(initial, [...(byInitial.get(initial) ?? []), c]);
+  }
+  // Plain sort, not localeCompare: single letters, and the CDN-cached SSR
+  // order has to match every client's hydration order exactly.
+  const initials = [...byInitial.keys()].sort();
+  return (
+    <div className="mt-3.5 space-y-1">
+      {initials.map((letter) => (
+        <div key={letter} className="flex items-baseline gap-3 border-t border-border/60 py-1">
+          <span className="w-4 shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+            {letter}
+          </span>
+          <div className="flex flex-wrap gap-x-1 gap-y-0.5">
+            {(byInitial.get(letter) ?? []).map((c) => (
+              <Link
+                key={c.slug}
+                to="/best/$slug"
+                params={{ slug: c.slug }}
+                className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
+              >
+                {c.title.replace(/^The Best /, "")}
+                <span className="tabular-nums text-text-dim">{c.item_count}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function genreServicePairs(rows: CollectionSummary[]) {
   const out: { row: string; col: string; c: CollectionSummary }[] = [];
   for (const c of rows) {
@@ -540,7 +581,6 @@ function DualIndexMatrix({
 function CollectionsPage() {
   const collections = Route.useLoaderData();
   const [q, setQ] = useState("");
-  const [peopleExpanded, setPeopleExpanded] = useState(false);
 
   const query = q.trim().toLowerCase();
   const matches = useMemo(
@@ -687,38 +727,7 @@ function CollectionsPage() {
                 </h2>
                 <span className="font-mono text-[10.5px] text-text-dim">{people.length} lists</span>
               </div>
-              {/* The largest filmographies up front; the full alphabetical
-                  list one tap away (same pattern as the genre rail). */}
-              <div className="mt-3.5 flex flex-wrap gap-1.5">
-                {(peopleExpanded
-                  ? people
-                  : [...people]
-                      .sort(
-                        (a: CollectionSummary, b: CollectionSummary) => b.item_count - a.item_count,
-                      )
-                      .slice(0, 24)
-                ).map((c: CollectionSummary) => (
-                  <Link
-                    key={c.slug}
-                    to="/best/$slug"
-                    params={{ slug: c.slug }}
-                    className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] text-text-muted transition-colors hover:border-primary hover:text-primary"
-                  >
-                    {c.title.replace(/^The Best /, "")}
-                    <span className="ml-1 tabular-nums opacity-70">{c.item_count}</span>
-                  </Link>
-                ))}
-                {people.length > 24 && (
-                  <button
-                    type="button"
-                    onClick={() => setPeopleExpanded(!peopleExpanded)}
-                    aria-expanded={peopleExpanded}
-                    className="cursor-pointer rounded-[4px] border border-dashed border-border px-2.5 py-1 font-mono text-[11px] text-text-dim transition-colors hover:border-border-strong hover:text-text-bright"
-                  >
-                    {peopleExpanded ? "Fewer people" : `All ${people.length} people`}
-                  </button>
-                )}
-              </div>
+              <PeopleIndex people={people} />
             </section>
           )}
 

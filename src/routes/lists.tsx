@@ -57,7 +57,9 @@ const BUCKET_META: Record<
 };
 
 // Empty states that point somewhere: the grid for saving, the deck for rating.
-const BUCKET_EMPTY: Record<Bucket, { text: string; cta: string; to: string }> = {
+// `to` is a literal union of real route paths so a dead target fails typecheck
+// instead of falling through to the /$handle catch-all at runtime.
+const BUCKET_EMPTY: Record<Bucket, { text: string; cta: string; to: "/" | "/watched" }> = {
   watchlist: {
     text: "Nothing saved yet. Hover a poster in the grid and hit Save, or swipe left in the deck.",
     cta: "Browse the grid",
@@ -66,17 +68,17 @@ const BUCKET_EMPTY: Record<Bucket, { text: string; cta: string; to: string }> = 
   favorites: {
     text: "No favorites yet. Mark something Watched and tap “Liked it”, or swipe up in the deck.",
     cta: "Rate titles",
-    to: "/rate",
+    to: "/watched",
   },
   history: {
     text: "Nothing watched yet. The fastest way to build your history is a quick deck session.",
     cta: "Rate titles",
-    to: "/rate",
+    to: "/watched",
   },
   notInterested: {
     text: "Nothing hidden. Press X in the deck (or “Never show this” on a title page) to keep the junk out of your recommendations.",
     cta: "Rate titles",
-    to: "/rate",
+    to: "/watched",
   },
 };
 

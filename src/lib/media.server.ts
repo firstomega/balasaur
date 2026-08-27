@@ -2207,14 +2207,28 @@ export async function fetchMediaDetail(
           //
           // Healed from the catalog row rather than by purging ~190k cached
           // details, which would also stampede TMDB with rebuild fetches.
+          //   the per-source ratings are healed for the same reason. The
+          //              rating markup counts how many of the four sources the
+          //              score averaged, so a stale payload holding only
+          //              {tmdb} while the catalog row holds three sources
+          //              silently drops the block off pages like Seinfeld and
+          //              The Simpsons. Healing the sources keeps the count
+          //              describing the same population the score does.
+          const sourceCount = (r?: MediaDetail["ratings"]) =>
+            [r?.imdb, r?.rottenTomatoes, r?.metacritic, r?.tmdb].filter(
+              (v) => typeof v === "number",
+            ).length;
           const needsVotes = cached.voteCount === undefined;
           const needsScore = cached.ratings?.balasaur === undefined;
           const needsStreaming = (cached.streaming ?? []).length === 0;
-          if (needsVotes || needsScore || needsStreaming) {
+          const needsSources = sourceCount(cached.ratings) < 2;
+          if (needsVotes || needsScore || needsStreaming || needsSources) {
             try {
               const { data: row } = await supabaseAdmin
                 .from("media")
-                .select("vote_count, rating_balasaur, streaming")
+                .select(
+                  "vote_count, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
+                )
                 .eq("media_id", cacheId)
                 .maybeSingle();
               if (needsVotes && typeof row?.vote_count === "number") {
@@ -2225,6 +2239,20 @@ export async function fetchMediaDetail(
               }
               if (needsStreaming && Array.isArray(row?.streaming) && row.streaming.length > 0) {
                 cached.streaming = row.streaming;
+              }
+              if (needsSources && row) {
+                const healed = {
+                  imdb: cached.ratings?.imdb ?? row.rating_imdb ?? undefined,
+                  rottenTomatoes:
+                    cached.ratings?.rottenTomatoes ?? row.rating_rotten_tomatoes ?? undefined,
+                  metacritic: cached.ratings?.metacritic ?? row.rating_metacritic ?? undefined,
+                  tmdb: cached.ratings?.tmdb ?? row.rating_tmdb ?? undefined,
+                };
+                // Only adopt the healed set if it actually adds a source, so a
+                // catalog row that is itself thin never overwrites good data.
+                if (sourceCount(healed) > sourceCount(cached.ratings)) {
+                  cached.ratings = { ...(cached.ratings ?? {}), ...healed };
+                }
               }
             } catch {
               // best-effort — the page still renders without these
