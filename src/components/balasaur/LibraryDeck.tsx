@@ -563,7 +563,7 @@ function Legend() {
               <span className="block truncate font-mono text-[11px] uppercase tracking-wider text-text-bright">
                 {ACTION_LABEL[r.dir]}
               </span>
-              <span className="block truncate font-mono text-[8.5px] uppercase tracking-wider text-text-dim">
+              <span className="block truncate font-mono text-[11px] uppercase tracking-wider text-text-dim">
                 {ACTION_SUBLABEL[r.dir]}
               </span>
             </span>
@@ -594,7 +594,7 @@ function LibrarySummary({
   return (
     <div className="mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-6 px-6 py-10 text-center">
       <div>
-        <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted">
+        <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted">
           Session complete
         </div>
         <div className="mt-2 text-[40px] font-semibold text-text-bright">

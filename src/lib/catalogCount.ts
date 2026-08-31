@@ -13,3 +13,9 @@
 // Re-measure and bump when the catalog grows materially.
 export const CATALOG_COUNT = 76264;
 export const CATALOG_COUNT_LABEL = CATALOG_COUNT.toLocaleString("en-US");
+
+// Static copy quotes the floored form ("more than 76,000"): the homepage grid
+// prints its own live count, which grows nightly, so an exact figure in
+// cached prose would disagree with it within days. A floor stays true.
+export const CATALOG_FLOOR = Math.floor(CATALOG_COUNT / 1000) * 1000;
+export const CATALOG_FLOOR_LABEL = CATALOG_FLOOR.toLocaleString("en-US");

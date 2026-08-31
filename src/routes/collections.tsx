@@ -5,7 +5,7 @@ import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
 import { tmdbImage } from "@/lib/tmdbImage";
-import { CATALOG_COUNT_LABEL } from "@/lib/catalogCount";
+import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 
 // /collections — three tiers, priorities in this order: seduction, navigation,
 // completeness.
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/collections")({
   head: () => ({
     meta: buildMeta({
       title: "Ranked Movie & TV Collections | Balasaur",
-      description: `Ranked lists drawn from ${CATALOG_COUNT_LABEL} titles: by service, decade, genre, and acclaim. Each one is ordered by Balasaur Score and rebuilt nightly.`,
+      description: `Ranked lists drawn from more than ${CATALOG_FLOOR_LABEL} titles: by service, decade, genre, and acclaim. Each one is ordered by Balasaur Score and rebuilt nightly.`,
       url: `${SITE_ORIGIN}/collections`,
     }),
     links: [canonicalLink(`${SITE_ORIGIN}/collections`)],
@@ -178,7 +178,7 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
       <span className="mt-3.5 block text-[19px] font-semibold leading-tight tracking-tight text-text-bright group-hover:text-primary sm:text-[21px]">
         {chip && (
           <span
-            className={`mr-2 inline-grid h-5 place-items-center rounded-[4px] px-1.5 align-[2px] font-mono text-[10px] font-bold ${chip.className}`}
+            className={`mr-2 inline-grid h-5 place-items-center rounded-[4px] px-1.5 align-[2px] font-mono text-[11px] font-bold ${chip.className}`}
           >
             {chip.label}
           </span>
@@ -224,7 +224,7 @@ function ShelfCard({ c }: { c: CollectionSummary }) {
         {c.title}
       </span>
       {typeof c.top_score === "number" && (
-        <span className="mt-0.5 block font-mono text-[10px] text-text-dim">
+        <span className="mt-0.5 block font-mono text-[11px] text-text-dim">
           top <span className="text-rating">{c.top_score}</span>
         </span>
       )}
@@ -245,7 +245,7 @@ function Shelf({
     <section className="mt-11">
       <div className="flex items-baseline gap-3">
         <h2 className="text-[17px] font-semibold tracking-tight text-text-bright">{title}</h2>
-        {meta && <span className="font-mono text-[10.5px] text-text-dim">{meta}</span>}
+        {meta && <span className="font-mono text-[12px] text-text-dim">{meta}</span>}
       </div>
       <div className="mt-3.5">
         <ScrollRail className="gap-2">{children}</ScrollRail>
@@ -292,7 +292,7 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
   if (rows.length === 0) return null;
   return (
     <div className="mt-8">
-      <h3 className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">
+      <h3 className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
         {label}
       </h3>
       <div className="overflow-x-auto">
@@ -303,7 +303,7 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
               {cols.map((col) => (
                 <th
                   key={col}
-                  className="px-1 pb-1.5 text-center font-mono text-[9px] font-normal uppercase tracking-wider text-text-dim"
+                  className="px-1 pb-1.5 text-center font-mono text-[11px] font-normal uppercase tracking-wider text-text-dim"
                 >
                   {col}
                 </th>
@@ -360,13 +360,13 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
   const decades = [...byDecade.keys()].sort().reverse();
   return (
     <div className="mt-8">
-      <h3 className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">
+      <h3 className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
         By year
       </h3>
       <div className="space-y-1">
         {decades.map((dec) => (
           <div key={dec} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-            <span className="w-14 shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+            <span className="w-14 shrink-0 font-mono text-[11px] uppercase tracking-wider text-text-dim">
               {dec}
             </span>
             <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -418,7 +418,7 @@ function PeopleIndex({ people }: { people: CollectionSummary[] }) {
     <div className="mt-3.5 space-y-1">
       {initials.map((letter) => (
         <div key={letter} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-          <span className="w-4 shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+          <span className="w-4 shrink-0 font-mono text-[11px] uppercase tracking-wider text-text-dim">
             {letter}
           </span>
           <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -506,8 +506,8 @@ function DualIndexMatrix({
   return (
     <div className="mt-8">
       <div className="mb-2.5 flex items-center gap-4">
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.14em] text-text-dim">{label}</h3>
-        <span className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+        <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">{label}</h3>
+        <span className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider text-text-dim">
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-[2px] bg-media-movie" /> Movies
           </span>
@@ -524,7 +524,7 @@ function DualIndexMatrix({
               {cols.map((col) => (
                 <th
                   key={col}
-                  className="px-1 pb-1.5 text-center font-mono text-[9px] font-normal uppercase tracking-wider text-text-dim"
+                  className="px-1 pb-1.5 text-center font-mono text-[11px] font-normal uppercase tracking-wider text-text-dim"
                 >
                   {col}
                 </th>
@@ -640,8 +640,7 @@ function CollectionsPage() {
         {matches && (
           <section className="mt-7">
             <h2 className="text-[15px] font-semibold text-text-bright">
-              Matches{" "}
-              <span className="font-mono text-[10.5px] text-text-dim">{matches.length}</span>
+              Matches <span className="font-mono text-[12px] text-text-dim">{matches.length}</span>
             </h2>
             {matches.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -725,7 +724,7 @@ function CollectionsPage() {
                 <h2 className="text-[17px] font-semibold tracking-tight text-text-bright">
                   People
                 </h2>
-                <span className="font-mono text-[10.5px] text-text-dim">{people.length} lists</span>
+                <span className="font-mono text-[12px] text-text-dim">{people.length} lists</span>
               </div>
               <PeopleIndex people={people} />
             </section>
@@ -733,7 +732,7 @@ function CollectionsPage() {
 
           {/* Tier 3: the full index */}
           <section className="mt-13 border-t border-border pt-7">
-            <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">
+            <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted">
               Every collection · {collections.length}
             </div>
 
@@ -757,11 +756,11 @@ function CollectionsPage() {
             <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 pb-2">
               <Link
                 to="/methodology"
-                className="font-mono text-[10.5px] text-text-muted hover:text-primary"
+                className="font-mono text-[12px] text-text-muted hover:text-primary"
               >
                 How we rank →
               </Link>
-              <span className="font-mono text-[10.5px] text-text-dim">Data: TMDB &amp; OMDb</span>
+              <span className="font-mono text-[12px] text-text-dim">Data: TMDB &amp; OMDb</span>
             </div>
           </section>
         </div>

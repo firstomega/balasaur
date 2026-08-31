@@ -354,7 +354,7 @@ function HomePage() {
                 <PanelLeftClose className="h-4 w-4" />
               </button>
             </div>
-            <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
+            <Suspense fallback={<div className="font-mono text-[11px] text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
                 setFilters={setFilters}
@@ -370,7 +370,7 @@ function HomePage() {
               onClick={() => setRail(false)}
               aria-label="Show filters"
               title="Show filters"
-              className="sticky top-12 flex cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-panel px-2 py-2 font-mono text-[10px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+              className="sticky top-12 flex cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-panel px-2 py-2 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
             >
               <PanelLeftOpen className="h-4 w-4" />
             </button>
@@ -468,7 +468,7 @@ function HomePage() {
                 <button
                   type="button"
                   onClick={() => setFilters(() => defaultFilterState())}
-                  className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
+                  className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
                 >
                   Clear all
                 </button>
@@ -476,7 +476,7 @@ function HomePage() {
             </div>
           </SheetHeader>
           <div className="mt-3 pb-16">
-            <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
+            <Suspense fallback={<div className="font-mono text-[11px] text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
                 setFilters={setFilters}
@@ -625,7 +625,7 @@ function BrowseBreak({
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="ml-auto cursor-pointer font-mono text-[10px] uppercase tracking-wider text-text-dim hover:text-text-bright"
+        className="ml-auto cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-dim hover:text-text-bright"
       >
         Back to top ↑
       </button>
@@ -902,7 +902,7 @@ function GridWithControls({
       {!isLoading && total === 0 && (
         <div className="mt-10 flex flex-col items-center rounded-[5px] border border-border bg-panel p-8 text-center">
           <DinoMark className="h-8 w-8 text-primary opacity-80" />
-          <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.18em] text-text-dim">
+          <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.12em] text-text-dim">
             No matches
           </p>
           {suggestions.length > 0 ? (

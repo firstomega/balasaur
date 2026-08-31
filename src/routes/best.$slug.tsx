@@ -102,6 +102,14 @@ function CollectionPage() {
     setMounted(true);
   }, []);
 
+  // The route component survives a $slug change (related-collection links),
+  // so filters chosen on one collection must not silently trim the next.
+  useEffect(() => {
+    setSvc(null);
+    setDecade(null);
+    setHideSeen(false);
+  }, [row.slug]);
+
   // A chip group renders only when it would change anything: at least two
   // distinct values, none covering the whole list. Service chips are also
   // suppressed on collections already scoped to a service, where every row
