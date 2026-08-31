@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { Filter, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
@@ -9,6 +9,7 @@ import { FilterRail } from "@/components/balasaur/FilterRail";
 import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters";
 import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { SortControl } from "@/components/balasaur/SortControl";
+import { MobileFilterStrip } from "@/components/balasaur/MobileFilterStrip";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
@@ -795,27 +796,20 @@ function GridWithControls({
         </div>
       )}
 
+      {/* The mobile filter strip replaces the old Filters pill: chips wear
+          their values, the first chip is the live count, and each opens a
+          bottom sheet with just that control. Desktop keeps the sidebar. */}
+      <MobileFilterStrip
+        filters={filters}
+        setFilters={setFilters}
+        total={total}
+        activeCount={activeCount}
+        onOpenAllFilters={onOpenMobileFilters}
+      />
+
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-2">
-        <button
-          type="button"
-          onClick={onOpenMobileFilters}
-          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border px-3 py-1.5 font-mono text-[12px] font-medium uppercase tracking-wider transition-colors md:hidden ${
-            activeCount > 0
-              ? "border-primary bg-primary/15 text-primary"
-              : "border-border-strong bg-panel text-text-bright hover:border-primary/60"
-          }`}
-        >
-          <Filter className="h-3.5 w-3.5" />
-          Filters
-          {activeCount > 0 && (
-            <span className="ml-0.5 rounded-[3px] bg-primary px-1 text-[11px] text-primary-foreground">
-              {activeCount}
-            </span>
-          )}
-        </button>
-
-        <span className="font-mono text-[12px] text-text-muted">
+        <span className="hidden font-mono text-[12px] text-text-muted md:inline">
           <AnimatedCount value={total} className="text-text-bright" /> results
         </span>
 
@@ -851,7 +845,9 @@ function GridWithControls({
 
       {/* Active chips */}
       <div className="mb-3">
-        <ActiveFilters filters={filters} setFilters={setFilters} />
+        <div className="hidden md:block">
+          <ActiveFilters filters={filters} setFilters={setFilters} />
+        </div>
       </div>
 
       {isLoading && items.length === 0 ? (
