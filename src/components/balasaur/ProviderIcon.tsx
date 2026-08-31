@@ -287,7 +287,7 @@ export function ProviderIcon({
             {tile}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="font-mono text-[10px] uppercase tracking-wider">
+        <TooltipContent side="bottom" className="font-mono text-[11px] uppercase tracking-wider">
           {displayLabel}
         </TooltipContent>
       </Tooltip>

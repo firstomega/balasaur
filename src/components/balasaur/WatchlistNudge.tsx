@@ -37,7 +37,7 @@ export function WatchlistNudge({ wantIds, region }: { wantIds: Set<string>; regi
           <span className="ml-1.5 text-text-muted">on {providers.join(", ")}</span>
         )}
       </span>
-      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-[#e8b84b]">
+      <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-[#e8b84b]">
         View →
       </span>
     </Link>

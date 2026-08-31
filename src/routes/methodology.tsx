@@ -33,7 +33,7 @@ function MethodologyPage() {
         <div className="mt-10 space-y-12">
           <section>
             <h2 className="text-[18px] font-semibold text-text-bright">The Balasaur Score</h2>
-            <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
+            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
                 The Balasaur Score is a 0 to 100 blend of ratings from IMDb, Rotten Tomatoes,
                 Metacritic, and TMDB. When a source has no rating for a title, the remaining sources
@@ -92,7 +92,7 @@ function MethodologyPage() {
 
           <section>
             <h2 className="text-[18px] font-semibold text-text-bright">Ranked Collections</h2>
-            <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
+            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
                 A collection only makes the cut when enough qualifying titles exist. A qualifying
                 title must have a poster, synopsis, score, and no flagged content.
@@ -112,7 +112,7 @@ function MethodologyPage() {
 
           <section>
             <h2 className="text-[18px] font-semibold text-text-bright">Freshness</h2>
-            <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
+            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
                 The catalog syncs from TMDB and OMDb nightly. Every collection is rebuilt nightly to
                 ensure rankings reflect the latest data. Each collection page displays its own
@@ -123,7 +123,7 @@ function MethodologyPage() {
 
           <section>
             <h2 className="text-[18px] font-semibold text-text-bright">What we do not do</h2>
-            <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
+            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
                 We do not accept editorial payola, we do not feature sponsored placements, and we do
                 not use AI generated reviews. Data sources are credited to TMDB and OMDb.

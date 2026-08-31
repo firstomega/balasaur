@@ -28,7 +28,7 @@ principle here has a check.
 
 ## What this product is
 
-A movie and TV discovery database. ~66,000 titles from TMDB and OMDb,
+A movie and TV discovery database. ~76,000 titles from TMDB and OMDb,
 refreshed nightly. Its one differentiated asset is the Balasaur Score, a
 0 to 100 blend of IMDb, Rotten Tomatoes, Metacritic, and TMDB. Everything
 else on the site is commodity data that a dozen competitors also have.

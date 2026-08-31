@@ -259,7 +259,7 @@ export function ActiveFilters({
       {chips.map((c) => (
         <span
           key={c.key}
-          className="inline-flex items-center gap-1 rounded-[4px] border border-border-strong bg-panel px-1.5 py-[3px] font-mono text-[10.5px] text-text-bright"
+          className="inline-flex items-center gap-1 rounded-[4px] border border-border-strong bg-panel px-1.5 py-[3px] font-mono text-[11px] text-text-bright"
         >
           {c.label}
           <button
@@ -275,7 +275,7 @@ export function ActiveFilters({
       <button
         type="button"
         onClick={() => setFilters(() => defaultFilterState())}
-        className="cursor-pointer font-mono text-[10.5px] uppercase tracking-wider text-text-muted underline-offset-2 hover:text-text-bright hover:underline"
+        className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted underline-offset-2 hover:text-text-bright hover:underline"
       >
         Clear all
       </button>

@@ -95,7 +95,7 @@ export function AuthDialog({
           <DialogTitle className="font-mono text-[13px] uppercase tracking-wider text-text-bright">
             {mode === "signin" ? "Sign in" : "Create account"}
           </DialogTitle>
-          <DialogDescription className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+          <DialogDescription className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
             {reason ?? "Save your library across devices"}
           </DialogDescription>
         </DialogHeader>
@@ -110,7 +110,7 @@ export function AuthDialog({
               Continue with Google
             </button>
 
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
               <span className="h-px flex-1 bg-border" />
               or
               <span className="h-px flex-1 bg-border" />
@@ -138,8 +138,8 @@ export function AuthDialog({
               className="h-9 w-full rounded-[5px] border border-border bg-background px-2.5 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
           )}
-          {error && <p className="font-mono text-[10.5px] text-red-400">{error}</p>}
-          {notice && <p className="font-mono text-[10.5px] text-primary">{notice}</p>}
+          {error && <p className="font-mono text-[12px] text-red-400">{error}</p>}
+          {notice && <p className="font-mono text-[12px] text-primary">{notice}</p>}
           <button
             type="submit"
             disabled={busy}
@@ -159,7 +159,7 @@ export function AuthDialog({
           <button
             type="button"
             onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="cursor-pointer text-left font-mono text-[10.5px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+            className="cursor-pointer text-left font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
           >
             {mode === "signin" ? "No account? Create one" : "Have an account? Sign in"}
           </button>
@@ -167,7 +167,7 @@ export function AuthDialog({
             <button
               type="button"
               onClick={() => setMode("magic")}
-              className="cursor-pointer text-left font-mono text-[10.5px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+              className="cursor-pointer text-left font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
             >
               Or email me a sign-in link (no password)
             </button>

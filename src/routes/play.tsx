@@ -146,7 +146,7 @@ function GuessInput({
                 }
               >
                 <span className="truncate">{h.title}</span>
-                <span className="shrink-0 font-mono text-[10px] text-text-dim">
+                <span className="shrink-0 font-mono text-[12px] text-text-dim">
                   {h.year || h.mediaType}
                 </span>
               </button>
@@ -311,7 +311,7 @@ function PlayPage() {
                 {wrongTitles.map((t, i) => (
                   <span
                     key={i}
-                    className="rounded-[4px] border border-border px-2 py-0.5 font-mono text-[10.5px] text-text-dim line-through"
+                    className="rounded-[4px] border border-border px-2 py-0.5 font-mono text-[12px] text-text-dim line-through"
                   >
                     {t}
                   </span>
@@ -323,13 +323,13 @@ function PlayPage() {
               <div className="mt-5 space-y-2.5">
                 <GuessInput onGuess={onGuess} disabled={finished} />
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
                     Guess {state.guessedIds.length + 1} of {MAX_GUESSES}
                   </span>
                   <button
                     type="button"
                     onClick={giveUp}
-                    className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim underline hover:text-text-muted"
+                    className="font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-muted"
                   >
                     Reveal the answer
                   </button>
@@ -344,7 +344,7 @@ function PlayPage() {
                     className="h-[132px] w-[88px] shrink-0 rounded-[4px] object-cover"
                   />
                   <div className="min-w-0">
-                    <p className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+                    <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
                       {state.solved
                         ? `Solved in ${state.guessedIds.length} of ${MAX_GUESSES}`
                         : "The answer was"}
@@ -375,11 +375,11 @@ function PlayPage() {
                     )}
                     {copied ? "Copied" : "Share result"}
                   </button>
-                  <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
                     Streak {state.streak} · Best {state.best} · Won {state.wins} of {state.played}
                   </span>
                 </div>
-                <p className="mt-3 font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+                <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-text-dim">
                   Next game at midnight UTC.
                 </p>
               </div>

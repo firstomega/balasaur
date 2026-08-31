@@ -5,6 +5,7 @@ import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
 import { tmdbImage } from "@/lib/tmdbImage";
+import { CATALOG_COUNT_LABEL } from "@/lib/catalogCount";
 
 // /collections — three tiers, priorities in this order: seduction, navigation,
 // completeness.
@@ -26,8 +27,7 @@ export const Route = createFileRoute("/collections")({
   head: () => ({
     meta: buildMeta({
       title: "Ranked Movie & TV Collections | Balasaur",
-      description:
-        "Ranked lists drawn from 65,000 titles: by service, decade, genre, and acclaim. Each one is ordered by Balasaur Score and rebuilt nightly.",
+      description: `Ranked lists drawn from ${CATALOG_COUNT_LABEL} titles: by service, decade, genre, and acclaim. Each one is ordered by Balasaur Score and rebuilt nightly.`,
       url: `${SITE_ORIGIN}/collections`,
     }),
     links: [canonicalLink(`${SITE_ORIGIN}/collections`)],

@@ -223,7 +223,7 @@ function ProfileEditor() {
                 type="button"
                 onClick={() => setAvatarPreset(null)}
                 title="Auto (from handle)"
-                className={`h-8 rounded-full border px-3 font-mono text-[10px] uppercase tracking-wider ${
+                className={`h-8 rounded-full border px-3 font-mono text-[11px] uppercase tracking-wider ${
                   avatarPreset === null
                     ? "border-primary text-primary"
                     : "border-border text-text-dim hover:border-border-strong"
@@ -276,7 +276,7 @@ function ProfileEditor() {
               />
             </div>
             {usernameChanged && uStatus.msg && (
-              <p className={`font-mono text-[10.5px] ${uStatusColor}`}>
+              <p className={`font-mono text-[12px] ${uStatusColor}`}>
                 {uStatus.kind === "checking" ? "Checking…" : uStatus.msg}
               </p>
             )}
@@ -292,7 +292,7 @@ function ProfileEditor() {
               className={`${inputCls} h-auto py-2`}
               placeholder="A line or two about your taste…"
             />
-            <p className="text-right font-mono text-[10px] text-text-dim">
+            <p className="text-right font-mono text-[12px] text-text-dim">
               {bio.length}/{BIO_MAX}
             </p>
           </Field>
@@ -352,7 +352,7 @@ function ProfileEditor() {
             </Link>
             {saveMsg && (
               <span
-                className={`font-mono text-[10.5px] ${
+                className={`font-mono text-[12px] ${
                   saveMsg.kind === "ok" ? "text-emerald-400" : "text-red-400"
                 }`}
               >
@@ -377,11 +377,11 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+      <label className="block font-mono text-[11px] uppercase tracking-wider text-text-dim">
         {label}
       </label>
       {children}
-      {hint && <p className="font-mono text-[10.5px] text-text-dim">{hint}</p>}
+      {hint && <p className="font-mono text-[12px] text-text-dim">{hint}</p>}
     </div>
   );
 }

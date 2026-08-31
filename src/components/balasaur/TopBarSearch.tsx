@@ -217,14 +217,14 @@ export function TopBarSearch() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">
-                        <span className="truncate text-[12.5px] font-semibold text-text-bright">
+                        <span className="truncate text-[13px] font-semibold text-text-bright">
                           {hit.title}
                         </span>
-                        <span className="shrink-0 font-mono text-[10px] text-text-dim">
+                        <span className="shrink-0 font-mono text-[12px] text-text-dim">
                           {hit.year || "—"}
                         </span>
                       </div>
-                      <div className="mt-0.5 flex items-center gap-2 font-mono text-[10px]">
+                      <div className="mt-0.5 flex items-center gap-2 font-mono text-[11px]">
                         <span
                           className={`uppercase tracking-wider ${TYPE_COLOR[hit.mediaType] ?? "text-text-muted"}`}
                         >
@@ -242,7 +242,7 @@ export function TopBarSearch() {
           )}
           {people.length > 0 && (
             <div className="border-t border-border">
-              <div className="px-3 pb-0.5 pt-1.5 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+              <div className="px-3 pb-0.5 pt-1.5 font-mono text-[11px] uppercase tracking-wider text-text-dim">
                 People
               </div>
               <ul className="pb-1">
@@ -276,10 +276,10 @@ export function TopBarSearch() {
                         ) : null}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="truncate text-[12.5px] font-semibold text-text-bright">
+                        <span className="truncate text-[13px] font-semibold text-text-bright">
                           {hit.name}
                         </span>
-                        <div className="mt-0.5 font-mono text-[10px] text-text-dim">
+                        <div className="mt-0.5 font-mono text-[12px] text-text-dim">
                           {hit.titles} titles here
                         </div>
                       </div>
@@ -289,7 +289,7 @@ export function TopBarSearch() {
               </ul>
             </div>
           )}
-          <div className="border-t border-border px-3 py-1.5 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+          <div className="border-t border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-dim">
             ↑↓ navigate · ↵ open · esc close
           </div>
         </div>

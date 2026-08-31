@@ -100,13 +100,13 @@ function PosterTile({ item }: { item: PublicMediaItem }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center p-2 text-center font-mono text-[10px] text-text-dim">
+          <div className="flex h-full items-center justify-center p-2 text-center font-mono text-[12px] text-text-dim">
             {item.title}
           </div>
         )}
       </div>
       <p className="mt-1.5 line-clamp-1 font-mono text-[11px] text-text-bright">{item.title}</p>
-      {item.year && <p className="font-mono text-[10px] text-text-dim">{item.year}</p>}
+      {item.year && <p className="font-mono text-[12px] text-text-dim">{item.year}</p>}
     </>
   );
   if (seg === "movie")
@@ -141,7 +141,7 @@ function Stat({ n, label }: { n: number; label: string }) {
   return (
     <div className="text-center">
       <div className="font-sans text-xl font-semibold text-text-bright">{n}</div>
-      <div className="font-mono text-[10px] uppercase tracking-wider text-text-dim">{label}</div>
+      <div className="font-mono text-[11px] uppercase tracking-wider text-text-dim">{label}</div>
     </div>
   );
 }
@@ -205,14 +205,14 @@ function ProfilePage() {
               {p.favoriteGenres.map((g: string) => (
                 <span
                   key={g}
-                  className="rounded-full border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-text-muted"
+                  className="rounded-full border border-border bg-panel px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-text-muted"
                 >
                   {g}
                 </span>
               ))}
             </div>
           )}
-          <p className="mt-3 font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+          <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-text-dim">
             Joined {joined}
           </p>
         </div>

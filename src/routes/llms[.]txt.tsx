@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CATALOG_COUNT_LABEL } from "@/lib/catalogCount";
 import { SITE_ORIGIN } from "@/lib/seo";
 
 // Served at /llms.txt — the convention for telling AI answer engines what a
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/llms.txt")({
       GET: () => {
         const body = `# Balasaur
 
-> A movie and TV database of about 66,000 titles. Every title carries a
+> A movie and TV database of ${CATALOG_COUNT_LABEL} titles. Every title carries a
 > Balasaur Score, a 0 to 100 blend of its IMDb, Rotten Tomatoes, Metacritic,
 > and TMDB ratings, so titles rated on four different scales can be compared
 > directly. Scores and streaming availability are rebuilt nightly.

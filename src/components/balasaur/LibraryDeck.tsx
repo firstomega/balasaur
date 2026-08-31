@@ -202,7 +202,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   if (!ready) {
     return (
       <div className="mx-auto flex h-[560px] w-full max-w-md items-center justify-center">
-        <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
           Loading…
         </span>
       </div>
@@ -224,19 +224,19 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
 
   return (
     <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-between gap-4 px-4 py-4 md:max-w-3xl">
-      <div className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+      <div className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
         {index + 1} / {deck.length} · sorted {summary.total}
       </div>
 
       {showNudge && (
         <div className="flex w-full max-w-[360px] items-center gap-2 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2">
-          <span className="flex-1 font-mono text-[10.5px] uppercase tracking-wider text-text-bright">
+          <span className="flex-1 font-mono text-[11px] uppercase tracking-wider text-text-bright">
             Sign in to save your {sessionPicks} picks
           </span>
           <button
             type="button"
             onClick={() => setAuthOpen(true)}
-            className="cursor-pointer rounded-[4px] bg-primary px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="cursor-pointer rounded-[4px] bg-primary px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
           >
             Sign in
           </button>
@@ -400,7 +400,7 @@ function DeckInfo({ item }: { item: MediaItem }) {
   const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+      <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-text-muted">
         <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
         {item.year && <span>· {item.year}</span>}
         {seasons > 0 && (
@@ -412,7 +412,7 @@ function DeckInfo({ item }: { item: MediaItem }) {
       </div>
       <h2 className="text-[20px] font-semibold leading-tight text-text-bright">{item.title}</h2>
       {item.genres.length > 0 && (
-        <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+        <div className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
           {item.genres.slice(0, 4).join(" · ")}
         </div>
       )}
@@ -422,7 +422,7 @@ function DeckInfo({ item }: { item: MediaItem }) {
         </p>
       )}
       {item.streaming.length > 0 && (
-        <div className="mt-auto font-mono text-[10px] uppercase tracking-wider text-text-muted">
+        <div className="mt-auto font-mono text-[11px] uppercase tracking-wider text-text-muted">
           On {item.streaming.slice(0, 3).join(", ")}
         </div>
       )}
@@ -476,13 +476,13 @@ function CardFace({
               (infoOpen ? " invisible" : "")
             }
           >
-            <div className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-white/80">
+            <div className="mb-1 flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-white/80">
               <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
               {item.year && <span>· {item.year}</span>}
               {score !== undefined && <ScoreBadge score={score} />}
             </div>
             <h2 className="text-[20px] font-semibold leading-tight text-white">{item.title}</h2>
-            <p className="mt-1.5 font-mono text-[9.5px] uppercase tracking-wider text-white/60">
+            <p className="mt-1.5 font-mono text-[11px] uppercase tracking-wider text-white/60">
               Tap for details
             </p>
           </div>
@@ -491,7 +491,7 @@ function CardFace({
           {infoOpen && (
             <div className="absolute inset-0 flex flex-col gap-2.5 overflow-hidden bg-black/95 p-4 md:hidden">
               <DeckInfo item={item} />
-              <p className="font-mono text-[9.5px] uppercase tracking-wider text-white/50">
+              <p className="font-mono text-[11px] uppercase tracking-wider text-white/50">
                 Tap to close
               </p>
             </div>
@@ -544,7 +544,7 @@ function Legend() {
   ];
   return (
     <div className="w-full max-w-[360px] space-y-1.5 rounded-[5px] border border-border bg-panel/60 p-2">
-      <div className="text-center font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+      <div className="text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">
         Swipe to sort · only Not now comes back
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -560,7 +560,7 @@ function Legend() {
               {r.icon}
             </span>
             <span className="min-w-0">
-              <span className="block truncate font-mono text-[10px] uppercase tracking-wider text-text-bright">
+              <span className="block truncate font-mono text-[11px] uppercase tracking-wider text-text-bright">
                 {ACTION_LABEL[r.dir]}
               </span>
               <span className="block truncate font-mono text-[8.5px] uppercase tracking-wider text-text-dim">
@@ -594,7 +594,7 @@ function LibrarySummary({
   return (
     <div className="mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-6 px-6 py-10 text-center">
       <div>
-        <div className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-text-muted">
+        <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted">
           Session complete
         </div>
         <div className="mt-2 text-[40px] font-semibold text-text-bright">
@@ -605,13 +605,13 @@ function LibrarySummary({
       {anonUnsaved > 0 && (
         <div className="flex w-full items-center gap-3 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2.5 text-left">
           <Check className="h-4 w-4 shrink-0 text-primary" />
-          <span className="flex-1 font-mono text-[10.5px] uppercase tracking-wider text-text-bright">
+          <span className="flex-1 font-mono text-[11px] uppercase tracking-wider text-text-bright">
             Saved on this device · sign in to keep your {anonUnsaved} picks
           </span>
           <button
             type="button"
             onClick={onSignIn}
-            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
           >
             Sign in
           </button>
@@ -657,12 +657,12 @@ function LibrarySummary({
 export function LibraryHeader() {
   return (
     <header className="flex h-12 items-center justify-between border-b border-border px-4">
-      <div className="font-mono text-[12px] uppercase tracking-[0.18em] text-text-bright">
+      <div className="font-mono text-[12px] uppercase tracking-[0.12em] text-text-bright">
         Rate Titles
       </div>
       <Link
         to="/"
-        className="inline-flex items-center gap-1 rounded-[4px] border border-border px-2 py-1 font-mono text-[10.5px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+        className="inline-flex items-center gap-1 rounded-[4px] border border-border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
       >
         <X className="h-3 w-3" />
         Exit

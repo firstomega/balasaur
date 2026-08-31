@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
+import { CATALOG_COUNT_LABEL } from "@/lib/catalogCount";
 
 export const Route = createFileRoute("/about")({
   loader: async () => {
@@ -56,7 +57,7 @@ function AboutPage() {
             <h2 className="text-[18px] font-semibold text-text-bright">The catalog</h2>
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
-                More than 66,000 movies and TV shows, synced from TMDB and OMDb every night.
+                {CATALOG_COUNT_LABEL} movies and TV shows, synced from TMDB and OMDb every night.
                 Rankings rebuild nightly too, so a list like Best on Netflix reflects what is on
                 Netflix now, not what was there when the page was first written.
               </p>

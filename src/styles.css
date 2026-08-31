@@ -80,10 +80,10 @@
   --panel: #171b21;
   --foreground: #d4d8e0;
   --text-bright: #ffffff;
-  --text-muted: #9aa2b1;
+  --text-muted: #a1a29b;
   /* 3.76 against the ground, below the 4.5 floor. 5.28 passes; one step
      lighter, still clearly quieter than muted. */
-  --text-dim: #818899;
+  --text-dim: #8a887f;
   --card: #171b21;
   --card-foreground: #d4d8e0;
   --popover: #171b21;
@@ -96,7 +96,7 @@
   --secondary: #1f242c;
   --secondary-foreground: #d4d8e0;
   --muted: #1f242c;
-  --muted-foreground: #9aa2b1;
+  --muted-foreground: #a1a29b;
   --accent: #262d37;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
