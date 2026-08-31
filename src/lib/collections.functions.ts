@@ -26,6 +26,35 @@ export interface CollectionSummary extends CollectionRow {
   media_type: string | null;
 }
 
+/** Resolve poster URLs for a set of media ids.
+ *
+ * Chunked on purpose. The collections hub asks for every card's collage at
+ * once, which is 1,733 distinct ids across 673 shelves, and a single .in()
+ * of that size loses rows: the REST layer caps a response at 1,000, so
+ * roughly seven hundred ids came back with nothing and their cards rendered
+ * with an empty poster fan. It also built a 20KB URL. Chunks bound both.
+ */
+async function postersByIds(ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const CHUNK = 400;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const { data, error } = await supabaseAdmin
+      .from("media")
+      .select("media_id, poster_url")
+      .in("media_id", slice)
+      .limit(slice.length);
+    if (error) {
+      console.error("[collections] poster lookup failed:", error.message);
+      continue;
+    }
+    for (const p of (data ?? []) as { media_id: string; poster_url: string | null }[]) {
+      if (p.poster_url) out.set(p.media_id, p.poster_url);
+    }
+  }
+  return out;
+}
+
 export const listCollections = createServerFn({ method: "GET" }).handler(
   async (): Promise<CollectionSummary[]> => {
     const { data, error } = await supabaseAdmin
@@ -47,16 +76,7 @@ export const listCollections = createServerFn({ method: "GET" }).handler(
 
     // One lookup for every collage poster (~4 ids × N collections).
     const ids = [...new Set(rows.flatMap((r) => r.poster_ids ?? []))];
-    const posterById = new Map<string, string>();
-    if (ids.length > 0) {
-      const { data: posters } = await supabaseAdmin
-        .from("media")
-        .select("media_id, poster_url")
-        .in("media_id", ids);
-      for (const p of (posters ?? []) as { media_id: string; poster_url: string | null }[]) {
-        if (p.poster_url) posterById.set(p.media_id, p.poster_url);
-      }
-    }
+    const posterById = await postersByIds(ids);
 
     return rows.map((r) => ({
       ...r,
@@ -124,16 +144,7 @@ export const listHomeCollections = createServerFn({ method: "GET" }).handler(
     const picked = rows.sort((a, b) => rank(a) - rank(b)).slice(0, HOME_RAIL_SIZE);
 
     const ids = [...new Set(picked.flatMap((r) => (r.poster_ids ?? []).slice(0, 3)))];
-    const posterById = new Map<string, string>();
-    if (ids.length > 0) {
-      const { data: posters } = await supabaseAdmin
-        .from("media")
-        .select("media_id, poster_url")
-        .in("media_id", ids);
-      for (const p of (posters ?? []) as { media_id: string; poster_url: string | null }[]) {
-        if (p.poster_url) posterById.set(p.media_id, p.poster_url);
-      }
-    }
+    const posterById = await postersByIds(ids);
 
     return picked.map((r) => ({
       slug: r.slug,

@@ -4,6 +4,8 @@ import { TopBar } from "@/components/balasaur/TopBar";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
+import { useCollectionOverlap } from "@/hooks/useCollectionOverlap";
+import { collectionProgressLine, collectionCountLine } from "@/lib/collectionProgress";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 
@@ -189,7 +191,7 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
   );
 }
 
-function ShelfCard({ c }: { c: CollectionSummary }) {
+function ShelfCard({ c, progress }: { c: CollectionSummary; progress?: string | null }) {
   const chip = c.kind === "service" ? providerChip(c.title) : null;
   const era = c.kind === "decade" ? decadeWord(c.title) : null;
   return (
@@ -223,19 +225,12 @@ function ShelfCard({ c }: { c: CollectionSummary }) {
       <span className="mt-2.5 block text-[14px] font-semibold leading-snug text-text-bright group-hover:text-primary">
         {c.title}
       </span>
-      {/* What the whole shelf is like, not what its best row scored. "top 92"
-          read as "the top 92 titles" to the owner, and it could not tell two
-          collections apart anyway: across 673 shelves top_score has a standard
-          deviation of 4.1 and half sit between 88 and 95. The count kills that
-          misreading outright and the median describes the package. */}
+      {/* Where the visitor stands in this shelf, which is what a person wants
+          before opening one. Quality is taken on trust; the old "top 92" was
+          a verdict nobody asked for and, at a standard deviation of 4.1
+          across 673 shelves, one that could not separate them anyway. */}
       <span className="mt-0.5 block font-mono text-[11px] text-text-dim">
-        {c.item_count.toLocaleString("en-US")} titles
-        {typeof c.median_score === "number" && (
-          <>
-            {" · half above "}
-            <span className="text-rating">{c.median_score}</span>
-          </>
-        )}
+        {progress ?? collectionCountLine(c.item_count)}
       </span>
     </Link>
   );
@@ -590,6 +585,14 @@ function DualIndexMatrix({
 function CollectionsPage() {
   const collections = Route.useLoaderData();
   const [q, setQ] = useState("");
+  // Personal, so it arrives after mount: the page itself is cached for six
+  // hours and served identically to everyone. Until it lands, and for every
+  // shelf the visitor has never touched, the card shows its title count.
+  const { overlap } = useCollectionOverlap();
+  const progressFor = (c: CollectionSummary) => {
+    const o = overlap.get(c.slug);
+    return o ? collectionProgressLine({ total: c.item_count, seen: o.seen, want: o.want }) : null;
+  };
 
   const query = q.trim().toLowerCase();
   const matches = useMemo(
@@ -692,21 +695,21 @@ function CollectionsPage() {
               }
             >
               {[...inSeason, ...everyday].map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} />
+                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
               ))}
             </Shelf>
           )}
           {services.length > 0 && (
             <Shelf title="Streaming now" meta={`${services.length} services · updated nightly`}>
               {services.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} />
+                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
               ))}
             </Shelf>
           )}
           {genres.length > 0 && (
             <Shelf title="By genre" meta={`${genres.length} lists`}>
               {genres.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} />
+                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
               ))}
             </Shelf>
           )}
@@ -716,14 +719,14 @@ function CollectionsPage() {
               meta={`${new Set(decades.map((c: CollectionSummary) => decadeWord(c.title))).size} decades · ${new Set(years.map((c: CollectionSummary) => c.slug.match(/-of-(\d{4})$/)?.[1])).size} years`}
             >
               {decades.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} />
+                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
               ))}
             </Shelf>
           )}
           {acclaim.length > 0 && (
             <Shelf title="Awards & discovery" meta={`${acclaim.length} lists`}>
               {acclaim.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} />
+                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
               ))}
             </Shelf>
           )}
