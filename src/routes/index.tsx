@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { Filter, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
@@ -9,6 +9,7 @@ import { FilterRail } from "@/components/balasaur/FilterRail";
 import { ActiveFilters, countActive } from "@/components/balasaur/ActiveFilters";
 import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { SortControl } from "@/components/balasaur/SortControl";
+import { MobileFilterStrip } from "@/components/balasaur/MobileFilterStrip";
 import { LandingHero } from "@/components/balasaur/LandingHero";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
@@ -68,7 +69,7 @@ function pageOffset(raw: string | undefined): number {
   return (pageNumber(raw) - 1) * PAGE_SIZE;
 }
 
-const BASE_TITLE = "Balasaur: Your Personal Entertainment Database";
+const BASE_TITLE = "Balasaur: Stop Scrolling, Start Watching";
 
 /** True when anything other than the page cursor is narrowing the catalog. */
 function isFiltered(search: FilterSearch | undefined): boolean {
@@ -354,7 +355,7 @@ function HomePage() {
                 <PanelLeftClose className="h-4 w-4" />
               </button>
             </div>
-            <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
+            <Suspense fallback={<div className="font-mono text-[11px] text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
                 setFilters={setFilters}
@@ -370,7 +371,7 @@ function HomePage() {
               onClick={() => setRail(false)}
               aria-label="Show filters"
               title="Show filters"
-              className="sticky top-12 flex cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-panel px-2 py-2 font-mono text-[10px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+              className="sticky top-12 flex cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-panel px-2 py-2 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
             >
               <PanelLeftOpen className="h-4 w-4" />
             </button>
@@ -468,7 +469,7 @@ function HomePage() {
                 <button
                   type="button"
                   onClick={() => setFilters(() => defaultFilterState())}
-                  className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
+                  className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
                 >
                   Clear all
                 </button>
@@ -476,7 +477,7 @@ function HomePage() {
             </div>
           </SheetHeader>
           <div className="mt-3 pb-16">
-            <Suspense fallback={<div className="font-mono text-[10px] text-text-dim">…</div>}>
+            <Suspense fallback={<div className="font-mono text-[11px] text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
                 setFilters={setFilters}
@@ -609,7 +610,7 @@ function BrowseBreak({
 
   return (
     <div className="my-5 flex flex-wrap items-center gap-2 rounded-[5px] border border-border bg-panel/60 px-3 py-2.5">
-      <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+      <span className="font-mono text-[12px] uppercase tracking-wider text-text-muted">
         {browsed.toLocaleString("en-US")} titles browsed · narrow it down?
       </span>
       {suggestions.map((g) => (
@@ -617,7 +618,7 @@ function BrowseBreak({
           key={g}
           type="button"
           onClick={() => setFilters((p) => ({ ...p, genres: new Set([...p.genres, g]) }))}
-          className="cursor-pointer rounded-[4px] border border-border bg-panel px-2 py-[3px] font-mono text-[10.5px] uppercase tracking-wide text-text-muted transition-colors hover:border-primary hover:text-primary"
+          className="cursor-pointer rounded-[4px] border border-border bg-panel px-2 py-[3px] font-mono text-[12px] uppercase tracking-wide text-text-muted transition-colors hover:border-primary hover:text-primary"
         >
           {g}
         </button>
@@ -625,7 +626,7 @@ function BrowseBreak({
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="ml-auto cursor-pointer font-mono text-[10px] uppercase tracking-wider text-text-dim hover:text-text-bright"
+        className="ml-auto cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-dim hover:text-text-bright"
       >
         Back to top ↑
       </button>
@@ -785,41 +786,37 @@ function GridWithControls({
                 first two dozen rows of the grid directly below it, wearing
                 rank numerals. A first-time visitor read the same seven posters
                 twice and had to work out whether the site was broken. */}
-            <div className="mb-6 rounded-[6px] border border-border bg-panel/40 p-3 sm:p-4">
+            {/* De-boxed: the bordered panel is gone so the page reads
+                boxed hero, open rail, boxed grid instead of three identical
+                crates in a row. */}
+            <div className="mb-6">
               <CollectionRail />
             </div>
           </div>
         </div>
       )}
 
+      {/* The mobile filter strip replaces the old Filters pill: chips wear
+          their values, the first chip is the live count, and each opens a
+          bottom sheet with just that control. Desktop keeps the sidebar. */}
+      <MobileFilterStrip
+        filters={filters}
+        setFilters={setFilters}
+        total={total}
+        activeCount={activeCount}
+        onOpenAllFilters={onOpenMobileFilters}
+      />
+
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-2">
-        <button
-          type="button"
-          onClick={onOpenMobileFilters}
-          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border px-3 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors md:hidden ${
-            activeCount > 0
-              ? "border-primary bg-primary/15 text-primary"
-              : "border-border-strong bg-panel text-text-bright hover:border-primary/60"
-          }`}
-        >
-          <Filter className="h-3.5 w-3.5" />
-          Filters
-          {activeCount > 0 && (
-            <span className="ml-0.5 rounded-[3px] bg-primary px-1 text-[10px] text-primary-foreground">
-              {activeCount}
-            </span>
-          )}
-        </button>
-
-        <span className="font-mono text-[11px] text-text-muted">
+        <span className="hidden font-mono text-[12px] text-text-muted md:inline">
           <AnimatedCount value={total} className="text-text-bright" /> results
         </span>
 
         {refreshing && (
           <span
             role="status"
-            className="animate-pulse font-mono text-[9.5px] uppercase tracking-wider text-primary"
+            className="animate-pulse font-mono text-[11px] uppercase tracking-wider text-primary"
           >
             Updating…
           </span>
@@ -833,7 +830,7 @@ function GridWithControls({
               checked={filters.hideSeen}
               onCheckedChange={(v) => setFilters((p) => ({ ...p, hideSeen: !!v }))}
             />
-            <span className="font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+            <span className="font-mono text-[12px] uppercase tracking-wider text-text-muted">
               Hide seen
             </span>
           </label>
@@ -848,7 +845,9 @@ function GridWithControls({
 
       {/* Active chips */}
       <div className="mb-3">
-        <ActiveFilters filters={filters} setFilters={setFilters} />
+        <div className="hidden md:block">
+          <ActiveFilters filters={filters} setFilters={setFilters} />
+        </div>
       </div>
 
       {isLoading && items.length === 0 ? (
@@ -899,7 +898,7 @@ function GridWithControls({
       {!isLoading && total === 0 && (
         <div className="mt-10 flex flex-col items-center rounded-[5px] border border-border bg-panel p-8 text-center">
           <DinoMark className="h-8 w-8 text-primary opacity-80" />
-          <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+          <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.12em] text-text-dim">
             No matches
           </p>
           {suggestions.length > 0 ? (
@@ -928,7 +927,7 @@ function GridWithControls({
               <button
                 type="button"
                 onClick={() => setFilters(() => defaultFilterState())}
-                className="mt-4 cursor-pointer font-mono text-[10.5px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
+                className="mt-4 cursor-pointer font-mono text-[12px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
               >
                 Clear all filters
               </button>

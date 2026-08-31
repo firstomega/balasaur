@@ -138,11 +138,11 @@ function CalendarPage() {
                     {dayLabel(day.date)}
                   </span>
                   {day.date === today && (
-                    <span className="rounded-[3px] bg-primary/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary">
+                    <span className="rounded-[3px] bg-primary/15 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-primary">
                       Today
                     </span>
                   )}
-                  <span className="font-mono text-[10.5px] text-text-dim">{day.items.length}</span>
+                  <span className="font-mono text-[12px] text-text-dim">{day.items.length}</span>
                 </h2>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
                   {day.items.map((item) => (

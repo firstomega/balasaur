@@ -148,7 +148,7 @@ function ListsPage() {
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
       <main id="main" className="mx-auto max-w-[1600px] px-4 py-6">
-        <h1 className="mb-4 font-mono text-[14px] uppercase tracking-[0.18em] text-text-bright">
+        <h1 className="mb-4 font-mono text-[14px] uppercase tracking-[0.12em] text-text-bright">
           My lists
         </h1>
 
@@ -199,7 +199,7 @@ function ListsPage() {
                 >
                   <meta.Icon className={`h-3.5 w-3.5 ${selected ? meta.iconClass : ""}`} />
                   {meta.label}
-                  <span className="font-mono text-[10px] text-text-dim">
+                  <span className="font-mono text-[12px] text-text-dim">
                     {showSkeleton ? "" : grouped[b].length}
                   </span>
                 </button>
@@ -207,7 +207,7 @@ function ListsPage() {
             })}
           </div>
 
-          <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+          <p className="mb-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
             {active.hint} · newest first · open a title to change its status
           </p>
 

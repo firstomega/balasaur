@@ -35,7 +35,7 @@ function ContactPage() {
         <div className="mt-10 space-y-12">
           <section>
             <h2 className="text-[18px] font-semibold text-text-bright">Email</h2>
-            <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
+            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
@@ -50,7 +50,7 @@ function ContactPage() {
 
           <section>
             <h2 className="text-[18px] font-semibold text-text-bright">Worth writing about</h2>
-            <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
+            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
                 A wrong or stale fact. Scores and streaming availability sync nightly, so when an
                 upstream source has already corrected itself the fix lands here within a day. When

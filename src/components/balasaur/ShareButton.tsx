@@ -40,7 +40,7 @@ export function ShareButton({
       onClick={share}
       aria-label="Share"
       title="Share"
-      className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[10.5px] uppercase tracking-wider text-text-muted transition-colors hover:border-border-strong hover:text-text-bright"
+      className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-border-strong hover:text-text-bright"
     >
       <Share2 className="h-3.5 w-3.5" />
       {label ?? "Share"}

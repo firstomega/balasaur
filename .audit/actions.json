@@ -13,6 +13,15 @@
   },
   {
    "rank": 2,
+   "name": "Stop printing three different catalog sizes, none of which match the count on screen",
+   "why": "The homepage counts 76,351 results. About says more than 66,000, the collections hub says 65,000, and llms.txt says about 66,000. A visitor who reads two pages sees the site contradict itself about the one thing it is a database of, and the true browsable count is 76,264.",
+   "severity": 3,
+   "effort": "S",
+   "category": "Content and copy consistency",
+   "area": "about.tsx, collections.tsx, llms.txt.tsx"
+  },
+  {
+   "rank": 3,
    "name": "Raise the person sitemap cap above 5,000",
    "area": "src/routes/sitemap-people[.]xml.tsx:22",
    "category": "SEO",
@@ -22,7 +31,7 @@
    "why": "The loop stops at 5,000 while person_index holds 37,923 rows, and the audit measured 5,663 qualifying pages dropped. Person pages are the best-positioned family on the site at average position 8.9, so this is the same class of bug as the title sitemap and is still live."
   },
   {
-   "rank": 3,
+   "rank": 4,
    "name": "Give the sitemap more than 2,500 slots now that the ordering is right",
    "area": "src/lib/media.server.ts, SITEMAP_TITLE_BUDGET",
    "category": "SEO",
@@ -32,7 +41,7 @@
    "why": "5,450 titles now clear the 1,000-rating bar and only 2,500 fit, so 2,950 titles people actually search for are still unsubmitted. The 2,500 figure was chosen when the ordering was wrong and a focused list was the safer bet; that reasoning no longer holds."
   },
   {
-   "rank": 4,
+   "rank": 5,
    "name": "Make the homepage title agree with the homepage headline",
    "area": "src/routes/index.tsx BASE_TITLE",
    "category": "Content / SEO",
@@ -42,7 +51,7 @@
    "why": "The hero now reads 'One number instead of four rating sites' while the page title still says 'Your Personal Entertainment Database', so the search result and the page a visitor lands on say different things. Introduced by the headline fix and not carried through."
   },
   {
-   "rank": 5,
+   "rank": 6,
    "name": "Stop a mis-tap on the primary button recording 'Accept all'",
    "area": "src/components/balasaur/CookieBanner.tsx, app shell",
    "category": "UX flow / Legal",
@@ -52,7 +61,7 @@
    "why": "At 360x800, the most common Android viewport, the primary button sits under the consent bar and the hit test resolves to the 'Accept all' control. That is a recorded consent the person did not choose, not merely a swallowed tap. The real fix is an app-shell change with scroll-restoration risk, so it wants its own session."
   },
   {
-   "rank": 6,
+   "rank": 7,
    "name": "Give The Halloween Binge its own cut",
    "area": "collection recipes",
    "category": "SEO / Content",
@@ -62,7 +71,7 @@
    "why": "best-horror-movies and the-halloween-binge now hold an identical 60. It was not an exact duplicate when the audit started, so catalogue drift converged two heavily overlapping lists and it will keep flickering until the occasion recipe stops being top-horror-by-another-name."
   },
   {
-   "rank": 7,
+   "rank": 8,
    "name": "Thicken or gate the thin half of the catalogue",
    "area": "src/lib/titleProse.ts, indexability.ts",
    "category": "AdSense",
@@ -72,7 +81,7 @@
    "why": "24,797 of 61,673 indexable titles carry a synopsis under 200 characters, which with one or two generated sentences is the poster-plus-borrowed-blurb shape ad networks reject. This is the structural half of the AdSense problem and the only item here that is a quarter's work rather than an afternoon."
   },
   {
-   "rank": 8,
+   "rank": 9,
    "name": "Stop announcing all 678 collections to Bing every night",
    "area": "ping_indexnow",
    "category": "SEO",
@@ -82,7 +91,7 @@
    "why": "rebuild_collections clears indexnow_hash on every row each night, so all 678 collection URLs are submitted daily whether or not anything changed. That is the batch-submission pattern the function's own comment says the site was flagged for and fixed on the media side only."
   },
   {
-   "rank": 9,
+   "rank": 10,
    "name": "Stop claiming Balasaur learns your taste",
    "area": "collection pages, onboarding copy",
    "category": "Content",
@@ -92,7 +101,7 @@
    "why": "678 pages carry the claim against 109 ratings from 2 accounts. It is not true yet, and Principle 4 asks whether a sentence would be equally true on a competitor's site; this one is not even true here."
   },
   {
-   "rank": 10,
+   "rank": 11,
    "name": "Collapse the Movie Night solo flow and add a share on the result",
    "area": "src/routes/night.index.tsx, night.$code.tsx",
    "category": "Growth / UX flow",
@@ -102,7 +111,7 @@
    "why": "Two buttons both say 'Find my pick' and only the second produces anything, and the one screen where a person would tell a friend has no share affordance. Worth doing after you have actually used the feature rather than before."
   },
   {
-   "rank": 11,
+   "rank": 12,
    "name": "Add ads.txt",
    "area": "public/ads.txt",
    "category": "AdSense",

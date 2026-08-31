@@ -33,7 +33,7 @@ export function SortControl({
     <Select value={current} onValueChange={(v) => onChange(v as SortKey)}>
       <SelectTrigger
         aria-label="Sort"
-        className="h-8 w-[136px] rounded-[4px] border-border bg-panel px-2 font-mono text-[10.5px] uppercase tracking-wider text-text-bright"
+        className="h-8 w-[136px] rounded-[4px] border-border bg-panel px-2 font-mono text-[11px] uppercase tracking-wider text-text-bright"
       >
         <SelectValue />
       </SelectTrigger>
@@ -42,7 +42,7 @@ export function SortControl({
           <SelectItem
             key={o.value}
             value={o.value}
-            className="cursor-pointer font-mono text-[10.5px] uppercase tracking-wider text-text-muted focus:text-text-bright"
+            className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted focus:text-text-bright"
           >
             {o.label}
           </SelectItem>

@@ -82,15 +82,55 @@ export const Route = createFileRoute("/best/$slug")({
   notFoundComponent: CollectionNotFound,
 });
 
+/** Decade label for a year string, "1994" → "1990s". */
+function decadeOf(year: string | undefined): string | null {
+  if (!year || !/^\d{4}/.test(year)) return null;
+  return `${year.slice(0, 3)}0s`;
+}
+
 function CollectionPage() {
   const { row, items, related } = Route.useLoaderData();
-  const { statuses, isAnonymous, ready } = useUserStatus();
+  const { statuses, ready } = useUserStatus();
   const [mounted, setMounted] = useState(false);
   const [hideSeen, setHideSeen] = useState(false);
+  // In-place filters over the ~60 loaded rows. Component state only, never
+  // the URL: a filtered view of a ranked page must not mint its own URL.
+  const [svc, setSvc] = useState<string | null>(null);
+  const [decade, setDecade] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // The route component survives a $slug change (related-collection links),
+  // so filters chosen on one collection must not silently trim the next.
+  useEffect(() => {
+    setSvc(null);
+    setDecade(null);
+    setHideSeen(false);
+  }, [row.slug]);
+
+  // A chip group renders only when it would change anything: at least two
+  // distinct values, none covering the whole list. Service chips are also
+  // suppressed on collections already scoped to a service, where every row
+  // would carry the same chip.
+  const serviceCounts = new Map<string, number>();
+  const decadeCounts = new Map<string, number>();
+  for (const i of items as MediaItem[]) {
+    for (const sv of i.streaming ?? []) serviceCounts.set(sv, (serviceCounts.get(sv) ?? 0) + 1);
+    const d = decadeOf(i.year);
+    if (d) decadeCounts.set(d, (decadeCounts.get(d) ?? 0) + 1);
+  }
+  const serviceScoped = row.kind === "service" || row.kind === "genre-service";
+  const serviceChips = serviceScoped
+    ? []
+    : [...serviceCounts.entries()]
+        .filter(([, n]) => n < items.length)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+  const decadeChips =
+    decadeCounts.size > 1 ? [...decadeCounts.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)) : [];
+  const showChips = serviceChips.length >= 2 || decadeChips.length >= 2;
   const dek = collectionDek(
     row,
     items.slice(0, 3).map((i: MediaItem) => ({ title: i.title, score: i.ratings.balasaur })),
@@ -108,11 +148,15 @@ function CollectionPage() {
   const updated = (row.updated_at ?? "").slice(0, 10);
 
   const seenCount = items.filter((i: MediaItem) => statuses[i.id]?.status === "seen").length;
+  // Rank is assigned BEFORE any filter runs and survives every filter:
+  // filtered-out titles collapse, survivors keep their numerals, and the
+  // gaps in the numbers (#3, #7, #12) are the proof the order never changed.
   const ranked = items.map((item: MediaItem, idx: number) => ({ item, rank: idx + 1 }));
-  const displayItems =
-    hideSeen && mounted
-      ? ranked.filter(({ item }) => statuses[item.id]?.status !== "seen")
-      : ranked;
+  const displayItems = ranked
+    .filter(({ item }) => !(hideSeen && mounted && statuses[item.id]?.status === "seen"))
+    .filter(({ item }) => !svc || (item.streaming ?? []).includes(svc))
+    .filter(({ item }) => !decade || decadeOf(item.year) === decade);
+  const filtered = displayItems.length < ranked.length;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -120,7 +164,7 @@ function CollectionPage() {
       <main id="main" className="mx-auto max-w-[1160px] px-4 py-6">
         <nav
           aria-label="Breadcrumb"
-          className="mb-3 font-mono text-[10.5px] uppercase tracking-wider text-text-dim"
+          className="mb-3 font-mono text-[11px] uppercase tracking-wider text-text-dim"
         >
           <Link to="/collections" className="hover:text-primary">
             Collections
@@ -132,7 +176,7 @@ function CollectionPage() {
         <h1 className="max-w-[30ch] text-[26px] font-bold leading-tight tracking-tight text-text-bright">
           {row.title}
         </h1>
-        <p className="mt-2 max-w-[76ch] text-[14px] leading-relaxed text-text">{dek}</p>
+        <p className="mt-2 max-w-[76ch] text-[15px] leading-relaxed text-text">{dek}</p>
         {composition && (
           <p className="mt-1.5 max-w-[76ch] text-[13px] leading-relaxed text-text-muted">
             {composition}
@@ -144,24 +188,57 @@ function CollectionPage() {
           {updated && <MetaChip>Updated {updated}</MetaChip>}
           <Link
             to="/methodology"
-            className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+            className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
           >
             Ranked by Balasaur Score
           </Link>
-          {mounted && ready && !isAnonymous && seenCount > 0 && (
+          {mounted && ready && seenCount > 0 && (
             <>
               <MetaChip>
                 You have seen {seenCount} of {row.item_count}
               </MetaChip>
               <button
                 onClick={() => setHideSeen(!hideSeen)}
-                className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+                className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
               >
                 {hideSeen ? "Show seen" : "Hide seen"}
               </button>
             </>
           )}
         </div>
+
+        {showChips && (
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            {serviceChips.length >= 2 &&
+              serviceChips.map(([name, n]) => (
+                <FilterChip
+                  key={name}
+                  active={svc === name}
+                  onClick={() => setSvc(svc === name ? null : name)}
+                >
+                  {name} {n}
+                </FilterChip>
+              ))}
+            {serviceChips.length >= 2 && decadeChips.length >= 2 && (
+              <span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
+            )}
+            {decadeChips.length >= 2 &&
+              decadeChips.map(([name, n]) => (
+                <FilterChip
+                  key={name}
+                  active={decade === name}
+                  onClick={() => setDecade(decade === name ? null : name)}
+                >
+                  {name} {n}
+                </FilterChip>
+              ))}
+            {filtered && (
+              <span className="ml-1 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                Showing {displayItems.length} of {ranked.length}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
           {displayItems.map(({ item, rank }, i) => (
@@ -219,9 +296,34 @@ function CollectionPage() {
   );
 }
 
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`cursor-pointer rounded-[4px] border px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+        active
+          ? "border-primary bg-primary/15 text-primary"
+          : "border-border bg-panel text-text-muted hover:border-primary/60 hover:text-text-bright"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-text-muted">
+    <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted">
       {children}
     </span>
   );

@@ -9,7 +9,7 @@ import { personProse } from "@/lib/personProse";
 
 function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+    <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
       {children}
     </div>
   );
@@ -33,7 +33,7 @@ function Bio({ text }: { text: string }) {
       <MicroLabel>Biography</MicroLabel>
       <p
         className={
-          "whitespace-pre-line text-[14px] leading-relaxed text-text-bright " +
+          "whitespace-pre-line text-[15px] leading-relaxed text-text-bright " +
           (!open && long ? "line-clamp-6" : "")
         }
       >
@@ -71,7 +71,7 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center font-mono text-[10px] uppercase text-text-dim">
+              <div className="flex h-full w-full items-center justify-center font-mono text-[11px] uppercase text-text-dim">
                 No photo
               </div>
             )}

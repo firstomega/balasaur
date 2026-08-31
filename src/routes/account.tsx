@@ -145,11 +145,11 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+      <label className="block font-mono text-[11px] uppercase tracking-wider text-text-dim">
         {label}
       </label>
       {children}
-      {hint && <p className="font-mono text-[10.5px] text-text-dim">{hint}</p>}
+      {hint && <p className="font-mono text-[12px] text-text-dim">{hint}</p>}
     </div>
   );
 }
@@ -170,9 +170,7 @@ function Status({ msg }: { msg: { kind: "ok" | "err"; text: string } | null }) {
   if (!msg) return null;
   return (
     <p
-      className={`font-mono text-[10.5px] ${
-        msg.kind === "ok" ? "text-emerald-400" : "text-red-400"
-      }`}
+      className={`font-mono text-[12px] ${msg.kind === "ok" ? "text-emerald-400" : "text-red-400"}`}
     >
       {msg.text}
     </p>
@@ -308,7 +306,7 @@ function NotificationsSection() {
   ];
   return (
     <Section title="Notifications & Email">
-      <p className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+      <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
         Coming soon. No email system is wired up yet.
       </p>
       <ul className="divide-y divide-border rounded-[5px] border border-border">
@@ -319,7 +317,7 @@ function NotificationsSection() {
           >
             <div>
               <p className="font-mono text-[12px] text-text-bright">{r.label}</p>
-              <p className="font-mono text-[10.5px] text-text-dim">{r.desc}</p>
+              <p className="font-mono text-[12px] text-text-dim">{r.desc}</p>
             </div>
             <label className="inline-flex cursor-not-allowed items-center">
               <input type="checkbox" disabled className="h-4 w-4 accent-primary" />
@@ -392,13 +390,13 @@ function SubscriptionSection() {
     <Section title="Subscription">
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex-1 rounded-[5px] border border-border bg-background p-3">
-          <p className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
             Current plan
           </p>
           <p className="mt-1 font-sans text-lg text-text-bright">Free</p>
         </div>
         <div className="flex-1 rounded-[5px] border border-dashed border-border bg-background p-3 opacity-70">
-          <p className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
             Balasaur Pro
           </p>
           <p className="mt-1 font-sans text-lg text-text-bright">Coming soon</p>
@@ -461,7 +459,7 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-mono text-[12px] text-text-bright">Clear my activity</p>
-            <p className="font-mono text-[10.5px] text-text-dim">
+            <p className="font-mono text-[12px] text-text-dim">
               Removes everything you've marked (seen, want, liked, disliked). Keeps your account.
             </p>
           </div>
@@ -473,7 +471,7 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-mono text-[12px] text-text-bright">Delete my account permanently</p>
-            <p className="font-mono text-[10.5px] text-text-dim">This cannot be undone.</p>
+            <p className="font-mono text-[12px] text-text-dim">This cannot be undone.</p>
           </div>
           <button onClick={() => setDelOpen(true)} className={btnDanger}>
             Delete account

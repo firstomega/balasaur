@@ -327,7 +327,7 @@ function JoinGate({
           <h1 className="text-[17px] font-semibold text-text-bright">
             {lost ? "Back in you go" : "You are invited"}
           </h1>
-          <p className="text-[12.5px] text-text-muted">
+          <p className="text-[13px] text-text-muted">
             Room <span className="font-mono tracking-widest text-text-bright">{code}</span>.{" "}
             {lost
               ? "Your spot in this room expired. Rejoin with a name."
@@ -343,7 +343,7 @@ function JoinGate({
         maxLength={24}
         className="w-full rounded-[5px] border border-border bg-panel px-3 py-2 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
       />
-      {error && <p className="mt-2 text-[12.5px] text-[#e08aa4]">{error}</p>}
+      {error && <p className="mt-2 text-[13px] text-[#e08aa4]">{error}</p>}
       <button
         type="button"
         disabled={busy}
@@ -578,7 +578,7 @@ function Wizard({
     options: readonly T[],
   ) => (
     <div>
-      <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+      <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
         {label}
       </span>
       <div className="flex flex-wrap gap-1.5">
@@ -621,7 +621,7 @@ function Wizard({
   return (
     <div className="space-y-5 rounded-[6px] border border-border bg-panel p-4">
       <div>
-        <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+        <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
           Tonight I want
         </span>
         <div className="flex flex-wrap gap-1.5">
@@ -630,7 +630,7 @@ function Wizard({
       </div>
 
       <div>
-        <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+        <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
           Less in the mood for
         </span>
         <p className="mb-2 text-[11.5px] text-text-dim">
@@ -644,7 +644,7 @@ function Wizard({
       </div>
 
       <div className="space-y-4 border-t border-border pt-4">
-        <p className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
           Optional. Every answer sharpens the pick.
         </p>
         {signalRow("From when", "era", NIGHT_ERAS)}
@@ -688,14 +688,14 @@ function HostControls({
 }) {
   const { room } = state;
   const chip = (active: boolean) =>
-    `cursor-pointer rounded-[5px] border px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wider transition-colors ${
+    `cursor-pointer rounded-[5px] border px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider transition-colors ${
       active
         ? "border-primary bg-primary/15 text-primary"
         : "border-border bg-background text-text-muted hover:border-border-strong"
     }`;
   return (
     <div className="space-y-3 border-t border-border pt-4">
-      <p className="font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+      <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
         Room settings (host)
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -930,7 +930,7 @@ function Results({
       {items.length === 0 && (
         <div className="rounded-[6px] border border-border bg-panel px-4 py-6 text-center">
           <p className="text-[13px] text-text-bright">Nothing left that fits.</p>
-          <p className="mt-1 text-[12.5px] text-text-muted">
+          <p className="mt-1 text-[13px] text-text-muted">
             {room.services.length > 0
               ? "Widen the services or the type above, then roll again."
               : "Widen the type above, then roll again."}
@@ -952,7 +952,7 @@ function Results({
 
       {!isSignedIn && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-border bg-panel px-4 py-3">
-          <p className="text-[12.5px] text-text-muted">
+          <p className="text-[13px] text-text-muted">
             Keep tonight's pick and everything you marked.
           </p>
           <button
@@ -1034,7 +1034,7 @@ function ResultCard({
             className="h-[138px] w-[92px] rounded-[4px] object-cover"
           />
         ) : (
-          <div className="flex h-[138px] w-[92px] items-center justify-center rounded-[4px] bg-background font-mono text-[10px] uppercase text-text-dim">
+          <div className="flex h-[138px] w-[92px] items-center justify-center rounded-[4px] bg-background font-mono text-[11px] uppercase text-text-dim">
             No art
           </div>
         )}
@@ -1045,7 +1045,7 @@ function ResultCard({
             <h3 className="truncate text-[15px] font-semibold leading-tight text-text-bright hover:underline">
               {item.title}
             </h3>
-            <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+            <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
               {item.media_type === "tv" ? "TV" : "Movie"}
               {item.year ? ` · ${item.year}` : ""}
               {item.runtime ? ` · ${item.runtime}m` : ""}
@@ -1058,7 +1058,7 @@ function ResultCard({
           {chips.map((c, i) => (
             <span
               key={i}
-              className={`rounded-[4px] border px-1.5 py-0.5 text-[10.5px] ${
+              className={`rounded-[4px] border px-1.5 py-0.5 text-[12px] ${
                 c.tone === "want"
                   ? "border-[#9fe6a0]/50 text-[#9fe6a0]"
                   : c.tone === "held"
@@ -1070,7 +1070,7 @@ function ResultCard({
             </span>
           ))}
           {item.streaming.length > 0 && (
-            <span className="rounded-[4px] border border-border px-1.5 py-0.5 text-[10.5px] text-text-muted">
+            <span className="rounded-[4px] border border-border px-1.5 py-0.5 text-[12px] text-text-muted">
               On {item.streaming.slice(0, 3).join(", ")}
             </span>
           )}
@@ -1081,7 +1081,7 @@ function ResultCard({
             type="button"
             onClick={onPick}
             disabled={isWinner}
-            className="cursor-pointer rounded-[4px] border border-primary/70 px-2 py-1 font-mono text-[10.5px] uppercase tracking-wider text-primary hover:bg-primary/10 disabled:cursor-default disabled:opacity-50"
+            className="cursor-pointer rounded-[4px] border border-primary/70 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary hover:bg-primary/10 disabled:cursor-default disabled:opacity-50"
           >
             {isWinner ? "Tonight's pick" : "Pick this"}
           </button>
@@ -1089,7 +1089,7 @@ function ResultCard({
             type="button"
             onClick={onSeen}
             disabled={seen}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-[4px] border border-border px-2 py-1 font-mono text-[10.5px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright disabled:cursor-default disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-[4px] border border-border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright disabled:cursor-default disabled:opacity-50"
           >
             <RotateCcw className="h-3 w-3" />
             {seen ? "Marked seen" : "Seen it"}

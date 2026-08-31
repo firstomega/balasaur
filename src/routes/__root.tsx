@@ -29,7 +29,7 @@ function NotFoundComponent() {
         <div className="mt-5 font-mono text-[64px] font-semibold leading-none tracking-tighter text-text-bright">
           404
         </div>
-        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
           Signal lost · route not found
         </p>
         <p className="mt-4 text-[13.5px] leading-relaxed text-text-muted">
@@ -59,7 +59,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-[5px] border border-border bg-panel p-8 text-center">
         <DinoMark className="mx-auto h-10 w-10 text-primary" />
-        <p className="mt-5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+        <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
           Process halted · error caught
         </p>
         <h1 className="mt-2 text-[20px] font-semibold tracking-tight text-text-bright">

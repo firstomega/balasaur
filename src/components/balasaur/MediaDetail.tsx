@@ -104,7 +104,7 @@ function FacetLink({
     <Link
       to="/"
       search={search}
-      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
     >
       {children}
     </Link>
@@ -113,7 +113,7 @@ function FacetLink({
 
 function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+    <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
       {children}
     </div>
   );
@@ -154,7 +154,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
         onClick={() => setPrimary(key)}
         aria-pressed={active}
         className={
-          "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 font-mono text-[10.5px] uppercase tracking-wider transition-colors " +
+          "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors " +
           (active
             ? "border-border-strong bg-background text-text-bright"
             : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
@@ -177,7 +177,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
 
       {primary === "watched" && (
         <div className="mt-2">
-          <div className="mb-1 font-mono text-[9px] uppercase tracking-wider text-text-dim">
+          <div className="mb-1 font-mono text-[11px] uppercase tracking-wider text-text-dim">
             How was it?
           </div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -190,7 +190,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
                   onClick={() => setSentiment(s)}
                   aria-pressed={active}
                   className={
-                    "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors " +
+                    "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors " +
                     (active
                       ? "bg-background text-text-bright"
                       : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
@@ -218,7 +218,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
           onClick={toggleNotInterested}
           aria-pressed={rejected}
           className={
-            "cursor-pointer font-mono text-[9.5px] uppercase tracking-wider transition-colors " +
+            "cursor-pointer font-mono text-[11px] uppercase tracking-wider transition-colors " +
             (rejected ? "text-[#c75d6e]" : "text-text-dim hover:text-text-muted")
           }
         >
@@ -228,7 +228,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
           <button
             type="button"
             onClick={() => recordStatus(detail.id, null)}
-            className="cursor-pointer font-mono text-[9.5px] uppercase tracking-wider text-text-dim hover:text-text-muted"
+            className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-dim hover:text-text-muted"
           >
             Clear
           </button>
@@ -327,7 +327,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center font-mono text-[10px] uppercase text-text-dim">
+                  <div className="flex h-full w-full items-center justify-center font-mono text-[11px] uppercase text-text-dim">
                     No art
                   </div>
                 )}
@@ -391,14 +391,14 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
           {prose && (
             <section>
               <MicroLabel>The read</MicroLabel>
-              <p className="text-[14.5px] leading-relaxed text-text-bright">{prose}</p>
+              <p className="text-[15px] leading-relaxed text-text-bright">{prose}</p>
             </section>
           )}
 
           {detail.overview && (
             <section>
               <MicroLabel>Synopsis</MicroLabel>
-              <p className="text-[14.5px] leading-relaxed text-text">{detail.overview}</p>
+              <p className="text-[15px] leading-relaxed text-text">{detail.overview}</p>
             </section>
           )}
 
@@ -445,7 +445,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                         type="button"
                         className="cursor-pointer rounded-[5px] border border-border bg-panel px-3 py-2.5 text-left transition-colors hover:border-border-strong"
                       >
-                        <div className="flex items-center gap-1 font-mono text-[9.5px] uppercase tracking-wider text-text-dim">
+                        <div className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-text-dim">
                           Balasaur Score
                           <Info className="h-2.5 w-2.5" aria-hidden="true" />
                         </div>
@@ -458,7 +458,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                       align="start"
                       className="w-72 border-border bg-panel p-3 text-foreground"
                     >
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-text-bright">
+                      <p className="font-mono text-[11px] uppercase tracking-wider text-text-bright">
                         How this score works
                       </p>
                       <p className="mt-1.5 text-[12px] leading-relaxed text-text-muted">
@@ -473,7 +473,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                           >
                             <span className={s.value ? "text-text-bright" : "text-text-dim"}>
                               {s.label}
-                              <span className="ml-1.5 text-[9.5px] text-text-dim">{s.weight}</span>
+                              <span className="ml-1.5 text-[11px] text-text-dim">{s.weight}</span>
                             </span>
                             <span className={s.value ? "text-text-bright" : "text-text-dim"}>
                               {s.value ?? "—"}
@@ -498,7 +498,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               <div className="mt-3 space-y-1.5">
                 {sourceBars.map((src) => (
                   <div key={src.label} className="flex items-center gap-2.5">
-                    <span className="w-[104px] shrink-0 font-mono text-[10px] uppercase tracking-wider text-text-dim">
+                    <span className="w-[104px] shrink-0 font-mono text-[11px] uppercase tracking-wider text-text-dim">
                       {src.label}
                     </span>
                     <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-border">
@@ -518,7 +518,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                   </p>
                 )}
                 {typeof detail.voteCount === "number" && detail.voteCount > 0 && (
-                  <p className="font-mono text-[10.5px] text-text-dim">
+                  <p className="font-mono text-[12px] text-text-dim">
                     {detail.voteCount.toLocaleString("en-US")} audience votes
                   </p>
                 )}
@@ -665,7 +665,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                   ) : (
                     <span
                       key={k}
-                      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-dim"
+                      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-text-dim"
                     >
                       {k}
                     </span>

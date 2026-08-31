@@ -143,7 +143,7 @@ function NightEntry() {
       <div className="font-mono text-[13px] font-semibold uppercase tracking-wider text-text-bright">
         {title}
       </div>
-      <div className="mt-1 text-[12.5px] leading-snug text-text-muted">{sub}</div>
+      <div className="mt-1 text-[13px] leading-snug text-text-muted">{sub}</div>
     </button>
   );
 
@@ -181,7 +181,7 @@ function NightEntry() {
             {/* Solo has no room to be named in, so it does not ask. */}
             {path !== "solo" && (
               <label className="block">
-                <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
                   Your name in the room
                 </span>
                 <input
@@ -197,7 +197,7 @@ function NightEntry() {
 
             {path === "join" ? (
               <label className="block">
-                <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
                   Room code
                 </span>
                 <input
@@ -213,7 +213,7 @@ function NightEntry() {
             ) : (
               <>
                 <div>
-                  <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+                  <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
                     Watching
                   </span>
                   <div className="flex gap-2">
@@ -237,7 +237,7 @@ function NightEntry() {
                 </div>
 
                 <div>
-                  <span className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-wider text-text-muted">
+                  <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
                     Services you can watch on (optional)
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -263,7 +263,7 @@ function NightEntry() {
               </>
             )}
 
-            {error && <p className="text-[12.5px] text-[#e08aa4]">{error}</p>}
+            {error && <p className="text-[13px] text-[#e08aa4]">{error}</p>}
 
             <button
               type="button"

@@ -56,8 +56,8 @@
  },
  "Content and copy consistency": {
   "before": 5.5,
-  "now": 6.5,
-  "since": "The false catalog median is gone from 633 pages and now carries the query that produced it. The homepage headline says something no competitor could say. /methodology publishes the weights it had only promised. Still open: the page title contradicts the new headline, and 'Balasaur learns your taste' ships against 109 ratings."
+  "now": 6.0,
+  "since": "The false catalog median is gone from 633 pages and now carries the query that produced it. The homepage headline says something no competitor could say. /methodology publishes the weights it had only promised. Still open: the page title contradicts the new headline, and 'Balasaur learns your taste' ships against 109 ratings. Re-measuring found the reverse of the same defect still live: the catalogue size is asserted as 65,000, 66,000 and more than 66,000 on three pages, against 76,264 browsable rows and a homepage that prints 76,351."
  },
  "Performance and perceived latency": {
   "before": 6.5,

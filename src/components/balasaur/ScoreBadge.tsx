@@ -61,7 +61,7 @@ export function ScoreBadge({
       title={`${score}/100 · ${tierName(score)}${score >= 90 ? " · Balasaur Approved" : ""}. IMDb, Rotten Tomatoes, Metacritic, and TMDB blended into one number.`}
       className={cn(
         "inline-flex items-center gap-1 rounded-[4px] bg-background/90 font-mono font-semibold tabular-nums ring-1 backdrop-blur-sm",
-        size === "sm" ? "h-[18px] px-1.5 text-[10px]" : "px-2 py-1 text-[13px]",
+        size === "sm" ? "h-[20px] px-1.5 text-[11px]" : "px-2 py-1 text-[14px]",
         t.text,
         t.ring,
         className,

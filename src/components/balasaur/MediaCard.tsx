@@ -108,7 +108,7 @@ export function MediaCard({
               aria-pressed={saved}
               title={saved ? "On your watchlist" : "Want to Watch"}
               className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[10px] uppercase tracking-wider backdrop-blur-sm transition-all",
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[11px] uppercase tracking-wider backdrop-blur-sm transition-all",
                 saved
                   ? "border-[#e8b84b]/70 bg-[#e8b84b]/25 text-[#e8b84b] opacity-100"
                   : "border-white/30 bg-black/70 text-white opacity-0 hover:border-[#e8b84b] hover:bg-[#e8b84b] hover:text-black group-hover:opacity-100",
@@ -128,7 +128,7 @@ export function MediaCard({
               aria-pressed={watched}
               title={watched ? "Watched" : "Mark as watched"}
               className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[10px] uppercase tracking-wider backdrop-blur-sm transition-all",
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[11px] uppercase tracking-wider backdrop-blur-sm transition-all",
                 watched
                   ? "border-rating/60 bg-rating/25 text-rating opacity-100"
                   : "border-white/30 bg-black/70 text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
@@ -168,16 +168,16 @@ export function MediaCard({
               params={{ id: slug }}
               className="block"
             >
-              <h3 className="line-clamp-2 text-[12.5px] font-semibold leading-tight text-text-bright hover:text-primary">
+              <h3 className="line-clamp-2 text-[13px] font-semibold leading-tight text-text-bright hover:text-primary">
                 {item.title}
               </h3>
             </Link>
           ) : (
-            <h3 className="line-clamp-2 text-[12.5px] font-semibold leading-tight text-text-bright">
+            <h3 className="line-clamp-2 text-[13px] font-semibold leading-tight text-text-bright">
               {item.title}
             </h3>
           )}
-          <p className="mt-1 font-mono text-[10.5px] text-text-muted">
+          <p className="mt-1 font-mono text-[12px] text-text-muted">
             {displayYear(item)}
             {(() => {
               // Media type already shown as the tag on the poster, so the caption only
@@ -188,7 +188,7 @@ export function MediaCard({
             })()}
           </p>
           {item.matchReasons && item.matchReasons.length > 0 && (
-            <p className="mt-0.5 line-clamp-2 text-[10px] leading-tight text-text-dim">
+            <p className="mt-0.5 line-clamp-2 text-[12px] leading-tight text-text-dim">
               {item.matchReasons[0] === "Same series"
                 ? item.matchReasons.join(" · ")
                 : `Shares: ${item.matchReasons.join(" · ")}`}
@@ -250,7 +250,7 @@ function CardArt({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-accent text-text-dim">
-            <span className="font-mono text-[10px] uppercase">No art</span>
+            <span className="font-mono text-[11px] uppercase">No art</span>
           </div>
         )}
       </div>
@@ -260,7 +260,7 @@ function CardArt({
           aria-hidden="true"
         />
         <span
-          className={`font-mono text-[9px] font-medium uppercase tracking-wider ${TYPE_COLOR_CLASS[item.mediaType]}`}
+          className={`font-mono text-[11px] font-medium uppercase tracking-wider ${TYPE_COLOR_CLASS[item.mediaType]}`}
         >
           {TYPE_LABEL[item.mediaType]}
         </span>
@@ -272,7 +272,7 @@ function CardArt({
         <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
           <ScoreBadge score={item.ratings.balasaur} />
           {showVotes && item.voteCount != null && (
-            <span className="rounded-[4px] bg-background/85 px-1 py-0.5 font-mono text-[9px] text-text-muted backdrop-blur-sm">
+            <span className="rounded-[4px] bg-background/85 px-1 py-0.5 font-mono text-[11px] text-text-muted backdrop-blur-sm">
               {Intl.NumberFormat("en-US", { notation: "compact" }).format(item.voteCount)} ratings
             </span>
           )}

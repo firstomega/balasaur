@@ -47,7 +47,7 @@ export function TopBar() {
             aria-describedby={undefined}
             className="w-[260px] border-border bg-background p-0"
           >
-            <SheetTitle className="px-4 pb-1 pt-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-text-dim">
+            <SheetTitle className="px-4 pb-1 pt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
               Menu
             </SheetTitle>
             <nav aria-label="Primary" className="flex flex-col">
@@ -137,10 +137,10 @@ export function TopBar() {
                       displayName={profile.displayName}
                       preset={profile.avatarPreset}
                       size={22}
-                      className="text-[10px]"
+                      className="text-[12px]"
                     />
                   ) : (
-                    <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-primary text-[10px] uppercase text-primary-foreground">
+                    <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-primary text-[11px] uppercase text-primary-foreground">
                       {user.email?.[0] ?? "?"}
                     </span>
                   )}
@@ -168,7 +168,7 @@ export function TopBar() {
                         <span className="block truncate text-[12px] text-text-bright">
                           {profile.displayName || profile.username}
                         </span>
-                        <span className="block truncate text-[10px] text-primary">
+                        <span className="block truncate text-[12px] text-primary">
                           @{profile.username}
                         </span>
                       </span>
@@ -190,7 +190,7 @@ export function TopBar() {
                   </>
                 ) : (
                   <>
-                    <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-text-dim">
+                    <DropdownMenuLabel className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
                       Signed in
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-border" />
