@@ -28,17 +28,25 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
         const urls: SitemapUrl[] = staticPaths.map((p) => ({ loc: `${SITE_ORIGIN}${p}` }));
 
         try {
-          // Every materialized collection shelf (~350 rows, one query).
-          const { data: shelves, error } = await supabaseAdmin
-            .from("collections")
-            .select("slug, updated_at")
-            .order("slug", { ascending: true });
-          if (error) throw error;
-          for (const s of (shelves ?? []) as { slug: string; updated_at: string | null }[]) {
-            urls.push({
-              loc: `${SITE_ORIGIN}/best/${s.slug}`,
-              lastmod: s.updated_at ? s.updated_at.slice(0, 10) : undefined,
-            });
+          // Paged, like the people and title sitemaps: PostgREST clamps any
+          // single request to ~1,000 rows. The shelf count sits at 673 and
+          // grows every time a facet is added, so an unpaged read would one
+          // day drop shelves out of the sitemap with no error to notice.
+          const PAGE = 1000;
+          for (let offset = 0; offset < 10000; offset += PAGE) {
+            const { data: shelves, error } = await supabaseAdmin
+              .from("collections")
+              .select("slug, updated_at")
+              .order("slug", { ascending: true })
+              .range(offset, offset + PAGE - 1);
+            if (error) throw error;
+            for (const s of (shelves ?? []) as { slug: string; updated_at: string | null }[]) {
+              urls.push({
+                loc: `${SITE_ORIGIN}/best/${s.slug}`,
+                lastmod: s.updated_at ? s.updated_at.slice(0, 10) : undefined,
+              });
+            }
+            if (!shelves || shelves.length < PAGE) break;
           }
         } catch (err) {
           // A DB hiccup shouldn't 500 the sitemap — ship the static section.
