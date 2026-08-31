@@ -464,6 +464,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_shelves: {
+        Row: {
+          items: Json;
+          name: string;
+          position: number;
+          shelf_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          items?: Json;
+          name: string;
+          position?: number;
+          shelf_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          items?: Json;
+          name?: string;
+          position?: number;
+          shelf_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       // People with 3+ leading or directing credits in indexable titles.
