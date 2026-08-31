@@ -8,10 +8,12 @@ import { getDailyChallenge, type DailyChallenge } from "@/lib/daily.functions";
 import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
 import {
   MAX_GUESSES,
+  MAX_HINTS,
   dayNumber,
   loadDaily,
   saveDaily,
   shareText,
+  titlePattern,
   type DailyState,
 } from "@/lib/daily";
 import { tmdbImage } from "@/lib/tmdbImage";
@@ -173,6 +175,7 @@ function PlayPage() {
           best: 0,
           played: 0,
           wins: 0,
+          hintsUsed: 0,
         }
       : null,
   );
@@ -230,11 +233,17 @@ function PlayPage() {
     update({ ...state, gaveUp: true, played: state.played + 1, streak: 0 });
   };
 
+  const hintsUsed = state?.hintsUsed ?? 0;
+  const takeHint = () => {
+    if (!state || finished || hintsUsed >= MAX_HINTS) return;
+    update({ ...state, hintsUsed: hintsUsed + 1 });
+  };
+
   const share = async () => {
     if (!challenge || !state) return;
     try {
       await navigator.clipboard.writeText(
-        shareText(challenge.number, state.guessedIds.length, state.solved),
+        shareText(challenge.number, state.guessedIds.length, state.solved, state.hintsUsed),
       );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -319,6 +328,30 @@ function PlayPage() {
               </div>
             )}
 
+            {hintsUsed > 0 && !finished && (
+              <div className="mt-3 space-y-2" aria-label="Hints" aria-live="polite">
+                {hintsUsed >= 2 && (
+                  <div className="flex gap-2.5 rounded-[5px] border border-primary/40 bg-primary/5 px-3 py-2.5">
+                    <span className="font-mono text-[11px] font-semibold text-primary">hint</span>
+                    <span className="font-mono text-[14px] tracking-[0.08em] text-text">
+                      {titlePattern(challenge.title)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex gap-2.5 rounded-[5px] border border-primary/40 bg-primary/5 px-3 py-2.5">
+                  <span className="font-mono text-[11px] font-semibold text-primary">hint</span>
+                  <img
+                    src={tmdbImage(challenge.posterUrl, "w185")}
+                    alt="Today's poster, blurred"
+                    draggable={false}
+                    className={`pointer-events-none h-[96px] w-[64px] select-none rounded-[4px] object-cover ${
+                      hintsUsed >= 3 ? "blur-[6px]" : "blur-[18px]"
+                    }`}
+                  />
+                </div>
+              </div>
+            )}
+
             {!finished ? (
               <div className="mt-5 space-y-2.5">
                 <GuessInput onGuess={onGuess} disabled={finished} />
@@ -326,13 +359,24 @@ function PlayPage() {
                   <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
                     Guess {state.guessedIds.length + 1} of {MAX_GUESSES}
                   </span>
-                  <button
-                    type="button"
-                    onClick={giveUp}
-                    className="font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-muted"
-                  >
-                    Reveal the answer
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {hintsUsed < MAX_HINTS && (
+                      <button
+                        type="button"
+                        onClick={takeHint}
+                        className="font-mono text-[11px] uppercase tracking-wider text-primary underline hover:text-primary/80"
+                      >
+                        Take a hint ({MAX_HINTS - hintsUsed} left)
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={giveUp}
+                      className="font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-muted"
+                    >
+                      Reveal the answer
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

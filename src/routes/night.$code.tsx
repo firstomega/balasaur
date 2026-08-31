@@ -34,6 +34,8 @@ import {
   setSavedNightName,
   joinNightChannel,
   nightColor,
+  fetchNightPreview,
+  type NightPreview,
   type NightState,
   type NightRollItem,
   type NightSignals,
@@ -448,10 +450,11 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
 }
 
 // ---------------------------------------------------------------------------
-// The wizard. One scrolling page, not steps: everyone sees the same layout,
-// and the rings show what everyone else has picked, live. Preferred pulls a
-// title up; "less" pushes it down without banning it, and the results screen
-// shows a held-back chip when a pick survives someone's reluctance.
+// The wizard. One question per screen now, not a wall of forty chips. Mood
+// answers re-rank the pool, the hard room facts shrink it, and the footer
+// carries the two facts that make answering worth it: how many titles are
+// still in play, and the exact title the deal would lead with right now.
+// The rings still show what everyone else picked, live.
 // ---------------------------------------------------------------------------
 
 function Wizard({
@@ -466,30 +469,55 @@ function Wizard({
   collapsed: boolean;
 }) {
   const { you, members, room } = state;
-  // Someone who joins after the host has rolled has answered nothing, so
-  // collapsing their wizard hands them "Adjust answers" over a form they never
-  // filled in. Only fold it away once they have actually said something.
   const hasAnswered =
     you.genres_want.length > 0 ||
     you.genres_less.length > 0 ||
     Object.keys(you.signals ?? {}).length > 0;
   const [open, setOpen] = useState(!collapsed || !hasAnswered);
   useEffect(() => {
-    // Collapse when results arrive; a re-roll adjustment reopens by hand.
     if (collapsed && hasAnswered) setOpen(false);
   }, [collapsed, hasAnswered]);
 
-  // Colour comes from each member's own position in the room, not from their
-  // name. Two guests who both left the name blank are both "Anonymous Raptor",
-  // and a name-keyed map collapsed them onto one colour.
-  const others = members.map((m, i) => ({ ...m, seat: i })).filter((m) => !m.is_you);
+  // One question per screen. "length" only exists where runtime does.
+  const steps = useMemo(() => {
+    const list: {
+      key: "mood" | "era" | "length" | "crowd" | "vibe" | "ready";
+      q: string;
+      hint?: string;
+    }[] = [
+      { key: "mood", q: "Tonight feels like?", hint: "Up to three. Skip if anything goes." },
+      { key: "era", q: "From when?" },
+    ];
+    if (room.media_type !== "tv") list.push({ key: "length", q: "How long have you got?" });
+    list.push({ key: "crowd", q: "Something everyone knows, or a deep cut?" });
+    list.push({ key: "vibe", q: "What kind of night is it?" });
+    list.push({ key: "ready", q: room.mode === "group" ? "Lock it in" : "Deal the hand" });
+    return list;
+  }, [room.media_type, room.mode]);
+  const [stepIdx, setStepIdx] = useState(0);
+  const step = steps[Math.min(stepIdx, steps.length - 1)];
 
+  // The needle. Refetched whenever the room state moves (any member's answer
+  // taps the doorbell, which refetches state, which lands here).
+  const [preview, setPreview] = useState<NightPreview | null>(null);
+  useEffect(() => {
+    let dead = false;
+    fetchNightPreview(token)
+      .then((pv) => {
+        if (!dead && !pv.error) setPreview(pv);
+      })
+      .catch(() => {});
+    return () => {
+      dead = true;
+    };
+  }, [token, state]);
+
+  const others = members.map((m, i) => ({ ...m, seat: i })).filter((m) => !m.is_you);
   const ringsFor = (genre: string, list: "genres_want" | "genres_less") =>
     others.filter((m) => m[list].includes(genre)).map((m) => nightColor(m.seat));
 
-  const toggleGenre = (genre: string, list: "want" | "less") => {
-    const current = list === "want" ? you.genres_want : you.genres_less;
-    const other = list === "want" ? you.genres_less : you.genres_want;
+  const toggleGenre = (genre: string) => {
+    const current = you.genres_want;
     let next: string[];
     if (current.includes(genre)) {
       next = current.filter((g) => g !== genre);
@@ -500,11 +528,7 @@ function Wizard({
       }
       next = [...current, genre];
     }
-    const patch =
-      list === "want"
-        ? { genresWant: next, genresLess: other.filter((g) => g !== genre) }
-        : { genresLess: next, genresWant: other.filter((g) => g !== genre) };
-    void write(() => saveNightPrefs(token, patch));
+    void write(() => saveNightPrefs(token, { genresWant: next }));
   };
 
   const setSignal = (key: keyof NightSignals, value: string) => {
@@ -528,151 +552,209 @@ function Wizard({
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setStepIdx(0);
+          setOpen(true);
+        }}
         className="mb-4 w-full cursor-pointer rounded-[6px] border border-border bg-panel px-3 py-2.5 text-left font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
       >
-        Adjust answers, then roll again
+        Adjust answers, then deal again
       </button>
     );
   }
 
   const chipBase =
-    "relative cursor-pointer rounded-[5px] border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors";
+    "relative cursor-pointer rounded-[5px] border px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors";
 
-  const genreChip = (genre: string, list: "want" | "less") => {
-    const mine = (list === "want" ? you.genres_want : you.genres_less).includes(genre);
-    const rings = ringsFor(genre, list === "want" ? "genres_want" : "genres_less");
+  const optionChip = (props: {
+    id: string;
+    label: string;
+    mine: boolean;
+    rings: string[];
+    onClick: () => void;
+  }) => (
+    <button
+      key={props.id}
+      type="button"
+      aria-pressed={props.mine}
+      onClick={props.onClick}
+      className={`${chipBase} ${
+        props.mine
+          ? "border-primary bg-primary/15 text-primary"
+          : "border-border bg-background text-text-bright hover:border-border-strong"
+      }`}
+    >
+      {props.label}
+      {props.rings.length > 0 && (
+        <span className="absolute -right-1 -top-1 flex gap-0.5">
+          {props.rings.slice(0, 4).map((c, i) => (
+            <span
+              key={i}
+              aria-hidden="true"
+              className="inline-block h-2 w-2 rounded-full border border-background"
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </span>
+      )}
+    </button>
+  );
+
+  const signalOptions = (key: "era" | "length" | "crowd" | "vibe") => {
+    const options =
+      key === "era"
+        ? NIGHT_ERAS
+        : key === "length"
+          ? NIGHT_LENGTHS
+          : key === "crowd"
+            ? NIGHT_CROWDS
+            : NIGHT_VIBES;
     return (
-      <button
-        key={genre}
-        type="button"
-        onClick={() => toggleGenre(genre, list)}
-        className={`${chipBase} ${
-          mine
-            ? list === "want"
-              ? "border-primary bg-primary/15 text-primary"
-              : "border-[#e08aa4] bg-[#e08aa4]/10 text-[#e08aa4]"
-            : "border-border bg-background text-text-bright hover:border-border-strong"
-        }`}
-      >
-        {genre}
-        {rings.length > 0 && (
-          <span className="absolute -right-1 -top-1 flex gap-0.5">
-            {rings.slice(0, 4).map((c, i) => (
-              <span
-                key={i}
-                aria-hidden="true"
-                className="inline-block h-2 w-2 rounded-full border border-background"
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) =>
+          optionChip({
+            id: o.value,
+            label: o.label,
+            mine: you.signals[key] === o.value,
+            rings: others
+              .filter((m) => m.signals?.[key] === o.value)
+              .map((m) => nightColor(m.seat)),
+            onClick: () => setSignal(key, o.value),
+          }),
         )}
-      </button>
+      </div>
     );
   };
 
-  const signalRow = <T extends { value: string; label: string }>(
-    label: string,
-    key: keyof NightSignals,
-    options: readonly T[],
-  ) => (
-    <div>
-      <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
-        {label}
-      </span>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((o) => {
-          const mine = you.signals[key] === o.value;
-          const pickedBy = others
-            .filter((m) => m.signals?.[key] === o.value)
-            .map((m) => nightColor(m.seat));
-          return (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => setSignal(key, o.value)}
-              className={`${chipBase} ${
-                mine
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border bg-background text-text-bright hover:border-border-strong"
-              }`}
-            >
-              {o.label}
-              {pickedBy.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex gap-0.5">
-                  {pickedBy.slice(0, 4).map((c, i) => (
-                    <span
-                      key={i}
-                      aria-hidden="true"
-                      className="inline-block h-2 w-2 rounded-full border border-background"
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const stepAnswered =
+    step.key === "mood"
+      ? you.genres_want.length > 0
+      : step.key === "ready"
+        ? true
+        : !!you.signals[step.key];
+
+  const yourAnswers: string[] = [
+    ...you.genres_want,
+    ...(["era", "length", "crowd", "vibe"] as const).flatMap((k) => {
+      const v = you.signals[k];
+      if (!v) return [];
+      const all = [...NIGHT_ERAS, ...NIGHT_LENGTHS, ...NIGHT_CROWDS, ...NIGHT_VIBES];
+      const hit = all.find((o) => o.value === v);
+      return hit ? [hit.label] : [];
+    }),
+  ];
 
   return (
-    <div className="space-y-5 rounded-[6px] border border-border bg-panel p-4">
-      <div>
-        <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
-          Tonight I want
+    <div className="space-y-4 rounded-[6px] border border-border bg-panel p-4">
+      <div className="flex items-baseline justify-between">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          {stepIdx + 1} of {steps.length}
         </span>
-        <div className="flex flex-wrap gap-1.5">
-          {UNIFIED_GENRES.map((g) => genreChip(g, "want"))}
-        </div>
-      </div>
-
-      <div>
-        <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
-          Less in the mood for
-        </span>
-        <p className="mb-2 text-[11.5px] text-text-dim">
-          {room.mode === "solo"
-            ? "Not a ban. It drops down the list, it does not disappear."
-            : "Not a ban. If someone else wants it badly enough, it can still win."}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {UNIFIED_GENRES.map((g) => genreChip(g, "less"))}
-        </div>
-      </div>
-
-      <div className="space-y-4 border-t border-border pt-4">
-        <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-          Optional. Every answer sharpens the pick.
-        </p>
-        {signalRow("From when", "era", NIGHT_ERAS)}
-        {room.media_type !== "tv" && signalRow("How long", "length", NIGHT_LENGTHS)}
-        {signalRow("How famous", "crowd", NIGHT_CROWDS)}
-        {signalRow("The mood", "vibe", NIGHT_VIBES)}
-      </div>
-
-      {you.is_host && <HostControls state={state} token={token} write={write} />}
-
-      <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-        {room.mode === "group" ? (
+        {stepIdx > 0 && (
           <button
             type="button"
-            onClick={() => setReady(!you.ready)}
-            className={`cursor-pointer rounded-[5px] border px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors ${
-              you.ready
-                ? "border-[#9fe6a0] bg-[#9fe6a0]/10 text-[#9fe6a0]"
-                : "border-border-strong bg-background text-text-bright hover:border-primary"
-            }`}
+            onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
+            className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
           >
-            {you.ready ? "Ready" : "I am ready"}
+            Back
           </button>
-        ) : (
-          <span className="text-[11.5px] text-text-dim">{answered} answers shaping this pick</span>
         )}
-        <RollButton state={state} token={token} write={write} answered={answered} />
       </div>
+
+      <div>
+        <h2 className="text-[18px] font-semibold leading-tight text-text-bright">{step.q}</h2>
+        {step.hint && <p className="mt-1 text-[12.5px] text-text-dim">{step.hint}</p>}
+      </div>
+
+      {step.key === "mood" && (
+        <div className="flex flex-wrap gap-1.5">
+          {UNIFIED_GENRES.map((g) =>
+            optionChip({
+              id: g,
+              label: g,
+              mine: you.genres_want.includes(g),
+              rings: ringsFor(g, "genres_want"),
+              onClick: () => toggleGenre(g),
+            }),
+          )}
+        </div>
+      )}
+      {(step.key === "era" ||
+        step.key === "length" ||
+        step.key === "crowd" ||
+        step.key === "vibe") &&
+        signalOptions(step.key)}
+
+      {step.key === "ready" && (
+        <div className="space-y-4">
+          {yourAnswers.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {yourAnswers.map((a) => (
+                <span
+                  key={a}
+                  className="rounded-[4px] border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary"
+                >
+                  {a}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[13px] text-text-muted">
+              No answers. The deal leads with the highest scores in play.
+            </p>
+          )}
+          {you.is_host && <HostControls state={state} token={token} write={write} />}
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+            {room.mode === "group" ? (
+              <button
+                type="button"
+                onClick={() => setReady(!you.ready)}
+                className={`cursor-pointer rounded-[5px] border px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+                  you.ready
+                    ? "border-[#9fe6a0] bg-[#9fe6a0]/10 text-[#9fe6a0]"
+                    : "border-border-strong bg-background text-text-bright hover:border-primary"
+                }`}
+              >
+                {you.ready ? "Ready" : "I am ready"}
+              </button>
+            ) : (
+              <span className="text-[11.5px] text-text-dim">
+                {answered} answers shaping this deal
+              </span>
+            )}
+            <RollButton
+              state={state}
+              token={token}
+              write={write}
+              answered={answered}
+              pool={preview?.pool ?? null}
+            />
+          </div>
+        </div>
+      )}
+
+      {step.key !== "ready" && (
+        <button
+          type="button"
+          onClick={() => setStepIdx((i) => Math.min(steps.length - 1, i + 1))}
+          className="w-full cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2.5 text-center text-[13px] font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          {stepAnswered ? "Next" : "Skip"}
+        </button>
+      )}
+
+      {preview && (
+        <p className="border-t border-border pt-3 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          <span className="text-text-bright">{preview.pool.toLocaleString("en-US")}</span> in play
+          {preview.front && (
+            <>
+              {" "}
+              · Front of the deck: {preview.front.title}
+              {typeof preview.front.score === "number" ? ` · ${preview.front.score}` : ""}
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }
@@ -745,11 +827,13 @@ function RollButton({
   token,
   write,
   answered,
+  pool,
 }: {
   state: NightState;
   token: string;
   write: (fn: () => Promise<unknown>) => Promise<void>;
   answered: number;
+  pool: number | null;
 }) {
   const { you, room, members } = state;
   const [busy, setBusy] = useState(false);
@@ -801,7 +885,13 @@ function RollButton({
       onClick={() => void roll()}
       className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[12px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
     >
-      {room.roll_seq > 0 ? "Roll again" : room.mode === "solo" ? "Find my pick" : "Get the picks"}
+      {room.roll_seq > 0
+        ? "Deal again"
+        : pool
+          ? `Deal from ${pool.toLocaleString("en-US")}`
+          : room.mode === "solo"
+            ? "Deal my hand"
+            : "Deal the hand"}
     </button>
   );
 }

@@ -15,6 +15,7 @@ export function dailyIndex(day: number, poolSize: number): number {
 }
 
 export const MAX_GUESSES = 6;
+export const MAX_HINTS = 3;
 
 /** Blank the answer out of a clue so a tagline cannot give the game away. */
 export function redactTitle(text: string, title: string): string {
@@ -35,11 +36,29 @@ export function redactTitle(text: string, title: string): string {
   return out;
 }
 
-/** The shareable result grid, Wordle-convention. */
-export function shareText(gameNumber: number, guesses: number, won: boolean): string {
+/** The title with every letter blanked: "The Dark Knight" → "T__ D___ K______".
+ *  Digits count as letters (a year in a title would give too much away);
+ *  punctuation survives, because its shape is part of the puzzle's charm. */
+export function titlePattern(title: string): string {
+  return title
+    .split(/(\s+)/)
+    .map((part) =>
+      /^\s+$/.test(part)
+        ? part
+        : part
+            .split("")
+            .map((ch, i) => (i === 0 ? ch.toUpperCase() : /[\p{L}\p{N}]/u.test(ch) ? "_" : ch))
+            .join(""),
+    )
+    .join("");
+}
+
+/** The shareable result grid, Wordle-convention. Hints ride along honestly. */
+export function shareText(gameNumber: number, guesses: number, won: boolean, hints = 0): string {
   const squares = won ? "🟥".repeat(guesses - 1) + "🟩" : "🟥".repeat(MAX_GUESSES);
   const score = won ? `${guesses}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
-  return `Balasaurdle #${gameNumber} ${score}\n${squares}\nbalasaur.com/play`;
+  const hintTag = hints > 0 ? ` (${hints} hint${hints === 1 ? "" : "s"})` : "";
+  return `Balasaurdle #${gameNumber} ${score}${hintTag}\n${squares}\nbalasaur.com/play`;
 }
 
 export interface DailyState {
@@ -51,6 +70,8 @@ export interface DailyState {
   best: number;
   played: number;
   wins: number;
+  /** On-demand hints revealed this game, 0 to MAX_HINTS. */
+  hintsUsed: number;
 }
 
 const KEY = "balasaur:daily";
@@ -65,6 +86,7 @@ export function loadDaily(today: number): DailyState {
     best: 0,
     played: 0,
     wins: 0,
+    hintsUsed: 0,
   };
   if (typeof window === "undefined") return fresh;
   try {
