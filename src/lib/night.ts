@@ -223,6 +223,20 @@ export function pickNightWinner(
   return call("night_pick", { p_member_token: memberToken, p_media_id: mediaId });
 }
 
+export interface NightPreview {
+  pool: number;
+  front: { media_id: string; title: string; score: number | null } | null;
+  error?: string;
+}
+
+/** The wizard's needle: how many titles are in play for this room, and the
+ *  title the deal would lead with right now. Any member may ask. The pool
+ *  moves only on hard answers (type, services, seen titles); mood answers
+ *  re-rank, so they move the front card instead. */
+export async function fetchNightPreview(memberToken: string): Promise<NightPreview> {
+  return call("night_preview", { p_member_token: memberToken });
+}
+
 // ---------- Per-room identity, kept in this browser ----------
 
 const TOKEN_PREFIX = "balasaur:night:token:";
