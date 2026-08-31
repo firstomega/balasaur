@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  titlePattern,
   DAILY_EPOCH_UTC,
   dayNumber,
   dailyIndex,
@@ -80,5 +81,25 @@ describe("redactTitle word boundaries", () => {
     expect(redactTitle("The Thing returns: the thing is back.", "The Thing")).toBe(
       "___ returns: ___ is back.",
     );
+  });
+});
+
+describe("titlePattern", () => {
+  it("blanks every letter after the first of each word", () => {
+    expect(titlePattern("The Dark Knight")).toBe("T__ D___ K_____");
+  });
+  it("keeps punctuation and blanks digits", () => {
+    expect(titlePattern("Se7en")).toBe("S____");
+    expect(titlePattern("WALL·E")).toBe("W___·_");
+  });
+});
+
+describe("shareText hints", () => {
+  it("stays silent at zero hints", () => {
+    expect(shareText(10, 3, true, 0)).not.toContain("hint");
+  });
+  it("declares hints when used", () => {
+    expect(shareText(10, 3, true, 2)).toContain("3/6 (2 hints)");
+    expect(shareText(10, 2, true, 1)).toContain("(1 hint)");
   });
 });
