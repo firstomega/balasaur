@@ -70,8 +70,12 @@ describe("collectionDek", () => {
     expect(collectionDek({ ...base, median_score: clears }, top)).toContain(
       `catalog median of ${CATALOG_MEDIAN}`,
     );
-    // Above the catalog but inside the noise margin, so no sentence.
-    expect(collectionDek({ ...base, median_score: clears - 1 }, top)).not.toContain("typical pick");
+    // Inside the noise margin the median is still stated, because the hub card
+    // prints it, but the boast about beating the catalog is withheld.
+    const inside = collectionDek({ ...base, median_score: clears - 1 }, top);
+    expect(inside).toContain(`typical pick here scores ${clears - 1}`);
+    expect(inside).not.toContain("catalog median");
+    // No median, no sentence: nothing to state and nothing to check.
     expect(collectionDek({ ...base, median_score: null }, top)).not.toContain("typical pick");
   });
 

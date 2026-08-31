@@ -71,7 +71,7 @@ export function CollectionRail() {
                   {c.media_type === "tv" ? "Shows" : "Movies"}
                 </span>
               )}
-              <span>{c.item_count} picks</span>
+              <span>{c.item_count.toLocaleString("en-US")} titles</span>
             </div>
           </Link>
         ))}

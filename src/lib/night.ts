@@ -19,6 +19,9 @@ export interface NightRoomInfo {
   services: string[];
   roll_seq: number;
   reveal_at: string | null;
+  /** Null while a group room is still gathering in the lobby. */
+  started_at: string | null;
+  created_at: string;
   winner_media_id: string | null;
   winner_name: string | null;
   expires_at: string;
@@ -235,6 +238,15 @@ export interface NightPreview {
  *  re-rank, so they move the front card instead. */
 export async function fetchNightPreview(memberToken: string): Promise<NightPreview> {
   return call("night_preview", { p_member_token: memberToken });
+}
+
+/** Leave the lobby and put everyone into the questions. Idempotent, and open
+ *  to any member once the room is three minutes old so a vanished host can
+ *  never strand the room. */
+export async function startNight(
+  memberToken: string,
+): Promise<{ ok?: boolean; started_at?: string; error?: string }> {
+  return call("night_start", { p_member_token: memberToken });
 }
 
 // ---------- Per-room identity, kept in this browser ----------

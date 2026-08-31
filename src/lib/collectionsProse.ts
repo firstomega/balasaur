@@ -104,12 +104,17 @@ export function collectionDek(row: CollectionRow, top: DekTopItem[]): string {
     `${row.item_count.toLocaleString("en-US")} ${subject(row)} made the cut, ordered from highest Balasaur Score to lowest.`,
   );
 
-  if (
-    typeof row.median_score === "number" &&
-    row.median_score >= CATALOG_MEDIAN + CATALOG_MEDIAN_MARGIN
-  ) {
+  // Always state the median, because the collections hub now prints it on
+  // every card ("60 titles · half above 82") and a number on a card that the
+  // page it links to never mentions is a number nobody can check. The
+  // comparison against the catalog is the part that has to earn itself: it is
+  // only worth a clause when the shelf genuinely clears the catalog by a
+  // margin, otherwise it is a boast about being average.
+  if (typeof row.median_score === "number") {
     parts.push(
-      `The typical pick here scores ${row.median_score}, well above the catalog median of ${CATALOG_MEDIAN}.`,
+      row.median_score >= CATALOG_MEDIAN + CATALOG_MEDIAN_MARGIN
+        ? `The typical pick here scores ${row.median_score}, well above the catalog median of ${CATALOG_MEDIAN}.`
+        : `The typical pick here scores ${row.median_score}.`,
     );
   }
 
