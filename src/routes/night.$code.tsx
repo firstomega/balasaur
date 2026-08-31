@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Check, Copy, Crown, Share2, RotateCcw } from "lucide-react";
@@ -13,9 +13,11 @@ import { UNIFIED_GENRES } from "@/lib/genres";
 import { STREAMING_OPTIONS } from "@/types/filters";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserStatus } from "@/hooks/useUserStatus";
-import { recordForWatched } from "@/lib/userStatus";
+import { recordForWatched, recordForWant, recordForNotInterested } from "@/lib/userStatus";
 import { capturePostHogEvent } from "@/lib/posthog";
 import type { MediaItem } from "@/types/media";
+import { MediaCard, type QuickAction } from "@/components/balasaur/MediaCard";
+import { useDeckMedia } from "@/hooks/useCatalog";
 import {
   NIGHT_ERAS,
   NIGHT_LENGTHS,
@@ -35,6 +37,7 @@ import {
   joinNightChannel,
   nightColor,
   fetchNightPreview,
+  startNight,
   type NightPreview,
   type NightState,
   type NightRollItem,
@@ -252,12 +255,19 @@ function NightRoomPage() {
           recordStatus={recordStatus}
         />
       ) : null}
-      <Wizard
-        state={state}
-        token={token}
-        write={write}
-        collapsed={state.room.status === "results"}
-      />
+      {/* A group room gathers before it asks anything. Answering alone while
+          the others are still arriving was the whole complaint, so the wizard
+          is not mounted until the room has started. Solo rooms never wait. */}
+      {state.room.mode === "group" && !state.room.started_at ? (
+        <Lobby state={state} token={token} write={write} />
+      ) : (
+        <Wizard
+          state={state}
+          token={token}
+          write={write}
+          collapsed={state.room.status === "results"}
+        />
+      )}
     </Shell>
   );
 }
@@ -445,6 +455,157 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The lobby. Nobody answers questions until the room is assembled, and the
+// wait is spent on something that pays: marking what you have already seen.
+// That is not busywork dressed up. night_recommend excludes every member's
+// watched titles from the room's pool and gives "want to watch" the heaviest
+// term in its ranking, so a minute spent here visibly sharpens tonight's pick
+// and fills in a profile that outlives the room.
+// ---------------------------------------------------------------------------
+
+function Lobby({
+  state,
+  token,
+  write,
+}: {
+  state: NightState;
+  token: string;
+  write: (fn: () => Promise<unknown>) => Promise<void>;
+}) {
+  const { you, members, room } = state;
+  const { statuses, recordStatus } = useUserStatus();
+  const [starting, setStarting] = useState(false);
+  const readyCount = members.filter((m) => m.ready).length;
+  // Three minutes after the room opened anyone can start it. A host who shut
+  // the tab costs the room a wait, never the night.
+  const [canForce, setCanForce] = useState(false);
+  useEffect(() => {
+    const at = Date.parse(room.created_at) + 3 * 60 * 1000;
+    if (Date.now() >= at) {
+      setCanForce(true);
+      return;
+    }
+    const t = window.setTimeout(() => setCanForce(true), at - Date.now());
+    return () => window.clearTimeout(t);
+  }, [room.created_at]);
+
+  const everyoneReady = members.length >= 2 && readyCount === members.length;
+  const mayStart = you.is_host || everyoneReady || canForce;
+
+  const start = async () => {
+    setStarting(true);
+    try {
+      await write(async () => {
+        const res = await startNight(token);
+        if (res.error === "not_yet") toast("Not everyone is in yet.", { duration: 1800 });
+        else if (res.error) toast("Could not start. Try again.", { duration: 2000 });
+        else capturePostHogEvent("night_started", { members: members.length });
+      });
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const onAction = (item: MediaItem, action: QuickAction) => {
+    if (action === "watched") {
+      recordStatus(item.id, recordForWatched(statuses[item.id]), item);
+      // The room needs to know too, or tonight's pool still contains it.
+      void write(() => markNightWatched(token, item.id));
+    } else if (action === "want") {
+      recordStatus(item.id, recordForWant(), item);
+    } else {
+      recordStatus(item.id, recordForNotInterested(), item);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-[6px] border border-border bg-panel p-3.5">
+        <div className="min-w-0">
+          <p className="text-[14px] text-text-bright">
+            {members.length === 1
+              ? "Waiting for the room to fill."
+              : `${members.length} here${readyCount > 0 ? `, ${readyCount} ready` : ""}.`}
+          </p>
+          {!mayStart && (
+            <p className="mt-0.5 text-[12.5px] text-text-dim">The host starts the questions.</p>
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          {!you.is_host && (
+            <button
+              type="button"
+              onClick={() => void write(() => saveNightPrefs(token, { ready: !you.ready }))}
+              className={`cursor-pointer rounded-[5px] border px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+                you.ready
+                  ? "border-[#9fe6a0] bg-[#9fe6a0]/10 text-[#9fe6a0]"
+                  : "border-border-strong bg-background text-text-bright hover:border-primary"
+              }`}
+            >
+              {you.ready ? "Ready" : "I am ready"}
+            </button>
+          )}
+          {mayStart && (
+            <button
+              type="button"
+              disabled={starting}
+              onClick={() => void start()}
+              className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[12px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            >
+              {starting ? "Starting" : "Start the questions"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[13px] text-text-muted">
+          Seen one? Mark it while you wait. Anything the room has seen drops out of tonight&apos;s
+          picks.
+        </p>
+        <Suspense
+          fallback={
+            <div className="h-64 animate-pulse rounded-[6px] border border-border bg-panel" />
+          }
+        >
+          <LobbyDeck mediaType={room.media_type} statuses={statuses} onAction={onAction} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+/** A grid, not a swipe deck: "quickly mark a few" is a scan-and-tap job, and
+ *  MediaCard already carries the three actions this needs. */
+function LobbyDeck({
+  mediaType,
+  statuses,
+  onAction,
+}: {
+  mediaType: string;
+  statuses: Record<string, { status?: string } | undefined>;
+  onAction: (item: MediaItem, action: QuickAction) => void;
+}) {
+  const { data } = useDeckMedia("US", "");
+  const items = (data ?? [])
+    .filter((m) => (mediaType === "either" ? true : m.mediaType === mediaType))
+    .filter((m) => !statuses[m.id])
+    .slice(0, 12);
+  if (items.length === 0) {
+    return (
+      <p className="text-[13px] text-text-dim">Nothing left to file. You are all caught up.</p>
+    );
+  }
+  return (
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+      {items.map((item) => (
+        <MediaCard key={item.id} item={item} onQuickAction={onAction} />
+      ))}
     </div>
   );
 }

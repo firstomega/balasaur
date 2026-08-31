@@ -17,12 +17,86 @@ export function dailyIndex(day: number, poolSize: number): number {
 export const MAX_GUESSES = 6;
 export const MAX_HINTS = 3;
 
+// Words too common to treat as part of an answer. Without this, "The Truman
+// Show" makes any clue containing "the" look like a leak, and 1,140 of the
+// 3,930 titles in the daily pool contain "the" as a word: clue 1 reads "from
+// the 1990s" and would have been dropped on roughly a third of all days.
+const TITLE_STOPWORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "his",
+  "her",
+  "its",
+  "our",
+  "you",
+  "your",
+  "who",
+  "not",
+  "but",
+  "all",
+  "one",
+  "two",
+  "out",
+  "off",
+  "was",
+  "are",
+  "has",
+  "had",
+  "with",
+  "from",
+  "into",
+  "that",
+  "this",
+  "then",
+  "than",
+  "them",
+  "they",
+  "there",
+  "when",
+  "what",
+  "some",
+  "more",
+  "most",
+  "were",
+  "been",
+  "over",
+  "under",
+  "after",
+  "before",
+  "about",
+  "again",
+  "still",
+  "never",
+  "always",
+  "part",
+]);
+
+/** The meaningful words of a title: the ones that would give the game away. */
+function titleWords(title: string): string[] {
+  return title
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !TITLE_STOPWORDS.has(w.toLowerCase().replace(/[^\w]/g, "")));
+}
+
+/** Would this clue hand the player the answer? Used to drop a clue whose
+ *  fact happens to contain the title, e.g. a network or a person named after
+ *  the show. Stopwords are ignored, so "from the 1990s" is not a leak. */
+export function leaksTitle(text: string, title: string): boolean {
+  if (!title || title.length <= 2) return false;
+  const hay = text.toLowerCase();
+  if (hay.includes(title.toLowerCase())) return true;
+  return titleWords(title).some((w) =>
+    new RegExp(`\\b${w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(hay),
+  );
+}
+
 /** Blank the answer out of a clue so a tagline cannot give the game away. */
 export function redactTitle(text: string, title: string): string {
   // A one- or two-letter title ("It") cannot be redacted without shredding
   // the sentence; the final clue tolerates that small leak.
   if (!title || title.length <= 2) return text;
-  const words = title.split(/\s+/).filter((w) => w.length > 2);
+  const words = titleWords(title);
   let out = text;
   for (const w of [title, ...words]) {
     const esc = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

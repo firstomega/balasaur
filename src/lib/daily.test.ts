@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  leaksTitle,
   titlePattern,
   DAILY_EPOCH_UTC,
   dayNumber,
@@ -101,5 +102,34 @@ describe("shareText hints", () => {
   it("declares hints when used", () => {
     expect(shareText(10, 3, true, 2)).toContain("3/6 (2 hints)");
     expect(shareText(10, 2, true, 1)).toContain("(1 hint)");
+  });
+});
+
+describe("leaksTitle", () => {
+  it("ignores stopwords so structural clues survive", () => {
+    // The bug this exists to prevent: "the" is 3 characters, so a naive
+    // word guard dropped clue 1 on every title containing it.
+    expect(leaksTitle("A movie from the 1990s.", "The Truman Show")).toBe(false);
+    expect(leaksTitle("Genres: Drama.", "The Godfather")).toBe(false);
+  });
+  it("catches a real leak, whole word and whole title", () => {
+    expect(leaksTitle("It aired on Fargo Network.", "Fargo")).toBe(true);
+    expect(leaksTitle("Features Truman Capote.", "The Truman Show")).toBe(true);
+    expect(leaksTitle("Tagline: the truman show", "The Truman Show")).toBe(true);
+  });
+  it("does not fire on a substring inside another word", () => {
+    expect(leaksTitle("Features Christopher Nolan.", "Up")).toBe(false);
+    expect(leaksTitle("It aired on Showtime.", "Show Me a Hero")).toBe(false);
+  });
+});
+
+describe("redactTitle stopwords", () => {
+  it("leaves common words alone while blanking the real ones", () => {
+    // The full title is blanked whole when it appears. This case is the one
+    // stopwords are for: only the meaningful words are hunted, so the article
+    // survives and the sentence still reads.
+    const out = redactTitle("The show must go on for Truman", "The Truman Show");
+    expect(out.startsWith("The ")).toBe(true);
+    expect(out).not.toContain("Truman");
   });
 });

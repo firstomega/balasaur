@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { dayNumber, dailyIndex, redactTitle } from "@/lib/daily";
+import { dayNumber, dailyIndex, redactTitle, leaksTitle } from "@/lib/daily";
 import type { MediaPerson } from "@/types/media";
 
 // The daily pick. Pool: titles with 1,500+ ratings, so the answer is always
@@ -24,8 +24,19 @@ export interface DailyChallenge {
 
 const POOL_MIN_VOTES = 1500;
 
+/** "$322,740,140" to "$322 million". Anything unparseable yields "", which
+ *  makes the clue slot fall through rather than print a broken number. */
+function boxOfficeWords(raw?: string): string {
+  if (!raw || raw === "N/A") return "";
+  const n = Number(raw.replace(/[^0-9]/g, ""));
+  if (!Number.isFinite(n) || n < 1_000_000) return "";
+  return n >= 1_000_000_000
+    ? `$${(n / 1_000_000_000).toFixed(1)} billion`
+    : `$${Math.round(n / 1_000_000)} million`;
+}
+
 const CHALLENGE_COLS =
-  "media_id, media_type, title, year, poster_url, rating_balasaur, genres, people, film_length_minutes, seasons, raw_tmdb";
+  "media_id, media_type, title, year, poster_url, rating_balasaur, rating_imdb, rating_rotten_tomatoes, genres, people, seasons, awards_won, raw_tmdb, raw_omdb";
 
 /** The pinned pick for a day, computing and pinning it on first request. */
 async function pinnedMediaId(day: number): Promise<string | null> {
@@ -101,9 +112,12 @@ export const getDailyChallenge = createServerFn({ method: "GET" }).handler(
       rating_balasaur: number | null;
       genres: string[] | null;
       people: MediaPerson[] | null;
-      film_length_minutes: number | null;
-      seasons: unknown[] | null;
-      raw_tmdb: { tagline?: string } | null;
+      rating_imdb: number | null;
+      rating_rotten_tomatoes: number | null;
+      seasons: { episode_count?: number }[] | null;
+      awards_won: string[] | null;
+      raw_tmdb: { tagline?: string; networks?: { name?: string }[] } | null;
+      raw_omdb: { BoxOffice?: string } | null;
     };
 
     const typeWord = r.media_type === "tv" ? "TV series" : "movie";
@@ -112,26 +126,74 @@ export const getDailyChallenge = createServerFn({ method: "GET" }).handler(
     const people = (r.people ?? []).filter((p) => p.name);
     const director = people.find((p) => p.role === "Director" || p.role === "Creator");
     const actor = people.find((p) => p.role !== "Director" && p.role !== "Creator");
-    const length =
-      r.media_type === "tv"
-        ? `${(r.seasons ?? []).length || "several"} ${(r.seasons ?? []).length === 1 ? "season" : "seasons"}`
-        : r.film_length_minutes
-          ? `${Math.floor(r.film_length_minutes / 60)}h ${r.film_length_minutes % 60}m`
-          : "";
+    const network = (r.raw_tmdb?.networks ?? []).find((n) => n?.name)?.name ?? "";
+    const seasonCount = (r.seasons ?? []).length;
+    const episodes = (r.seasons ?? []).reduce(
+      (n, sn) => n + (typeof sn?.episode_count === "number" ? sn.episode_count : 0),
+      0,
+    );
+    const box = boxOfficeWords(r.raw_omdb?.BoxOffice);
+    const wonBig = (r.awards_won ?? []).find((a) => a === "oscar" || a === "emmy");
     const tagline = r.raw_tmdb?.tagline ? redactTitle(r.raw_tmdb.tagline, r.title) : "";
 
-    // Six clues, cheapest information first. Blanks are skipped by falling
-    // back to a fact that always exists, so the list is always full length.
-    const titleWords = r.title.split(/\s+/).length;
-    const wordClue = `The title is ${titleWords} ${titleWords === 1 ? "word" : "words"} long.`;
+    // Six clues, hardest first. Each slot proposes candidates in order and
+    // takes the first that is present, does not repeat an earlier line, and
+    // does not name the answer.
+    //
+    // Runtime is gone: nobody guesses a film from "2h 50m", and inside a
+    // decade band it separates almost nothing. Two slots were also failing
+    // silently. Clue 5 asked for a director, which only 24 of the 354 TV
+    // titles in the pool carry, so nearly every TV day printed filler; the
+    // network is on all 354. And the old scale slot restated the year that
+    // clue 1 already gave. Box office covers 89% of the pool's movies.
+    const used = new Set<string>();
+    const pick = (...candidates: (string | "")[]): string => {
+      for (const c of candidates) {
+        if (!c || used.has(c) || leaksTitle(c, r.title)) continue;
+        used.add(c);
+        return c;
+      }
+      return "";
+    };
+    const scoreLine =
+      typeof r.rating_balasaur === "number" ? `Balasaur Score: ${r.rating_balasaur}.` : "";
+    const imdbLine =
+      typeof r.rating_imdb === "number" ? `IMDb users give it ${r.rating_imdb}.` : "";
+    const rtLine =
+      typeof r.rating_rotten_tomatoes === "number"
+        ? `Rotten Tomatoes: ${r.rating_rotten_tomatoes}%.`
+        : "";
+
     const clues = [
-      `A ${typeWord} from the ${decade}.`,
-      genres ? `Genres: ${genres}.` : wordClue,
-      length ? `Released ${r.year}. Runs ${length}.` : `Released ${r.year}.`,
-      actor ? `Features ${actor.name}.` : `It scores ${r.rating_balasaur ?? "no rating"} here.`,
-      director ? `${director.role}: ${director.name}.` : wordClue,
-      tagline ? `Tagline: "${tagline}"` : `The title starts with "${r.title[0].toUpperCase()}".`,
-    ];
+      pick(`A ${typeWord} from the ${decade}.`),
+      pick(genres ? `Genres: ${genres}.` : "", scoreLine, imdbLine),
+      pick(
+        r.media_type === "tv" && seasonCount > 0
+          ? `${seasonCount} ${seasonCount === 1 ? "season" : "seasons"}${episodes > 0 ? `, ${episodes} episodes` : ""}.`
+          : box
+            ? `It took ${box} at the box office.`
+            : "",
+        imdbLine,
+        scoreLine,
+      ),
+      pick(
+        wonBig ? `It won an ${wonBig === "oscar" ? "Oscar" : "Emmy"}.` : "",
+        rtLine,
+        imdbLine,
+        scoreLine,
+      ),
+      pick(
+        r.media_type === "tv" && network ? `It aired on ${network}.` : "",
+        director ? `${director.role}: ${director.name}.` : "",
+        scoreLine,
+        rtLine,
+      ),
+      pick(
+        actor ? `Features ${actor.name}.` : "",
+        tagline ? `Tagline: "${tagline}"` : "",
+        `The title starts with "${r.title[0].toUpperCase()}".`,
+      ),
+    ].filter(Boolean);
 
     return {
       number: day,

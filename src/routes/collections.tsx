@@ -223,11 +223,20 @@ function ShelfCard({ c }: { c: CollectionSummary }) {
       <span className="mt-2.5 block text-[14px] font-semibold leading-snug text-text-bright group-hover:text-primary">
         {c.title}
       </span>
-      {typeof c.top_score === "number" && (
-        <span className="mt-0.5 block font-mono text-[11px] text-text-dim">
-          top <span className="text-rating">{c.top_score}</span>
-        </span>
-      )}
+      {/* What the whole shelf is like, not what its best row scored. "top 92"
+          read as "the top 92 titles" to the owner, and it could not tell two
+          collections apart anyway: across 673 shelves top_score has a standard
+          deviation of 4.1 and half sit between 88 and 95. The count kills that
+          misreading outright and the median describes the package. */}
+      <span className="mt-0.5 block font-mono text-[11px] text-text-dim">
+        {c.item_count.toLocaleString("en-US")} titles
+        {typeof c.median_score === "number" && (
+          <>
+            {" · half above "}
+            <span className="text-rating">{c.median_score}</span>
+          </>
+        )}
+      </span>
     </Link>
   );
 }
