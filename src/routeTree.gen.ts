@@ -23,6 +23,7 @@ import { Route as PlayRouteImport } from './routes/play'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as ListsRouteImport } from './routes/lists'
+import { Route as LibraryRouteImport } from './routes/library'
 import { Route as D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport } from './routes/d50e38be1b86ef6ef1079ff766aa2079[.]txt'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CollectionsRouteImport } from './routes/collections'
@@ -109,6 +110,11 @@ const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
 const ListsRoute = ListsRouteImport.update({
   id: '/lists',
   path: '/lists',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
   getParentRoute: () => rootRouteImport,
 } as any)
 const D50e38be1b86ef6ef1079ff766aa2079DottxtRoute =
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
   '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
+  '/library': typeof LibraryRoute
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
   '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
+  '/library': typeof LibraryRoute
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/collections': typeof CollectionsRoute
   '/contact': typeof ContactRoute
   '/d50e38be1b86ef6ef1079ff766aa2079.txt': typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
+  '/library': typeof LibraryRoute
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/contact'
     | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+    | '/library'
     | '/lists'
     | '/llms.txt'
     | '/methodology'
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/contact'
     | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+    | '/library'
     | '/lists'
     | '/llms.txt'
     | '/methodology'
@@ -376,6 +387,7 @@ export interface FileRouteTypes {
     | '/collections'
     | '/contact'
     | '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+    | '/library'
     | '/lists'
     | '/llms.txt'
     | '/methodology'
@@ -410,6 +422,7 @@ export interface RootRouteChildren {
   CollectionsRoute: typeof CollectionsRoute
   ContactRoute: typeof ContactRoute
   D50e38be1b86ef6ef1079ff766aa2079DottxtRoute: typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRoute
+  LibraryRoute: typeof LibraryRoute
   ListsRoute: typeof ListsRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   MethodologyRoute: typeof MethodologyRoute
@@ -533,6 +546,13 @@ declare module '@tanstack/react-router' {
       path: '/lists'
       fullPath: '/lists'
       preLoaderRoute: typeof ListsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/d50e38be1b86ef6ef1079ff766aa2079.txt': {
@@ -667,6 +687,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   D50e38be1b86ef6ef1079ff766aa2079DottxtRoute:
     D50e38be1b86ef6ef1079ff766aa2079DottxtRoute,
+  LibraryRoute: LibraryRoute,
   ListsRoute: ListsRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   MethodologyRoute: MethodologyRoute,

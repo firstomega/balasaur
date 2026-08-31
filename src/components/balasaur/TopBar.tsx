@@ -68,8 +68,8 @@ export function TopBar() {
                 onNavigate={() => setMenuOpen(false)}
               />
               <MenuLink
-                to="/lists"
-                label="My Lists"
+                to="/library"
+                label="My Library"
                 icon={<Library className="h-3.5 w-3.5" />}
                 onNavigate={() => setMenuOpen(false)}
               />
@@ -117,12 +117,12 @@ export function TopBar() {
             Rate
           </Link>
           <Link
-            to="/lists"
+            to="/library"
             aria-label="My lists"
             className="hidden items-center gap-1.5 rounded-[5px] px-2 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:px-2.5 md:inline-flex"
           >
             <Library className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">My Lists</span>
+            <span className="hidden sm:inline">My Library</span>
           </Link>
           {user ? (
             <DropdownMenu>
