@@ -7,11 +7,11 @@
 // which they take on trust, but where they stand in it.
 //
 // So the line is personal, and its VARIATION is driven by the data rather
-// than by rotation: the sentence changes when the meaning of the number
-// changes. Early in a shelf the interesting figure is how many you have
-// seen; near the end it is how many are left; at the end it is that you are
-// done. Because shelves differ in how far a person has got, a column of
-// cards varies on its own without any string being picked at random.
+// than by rotation: the sentence changes only where the ordinary shape would
+// be wrong to say out loud, at nothing watched, at one title left, and at a
+// finished shelf. Everywhere else it keeps one shape and one scale, because a
+// column of cards is read by diffing it, and two scales in one column stop
+// adjacent cards being comparable. The numbers do the varying.
 
 export interface ProgressInput {
   total: number;
@@ -35,20 +35,24 @@ export function collectionProgressLine(input: ProgressInput): string | null {
   // a person wants is the whole shelf.
   if (seen === total) return `You have seen all ${total}`;
 
-  // Nearly finished, so the small number is the useful one. The threshold is
-  // "fewer left than seen", not a percentage, because that is exactly the
-  // point where the remaining pile becomes the thing you are tracking.
-  if (seen > 0 && left <= seen) {
-    return left === 1 ? "1 left to see" : `${left} left to see`;
-  }
+  // One title short. The fraction buries this: "59 of 60" scans as "a lot",
+  // when the fact worth knowing is that one specific film is still unwatched.
+  // Requires progress: on a one-title shelf, nothing watched also leaves one,
+  // and "all but one" would then be a claim about a shelf never touched.
+  if (seen > 0 && left === 1) return "You have seen all but one";
 
-  // Underway.
+  // Underway. Deliberately the same shape all the way from one seen to nearly
+  // all: an earlier draft flipped to "30 left to see" past the halfway mark,
+  // which put two different scales in one column and made adjacent cards
+  // incomparable, at a threshold the reader cannot see. The number varies on
+  // its own; the sentence should not.
   if (seen > 0) return `You have seen ${seen} of ${total}`;
 
   // Nothing seen, but some of it is already saved: still personal, still true,
-  // and it is the state a new visitor reaches first because saving is one tap
-  // and watching is two hours.
-  if (want > 0) return want === 1 ? "1 on your watchlist" : `${want} on your watchlist`;
+  // and the state a new visitor reaches first, because saving is one tap and
+  // watching is two hours. Same "of {total}" scale as the rung above, so the
+  // column keeps one ruler.
+  if (want > 0) return `${want} of ${total} on your watchlist`;
 
   // Nothing to say about this person and this shelf.
   return null;

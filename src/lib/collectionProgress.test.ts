@@ -10,8 +10,8 @@ describe("collectionProgressLine", () => {
   });
 
   it("falls back to the watchlist before anything is watched", () => {
-    expect(line(0, 3)).toBe("3 on your watchlist");
-    expect(line(0, 1)).toBe("1 on your watchlist");
+    expect(line(0, 3)).toBe("3 of 60 on your watchlist");
+    expect(line(0, 1)).toBe("1 of 60 on your watchlist");
   });
 
   it("counts up while the shelf is mostly unwatched", () => {
@@ -20,12 +20,13 @@ describe("collectionProgressLine", () => {
     expect(line(29, 0)).toBe("You have seen 29 of 60");
   });
 
-  it("flips to what is left once fewer remain than are seen", () => {
-    // 30 seen of 60 leaves 30: the remaining pile is now the smaller number
-    // and the one a person is tracking.
-    expect(line(30, 0)).toBe("30 left to see");
-    expect(line(52, 0)).toBe("8 left to see");
-    expect(line(59, 0)).toBe("1 left to see");
+  it("keeps one scale all the way up, so a column stays comparable", () => {
+    expect(line(30, 0)).toBe("You have seen 30 of 60");
+    expect(line(52, 0)).toBe("You have seen 52 of 60");
+  });
+
+  it("has a sentence for one title short, which the fraction would bury", () => {
+    expect(line(59, 0)).toBe("You have seen all but one");
   });
 
   it("has one sentence for a finished shelf", () => {
@@ -44,7 +45,7 @@ describe("collectionProgressLine", () => {
 
   it("handles a one-title shelf without reading oddly", () => {
     expect(line(1, 0, 1)).toBe("You have seen all 1");
-    expect(line(0, 1, 1)).toBe("1 on your watchlist");
+    expect(line(0, 1, 1)).toBe("1 of 1 on your watchlist");
   });
 });
 
