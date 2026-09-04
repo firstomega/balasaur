@@ -132,7 +132,7 @@ export function shareText(gameNumber: number, guesses: number, won: boolean, hin
   const squares = won ? "🟥".repeat(guesses - 1) + "🟩" : "🟥".repeat(MAX_GUESSES);
   const score = won ? `${guesses}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
   const hintTag = hints > 0 ? ` (${hints} hint${hints === 1 ? "" : "s"})` : "";
-  return `Balasaurdle #${gameNumber} ${score}${hintTag}\n${squares}\nbalasaur.com/play`;
+  return `Balasaurdle #${gameNumber} ${score}${hintTag}\n${squares}\nbalasaur.com/play/balasaurdle`;
 }
 
 export interface DailyState {

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SITE_ORIGIN } from "@/lib/seo";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
+import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
 
 // Served at /sitemap-pages.xml — static pages plus every ranked collection.
 // These are the pages that answer questions the incumbents answer badly
@@ -16,6 +17,10 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
           "/collections",
           "/calendar",
           "/play",
+          // Every enabled arcade game, straight from the registry, so the hub
+          // grid and the sitemap can never disagree. /play/leaderboard is
+          // noindexed and stays out.
+          ...ENABLED_SLUGS.map((slug) => GAMES[slug].path),
           // /watched and /lists are personal tools: signed out they render an
           // empty shell, which is exactly the thin page a crawler should never
           // be handed. They carry noindex and stay out of the sitemap.

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { TablesUpdate } from "@/integrations/supabase/types";
@@ -179,6 +180,13 @@ export interface PublicMediaItem {
   year: string | null;
 }
 
+export interface PublicArcadeBest {
+  /** Game slug from the arcade registry; the client maps it to a name. */
+  game: string;
+  bestScore: number;
+  plays: number;
+}
+
 export interface PublicProfileData {
   found: boolean;
   isPrivate?: boolean;
@@ -193,6 +201,38 @@ export interface PublicProfileData {
   stats?: { watched: number; liked: number; want: number };
   watched?: PublicMediaItem[];
   liked?: PublicMediaItem[];
+  /** Lifetime comets from the arcade wallet. 0 when they never played. */
+  comets?: number;
+  /** Per-game bests, credited runs only. Empty when they never played. */
+  bests?: PublicArcadeBest[];
+}
+
+/** Arcade wallet + per-game bests for a public profile. The generated types
+ *  predate the arcade_* tables, so the reads go through one narrow cast here.
+ *  Fail-soft: an error means the profile simply shows no arcade section. */
+async function readArcade(userId: string): Promise<{ comets: number; bests: PublicArcadeBest[] }> {
+  const none = { comets: 0, bests: [] as PublicArcadeBest[] };
+  try {
+    const sb = supabaseAdmin as unknown as SupabaseClient;
+    const [wallet, stats] = await Promise.all([
+      sb.from("arcade_wallets").select("comets").eq("user_id", userId).maybeSingle(),
+      sb.from("arcade_stats").select("game_slug, best_score, plays").eq("user_id", userId),
+    ]);
+    if (wallet.error || stats.error) {
+      console.error("[profile] arcade read failed:", wallet.error?.message ?? stats.error?.message);
+      return none;
+    }
+    const rows = (stats.data ?? []) as { game_slug: string; best_score: number; plays: number }[];
+    return {
+      comets: (wallet.data as { comets: number } | null)?.comets ?? 0,
+      bests: rows
+        .filter((r) => r.plays > 0)
+        .map((r) => ({ game: r.game_slug, bestScore: r.best_score, plays: r.plays })),
+    };
+  } catch (e) {
+    console.error("[profile] arcade read failed:", e instanceof Error ? e.message : e);
+    return none;
+  }
 }
 
 /**
@@ -229,13 +269,16 @@ export const getPublicProfile = createServerFn({ method: "GET" })
       };
     }
 
-    const { data: rows, error: rErr } = await supabaseAdmin
-      .from("user_media_status")
-      .select(
-        "media_id, media_type, title, poster_url, year, status, sentiment, intent, updated_at",
-      )
-      .eq("user_id", p.id)
-      .order("updated_at", { ascending: false });
+    const [{ data: rows, error: rErr }, arcade] = await Promise.all([
+      supabaseAdmin
+        .from("user_media_status")
+        .select(
+          "media_id, media_type, title, poster_url, year, status, sentiment, intent, updated_at",
+        )
+        .eq("user_id", p.id)
+        .order("updated_at", { ascending: false }),
+      readArcade(p.id),
+    ]);
     if (rErr) throw new Error(rErr.message);
 
     type StatusRow = {
@@ -273,5 +316,7 @@ export const getPublicProfile = createServerFn({ method: "GET" })
       stats: { watched: watched.length, liked: liked.length, want: want.length },
       watched: watched.slice(0, 60).map(toItem),
       liked: liked.slice(0, 60).map(toItem),
+      comets: arcade.comets,
+      bests: arcade.bests,
     };
   });

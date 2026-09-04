@@ -4,8 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyProfile } from "@/hooks/useMyProfile";
+import { supabase } from "@/integrations/supabase/client";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
+import { CometMark } from "@/components/arcade/CometChip";
+import { useComets } from "@/lib/arcade/useComets";
+import { GAMES, HUB_ORDER } from "@/lib/arcade/games";
+import type { GameSlug } from "@/lib/arcade/types";
 import { AVATAR_PRESETS } from "@/lib/avatar";
 import { checkUsername, updateMyProfile, type ProfileDTO } from "@/lib/profile.functions";
 import { normalizeUsername, validateUsername, USERNAME_MAX } from "@/lib/username";
@@ -361,8 +366,89 @@ function ProfileEditor() {
             )}
           </div>
         </form>
+
+        <ArcadeStatsSection userId={user.id} />
       </main>
     </div>
+  );
+}
+
+interface ArcadeStatRow {
+  game_slug: string;
+  plays: number;
+  best_score: number;
+  best_streak: number;
+}
+
+/** The signed-in player's own arcade record: comet total plus per-game
+ *  bests from their arcade_stats rows (select-own RLS). Renders nothing
+ *  until the balance is ready, and nothing at all for someone who never
+ *  played. The generated types predate arcade_stats, so the read goes
+ *  through one narrow cast here. */
+function ArcadeStatsSection({ userId }: { userId: string }) {
+  const { total, ready } = useComets();
+  const [rows, setRows] = useState<ArcadeStatRow[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (
+      (supabase as unknown as { from(t: string): any })
+        .from("arcade_stats")
+        .select("game_slug, plays, best_score, best_streak")
+        .eq("user_id", userId) as PromiseLike<{
+        data: ArcadeStatRow[] | null;
+        error: { message: string } | null;
+      }>
+    ).then(({ data, error }) => {
+      if (cancelled) return;
+      // Supabase returns errors rather than throwing; a failed read just
+      // means the section shows the comet total alone.
+      if (error) {
+        console.error("[profile] arcade stats read failed:", error.message);
+        setRows([]);
+        return;
+      }
+      setRows((data ?? []).filter((r) => r.plays > 0));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (!ready || rows === null) return null;
+  if (total === 0 && rows.length === 0) return null;
+
+  const ordered = HUB_ORDER.map((slug) => rows.find((r) => r.game_slug === slug)).filter(
+    (r): r is ArcadeStatRow => !!r,
+  );
+
+  return (
+    <section className="mt-7 rounded-[6px] border border-border bg-panel/40 p-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">Arcade</h2>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] text-text-bright">
+          <CometMark className="h-4 w-4 text-primary" />
+          <span className="tabular-nums">{total}</span> comets
+        </span>
+      </div>
+      {ordered.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {ordered.map((r) => (
+            <li
+              key={r.game_slug}
+              className="flex items-baseline justify-between gap-3 font-mono text-[12px]"
+            >
+              <span className="text-text-muted">
+                {GAMES[r.game_slug as GameSlug]?.name ?? r.game_slug}
+              </span>
+              <span className="tabular-nums text-text">
+                best {r.best_score} · {r.plays} play{r.plays === 1 ? "" : "s"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

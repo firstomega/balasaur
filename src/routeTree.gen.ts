@@ -19,7 +19,6 @@ import { Route as SitemapPagesDotxmlRouteImport } from './routes/sitemap-pages[.
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as PlayRouteImport } from './routes/play'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as ListsRouteImport } from './routes/lists'
@@ -32,8 +31,21 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PlayIndexRouteImport } from './routes/play.index'
 import { Route as NightIndexRouteImport } from './routes/night.index'
 import { Route as TvIdRouteImport } from './routes/tv.$id'
+import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
+import { Route as PlayTaglinesRouteImport } from './routes/play.taglines'
+import { Route as PlaySpeedSortRouteImport } from './routes/play.speed-sort'
+import { Route as PlaySequelOrFakeRouteImport } from './routes/play.sequel-or-fake'
+import { Route as PlayScreeningRouteImport } from './routes/play.screening'
+import { Route as PlayQuoteMatchRouteImport } from './routes/play.quote-match'
+import { Route as PlayPosterRevealRouteImport } from './routes/play.poster-reveal'
+import { Route as PlayLinkUpRouteImport } from './routes/play.link-up'
+import { Route as PlayLeaderboardRouteImport } from './routes/play.leaderboard'
+import { Route as PlayEmojiRouteImport } from './routes/play.emoji'
+import { Route as PlayCastingCallRouteImport } from './routes/play.casting-call'
+import { Route as PlayBalasaurdleRouteImport } from './routes/play.balasaurdle'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as NightCodeRouteImport } from './routes/night.$code'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
@@ -90,11 +102,6 @@ const ProfileRoute = ProfileRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayRoute = PlayRouteImport.update({
-  id: '/play',
-  path: '/play',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MethodologyRoute = MethodologyRouteImport.update({
@@ -158,6 +165,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayIndexRoute = PlayIndexRouteImport.update({
+  id: '/play/',
+  path: '/play/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NightIndexRoute = NightIndexRouteImport.update({
   id: '/night/',
   path: '/night/',
@@ -166,6 +178,66 @@ const NightIndexRoute = NightIndexRouteImport.update({
 const TvIdRoute = TvIdRouteImport.update({
   id: '/tv/$id',
   path: '/tv/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayTimelineRoute = PlayTimelineRouteImport.update({
+  id: '/play/timeline',
+  path: '/play/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayTaglinesRoute = PlayTaglinesRouteImport.update({
+  id: '/play/taglines',
+  path: '/play/taglines',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaySpeedSortRoute = PlaySpeedSortRouteImport.update({
+  id: '/play/speed-sort',
+  path: '/play/speed-sort',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaySequelOrFakeRoute = PlaySequelOrFakeRouteImport.update({
+  id: '/play/sequel-or-fake',
+  path: '/play/sequel-or-fake',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayScreeningRoute = PlayScreeningRouteImport.update({
+  id: '/play/screening',
+  path: '/play/screening',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayQuoteMatchRoute = PlayQuoteMatchRouteImport.update({
+  id: '/play/quote-match',
+  path: '/play/quote-match',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayPosterRevealRoute = PlayPosterRevealRouteImport.update({
+  id: '/play/poster-reveal',
+  path: '/play/poster-reveal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayLinkUpRoute = PlayLinkUpRouteImport.update({
+  id: '/play/link-up',
+  path: '/play/link-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayLeaderboardRoute = PlayLeaderboardRouteImport.update({
+  id: '/play/leaderboard',
+  path: '/play/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayEmojiRoute = PlayEmojiRouteImport.update({
+  id: '/play/emoji',
+  path: '/play/emoji',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayCastingCallRoute = PlayCastingCallRouteImport.update({
+  id: '/play/casting-call',
+  path: '/play/casting-call',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayBalasaurdleRoute = PlayBalasaurdleRouteImport.update({
+  id: '/play/balasaurdle',
+  path: '/play/balasaurdle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PersonIdRoute = PersonIdRouteImport.update({
@@ -218,7 +290,6 @@ export interface FileRoutesByFullPath {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
-  '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -233,8 +304,21 @@ export interface FileRoutesByFullPath {
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
+  '/play/balasaurdle': typeof PlayBalasaurdleRoute
+  '/play/casting-call': typeof PlayCastingCallRoute
+  '/play/emoji': typeof PlayEmojiRoute
+  '/play/leaderboard': typeof PlayLeaderboardRoute
+  '/play/link-up': typeof PlayLinkUpRoute
+  '/play/poster-reveal': typeof PlayPosterRevealRoute
+  '/play/quote-match': typeof PlayQuoteMatchRoute
+  '/play/screening': typeof PlayScreeningRoute
+  '/play/sequel-or-fake': typeof PlaySequelOrFakeRoute
+  '/play/speed-sort': typeof PlaySpeedSortRoute
+  '/play/taglines': typeof PlayTaglinesRoute
+  '/play/timeline': typeof PlayTimelineRoute
   '/tv/$id': typeof TvIdRoute
   '/night/': typeof NightIndexRoute
+  '/play/': typeof PlayIndexRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
   '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
@@ -252,7 +336,6 @@ export interface FileRoutesByTo {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
-  '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -267,8 +350,21 @@ export interface FileRoutesByTo {
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
+  '/play/balasaurdle': typeof PlayBalasaurdleRoute
+  '/play/casting-call': typeof PlayCastingCallRoute
+  '/play/emoji': typeof PlayEmojiRoute
+  '/play/leaderboard': typeof PlayLeaderboardRoute
+  '/play/link-up': typeof PlayLinkUpRoute
+  '/play/poster-reveal': typeof PlayPosterRevealRoute
+  '/play/quote-match': typeof PlayQuoteMatchRoute
+  '/play/screening': typeof PlayScreeningRoute
+  '/play/sequel-or-fake': typeof PlaySequelOrFakeRoute
+  '/play/speed-sort': typeof PlaySpeedSortRoute
+  '/play/taglines': typeof PlayTaglinesRoute
+  '/play/timeline': typeof PlayTimelineRoute
   '/tv/$id': typeof TvIdRoute
   '/night': typeof NightIndexRoute
+  '/play': typeof PlayIndexRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
   '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
@@ -287,7 +383,6 @@ export interface FileRoutesById {
   '/lists': typeof ListsRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/methodology': typeof MethodologyRoute
-  '/play': typeof PlayRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -302,8 +397,21 @@ export interface FileRoutesById {
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
+  '/play/balasaurdle': typeof PlayBalasaurdleRoute
+  '/play/casting-call': typeof PlayCastingCallRoute
+  '/play/emoji': typeof PlayEmojiRoute
+  '/play/leaderboard': typeof PlayLeaderboardRoute
+  '/play/link-up': typeof PlayLinkUpRoute
+  '/play/poster-reveal': typeof PlayPosterRevealRoute
+  '/play/quote-match': typeof PlayQuoteMatchRoute
+  '/play/screening': typeof PlayScreeningRoute
+  '/play/sequel-or-fake': typeof PlaySequelOrFakeRoute
+  '/play/speed-sort': typeof PlaySpeedSortRoute
+  '/play/taglines': typeof PlayTaglinesRoute
+  '/play/timeline': typeof PlayTimelineRoute
   '/tv/$id': typeof TvIdRoute
   '/night/': typeof NightIndexRoute
+  '/play/': typeof PlayIndexRoute
   '/api/public/hooks/backfill-media': typeof ApiPublicHooksBackfillMediaRoute
   '/api/public/hooks/sync-media': typeof ApiPublicHooksSyncMediaRoute
   '/api/public/v1/score': typeof ApiPublicV1ScoreRoute
@@ -323,7 +431,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
-    | '/play'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -338,8 +445,21 @@ export interface FileRouteTypes {
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
+    | '/play/balasaurdle'
+    | '/play/casting-call'
+    | '/play/emoji'
+    | '/play/leaderboard'
+    | '/play/link-up'
+    | '/play/poster-reveal'
+    | '/play/quote-match'
+    | '/play/screening'
+    | '/play/sequel-or-fake'
+    | '/play/speed-sort'
+    | '/play/taglines'
+    | '/play/timeline'
     | '/tv/$id'
     | '/night/'
+    | '/play/'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
     | '/api/public/v1/score'
@@ -357,7 +477,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
-    | '/play'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -372,8 +491,21 @@ export interface FileRouteTypes {
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
+    | '/play/balasaurdle'
+    | '/play/casting-call'
+    | '/play/emoji'
+    | '/play/leaderboard'
+    | '/play/link-up'
+    | '/play/poster-reveal'
+    | '/play/quote-match'
+    | '/play/screening'
+    | '/play/sequel-or-fake'
+    | '/play/speed-sort'
+    | '/play/taglines'
+    | '/play/timeline'
     | '/tv/$id'
     | '/night'
+    | '/play'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
     | '/api/public/v1/score'
@@ -391,7 +523,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/llms.txt'
     | '/methodology'
-    | '/play'
     | '/privacy'
     | '/profile'
     | '/robots.txt'
@@ -406,8 +537,21 @@ export interface FileRouteTypes {
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
+    | '/play/balasaurdle'
+    | '/play/casting-call'
+    | '/play/emoji'
+    | '/play/leaderboard'
+    | '/play/link-up'
+    | '/play/poster-reveal'
+    | '/play/quote-match'
+    | '/play/screening'
+    | '/play/sequel-or-fake'
+    | '/play/speed-sort'
+    | '/play/taglines'
+    | '/play/timeline'
     | '/tv/$id'
     | '/night/'
+    | '/play/'
     | '/api/public/hooks/backfill-media'
     | '/api/public/hooks/sync-media'
     | '/api/public/v1/score'
@@ -426,7 +570,6 @@ export interface RootRouteChildren {
   ListsRoute: typeof ListsRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   MethodologyRoute: typeof MethodologyRoute
-  PlayRoute: typeof PlayRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -441,8 +584,21 @@ export interface RootRouteChildren {
   MovieIdRoute: typeof MovieIdRoute
   NightCodeRoute: typeof NightCodeRoute
   PersonIdRoute: typeof PersonIdRoute
+  PlayBalasaurdleRoute: typeof PlayBalasaurdleRoute
+  PlayCastingCallRoute: typeof PlayCastingCallRoute
+  PlayEmojiRoute: typeof PlayEmojiRoute
+  PlayLeaderboardRoute: typeof PlayLeaderboardRoute
+  PlayLinkUpRoute: typeof PlayLinkUpRoute
+  PlayPosterRevealRoute: typeof PlayPosterRevealRoute
+  PlayQuoteMatchRoute: typeof PlayQuoteMatchRoute
+  PlayScreeningRoute: typeof PlayScreeningRoute
+  PlaySequelOrFakeRoute: typeof PlaySequelOrFakeRoute
+  PlaySpeedSortRoute: typeof PlaySpeedSortRoute
+  PlayTaglinesRoute: typeof PlayTaglinesRoute
+  PlayTimelineRoute: typeof PlayTimelineRoute
   TvIdRoute: typeof TvIdRoute
   NightIndexRoute: typeof NightIndexRoute
+  PlayIndexRoute: typeof PlayIndexRoute
   ApiPublicHooksBackfillMediaRoute: typeof ApiPublicHooksBackfillMediaRoute
   ApiPublicHooksSyncMediaRoute: typeof ApiPublicHooksSyncMediaRoute
   ApiPublicV1ScoreRoute: typeof ApiPublicV1ScoreRoute
@@ -518,13 +674,6 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/play': {
-      id: '/play'
-      path: '/play'
-      fullPath: '/play'
-      preLoaderRoute: typeof PlayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/methodology': {
@@ -611,6 +760,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/play/': {
+      id: '/play/'
+      path: '/play'
+      fullPath: '/play/'
+      preLoaderRoute: typeof PlayIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/night/': {
       id: '/night/'
       path: '/night'
@@ -623,6 +779,90 @@ declare module '@tanstack/react-router' {
       path: '/tv/$id'
       fullPath: '/tv/$id'
       preLoaderRoute: typeof TvIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/timeline': {
+      id: '/play/timeline'
+      path: '/play/timeline'
+      fullPath: '/play/timeline'
+      preLoaderRoute: typeof PlayTimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/taglines': {
+      id: '/play/taglines'
+      path: '/play/taglines'
+      fullPath: '/play/taglines'
+      preLoaderRoute: typeof PlayTaglinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/speed-sort': {
+      id: '/play/speed-sort'
+      path: '/play/speed-sort'
+      fullPath: '/play/speed-sort'
+      preLoaderRoute: typeof PlaySpeedSortRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/sequel-or-fake': {
+      id: '/play/sequel-or-fake'
+      path: '/play/sequel-or-fake'
+      fullPath: '/play/sequel-or-fake'
+      preLoaderRoute: typeof PlaySequelOrFakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/screening': {
+      id: '/play/screening'
+      path: '/play/screening'
+      fullPath: '/play/screening'
+      preLoaderRoute: typeof PlayScreeningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/quote-match': {
+      id: '/play/quote-match'
+      path: '/play/quote-match'
+      fullPath: '/play/quote-match'
+      preLoaderRoute: typeof PlayQuoteMatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/poster-reveal': {
+      id: '/play/poster-reveal'
+      path: '/play/poster-reveal'
+      fullPath: '/play/poster-reveal'
+      preLoaderRoute: typeof PlayPosterRevealRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/link-up': {
+      id: '/play/link-up'
+      path: '/play/link-up'
+      fullPath: '/play/link-up'
+      preLoaderRoute: typeof PlayLinkUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/leaderboard': {
+      id: '/play/leaderboard'
+      path: '/play/leaderboard'
+      fullPath: '/play/leaderboard'
+      preLoaderRoute: typeof PlayLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/emoji': {
+      id: '/play/emoji'
+      path: '/play/emoji'
+      fullPath: '/play/emoji'
+      preLoaderRoute: typeof PlayEmojiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/casting-call': {
+      id: '/play/casting-call'
+      path: '/play/casting-call'
+      fullPath: '/play/casting-call'
+      preLoaderRoute: typeof PlayCastingCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/balasaurdle': {
+      id: '/play/balasaurdle'
+      path: '/play/balasaurdle'
+      fullPath: '/play/balasaurdle'
+      preLoaderRoute: typeof PlayBalasaurdleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/person/$id': {
@@ -691,7 +931,6 @@ const rootRouteChildren: RootRouteChildren = {
   ListsRoute: ListsRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   MethodologyRoute: MethodologyRoute,
-  PlayRoute: PlayRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -706,8 +945,21 @@ const rootRouteChildren: RootRouteChildren = {
   MovieIdRoute: MovieIdRoute,
   NightCodeRoute: NightCodeRoute,
   PersonIdRoute: PersonIdRoute,
+  PlayBalasaurdleRoute: PlayBalasaurdleRoute,
+  PlayCastingCallRoute: PlayCastingCallRoute,
+  PlayEmojiRoute: PlayEmojiRoute,
+  PlayLeaderboardRoute: PlayLeaderboardRoute,
+  PlayLinkUpRoute: PlayLinkUpRoute,
+  PlayPosterRevealRoute: PlayPosterRevealRoute,
+  PlayQuoteMatchRoute: PlayQuoteMatchRoute,
+  PlayScreeningRoute: PlayScreeningRoute,
+  PlaySequelOrFakeRoute: PlaySequelOrFakeRoute,
+  PlaySpeedSortRoute: PlaySpeedSortRoute,
+  PlayTaglinesRoute: PlayTaglinesRoute,
+  PlayTimelineRoute: PlayTimelineRoute,
   TvIdRoute: TvIdRoute,
   NightIndexRoute: NightIndexRoute,
+  PlayIndexRoute: PlayIndexRoute,
   ApiPublicHooksBackfillMediaRoute: ApiPublicHooksBackfillMediaRoute,
   ApiPublicHooksSyncMediaRoute: ApiPublicHooksSyncMediaRoute,
   ApiPublicV1ScoreRoute: ApiPublicV1ScoreRoute,
