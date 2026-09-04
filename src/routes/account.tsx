@@ -98,6 +98,7 @@ function AccountPage() {
         <div className="space-y-6">
           <SecuritySection email={user.email ?? ""} />
           <PreferencesSection initial={(user.user_metadata?.region as string | undefined) ?? ""} />
+          <ArcadeSection userId={user.id} />
           <NotificationsSection />
           <PrivacySection />
           <SubscriptionSection />
@@ -287,6 +288,91 @@ function PreferencesSection({ initial }: { initial: string }) {
         </Field>
         <div className="flex items-center gap-3">
           <button type="submit" disabled={busy} className={btnPrimary}>
+            {busy ? "…" : "Save"}
+          </button>
+          <Status msg={msg} />
+        </div>
+      </form>
+    </Section>
+  );
+}
+
+/* ---------- 2b. Arcade ---------- */
+
+/** Optional leaderboard country on the profiles row (nullable, clearable).
+ *  The generated types predate the country column, so the reads and the
+ *  update go through one narrow cast here. */
+function ArcadeSection({ userId }: { userId: string }) {
+  const [country, setCountry] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    type CountryRead = PromiseLike<{
+      data: { country: string | null } | null;
+      error: { message: string } | null;
+    }>;
+    type CountryQuery = {
+      select(c: string): { eq(col: string, val: string): { maybeSingle(): CountryRead } };
+    };
+    (supabase as unknown as { from(t: string): CountryQuery })
+      .from("profiles")
+      .select("country")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        // Supabase returns errors rather than throwing; a failed read just
+        // starts the selector at "Not set".
+        if (error) console.error("[account] country read failed:", error.message);
+        setCountry(data?.country ?? "");
+        setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    type CountryWrite = {
+      update(values: Record<string, unknown>): {
+        eq(col: string, val: string): PromiseLike<{ error: { message: string } | null }>;
+      };
+    };
+    const { error } = await (supabase as unknown as { from(t: string): CountryWrite })
+      .from("profiles")
+      .update({ country: country || null, updated_at: new Date().toISOString() })
+      .eq("id", userId);
+    setBusy(false);
+    if (error) setMsg({ kind: "err", text: error.message });
+    else setMsg({ kind: "ok", text: "Saved." });
+  }
+
+  return (
+    <Section title="Arcade">
+      <form onSubmit={save} className="space-y-2">
+        <Field label="Leaderboard country" hint="Sets which national leaderboard counts you.">
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            disabled={!loaded}
+            className={inputCls}
+          >
+            <option value="">Not set</option>
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={busy || !loaded} className={btnPrimary}>
             {busy ? "…" : "Save"}
           </button>
           <Status msg={msg} />

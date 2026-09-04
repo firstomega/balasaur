@@ -1,0 +1,636 @@
+{
+ "pack": "sequels",
+ "notes": "Counts: 45 real, 45 fake; all anchors unique so the two-per-anchor cap is satisfied. Real decades span 1963-2019. All 45 real titles are ones I am >=95% sure exist; verified from model knowledge only, no live database check was run in this environment. Reveal-level facts worth spot-checking at import (existence is certain, the anecdote is the softer claim): The Sting II's Oscar score nomination, The Net 2.0 being directed by Charles Winkler (son of the original's director Irwin Winkler), the Smokey and the Bandit Part 3 'Gleason as both roles' early-cut story, and the Mrs. Doubtfire 2 in-development claim used in a fake's reveal. For fakes, I checked each invented title against known filmographies and known announced-but-unmade projects; at import, run the 45 fake titles against your TMDB/OMDb catalog to confirm zero exact-title matches, paying attention to plain-numbered ones (Sinister 3, My Girl 3, Clueless 2, Old School 2, Weird Science 2, Baby's Day Out 2) and The Bodyguard 2, whose base title is used by unrelated Thai and Hong Kong films. Items are ordered real-then-fake; shuffle before serving.",
+ "items": [
+  {
+   "title": "Savage Sam",
+   "real": true,
+   "anchor": "Old Yeller",
+   "year": 1963,
+   "reveal": "Disney really made a sequel about Old Yeller's son, released six years after they shot the dog."
+  },
+  {
+   "title": "Look What's Happened to Rosemary's Baby",
+   "real": true,
+   "anchor": "Rosemary's Baby",
+   "year": 1976,
+   "reveal": "ABC aired this TV sequel with Patty Duke taking over the Mia Farrow role and the baby now a grown man."
+  },
+  {
+   "title": "Oliver's Story",
+   "real": true,
+   "anchor": "Love Story",
+   "year": 1978,
+   "reveal": "Ryan O'Neal returned for a sequel about Oliver dating again after Jenny's death, and it flopped."
+  },
+  {
+   "title": "The Bad News Bears Go to Japan",
+   "real": true,
+   "anchor": "The Bad News Bears",
+   "year": 1978,
+   "reveal": "The third Bears film sends the team to Tokyo with Tony Curtis as their hustler promoter."
+  },
+  {
+   "title": "Butch and Sundance: The Early Days",
+   "real": true,
+   "anchor": "Butch Cassidy and the Sundance Kid",
+   "year": 1979,
+   "reveal": "A prequel with Tom Berenger and William Katt in the Newman and Redford roles."
+  },
+  {
+   "title": "More American Graffiti",
+   "real": true,
+   "anchor": "American Graffiti",
+   "year": 1979,
+   "reveal": "The sequel scatters the cast across Vietnam, drag strips, and Haight-Ashbury, with storylines shot in different aspect ratios."
+  },
+  {
+   "title": "Grease 2",
+   "real": true,
+   "anchor": "Grease",
+   "year": 1982,
+   "reveal": "Michelle Pfeiffer's first lead role; almost nobody from the original returned except Frenchy and the teachers."
+  },
+  {
+   "title": "Trail of the Pink Panther",
+   "real": true,
+   "anchor": "The Pink Panther",
+   "year": 1982,
+   "reveal": "Released two years after Peter Sellers died, it stars him anyway, assembled from outtakes."
+  },
+  {
+   "title": "The Sting II",
+   "real": true,
+   "anchor": "The Sting",
+   "year": 1983,
+   "reveal": "Jackie Gleason and Mac Davis replaced Newman and Redford, and it still landed an Oscar nomination for its score."
+  },
+  {
+   "title": "Staying Alive",
+   "real": true,
+   "anchor": "Saturday Night Fever",
+   "year": 1983,
+   "reveal": "The Saturday Night Fever sequel was written and directed by Sylvester Stallone."
+  },
+  {
+   "title": "Smokey and the Bandit Part 3",
+   "real": true,
+   "anchor": "Smokey and the Bandit",
+   "year": 1983,
+   "reveal": "Burt Reynolds appears only in a cameo; an early cut reportedly had Jackie Gleason playing both Smokey and the Bandit."
+  },
+  {
+   "title": "Return to Oz",
+   "real": true,
+   "anchor": "The Wizard of Oz",
+   "year": 1985,
+   "reveal": "Disney's sequel opens with Dorothy being sent for electroshock therapy."
+  },
+  {
+   "title": "The Parent Trap II",
+   "real": true,
+   "anchor": "The Parent Trap",
+   "year": 1986,
+   "reveal": "Hayley Mills played both twins again in a TV sequel 25 years after the original."
+  },
+  {
+   "title": "Teen Wolf Too",
+   "real": true,
+   "anchor": "Teen Wolf",
+   "year": 1987,
+   "reveal": "Jason Bateman replaced Michael J. Fox as the wolf's cousin, who boxes instead of playing basketball."
+  },
+  {
+   "title": "Caddyshack II",
+   "real": true,
+   "anchor": "Caddyshack",
+   "year": 1988,
+   "reveal": "Jackie Mason stepped in for Rodney Dangerfield; Chevy Chase and the gopher were the main returnees."
+  },
+  {
+   "title": "Splash, Too",
+   "real": true,
+   "anchor": "Splash",
+   "year": 1988,
+   "reveal": "Disney made a TV sequel with a different actor in every role, including the mermaid."
+  },
+  {
+   "title": "The Two Jakes",
+   "real": true,
+   "anchor": "Chinatown",
+   "year": 1990,
+   "reveal": "Jack Nicholson directed himself in the Chinatown sequel."
+  },
+  {
+   "title": "Omen IV: The Awakening",
+   "real": true,
+   "anchor": "The Omen",
+   "year": 1991,
+   "reveal": "The fourth Omen is a TV movie about Damien's daughter."
+  },
+  {
+   "title": "Weekend at Bernie's II",
+   "real": true,
+   "anchor": "Weekend at Bernie's",
+   "year": 1993,
+   "reveal": "Voodoo partially reanimates the corpse, which can only walk when calypso music plays."
+  },
+  {
+   "title": "The Birds II: Land's End",
+   "real": true,
+   "anchor": "The Birds",
+   "year": 1994,
+   "reveal": "The made-for-TV Hitchcock sequel's director took his name off it and is credited as Alan Smithee."
+  },
+  {
+   "title": "The NeverEnding Story III",
+   "real": true,
+   "anchor": "The NeverEnding Story",
+   "year": 1994,
+   "reveal": "A young Jack Black plays the bully who leads a gang called the Nasties."
+  },
+  {
+   "title": "Blues Brothers 2000",
+   "real": true,
+   "anchor": "The Blues Brothers",
+   "year": 1998,
+   "reveal": "John Goodman fills the John Belushi slot and the band adds a ten-year-old."
+  },
+  {
+   "title": "The Rage: Carrie 2",
+   "real": true,
+   "anchor": "Carrie",
+   "year": 1999,
+   "reveal": "Amy Irving returned as Sue Snell, the only link to the 1976 original, 23 years later."
+  },
+  {
+   "title": "Book of Shadows: Blair Witch 2",
+   "real": true,
+   "anchor": "The Blair Witch Project",
+   "year": 2000,
+   "reveal": "The studio recut it so heavily that its director, a respected documentarian, disowned the result."
+  },
+  {
+   "title": "Cruel Intentions 2",
+   "real": true,
+   "anchor": "Cruel Intentions",
+   "year": 2000,
+   "reveal": "It began as a failed TV prequel pilot and was stitched into a direct-to-video movie."
+  },
+  {
+   "title": "American Psycho 2",
+   "real": true,
+   "anchor": "American Psycho",
+   "year": 2002,
+   "reveal": "Mila Kunis plays a student who killed Patrick Bateman as a child, a premise she has since said she regrets."
+  },
+  {
+   "title": "Home Alone 4: Taking Back the House",
+   "real": true,
+   "anchor": "Home Alone",
+   "year": 2002,
+   "reveal": "A TV movie that recast every single role, including Kevin."
+  },
+  {
+   "title": "Christmas Vacation 2: Cousin Eddie's Island Adventure",
+   "real": true,
+   "anchor": "National Lampoon's Christmas Vacation",
+   "year": 2003,
+   "reveal": "A TV sequel in which Randy Quaid's Cousin Eddie is the lead and the Griswolds barely appear."
+  },
+  {
+   "title": "Dumb and Dumberer: When Harry Met Lloyd",
+   "real": true,
+   "anchor": "Dumb and Dumber",
+   "year": 2003,
+   "reveal": "A prequel with new actors as teenage Harry and Lloyd; the Farrelly brothers had nothing to do with it."
+  },
+  {
+   "title": "Dirty Dancing: Havana Nights",
+   "real": true,
+   "anchor": "Dirty Dancing",
+   "year": 2004,
+   "reveal": "A 1958 Cuba retelling in which Patrick Swayze cameos as a dance instructor."
+  },
+  {
+   "title": "Carlito's Way: Rise to Power",
+   "real": true,
+   "anchor": "Carlito's Way",
+   "year": 2005,
+   "reveal": "A direct-to-video prequel with Jay Hernandez in the Al Pacino role."
+  },
+  {
+   "title": "Son of the Mask",
+   "real": true,
+   "anchor": "The Mask",
+   "year": 2005,
+   "reveal": "Jamie Kennedy replaced Jim Carrey and a baby gets the mask's powers."
+  },
+  {
+   "title": "Single White Female 2: The Psycho",
+   "real": true,
+   "anchor": "Single White Female",
+   "year": 2005,
+   "reveal": "The subtitle is literally The Psycho, and it went straight to video 13 years later with no returning cast."
+  },
+  {
+   "title": "The Net 2.0",
+   "real": true,
+   "anchor": "The Net",
+   "year": 2006,
+   "reveal": "The straight-to-DVD sequel was directed by the son of the man who directed the original."
+  },
+  {
+   "title": "Road House 2: Last Call",
+   "real": true,
+   "anchor": "Road House",
+   "year": 2006,
+   "reveal": "The straight-to-DVD sequel arrived 17 years later with none of the original cast."
+  },
+  {
+   "title": "Bachelor Party 2: The Last Temptation",
+   "real": true,
+   "anchor": "Bachelor Party",
+   "year": 2008,
+   "reveal": "The Tom Hanks comedy got an unrated direct-to-DVD sequel 24 years later."
+  },
+  {
+   "title": "S. Darko",
+   "real": true,
+   "anchor": "Donnie Darko",
+   "year": 2009,
+   "reveal": "A sequel following Donnie's little sister Samantha; Richard Kelly had no involvement."
+  },
+  {
+   "title": "Ace Ventura Jr.: Pet Detective",
+   "real": true,
+   "anchor": "Ace Ventura: Pet Detective",
+   "year": 2009,
+   "reveal": "A kids' TV movie about Ace's son; Jim Carrey is nowhere in it."
+  },
+  {
+   "title": "Legally Blondes",
+   "real": true,
+   "anchor": "Legally Blonde",
+   "year": 2009,
+   "reveal": "A direct-to-DVD spinoff about Elle's British twin cousins, produced by Reese Witherspoon, who does not appear."
+  },
+  {
+   "title": "Mean Girls 2",
+   "real": true,
+   "anchor": "Mean Girls",
+   "year": 2011,
+   "reveal": "A made-for-TV sequel whose only returning character is Principal Duvall."
+  },
+  {
+   "title": "A Christmas Story 2",
+   "real": true,
+   "anchor": "A Christmas Story",
+   "year": 2012,
+   "reveal": "An official direct-to-video sequel with Daniel Stern as the Old Man."
+  },
+  {
+   "title": "Jarhead 2: Field of Fire",
+   "real": true,
+   "anchor": "Jarhead",
+   "year": 2014,
+   "reveal": "The Sam Mendes war drama got a straight-to-video action sequel with an unrelated cast, then two more."
+  },
+  {
+   "title": "Jingle All the Way 2",
+   "real": true,
+   "anchor": "Jingle All the Way",
+   "year": 2014,
+   "reveal": "Larry the Cable Guy took over the Schwarzenegger role in a WWE Studios production."
+  },
+  {
+   "title": "Kindergarten Cop 2",
+   "real": true,
+   "anchor": "Kindergarten Cop",
+   "year": 2016,
+   "reveal": "Dolph Lundgren teaches the kindergarten this time, direct to video."
+  },
+  {
+   "title": "Backdraft 2",
+   "real": true,
+   "anchor": "Backdraft",
+   "year": 2019,
+   "reveal": "It arrived 28 years later, straight to video, with William Baldwin back."
+  },
+  {
+   "title": "Ghost 2: Unfinished Business",
+   "real": false,
+   "anchor": "Ghost",
+   "year": null,
+   "reveal": "Ghost never got a sequel; the subtitle borrows the film's own premise, which is exactly what a real DTV sequel would do."
+  },
+  {
+   "title": "Top Gun: Afterburner",
+   "real": false,
+   "anchor": "Top Gun",
+   "year": null,
+   "reveal": "The only real sequel is Maverick; Afterburner is just the right amount of jet jargon."
+  },
+  {
+   "title": "Speed 3: Flatline",
+   "real": false,
+   "anchor": "Speed",
+   "year": null,
+   "reveal": "The franchise stopped at Cruise Control; a Speed 3 exists only as a Father Ted joke."
+  },
+  {
+   "title": "Con Air 2: Final Descent",
+   "real": false,
+   "anchor": "Con Air",
+   "year": null,
+   "reveal": "Con Air never got a sequel, though every part of this title sounds like it did."
+  },
+  {
+   "title": "Air Force One: Retaliation",
+   "real": false,
+   "anchor": "Air Force One",
+   "year": null,
+   "reveal": "No sequel exists; the closest real title is the unrelated 2024 movie Air Force One Down."
+  },
+  {
+   "title": "The Fugitive: Dead Run",
+   "real": false,
+   "anchor": "The Fugitive",
+   "year": null,
+   "reveal": "The real follow-up is U.S. Marshals, which dropped both Harrison Ford and the title."
+  },
+  {
+   "title": "Panic Room 2: Home Invasion",
+   "real": false,
+   "anchor": "Panic Room",
+   "year": null,
+   "reveal": "The Fincher film has no sequel; the subtitle is the entire genre."
+  },
+  {
+   "title": "Fatal Attraction 2: Obsession",
+   "real": false,
+   "anchor": "Fatal Attraction",
+   "year": null,
+   "reveal": "No film sequel exists, only a 2023 TV series."
+  },
+  {
+   "title": "The Hand That Rocks the Cradle 2: A Family Affair",
+   "real": false,
+   "anchor": "The Hand That Rocks the Cradle",
+   "year": null,
+   "reveal": "No sequel exists; the title copies the real Single White Female 2 formula exactly."
+  },
+  {
+   "title": "Flashdance 2: Steel City Nights",
+   "real": false,
+   "anchor": "Flashdance",
+   "year": null,
+   "reveal": "Flashdance has no sequel; Steel City is Pittsburgh, which is the kind of homework a DTV subtitle does."
+  },
+  {
+   "title": "Footloose: The Next Step",
+   "real": false,
+   "anchor": "Footloose",
+   "year": null,
+   "reveal": "No sequel exists, just a 2011 remake."
+  },
+  {
+   "title": "Coyote Ugly 2: Last Dance",
+   "real": false,
+   "anchor": "Coyote Ugly",
+   "year": null,
+   "reveal": "A sequel was reported to be in development and never appeared."
+  },
+  {
+   "title": "The Bodyguard 2: Never Let Go",
+   "real": false,
+   "anchor": "The Bodyguard",
+   "year": null,
+   "reveal": "The Costner film has no sequel; unrelated Asian action movies have used the base title."
+  },
+  {
+   "title": "Pretty Woman: Ever After",
+   "real": false,
+   "anchor": "Pretty Woman",
+   "year": null,
+   "reveal": "No sequel exists; Garry Marshall reunited the leads in Runaway Bride instead."
+  },
+  {
+   "title": "Sweet Home Alabama 2: Southern Vows",
+   "real": false,
+   "anchor": "Sweet Home Alabama",
+   "year": null,
+   "reveal": "No sequel was ever made despite years of sequel talk."
+  },
+  {
+   "title": "Clueless 2: Back in Session",
+   "real": false,
+   "anchor": "Clueless",
+   "year": null,
+   "reveal": "Clueless got a TV series and a musical, never a film sequel."
+  },
+  {
+   "title": "10 Things I Hate About You Too",
+   "real": false,
+   "anchor": "10 Things I Hate About You",
+   "year": null,
+   "reveal": "The 'Too' construction is stolen from Teen Wolf Too, which is real; this one is not."
+  },
+  {
+   "title": "She's All That 2: Prom Queen",
+   "real": false,
+   "anchor": "She's All That",
+   "year": null,
+   "reveal": "The franchise's only follow-up is the gender-swapped remake He's All That."
+  },
+  {
+   "title": "Old School 2: Homecoming",
+   "real": false,
+   "anchor": "Old School",
+   "year": null,
+   "reveal": "A sequel was talked about for years and never made."
+  },
+  {
+   "title": "EuroTrip 2: Winter Break",
+   "real": false,
+   "anchor": "EuroTrip",
+   "year": null,
+   "reveal": "EuroTrip flopped in theaters and thrived on DVD, exactly where a sequel would have lived; none exists."
+  },
+  {
+   "title": "Liar Liar 2: Truth Be Told",
+   "real": false,
+   "anchor": "Liar Liar",
+   "year": null,
+   "reveal": "Jim Carrey hits really did spawn Carrey-less DTV sequels, but Liar Liar was spared."
+  },
+  {
+   "title": "Mrs. Doubtfire 2: The Nanny Returns",
+   "real": false,
+   "anchor": "Mrs. Doubtfire",
+   "year": null,
+   "reveal": "A real sequel was in development before Robin Williams died; it never got this far."
+  },
+  {
+   "title": "Matilda 2: The New Girl",
+   "real": false,
+   "anchor": "Matilda",
+   "year": null,
+   "reveal": "Matilda's only follow-up is the musical; no DTV sequel exists."
+  },
+  {
+   "title": "Homeward Bound III: Lost in the Rockies",
+   "real": false,
+   "anchor": "Homeward Bound: The Incredible Journey",
+   "year": null,
+   "reveal": "The series stopped at Lost in San Francisco; the third trip is invented."
+  },
+  {
+   "title": "Cool Runnings 2: Back on Ice",
+   "real": false,
+   "anchor": "Cool Runnings",
+   "year": null,
+   "reveal": "Disney never made one, despite making sequels to far smaller hits in that era."
+  },
+  {
+   "title": "Little Giants 2: Away Game",
+   "real": false,
+   "anchor": "Little Giants",
+   "year": null,
+   "reveal": "No sequel exists; Away Game is the standard kids-sports-sequel subtitle."
+  },
+  {
+   "title": "Rookie of the Year 2: The Big Leagues",
+   "real": false,
+   "anchor": "Rookie of the Year",
+   "year": null,
+   "reveal": "No sequel exists; the title just follows the real Sandlot sequel formula."
+  },
+  {
+   "title": "Varsity Blues 2: The Comeback",
+   "real": false,
+   "anchor": "Varsity Blues",
+   "year": null,
+   "reveal": "No sequel was ever made."
+  },
+  {
+   "title": "Sinister 3",
+   "real": false,
+   "anchor": "Sinister",
+   "year": null,
+   "reveal": "Sinister 2 is real; a third was discussed and never happened."
+  },
+  {
+   "title": "Arachnophobia 2: The Nest",
+   "real": false,
+   "anchor": "Arachnophobia",
+   "year": null,
+   "reveal": "The original has no sequel, only a long-rumored remake."
+  },
+  {
+   "title": "Scarface: The Beginning",
+   "real": false,
+   "anchor": "Scarface",
+   "year": null,
+   "reveal": "Carlito's Way really got a DTV prequel exactly like this; Scarface did not."
+  },
+  {
+   "title": "Training Day 2: Graduation Day",
+   "real": false,
+   "anchor": "Training Day",
+   "year": null,
+   "reveal": "The follow-up was a 2017 CBS series, never a film."
+  },
+  {
+   "title": "The Goonies: Return to Astoria",
+   "real": false,
+   "anchor": "The Goonies",
+   "year": null,
+   "reveal": "Decades of sequel rumors produced an NES game and nothing else."
+  },
+  {
+   "title": "Twister: Eye of the Storm",
+   "real": false,
+   "anchor": "Twister",
+   "year": null,
+   "reveal": "The real sequel waited 28 years and is called Twisters."
+  },
+  {
+   "title": "Poltergeist IV: The Reckoning",
+   "real": false,
+   "anchor": "Poltergeist",
+   "year": null,
+   "reveal": "The series stopped at III in 1988, plus a remake; a fourth exists only here."
+  },
+  {
+   "title": "Weird Science 2",
+   "real": false,
+   "anchor": "Weird Science",
+   "year": null,
+   "reveal": "It became a TV series instead; there is no film sequel."
+  },
+  {
+   "title": "Ferris Bueller's Day Off 2",
+   "real": false,
+   "anchor": "Ferris Bueller's Day Off",
+   "year": null,
+   "reveal": "No sequel exists; the closest thing is a Super Bowl ad Broderick did in character."
+  },
+  {
+   "title": "Turner & Hooch 2: New Tricks",
+   "real": false,
+   "anchor": "Turner & Hooch",
+   "year": null,
+   "reveal": "The follow-up was a 2021 Disney+ series; the dog never got a film sequel."
+  },
+  {
+   "title": "The Pacifier 2: Basic Training",
+   "real": false,
+   "anchor": "The Pacifier",
+   "year": null,
+   "reveal": "No sequel exists; the Vin Diesel family comedy stayed a one-off."
+  },
+  {
+   "title": "Snow Dogs 2: Race to the Pole",
+   "real": false,
+   "anchor": "Snow Dogs",
+   "year": null,
+   "reveal": "Disney made sequels to much smaller hits, but not this one."
+  },
+  {
+   "title": "My Girl 3",
+   "real": false,
+   "anchor": "My Girl",
+   "year": null,
+   "reveal": "My Girl 2 is real; the third one is not."
+  },
+  {
+   "title": "Baby's Day Out 2",
+   "real": false,
+   "anchor": "Baby's Day Out",
+   "year": null,
+   "reveal": "A theatrical flop that thrived on video is exactly the profile that got sequels; this one didn't."
+  },
+  {
+   "title": "The Waterboy 2: Overtime",
+   "real": false,
+   "anchor": "The Waterboy",
+   "year": null,
+   "reveal": "Sandler never made one, though Happy Gilmore eventually got its real sequel."
+  },
+  {
+   "title": "What Lies Beneath 2: Still Waters",
+   "real": false,
+   "anchor": "What Lies Beneath",
+   "year": null,
+   "reveal": "The Zemeckis thriller has no sequel; the subtitle is standard DTV water metaphor."
+  },
+  {
+   "title": "The Wedding Planner 2: The Honeymoon",
+   "real": false,
+   "anchor": "The Wedding Planner",
+   "year": null,
+   "reveal": "No sequel exists; Jennifer Lopez rom-coms never got the DTV treatment."
+  }
+ ]
+}

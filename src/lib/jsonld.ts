@@ -70,6 +70,40 @@ export function breadcrumbJsonLd(d: MediaDetail, url: string): Record<string, un
   };
 }
 
+/** ItemList markup for hub pages presenting a finite ordered set (the arcade
+ *  hub's game grid). Positions follow the given order. */
+export function itemListJsonLd(o: {
+  name: string;
+  url: string;
+  items: { name: string; url: string }[];
+}): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: o.name,
+    url: o.url,
+    itemListElement: o.items.map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: it.name,
+      item: it.url,
+    })),
+  };
+}
+
+/** Home → Play → Game trail for arcade game pages. */
+export function arcadeBreadcrumbJsonLd(gameName: string, url: string): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_ORIGIN },
+      { "@type": "ListItem", position: 2, name: "Play", item: `${SITE_ORIGIN}/play` },
+      { "@type": "ListItem", position: 3, name: gameName, item: url },
+    ],
+  };
+}
+
 /** Site-level identity for the homepage (no SearchAction — search isn't
  *  URL-addressable yet). */
 export function websiteJsonLd(): Record<string, unknown> {

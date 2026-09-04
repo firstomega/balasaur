@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { getPublicProfile, type PublicMediaItem } from "@/lib/profile.functions";
+import {
+  getPublicProfile,
+  type PublicArcadeBest,
+  type PublicMediaItem,
+} from "@/lib/profile.functions";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
+import { CometMark } from "@/components/arcade/CometChip";
+import { GAMES, HUB_ORDER } from "@/lib/arcade/games";
+import type { GameSlug } from "@/lib/arcade/types";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import { SITE_ORIGIN, buildMeta, canonicalLink, clampDescription } from "@/lib/seo";
 import { mediaSlug } from "@/lib/slug";
@@ -146,6 +153,39 @@ function Stat({ n, label }: { n: number; label: string }) {
   );
 }
 
+/** The arcade record: comet total plus per-game bests. Renders nothing at
+ *  zero comets; a profile that never played shows no arcade furniture. */
+function ArcadeSection({ comets, bests }: { comets: number; bests: PublicArcadeBest[] }) {
+  if (comets <= 0) return null;
+  const ordered = HUB_ORDER.map((slug) =>
+    bests.find((b) => b.game === slug && b.bestScore > 0),
+  ).filter((b): b is PublicArcadeBest => !!b);
+  return (
+    <section className="mt-6 rounded-[6px] border border-border bg-panel/40 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">Arcade</h2>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] text-text-bright">
+          <CometMark className="h-4 w-4 text-primary" />
+          <span className="tabular-nums">{comets}</span> comets
+        </span>
+      </div>
+      {ordered.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {ordered.map((b) => (
+            <span
+              key={b.game}
+              className="rounded-[5px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] text-text-muted"
+            >
+              {GAMES[b.game as GameSlug]?.name ?? b.game}{" "}
+              <span className="text-text-bright">best {b.bestScore}</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function HandleNotFound() {
   return (
     <Centered
@@ -232,6 +272,8 @@ function ProfilePage() {
           )}
         </div>
       </header>
+
+      <ArcadeSection comets={data.comets ?? 0} bests={data.bests ?? []} />
 
       {/* Tabs */}
       <nav className="mt-6 flex gap-1 border-b border-border">

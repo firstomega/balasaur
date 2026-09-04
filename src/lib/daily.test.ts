@@ -55,17 +55,19 @@ describe("redactTitle", () => {
 
 describe("shareText", () => {
   it("renders a win as red squares then one green", () => {
-    expect(shareText(42, 3, true)).toBe("Balasaurdle #42 3/6\n🟥🟥🟩\nbalasaur.com/play");
+    expect(shareText(42, 3, true)).toBe(
+      "Balasaurdle #42 3/6\n🟥🟥🟩\nbalasaur.com/play/balasaurdle",
+    );
   });
 
   it("renders a loss as a full red row with X", () => {
     expect(shareText(42, MAX_GUESSES, false)).toBe(
-      "Balasaurdle #42 X/6\n🟥🟥🟥🟥🟥🟥\nbalasaur.com/play",
+      "Balasaurdle #42 X/6\n🟥🟥🟥🟥🟥🟥\nbalasaur.com/play/balasaurdle",
     );
   });
 
   it("a first-guess win is a single green square", () => {
-    expect(shareText(1, 1, true)).toBe("Balasaurdle #1 1/6\n🟩\nbalasaur.com/play");
+    expect(shareText(1, 1, true)).toBe("Balasaurdle #1 1/6\n🟩\nbalasaur.com/play/balasaurdle");
   });
 });
 
