@@ -1,0 +1,1006 @@
+{
+ "pack": "emoji",
+ "notes": "Coverage: 100 unique movies, 1930s through 2020s, spanning animation, horror, sci-fi, musicals, crime, action, romance, and holiday films. Difficulty skews easy by design: roughly 40 at difficulty 1, 45 at difficulty 2, 15 at difficulty 3, which satisfies the \"at least 70 solvable at difficulty 1-2\" rule with margin; if you want a harder pack, promote borderline 2s (Psycho, Truman Show, Godfather) to 3 rather than adding obscure films. Cross-platform rendering flags to verify at import: (1) ZWJ sequences 👨‍👩‍👧‍👦 👨‍👦 👨‍🍳 👨‍🔬 👨‍🚀 👩‍🚀 👩‍🏫 👮‍♀️ 💇‍♀️ 🧙‍♂️ 🧜‍♀️ 👱‍♀️ and 🏴‍☠️ can split into component glyphs on older Android/Windows builds; every sequence still reads acceptably if split, but test the family emoji (Sound of Music, Encanto, Incredibles, Shining) on your minimum target OS. (2) 🧊 (Titanic) and 🪓 (The Shining) are Emoji 12.0 (2019); supported everywhere modern but they are the newest code points used, swap 🧊 for ❄️ and 🪓 for 🔪 if you must support pre-2020 devices. (3) 🗿 (Moana) and 🏺 (Ghost) render with noticeably different art across platforms but are universally present. No keycap numbers, no letter emoji, no regional-indicator flags were used. Verify exact official titles at import against your TMDB data, especially \"E.T. the Extra-Terrestrial\", \"WALL-E\", \"Se7en\" (TMDB lists it as \"Se7en\"), \"Star Wars\" (1977 entry, not \"A New Hope\" on some databases), and \"How the Grinch Stole Christmas\" (2000 live action, distinct from the 2018 \"The Grinch\"). Decoys are all real films chosen to be plausible for the same emoji; two decoys (Monsters University, Hannibal) are franchise siblings of the answer, which is intentional but worth a gameplay check.",
+ "items": [
+  {
+   "emoji": "🚢🧊💑🌊",
+   "title": "Titanic",
+   "year": 1997,
+   "difficulty": 1,
+   "decoys": [
+    "Poseidon",
+    "The Perfect Storm"
+   ]
+  },
+  {
+   "emoji": "🦈🏖️😱🚤",
+   "title": "Jaws",
+   "year": 1975,
+   "difficulty": 1,
+   "decoys": [
+    "The Meg",
+    "Deep Blue Sea"
+   ]
+  },
+  {
+   "emoji": "🦖🏝️🔬🎢",
+   "title": "Jurassic Park",
+   "year": 1993,
+   "difficulty": 1,
+   "decoys": [
+    "King Kong",
+    "Godzilla"
+   ]
+  },
+  {
+   "emoji": "🌪️👠🦁🧙",
+   "title": "The Wizard of Oz",
+   "year": 1939,
+   "difficulty": 1,
+   "decoys": [
+    "Alice in Wonderland",
+    "Oz the Great and Powerful"
+   ]
+  },
+  {
+   "emoji": "🐠🌊🔍👨‍👦",
+   "title": "Finding Nemo",
+   "year": 2003,
+   "difficulty": 1,
+   "decoys": [
+    "Shark Tale",
+    "The Little Mermaid"
+   ]
+  },
+  {
+   "emoji": "🦁👑🐗🌅",
+   "title": "The Lion King",
+   "year": 1994,
+   "difficulty": 1,
+   "decoys": [
+    "Madagascar",
+    "The Jungle Book"
+   ]
+  },
+  {
+   "emoji": "👽🚲🌕☎️",
+   "title": "E.T. the Extra-Terrestrial",
+   "year": 1982,
+   "difficulty": 1,
+   "decoys": [
+    "Close Encounters of the Third Kind",
+    "Flight of the Navigator"
+   ]
+  },
+  {
+   "emoji": "👦🏠🎄😱",
+   "title": "Home Alone",
+   "year": 1990,
+   "difficulty": 1,
+   "decoys": [
+    "Elf",
+    "The Santa Clause"
+   ]
+  },
+  {
+   "emoji": "💊🕶️🤖💻",
+   "title": "The Matrix",
+   "year": 1999,
+   "difficulty": 1,
+   "decoys": [
+    "Tron",
+    "Inception"
+   ]
+  },
+  {
+   "emoji": "🍎👸😴⛏️",
+   "title": "Snow White and the Seven Dwarfs",
+   "year": 1937,
+   "difficulty": 1,
+   "decoys": [
+    "Sleeping Beauty",
+    "Enchanted"
+   ]
+  },
+  {
+   "emoji": "❄️👭⛄🏰",
+   "title": "Frozen",
+   "year": 2013,
+   "difficulty": 1,
+   "decoys": [
+    "Tangled",
+    "Ice Age"
+   ]
+  },
+  {
+   "emoji": "🎈🏠👴🐦",
+   "title": "Up",
+   "year": 2009,
+   "difficulty": 1,
+   "decoys": [
+    "Around the World in 80 Days",
+    "Cloudy with a Chance of Meatballs"
+   ]
+  },
+  {
+   "emoji": "🐀👨‍🍳🍲",
+   "title": "Ratatouille",
+   "year": 2007,
+   "difficulty": 1,
+   "decoys": [
+    "Chef",
+    "Julie & Julia"
+   ]
+  },
+  {
+   "emoji": "🏨❄️🪓👨‍👩‍👦",
+   "title": "The Shining",
+   "year": 1980,
+   "difficulty": 2,
+   "decoys": [
+    "Misery",
+    "Psycho"
+   ]
+  },
+  {
+   "emoji": "🥊🏃🥩🏆",
+   "title": "Rocky",
+   "year": 1976,
+   "difficulty": 1,
+   "decoys": [
+    "Creed",
+    "Raging Bull"
+   ]
+  },
+  {
+   "emoji": "🏃🍫🦐🏓",
+   "title": "Forrest Gump",
+   "year": 1994,
+   "difficulty": 1,
+   "decoys": [
+    "Rain Man",
+    "Big"
+   ]
+  },
+  {
+   "emoji": "✈️🏝️🏐📦",
+   "title": "Cast Away",
+   "year": 2000,
+   "difficulty": 1,
+   "decoys": [
+    "Life of Pi",
+    "The Martian"
+   ]
+  },
+  {
+   "emoji": "🚢🐯🛶🌊",
+   "title": "Life of Pi",
+   "year": 2012,
+   "difficulty": 2,
+   "decoys": [
+    "Cast Away",
+    "The Jungle Book"
+   ]
+  },
+  {
+   "emoji": "👨‍🚀🥔🔴🚀",
+   "title": "The Martian",
+   "year": 2015,
+   "difficulty": 1,
+   "decoys": [
+    "Gravity",
+    "Interstellar"
+   ]
+  },
+  {
+   "emoji": "👩‍🚀💥🛰️🌍",
+   "title": "Gravity",
+   "year": 2013,
+   "difficulty": 2,
+   "decoys": [
+    "The Martian",
+    "Apollo 13"
+   ]
+  },
+  {
+   "emoji": "🚀🌕⚠️🌍",
+   "title": "Apollo 13",
+   "year": 1995,
+   "difficulty": 2,
+   "decoys": [
+    "First Man",
+    "Gravity"
+   ]
+  },
+  {
+   "emoji": "🦍🏙️✈️👱‍♀️",
+   "title": "King Kong",
+   "year": 2005,
+   "difficulty": 1,
+   "decoys": [
+    "Godzilla",
+    "Mighty Joe Young"
+   ]
+  },
+  {
+   "emoji": "🦎☢️🏙️💥",
+   "title": "Godzilla",
+   "year": 2014,
+   "difficulty": 2,
+   "decoys": [
+    "King Kong",
+    "Pacific Rim"
+   ]
+  },
+  {
+   "emoji": "👻🚫🏙️🔫",
+   "title": "Ghostbusters",
+   "year": 1984,
+   "difficulty": 1,
+   "decoys": [
+    "Beetlejuice",
+    "Casper"
+   ]
+  },
+  {
+   "emoji": "⏰🚗⚡👨‍🔬",
+   "title": "Back to the Future",
+   "year": 1985,
+   "difficulty": 1,
+   "decoys": [
+    "The Time Machine",
+    "Bill & Ted's Excellent Adventure"
+   ]
+  },
+  {
+   "emoji": "⚡👓🏰🧙",
+   "title": "Harry Potter and the Sorcerer's Stone",
+   "year": 2001,
+   "difficulty": 1,
+   "decoys": [
+    "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe",
+    "Percy Jackson & the Olympians: The Lightning Thief"
+   ]
+  },
+  {
+   "emoji": "💍🌋🧙‍♂️🗡️",
+   "title": "The Lord of the Rings: The Fellowship of the Ring",
+   "year": 2001,
+   "difficulty": 1,
+   "decoys": [
+    "The Hobbit: An Unexpected Journey",
+    "Willow"
+   ]
+  },
+  {
+   "emoji": "🚀⚔️🤖👸",
+   "title": "Star Wars",
+   "year": 1977,
+   "difficulty": 1,
+   "decoys": [
+    "Star Trek",
+    "Guardians of the Galaxy"
+   ]
+  },
+  {
+   "emoji": "🕷️👦🕸️🏙️",
+   "title": "Spider-Man",
+   "year": 2002,
+   "difficulty": 1,
+   "decoys": [
+    "Venom",
+    "Ant-Man"
+   ]
+  },
+  {
+   "emoji": "🦇🃏💥🚔",
+   "title": "The Dark Knight",
+   "year": 2008,
+   "difficulty": 1,
+   "decoys": [
+    "Batman Begins",
+    "Joker"
+   ]
+  },
+  {
+   "emoji": "💰🛠️🤖✈️",
+   "title": "Iron Man",
+   "year": 2008,
+   "difficulty": 2,
+   "decoys": [
+    "RoboCop",
+    "Transformers"
+   ]
+  },
+  {
+   "emoji": "🦸👽🏙️💥",
+   "title": "The Avengers",
+   "year": 2012,
+   "difficulty": 1,
+   "decoys": [
+    "Justice League",
+    "X-Men"
+   ]
+  },
+  {
+   "emoji": "👸🗡️⚔️🕊️",
+   "title": "Wonder Woman",
+   "year": 2017,
+   "difficulty": 2,
+   "decoys": [
+    "Captain Marvel",
+    "Justice League"
+   ]
+  },
+  {
+   "emoji": "🐆👑🌍💎",
+   "title": "Black Panther",
+   "year": 2018,
+   "difficulty": 1,
+   "decoys": [
+    "Captain Marvel",
+    "Blade"
+   ]
+  },
+  {
+   "emoji": "🤠🚀🧸👦",
+   "title": "Toy Story",
+   "year": 1995,
+   "difficulty": 1,
+   "decoys": [
+    "The Lego Movie",
+    "Small Soldiers"
+   ]
+  },
+  {
+   "emoji": "👹🐴👸🏰",
+   "title": "Shrek",
+   "year": 2001,
+   "difficulty": 1,
+   "decoys": [
+    "Beauty and the Beast",
+    "Brave"
+   ]
+  },
+  {
+   "emoji": "🥀👸🏰🕯️",
+   "title": "Beauty and the Beast",
+   "year": 1991,
+   "difficulty": 1,
+   "decoys": [
+    "Cinderella",
+    "Shrek"
+   ]
+  },
+  {
+   "emoji": "👠🎃👸🕛",
+   "title": "Cinderella",
+   "year": 1950,
+   "difficulty": 1,
+   "decoys": [
+    "Snow White and the Seven Dwarfs",
+    "Ella Enchanted"
+   ]
+  },
+  {
+   "emoji": "🧞💡🐒🕌",
+   "title": "Aladdin",
+   "year": 1992,
+   "difficulty": 1,
+   "decoys": [
+    "Prince of Persia: The Sands of Time",
+    "The Thief of Bagdad"
+   ]
+  },
+  {
+   "emoji": "🌊⛵🐔🗿",
+   "title": "Moana",
+   "year": 2016,
+   "difficulty": 1,
+   "decoys": [
+    "Lilo & Stitch",
+    "Pocahontas"
+   ]
+  },
+  {
+   "emoji": "👦👃🧚🐋",
+   "title": "Pinocchio",
+   "year": 1940,
+   "difficulty": 1,
+   "decoys": [
+    "Peter Pan",
+    "Dumbo"
+   ]
+  },
+  {
+   "emoji": "🧚🏴‍☠️👦⏰",
+   "title": "Peter Pan",
+   "year": 1953,
+   "difficulty": 1,
+   "decoys": [
+    "Hook",
+    "Tinker Bell"
+   ]
+  },
+  {
+   "emoji": "🧜‍♀️🦀👑🎶",
+   "title": "The Little Mermaid",
+   "year": 1989,
+   "difficulty": 1,
+   "decoys": [
+    "Moana",
+    "Aquamarine"
+   ]
+  },
+  {
+   "emoji": "🐘👂🎪✨",
+   "title": "Dumbo",
+   "year": 1941,
+   "difficulty": 1,
+   "decoys": [
+    "The Jungle Book",
+    "Bambi"
+   ]
+  },
+  {
+   "emoji": "🍫🎫🏭👦",
+   "title": "Charlie and the Chocolate Factory",
+   "year": 2005,
+   "difficulty": 1,
+   "decoys": [
+    "Wonka",
+    "Matilda"
+   ]
+  },
+  {
+   "emoji": "👧📚✨🏫",
+   "title": "Matilda",
+   "year": 1996,
+   "difficulty": 2,
+   "decoys": [
+    "The Witches",
+    "Nanny McPhee"
+   ]
+  },
+  {
+   "emoji": "💰📈💊🛥️",
+   "title": "The Wolf of Wall Street",
+   "year": 2013,
+   "difficulty": 2,
+   "decoys": [
+    "The Big Short",
+    "Wall Street"
+   ]
+  },
+  {
+   "emoji": "💻👥⚖️🎓",
+   "title": "The Social Network",
+   "year": 2010,
+   "difficulty": 2,
+   "decoys": [
+    "Steve Jobs",
+    "Jobs"
+   ]
+  },
+  {
+   "emoji": "😴💭🌀🏢",
+   "title": "Inception",
+   "year": 2010,
+   "difficulty": 2,
+   "decoys": [
+    "The Matrix",
+    "Shutter Island"
+   ]
+  },
+  {
+   "emoji": "🚀🌽⏳🕳️",
+   "title": "Interstellar",
+   "year": 2014,
+   "difficulty": 2,
+   "decoys": [
+    "Gravity",
+    "Arrival"
+   ]
+  },
+  {
+   "emoji": "🛸👩‍🏫✍️⏳",
+   "title": "Arrival",
+   "year": 2016,
+   "difficulty": 3,
+   "decoys": [
+    "Contact",
+    "Interstellar"
+   ]
+  },
+  {
+   "emoji": "🥁😤👨‍🏫🏆",
+   "title": "Whiplash",
+   "year": 2014,
+   "difficulty": 3,
+   "decoys": [
+    "Drumline",
+    "La La Land"
+   ]
+  },
+  {
+   "emoji": "💃🎹🌆💔",
+   "title": "La La Land",
+   "year": 2016,
+   "difficulty": 2,
+   "decoys": [
+    "A Star Is Born",
+    "500 Days of Summer"
+   ]
+  },
+  {
+   "emoji": "🕺💇‍♀️🚗🎶",
+   "title": "Grease",
+   "year": 1978,
+   "difficulty": 2,
+   "decoys": [
+    "Hairspray",
+    "Dirty Dancing"
+   ]
+  },
+  {
+   "emoji": "💃🏨🍉👫",
+   "title": "Dirty Dancing",
+   "year": 1987,
+   "difficulty": 2,
+   "decoys": [
+    "Footloose",
+    "Grease"
+   ]
+  },
+  {
+   "emoji": "🕺🚫⛪🏘️",
+   "title": "Footloose",
+   "year": 1984,
+   "difficulty": 3,
+   "decoys": [
+    "Flashdance",
+    "Grease"
+   ]
+  },
+  {
+   "emoji": "👰🏝️👨👨👨",
+   "title": "Mamma Mia!",
+   "year": 2008,
+   "difficulty": 2,
+   "decoys": [
+    "My Big Fat Greek Wedding",
+    "Letters to Juliet"
+   ]
+  },
+  {
+   "emoji": "⛰️🎶👗👨‍👩‍👧‍👦",
+   "title": "The Sound of Music",
+   "year": 1965,
+   "difficulty": 2,
+   "decoys": [
+    "Mary Poppins",
+    "Annie"
+   ]
+  },
+  {
+   "emoji": "☂️👩✨🧒",
+   "title": "Mary Poppins",
+   "year": 1964,
+   "difficulty": 1,
+   "decoys": [
+    "Nanny McPhee",
+    "The Sound of Music"
+   ]
+  },
+  {
+   "emoji": "🤵💼🔫🐎",
+   "title": "The Godfather",
+   "year": 1972,
+   "difficulty": 2,
+   "decoys": [
+    "Goodfellas",
+    "Scarface"
+   ]
+  },
+  {
+   "emoji": "🔫🍝💰🚁",
+   "title": "Goodfellas",
+   "year": 1990,
+   "difficulty": 3,
+   "decoys": [
+    "The Godfather",
+    "Casino"
+   ]
+  },
+  {
+   "emoji": "💵🔫🌴😤",
+   "title": "Scarface",
+   "year": 1983,
+   "difficulty": 3,
+   "decoys": [
+    "The Godfather",
+    "Carlito's Way"
+   ]
+  },
+  {
+   "emoji": "💼🕺💉🍔",
+   "title": "Pulp Fiction",
+   "year": 1994,
+   "difficulty": 2,
+   "decoys": [
+    "Reservoir Dogs",
+    "Kill Bill: Vol. 1"
+   ]
+  },
+  {
+   "emoji": "👰🗡️💛⚔️",
+   "title": "Kill Bill: Vol. 1",
+   "year": 2003,
+   "difficulty": 3,
+   "decoys": [
+    "Pulp Fiction",
+    "John Wick"
+   ]
+  },
+  {
+   "emoji": "🐶⚰️🔫😡",
+   "title": "John Wick",
+   "year": 2014,
+   "difficulty": 1,
+   "decoys": [
+    "Taken",
+    "The Equalizer"
+   ]
+  },
+  {
+   "emoji": "👨👧✈️📞🔫",
+   "title": "Taken",
+   "year": 2008,
+   "difficulty": 1,
+   "decoys": [
+    "John Wick",
+    "Ransom"
+   ]
+  },
+  {
+   "emoji": "🏢🎄🔫🦶",
+   "title": "Die Hard",
+   "year": 1988,
+   "difficulty": 2,
+   "decoys": [
+    "Lethal Weapon",
+    "Speed"
+   ]
+  },
+  {
+   "emoji": "🚌💣⏱️",
+   "title": "Speed",
+   "year": 1994,
+   "difficulty": 1,
+   "decoys": [
+    "Die Hard",
+    "The Fast and the Furious"
+   ]
+  },
+  {
+   "emoji": "🚗🏁🚓💨",
+   "title": "The Fast and the Furious",
+   "year": 2001,
+   "difficulty": 1,
+   "decoys": [
+    "Need for Speed",
+    "Gone in 60 Seconds"
+   ]
+  },
+  {
+   "emoji": "🚗🔥🏜️💀",
+   "title": "Mad Max: Fury Road",
+   "year": 2015,
+   "difficulty": 2,
+   "decoys": [
+    "Waterworld",
+    "The Book of Eli"
+   ]
+  },
+  {
+   "emoji": "🏜️🐛👑✨",
+   "title": "Dune",
+   "year": 2021,
+   "difficulty": 3,
+   "decoys": [
+    "Mad Max: Fury Road",
+    "John Carter"
+   ]
+  },
+  {
+   "emoji": "🔵🌳👽🚁",
+   "title": "Avatar",
+   "year": 2009,
+   "difficulty": 1,
+   "decoys": [
+    "Guardians of the Galaxy",
+    "Pocahontas"
+   ]
+  },
+  {
+   "emoji": "🤖🌱🚀💕",
+   "title": "WALL-E",
+   "year": 2008,
+   "difficulty": 1,
+   "decoys": [
+    "Big Hero 6",
+    "Short Circuit"
+   ]
+  },
+  {
+   "emoji": "🤖❤️👦🦸",
+   "title": "Big Hero 6",
+   "year": 2014,
+   "difficulty": 2,
+   "decoys": [
+    "The Iron Giant",
+    "Astro Boy"
+   ]
+  },
+  {
+   "emoji": "🤖👦🌲☄️",
+   "title": "The Iron Giant",
+   "year": 1999,
+   "difficulty": 3,
+   "decoys": [
+    "Big Hero 6",
+    "Transformers"
+   ]
+  },
+  {
+   "emoji": "👹🚪😱👧",
+   "title": "Monsters, Inc.",
+   "year": 2001,
+   "difficulty": 1,
+   "decoys": [
+    "Hotel Transylvania",
+    "Monsters University"
+   ]
+  },
+  {
+   "emoji": "😀😢😡🧠",
+   "title": "Inside Out",
+   "year": 2015,
+   "difficulty": 1,
+   "decoys": [
+    "Soul",
+    "The Emoji Movie"
+   ]
+  },
+  {
+   "emoji": "💀🎸👦🌼",
+   "title": "Coco",
+   "year": 2017,
+   "difficulty": 1,
+   "decoys": [
+    "The Book of Life",
+    "Encanto"
+   ]
+  },
+  {
+   "emoji": "🏠✨🕯️👨‍👩‍👧‍👦",
+   "title": "Encanto",
+   "year": 2021,
+   "difficulty": 1,
+   "decoys": [
+    "Coco",
+    "Luca"
+   ]
+  },
+  {
+   "emoji": "🦸👨‍👩‍👧‍👦🏝️🤖",
+   "title": "The Incredibles",
+   "year": 2004,
+   "difficulty": 1,
+   "decoys": [
+    "Sky High",
+    "Fantastic Four"
+   ]
+  },
+  {
+   "emoji": "😈👧👧👧🌕",
+   "title": "Despicable Me",
+   "year": 2010,
+   "difficulty": 1,
+   "decoys": [
+    "Megamind",
+    "Minions"
+   ]
+  },
+  {
+   "emoji": "😾💚🎄🎁",
+   "title": "How the Grinch Stole Christmas",
+   "year": 2000,
+   "difficulty": 1,
+   "decoys": [
+    "Elf",
+    "The Nightmare Before Christmas"
+   ]
+  },
+  {
+   "emoji": "🧝🎄🗽😄",
+   "title": "Elf",
+   "year": 2003,
+   "difficulty": 1,
+   "decoys": [
+    "The Santa Clause",
+    "Fred Claus"
+   ]
+  },
+  {
+   "emoji": "💀🎃🎄🎅",
+   "title": "The Nightmare Before Christmas",
+   "year": 1993,
+   "difficulty": 1,
+   "decoys": [
+    "Corpse Bride",
+    "Coraline"
+   ]
+  },
+  {
+   "emoji": "👧🚪🧵👀",
+   "title": "Coraline",
+   "year": 2009,
+   "difficulty": 3,
+   "decoys": [
+    "The Nightmare Before Christmas",
+    "ParaNorman"
+   ]
+  },
+  {
+   "emoji": "🚿🔪🏨👩",
+   "title": "Psycho",
+   "year": 1960,
+   "difficulty": 2,
+   "decoys": [
+    "Scream",
+    "The Shining"
+   ]
+  },
+  {
+   "emoji": "📞🔪🎭😱",
+   "title": "Scream",
+   "year": 1996,
+   "difficulty": 2,
+   "decoys": [
+    "Halloween",
+    "I Know What You Did Last Summer"
+   ]
+  },
+  {
+   "emoji": "👮‍♀️🧠🍽️🦋",
+   "title": "The Silence of the Lambs",
+   "year": 1991,
+   "difficulty": 3,
+   "decoys": [
+    "Se7en",
+    "Hannibal"
+   ]
+  },
+  {
+   "emoji": "📦🕵️🌧️😱",
+   "title": "Se7en",
+   "year": 1995,
+   "difficulty": 3,
+   "decoys": [
+    "Zodiac",
+    "The Silence of the Lambs"
+   ]
+  },
+  {
+   "emoji": "👦👀👻😨",
+   "title": "The Sixth Sense",
+   "year": 1999,
+   "difficulty": 2,
+   "decoys": [
+    "The Others",
+    "Ghost"
+   ]
+  },
+  {
+   "emoji": "💑🏺👻💔",
+   "title": "Ghost",
+   "year": 1990,
+   "difficulty": 2,
+   "decoys": [
+    "The Sixth Sense",
+    "City of Angels"
+   ]
+  },
+  {
+   "emoji": "😀📺🎥⛵🚪",
+   "title": "The Truman Show",
+   "year": 1998,
+   "difficulty": 2,
+   "decoys": [
+    "EDtv",
+    "Pleasantville"
+   ]
+  },
+  {
+   "emoji": "⏰🔁😩❄️",
+   "title": "Groundhog Day",
+   "year": 1993,
+   "difficulty": 2,
+   "decoys": [
+    "Palm Springs",
+    "Edge of Tomorrow"
+   ]
+  },
+  {
+   "emoji": "👽🔫🔁💀",
+   "title": "Edge of Tomorrow",
+   "year": 2014,
+   "difficulty": 3,
+   "decoys": [
+    "Groundhog Day",
+    "Source Code"
+   ]
+  },
+  {
+   "emoji": "🏹👧📺⚔️",
+   "title": "The Hunger Games",
+   "year": 2012,
+   "difficulty": 1,
+   "decoys": [
+    "Divergent",
+    "The Maze Runner"
+   ]
+  },
+  {
+   "emoji": "🏃🧱🌀👦",
+   "title": "The Maze Runner",
+   "year": 2014,
+   "difficulty": 2,
+   "decoys": [
+    "The Hunger Games",
+    "Divergent"
+   ]
+  },
+  {
+   "emoji": "🧛💑🐺🌲",
+   "title": "Twilight",
+   "year": 2008,
+   "difficulty": 1,
+   "decoys": [
+    "Interview with the Vampire",
+    "Vampire Academy"
+   ]
+  },
+  {
+   "emoji": "💑🌧️⛵👴👵",
+   "title": "The Notebook",
+   "year": 2004,
+   "difficulty": 2,
+   "decoys": [
+    "A Walk to Remember",
+    "Dear John"
+   ]
+  },
+  {
+   "emoji": "👦📺💰❓",
+   "title": "Slumdog Millionaire",
+   "year": 2008,
+   "difficulty": 3,
+   "decoys": [
+    "Lion",
+    "Quiz Show"
+   ]
+  },
+  {
+   "emoji": "⚔️🏟️👑💀",
+   "title": "Gladiator",
+   "year": 2000,
+   "difficulty": 2,
+   "decoys": [
+    "Troy",
+    "300"
+   ]
+  }
+ ]
+}

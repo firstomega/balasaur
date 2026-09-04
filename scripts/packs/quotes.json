@@ -1,0 +1,1206 @@
+{
+ "pack": "quotes",
+ "notes": "Counts: 40 difficulty-1, 50 difficulty-2, 30 difficulty-3; no two quotes from the same film; 7 TV catchphrases (Game of Thrones, Friends, The Simpsons, The Office, Breaking Bad, The Mandalorian, Stranger Things). Verbatim caveats to verify at import: Forrest Gump line is delivered as \"My momma always said, 'Life was like a box of chocolates'\"; I shortened it. Notting Hill omits \"also\" (\"I'm also just a girl...\"). Jurassic Park is delivered \"Life, uh, finds a way.\" Predator is often transcribed \"Get to the choppa!\" The Avengers line is sometimes quoted with \"Cap\" instead of \"Captain.\" Godfather Part II \"friends close/enemies closer\" is embedded in a longer sentence (\"My father taught me... keep your friends close, but your enemies closer\"). Rocky's \"Yo, Adrian!\" appears in Rocky; the fuller \"Yo Adrian, I did it!\" is Rocky II. \"I am Iron Man\" and \"I can do this all day\" recur in Avengers: Endgame; I attributed each to its first film. \"My friends, you bow to no one\" is the extended-vs-theatrical wording to spot-check. Infinity War line is sometimes rendered \"Mr. Stark? I don't feel so good.\" Also verify exact punctuation on \"I'm as mad as hell...\" (Network) and \"Royale with cheese\" capitalization. US title used for Harry Potter and the Sorcerer's Stone (UK: Philosopher's Stone); Phantom Menace and Say Anything... titles carry official episode/ellipsis formatting that your title matcher may need to normalize. All titles fall in 1970-2024.",
+ "items": [
+  {
+   "quote": "May the Force be with you.",
+   "title": "Star Wars",
+   "year": 1977,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Empire Strikes Back",
+    "Star Trek: The Motion Picture"
+   ]
+  },
+  {
+   "quote": "I'll be back.",
+   "title": "The Terminator",
+   "year": 1984,
+   "difficulty": 1,
+   "trap_titles": [
+    "Terminator 2: Judgment Day",
+    "Predator"
+   ]
+  },
+  {
+   "quote": "Mama always said life was like a box of chocolates.",
+   "title": "Forrest Gump",
+   "year": 1994,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Green Mile",
+    "Big"
+   ]
+  },
+  {
+   "quote": "Houston, we have a problem.",
+   "title": "Apollo 13",
+   "year": 1995,
+   "difficulty": 1,
+   "trap_titles": [
+    "Gravity",
+    "Armageddon"
+   ]
+  },
+  {
+   "quote": "I'm the king of the world!",
+   "title": "Titanic",
+   "year": 1997,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Aviator",
+    "Romeo + Juliet"
+   ]
+  },
+  {
+   "quote": "E.T. phone home.",
+   "title": "E.T. the Extra-Terrestrial",
+   "year": 1982,
+   "difficulty": 1,
+   "trap_titles": [
+    "Close Encounters of the Third Kind",
+    "Flight of the Navigator"
+   ]
+  },
+  {
+   "quote": "You're gonna need a bigger boat.",
+   "title": "Jaws",
+   "year": 1975,
+   "difficulty": 1,
+   "trap_titles": [
+    "Jurassic Park",
+    "The Meg"
+   ]
+  },
+  {
+   "quote": "I see dead people.",
+   "title": "The Sixth Sense",
+   "year": 1999,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Others",
+    "Ghost"
+   ]
+  },
+  {
+   "quote": "Why so serious?",
+   "title": "The Dark Knight",
+   "year": 2008,
+   "difficulty": 1,
+   "trap_titles": [
+    "Joker",
+    "Batman Begins"
+   ]
+  },
+  {
+   "quote": "Say hello to my little friend!",
+   "title": "Scarface",
+   "year": 1983,
+   "difficulty": 1,
+   "trap_titles": [
+    "Carlito's Way",
+    "The Godfather Part III"
+   ]
+  },
+  {
+   "quote": "You talkin' to me?",
+   "title": "Taxi Driver",
+   "year": 1976,
+   "difficulty": 1,
+   "trap_titles": [
+    "Raging Bull",
+    "Goodfellas"
+   ]
+  },
+  {
+   "quote": "I'm gonna make him an offer he can't refuse.",
+   "title": "The Godfather",
+   "year": 1972,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Godfather Part II",
+    "Goodfellas"
+   ]
+  },
+  {
+   "quote": "You can't handle the truth!",
+   "title": "A Few Good Men",
+   "year": 1992,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Firm",
+    "JFK"
+   ]
+  },
+  {
+   "quote": "Hasta la vista, baby.",
+   "title": "Terminator 2: Judgment Day",
+   "year": 1991,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Terminator",
+    "Total Recall"
+   ]
+  },
+  {
+   "quote": "To infinity and beyond!",
+   "title": "Toy Story",
+   "year": 1995,
+   "difficulty": 1,
+   "trap_titles": [
+    "Toy Story 2",
+    "Lightyear"
+   ]
+  },
+  {
+   "quote": "Just keep swimming.",
+   "title": "Finding Nemo",
+   "year": 2003,
+   "difficulty": 1,
+   "trap_titles": [
+    "Finding Dory",
+    "Shark Tale"
+   ]
+  },
+  {
+   "quote": "No, I am your father.",
+   "title": "The Empire Strikes Back",
+   "year": 1980,
+   "difficulty": 1,
+   "trap_titles": [
+    "Star Wars",
+    "Return of the Jedi"
+   ]
+  },
+  {
+   "quote": "Here's Johnny!",
+   "title": "The Shining",
+   "year": 1980,
+   "difficulty": 1,
+   "trap_titles": [
+    "Psycho",
+    "Misery"
+   ]
+  },
+  {
+   "quote": "Show me the money!",
+   "title": "Jerry Maguire",
+   "year": 1996,
+   "difficulty": 1,
+   "trap_titles": [
+    "Wall Street",
+    "Moneyball"
+   ]
+  },
+  {
+   "quote": "Wax on, wax off.",
+   "title": "The Karate Kid",
+   "year": 1984,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Karate Kid Part II",
+    "Kung Fu Panda"
+   ]
+  },
+  {
+   "quote": "I feel the need... the need for speed!",
+   "title": "Top Gun",
+   "year": 1986,
+   "difficulty": 1,
+   "trap_titles": [
+    "Days of Thunder",
+    "Top Gun: Maverick"
+   ]
+  },
+  {
+   "quote": "Nobody puts Baby in a corner.",
+   "title": "Dirty Dancing",
+   "year": 1987,
+   "difficulty": 1,
+   "trap_titles": [
+    "Footloose",
+    "Grease"
+   ]
+  },
+  {
+   "quote": "This is Sparta!",
+   "title": "300",
+   "year": 2006,
+   "difficulty": 1,
+   "trap_titles": [
+    "Troy",
+    "Gladiator"
+   ]
+  },
+  {
+   "quote": "I volunteer as tribute!",
+   "title": "The Hunger Games",
+   "year": 2012,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Hunger Games: Catching Fire",
+    "Divergent"
+   ]
+  },
+  {
+   "quote": "Yer a wizard, Harry.",
+   "title": "Harry Potter and the Sorcerer's Stone",
+   "year": 2001,
+   "difficulty": 1,
+   "trap_titles": [
+    "Harry Potter and the Chamber of Secrets",
+    "Fantastic Beasts and Where to Find Them"
+   ]
+  },
+  {
+   "quote": "You shall not pass!",
+   "title": "The Lord of the Rings: The Fellowship of the Ring",
+   "year": 2001,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Lord of the Rings: The Two Towers",
+    "The Hobbit: An Unexpected Journey"
+   ]
+  },
+  {
+   "quote": "Roads? Where we're going, we don't need roads.",
+   "title": "Back to the Future",
+   "year": 1985,
+   "difficulty": 1,
+   "trap_titles": [
+    "Back to the Future Part II",
+    "The Terminator"
+   ]
+  },
+  {
+   "quote": "I am Groot.",
+   "title": "Guardians of the Galaxy",
+   "year": 2014,
+   "difficulty": 1,
+   "trap_titles": [
+    "Guardians of the Galaxy Vol. 2",
+    "The Avengers"
+   ]
+  },
+  {
+   "quote": "I am Iron Man.",
+   "title": "Iron Man",
+   "year": 2008,
+   "difficulty": 1,
+   "trap_titles": [
+    "Avengers: Endgame",
+    "Iron Man 2"
+   ]
+  },
+  {
+   "quote": "With great power comes great responsibility.",
+   "title": "Spider-Man",
+   "year": 2002,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Amazing Spider-Man",
+    "Spider-Man: No Way Home"
+   ]
+  },
+  {
+   "quote": "Wakanda forever!",
+   "title": "Black Panther",
+   "year": 2018,
+   "difficulty": 1,
+   "trap_titles": [
+    "Avengers: Infinity War",
+    "Black Panther: Wakanda Forever"
+   ]
+  },
+  {
+   "quote": "Keep the change, ya filthy animal.",
+   "title": "Home Alone",
+   "year": 1990,
+   "difficulty": 1,
+   "trap_titles": [
+    "Home Alone 2: Lost in New York",
+    "Goodfellas"
+   ]
+  },
+  {
+   "quote": "On Wednesdays we wear pink.",
+   "title": "Mean Girls",
+   "year": 2004,
+   "difficulty": 1,
+   "trap_titles": [
+    "Clueless",
+    "Legally Blonde"
+   ]
+  },
+  {
+   "quote": "Life finds a way.",
+   "title": "Jurassic Park",
+   "year": 1993,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Lost World: Jurassic Park",
+    "Jurassic World"
+   ]
+  },
+  {
+   "quote": "Get busy living, or get busy dying.",
+   "title": "The Shawshank Redemption",
+   "year": 1994,
+   "difficulty": 1,
+   "trap_titles": [
+    "The Green Mile",
+    "Dead Man Walking"
+   ]
+  },
+  {
+   "quote": "I'm Batman.",
+   "title": "Batman",
+   "year": 1989,
+   "difficulty": 1,
+   "trap_titles": [
+    "Batman Begins",
+    "The Dark Knight"
+   ]
+  },
+  {
+   "quote": "Winter is coming.",
+   "title": "Game of Thrones",
+   "year": 2011,
+   "difficulty": 1,
+   "trap_titles": [
+    "House of the Dragon",
+    "The Lord of the Rings: The Two Towers"
+   ]
+  },
+  {
+   "quote": "How you doin'?",
+   "title": "Friends",
+   "year": 1994,
+   "difficulty": 1,
+   "trap_titles": [
+    "How I Met Your Mother",
+    "Seinfeld"
+   ]
+  },
+  {
+   "quote": "D'oh!",
+   "title": "The Simpsons",
+   "year": 1989,
+   "difficulty": 1,
+   "trap_titles": [
+    "Family Guy",
+    "Futurama"
+   ]
+  },
+  {
+   "quote": "That's what she said.",
+   "title": "The Office",
+   "year": 2005,
+   "difficulty": 1,
+   "trap_titles": [
+    "Parks and Recreation",
+    "Brooklyn Nine-Nine"
+   ]
+  },
+  {
+   "quote": "Hello. My name is Inigo Montoya. You killed my father. Prepare to die.",
+   "title": "The Princess Bride",
+   "year": 1987,
+   "difficulty": 2,
+   "trap_titles": [
+    "Robin Hood: Prince of Thieves",
+    "The Three Musketeers"
+   ]
+  },
+  {
+   "quote": "Are you not entertained?",
+   "title": "Gladiator",
+   "year": 2000,
+   "difficulty": 2,
+   "trap_titles": [
+    "Braveheart",
+    "Troy"
+   ]
+  },
+  {
+   "quote": "They may take our lives, but they'll never take our freedom!",
+   "title": "Braveheart",
+   "year": 1995,
+   "difficulty": 2,
+   "trap_titles": [
+    "Gladiator",
+    "Rob Roy"
+   ]
+  },
+  {
+   "quote": "Keep your friends close, but your enemies closer.",
+   "title": "The Godfather Part II",
+   "year": 1974,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Godfather",
+    "Scarface"
+   ]
+  },
+  {
+   "quote": "The first rule of Fight Club is: you do not talk about Fight Club.",
+   "title": "Fight Club",
+   "year": 1999,
+   "difficulty": 2,
+   "trap_titles": [
+    "Se7en",
+    "The Matrix"
+   ]
+  },
+  {
+   "quote": "There is no spoon.",
+   "title": "The Matrix",
+   "year": 1999,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Matrix Reloaded",
+    "Inception"
+   ]
+  },
+  {
+   "quote": "What's in the box?",
+   "title": "Se7en",
+   "year": 1995,
+   "difficulty": 2,
+   "trap_titles": [
+    "Fight Club",
+    "Zodiac"
+   ]
+  },
+  {
+   "quote": "I ate his liver with some fava beans and a nice Chianti.",
+   "title": "The Silence of the Lambs",
+   "year": 1991,
+   "difficulty": 2,
+   "trap_titles": [
+    "Hannibal",
+    "Red Dragon"
+   ]
+  },
+  {
+   "quote": "You're killin' me, Smalls!",
+   "title": "The Sandlot",
+   "year": 1993,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Bad News Bears",
+    "Little Giants"
+   ]
+  },
+  {
+   "quote": "How do you like them apples?",
+   "title": "Good Will Hunting",
+   "year": 1997,
+   "difficulty": 2,
+   "trap_titles": [
+    "Dead Poets Society",
+    "The Departed"
+   ]
+  },
+  {
+   "quote": "If you're a bird, I'm a bird.",
+   "title": "The Notebook",
+   "year": 2004,
+   "difficulty": 2,
+   "trap_titles": [
+    "A Walk to Remember",
+    "Dear John"
+   ]
+  },
+  {
+   "quote": "I'm just a girl, standing in front of a boy, asking him to love her.",
+   "title": "Notting Hill",
+   "year": 1999,
+   "difficulty": 2,
+   "trap_titles": [
+    "Love Actually",
+    "Four Weddings and a Funeral"
+   ]
+  },
+  {
+   "quote": "I love the smell of napalm in the morning.",
+   "title": "Apocalypse Now",
+   "year": 1979,
+   "difficulty": 2,
+   "trap_titles": [
+    "Platoon",
+    "Full Metal Jacket"
+   ]
+  },
+  {
+   "quote": "Greed, for lack of a better word, is good.",
+   "title": "Wall Street",
+   "year": 1987,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Wolf of Wall Street",
+    "Boiler Room"
+   ]
+  },
+  {
+   "quote": "I am serious. And don't call me Shirley.",
+   "title": "Airplane!",
+   "year": 1980,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Naked Gun",
+    "Blazing Saddles"
+   ]
+  },
+  {
+   "quote": "It's just a flesh wound.",
+   "title": "Monty Python and the Holy Grail",
+   "year": 1975,
+   "difficulty": 2,
+   "trap_titles": [
+    "Monty Python's Life of Brian",
+    "The Princess Bride"
+   ]
+  },
+  {
+   "quote": "I'm in a glass case of emotion!",
+   "title": "Anchorman: The Legend of Ron Burgundy",
+   "year": 2004,
+   "difficulty": 2,
+   "trap_titles": [
+    "Talladega Nights: The Ballad of Ricky Bobby",
+    "Step Brothers"
+   ]
+  },
+  {
+   "quote": "You sit on a throne of lies.",
+   "title": "Elf",
+   "year": 2003,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Santa Clause",
+    "A Christmas Story"
+   ]
+  },
+  {
+   "quote": "So you're telling me there's a chance.",
+   "title": "Dumb and Dumber",
+   "year": 1994,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Mask",
+    "Ace Ventura: Pet Detective"
+   ]
+  },
+  {
+   "quote": "It's a trap!",
+   "title": "Return of the Jedi",
+   "year": 1983,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Empire Strikes Back",
+    "Star Wars"
+   ]
+  },
+  {
+   "quote": "Get to the chopper!",
+   "title": "Predator",
+   "year": 1987,
+   "difficulty": 2,
+   "trap_titles": [
+    "Commando",
+    "Aliens"
+   ]
+  },
+  {
+   "quote": "Go ahead, make my day.",
+   "title": "Sudden Impact",
+   "year": 1983,
+   "difficulty": 2,
+   "trap_titles": [
+    "Dirty Harry",
+    "Death Wish"
+   ]
+  },
+  {
+   "quote": "I'm as mad as hell, and I'm not going to take this anymore!",
+   "title": "Network",
+   "year": 1976,
+   "difficulty": 2,
+   "trap_titles": [
+    "Broadcast News",
+    "Nightcrawler"
+   ]
+  },
+  {
+   "quote": "They call it a Royale with cheese.",
+   "title": "Pulp Fiction",
+   "year": 1994,
+   "difficulty": 2,
+   "trap_titles": [
+    "Reservoir Dogs",
+    "Jackie Brown"
+   ]
+  },
+  {
+   "quote": "As far back as I can remember, I always wanted to be a gangster.",
+   "title": "Goodfellas",
+   "year": 1990,
+   "difficulty": 2,
+   "trap_titles": [
+    "Casino",
+    "The Godfather"
+   ]
+  },
+  {
+   "quote": "There's no crying in baseball!",
+   "title": "A League of Their Own",
+   "year": 1992,
+   "difficulty": 2,
+   "trap_titles": [
+    "Field of Dreams",
+    "Moneyball"
+   ]
+  },
+  {
+   "quote": "I live my life a quarter mile at a time.",
+   "title": "The Fast and the Furious",
+   "year": 2001,
+   "difficulty": 2,
+   "trap_titles": [
+    "2 Fast 2 Furious",
+    "Days of Thunder"
+   ]
+  },
+  {
+   "quote": "Remember, remember, the fifth of November.",
+   "title": "V for Vendetta",
+   "year": 2005,
+   "difficulty": 2,
+   "trap_titles": [
+    "Watchmen",
+    "Sherlock Holmes"
+   ]
+  },
+  {
+   "quote": "After all this time? Always.",
+   "title": "Harry Potter and the Deathly Hallows Part 2",
+   "year": 2011,
+   "difficulty": 2,
+   "trap_titles": [
+    "Harry Potter and the Half-Blood Prince",
+    "Harry Potter and the Sorcerer's Stone"
+   ]
+  },
+  {
+   "quote": "Florals? For spring? Groundbreaking.",
+   "title": "The Devil Wears Prada",
+   "year": 2006,
+   "difficulty": 2,
+   "trap_titles": [
+    "Confessions of a Shopaholic",
+    "Ugly Betty"
+   ]
+  },
+  {
+   "quote": "What, like it's hard?",
+   "title": "Legally Blonde",
+   "year": 2001,
+   "difficulty": 2,
+   "trap_titles": [
+    "Clueless",
+    "Mean Girls"
+   ]
+  },
+  {
+   "quote": "Did we just become best friends?",
+   "title": "Step Brothers",
+   "year": 2008,
+   "difficulty": 2,
+   "trap_titles": [
+    "Talladega Nights: The Ballad of Ricky Bobby",
+    "Anchorman: The Legend of Ron Burgundy"
+   ]
+  },
+  {
+   "quote": "We're on a mission from God.",
+   "title": "The Blues Brothers",
+   "year": 1980,
+   "difficulty": 2,
+   "trap_titles": [
+    "National Lampoon's Animal House",
+    "Wayne's World"
+   ]
+  },
+  {
+   "quote": "The Dude abides.",
+   "title": "The Big Lebowski",
+   "year": 1998,
+   "difficulty": 2,
+   "trap_titles": [
+    "Fargo",
+    "No Country for Old Men"
+   ]
+  },
+  {
+   "quote": "Fear is the mind-killer.",
+   "title": "Dune",
+   "year": 2021,
+   "difficulty": 2,
+   "trap_titles": [
+    "Dune: Part Two",
+    "Blade Runner 2049"
+   ]
+  },
+  {
+   "quote": "I've seen things you people wouldn't believe.",
+   "title": "Blade Runner",
+   "year": 1982,
+   "difficulty": 2,
+   "trap_titles": [
+    "Blade Runner 2049",
+    "Total Recall"
+   ]
+  },
+  {
+   "quote": "Some people are worth melting for.",
+   "title": "Frozen",
+   "year": 2013,
+   "difficulty": 2,
+   "trap_titles": [
+    "Frozen II",
+    "Tangled"
+   ]
+  },
+  {
+   "quote": "Ogres are like onions.",
+   "title": "Shrek",
+   "year": 2001,
+   "difficulty": 2,
+   "trap_titles": [
+    "Shrek 2",
+    "Monsters, Inc."
+   ]
+  },
+  {
+   "quote": "No capes!",
+   "title": "The Incredibles",
+   "year": 2004,
+   "difficulty": 2,
+   "trap_titles": [
+    "Incredibles 2",
+    "Megamind"
+   ]
+  },
+  {
+   "quote": "But what I do have are a very particular set of skills.",
+   "title": "Taken",
+   "year": 2008,
+   "difficulty": 2,
+   "trap_titles": [
+    "John Wick",
+    "Taken 2"
+   ]
+  },
+  {
+   "quote": "I am the one who knocks!",
+   "title": "Breaking Bad",
+   "year": 2008,
+   "difficulty": 2,
+   "trap_titles": [
+    "Better Call Saul",
+    "Ozark"
+   ]
+  },
+  {
+   "quote": "This is the way.",
+   "title": "The Mandalorian",
+   "year": 2019,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Book of Boba Fett",
+    "Star Wars: The Force Awakens"
+   ]
+  },
+  {
+   "quote": "Why is the rum gone?",
+   "title": "Pirates of the Caribbean: The Curse of the Black Pearl",
+   "year": 2003,
+   "difficulty": 2,
+   "trap_titles": [
+    "Pirates of the Caribbean: Dead Man's Chest",
+    "Hook"
+   ]
+  },
+  {
+   "quote": "That's my secret, Captain: I'm always angry.",
+   "title": "The Avengers",
+   "year": 2012,
+   "difficulty": 2,
+   "trap_titles": [
+    "Avengers: Age of Ultron",
+    "The Incredible Hulk"
+   ]
+  },
+  {
+   "quote": "Mr. Stark, I don't feel so good.",
+   "title": "Avengers: Infinity War",
+   "year": 2018,
+   "difficulty": 2,
+   "trap_titles": [
+    "Avengers: Endgame",
+    "Spider-Man: Homecoming"
+   ]
+  },
+  {
+   "quote": "He's a friend from work!",
+   "title": "Thor: Ragnarok",
+   "year": 2017,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Avengers",
+    "Thor: The Dark World"
+   ]
+  },
+  {
+   "quote": "Do you like scary movies?",
+   "title": "Scream",
+   "year": 1996,
+   "difficulty": 2,
+   "trap_titles": [
+    "I Know What You Did Last Summer",
+    "Halloween"
+   ]
+  },
+  {
+   "quote": "Goonies never say die!",
+   "title": "The Goonies",
+   "year": 1985,
+   "difficulty": 2,
+   "trap_titles": [
+    "Stand by Me",
+    "E.T. the Extra-Terrestrial"
+   ]
+  },
+  {
+   "quote": "Bueller? Bueller?",
+   "title": "Ferris Bueller's Day Off",
+   "year": 1986,
+   "difficulty": 2,
+   "trap_titles": [
+    "The Breakfast Club",
+    "Sixteen Candles"
+   ]
+  },
+  {
+   "quote": "Yo, Adrian!",
+   "title": "Rocky",
+   "year": 1976,
+   "difficulty": 2,
+   "trap_titles": [
+    "Rocky II",
+    "Creed"
+   ]
+  },
+  {
+   "quote": "I drink your milkshake!",
+   "title": "There Will Be Blood",
+   "year": 2007,
+   "difficulty": 3,
+   "trap_titles": [
+    "No Country for Old Men",
+    "Boogie Nights"
+   ]
+  },
+  {
+   "quote": "Forget it, Jake. It's Chinatown.",
+   "title": "Chinatown",
+   "year": 1974,
+   "difficulty": 3,
+   "trap_titles": [
+    "L.A. Confidential",
+    "The Two Jakes"
+   ]
+  },
+  {
+   "quote": "Attica! Attica!",
+   "title": "Dog Day Afternoon",
+   "year": 1975,
+   "difficulty": 3,
+   "trap_titles": [
+    "Serpico",
+    "The Taking of Pelham One Two Three"
+   ]
+  },
+  {
+   "quote": "Shall we play a game?",
+   "title": "WarGames",
+   "year": 1983,
+   "difficulty": 3,
+   "trap_titles": [
+    "Tron",
+    "The Net"
+   ]
+  },
+  {
+   "quote": "Consider that a divorce.",
+   "title": "Total Recall",
+   "year": 1990,
+   "difficulty": 3,
+   "trap_titles": [
+    "True Lies",
+    "Terminator 2: Judgment Day"
+   ]
+  },
+  {
+   "quote": "Chewie, we're home.",
+   "title": "Star Wars: The Force Awakens",
+   "year": 2015,
+   "difficulty": 3,
+   "trap_titles": [
+    "Star Wars: The Last Jedi",
+    "Rogue One: A Star Wars Story"
+   ]
+  },
+  {
+   "quote": "You make me want to be a better man.",
+   "title": "As Good as It Gets",
+   "year": 1997,
+   "difficulty": 3,
+   "trap_titles": [
+    "Jerry Maguire",
+    "Good Will Hunting"
+   ]
+  },
+  {
+   "quote": "He's not the Messiah. He's a very naughty boy!",
+   "title": "Monty Python's Life of Brian",
+   "year": 1979,
+   "difficulty": 3,
+   "trap_titles": [
+    "Monty Python and the Holy Grail",
+    "History of the World: Part I"
+   ]
+  },
+  {
+   "quote": "Shake and bake!",
+   "title": "Talladega Nights: The Ballad of Ricky Bobby",
+   "year": 2006,
+   "difficulty": 3,
+   "trap_titles": [
+    "Days of Thunder",
+    "Step Brothers"
+   ]
+  },
+  {
+   "quote": "You're my boy, Blue!",
+   "title": "Old School",
+   "year": 2003,
+   "difficulty": 3,
+   "trap_titles": [
+    "Step Brothers",
+    "National Lampoon's Animal House"
+   ]
+  },
+  {
+   "quote": "Toga! Toga!",
+   "title": "National Lampoon's Animal House",
+   "year": 1978,
+   "difficulty": 3,
+   "trap_titles": [
+    "Old School",
+    "Revenge of the Nerds"
+   ]
+  },
+  {
+   "quote": "I gave her my heart, and she gave me a pen.",
+   "title": "Say Anything...",
+   "year": 1989,
+   "difficulty": 3,
+   "trap_titles": [
+    "The Breakfast Club",
+    "Sixteen Candles"
+   ]
+  },
+  {
+   "quote": "Call it, friendo.",
+   "title": "No Country for Old Men",
+   "year": 2007,
+   "difficulty": 3,
+   "trap_titles": [
+    "There Will Be Blood",
+    "Fargo"
+   ]
+  },
+  {
+   "quote": "Oh hi, Mark.",
+   "title": "The Room",
+   "year": 2003,
+   "difficulty": 3,
+   "trap_titles": [
+    "The Disaster Artist",
+    "Birdemic: Shock and Terror"
+   ]
+  },
+  {
+   "quote": "This is my boomstick!",
+   "title": "Army of Darkness",
+   "year": 1992,
+   "difficulty": 3,
+   "trap_titles": [
+    "Evil Dead II",
+    "The Evil Dead"
+   ]
+  },
+  {
+   "quote": "I'm Mary Poppins, y'all!",
+   "title": "Guardians of the Galaxy Vol. 2",
+   "year": 2017,
+   "difficulty": 3,
+   "trap_titles": [
+    "Guardians of the Galaxy",
+    "Thor: Ragnarok"
+   ]
+  },
+  {
+   "quote": "On your left.",
+   "title": "Captain America: The Winter Soldier",
+   "year": 2014,
+   "difficulty": 3,
+   "trap_titles": [
+    "Captain America: The First Avenger",
+    "Avengers: Endgame"
+   ]
+  },
+  {
+   "quote": "Dormammu, I've come to bargain.",
+   "title": "Doctor Strange",
+   "year": 2016,
+   "difficulty": 3,
+   "trap_titles": [
+    "Doctor Strange in the Multiverse of Madness",
+    "Thor: Ragnarok"
+   ]
+  },
+  {
+   "quote": "I can do this all day.",
+   "title": "Captain America: The First Avenger",
+   "year": 2011,
+   "difficulty": 3,
+   "trap_titles": [
+    "Captain America: Civil War",
+    "Avengers: Endgame"
+   ]
+  },
+  {
+   "quote": "You mustn't be afraid to dream a little bigger, darling.",
+   "title": "Inception",
+   "year": 2010,
+   "difficulty": 3,
+   "trap_titles": [
+    "Interstellar",
+    "Shutter Island"
+   ]
+  },
+  {
+   "quote": "My friends, you bow to no one.",
+   "title": "The Lord of the Rings: The Return of the King",
+   "year": 2003,
+   "difficulty": 3,
+   "trap_titles": [
+    "The Lord of the Rings: The Two Towers",
+    "The Lord of the Rings: The Fellowship of the Ring"
+   ]
+  },
+  {
+   "quote": "Now this is podracing!",
+   "title": "Star Wars: Episode I – The Phantom Menace",
+   "year": 1999,
+   "difficulty": 3,
+   "trap_titles": [
+    "Star Wars: Episode II – Attack of the Clones",
+    "Star Wars: Episode III – Revenge of the Sith"
+   ]
+  },
+  {
+   "quote": "Not the bees!",
+   "title": "The Wicker Man",
+   "year": 2006,
+   "difficulty": 3,
+   "trap_titles": [
+    "Midsommar",
+    "Face/Off"
+   ]
+  },
+  {
+   "quote": "Whoever saves one life, saves the world entire.",
+   "title": "Schindler's List",
+   "year": 1993,
+   "difficulty": 3,
+   "trap_titles": [
+    "The Pianist",
+    "Life Is Beautiful"
+   ]
+  },
+  {
+   "quote": "You've got red on you.",
+   "title": "Shaun of the Dead",
+   "year": 2004,
+   "difficulty": 3,
+   "trap_titles": [
+    "Hot Fuzz",
+    "Zombieland"
+   ]
+  },
+  {
+   "quote": "Friends don't lie.",
+   "title": "Stranger Things",
+   "year": 2016,
+   "difficulty": 3,
+   "trap_titles": [
+    "It",
+    "The Goonies"
+   ]
+  },
+  {
+   "quote": "Ditto.",
+   "title": "Ghost",
+   "year": 1990,
+   "difficulty": 3,
+   "trap_titles": [
+    "Dirty Dancing",
+    "The Bodyguard"
+   ]
+  },
+  {
+   "quote": "He slimed me.",
+   "title": "Ghostbusters",
+   "year": 1984,
+   "difficulty": 3,
+   "trap_titles": [
+    "Ghostbusters II",
+    "Beetlejuice"
+   ]
+  },
+  {
+   "quote": "Wolverines!",
+   "title": "Red Dawn",
+   "year": 1984,
+   "difficulty": 3,
+   "trap_titles": [
+    "Rambo: First Blood Part II",
+    "Invasion U.S.A."
+   ]
+  },
+  {
+   "quote": "Be excellent to each other.",
+   "title": "Bill & Ted's Excellent Adventure",
+   "year": 1989,
+   "difficulty": 3,
+   "trap_titles": [
+    "Wayne's World",
+    "Fast Times at Ridgemont High"
+   ]
+  }
+ ]
+}
