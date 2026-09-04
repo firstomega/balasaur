@@ -391,25 +391,29 @@ function ArcadeStatsSection({ userId }: { userId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    (
-      (supabase as unknown as { from(t: string): any })
-        .from("arcade_stats")
-        .select("game_slug, plays, best_score, best_streak")
-        .eq("user_id", userId) as PromiseLike<{
-        data: ArcadeStatRow[] | null;
-        error: { message: string } | null;
-      }>
-    ).then(({ data, error }) => {
-      if (cancelled) return;
-      // Supabase returns errors rather than throwing; a failed read just
-      // means the section shows the comet total alone.
-      if (error) {
-        console.error("[profile] arcade stats read failed:", error.message);
-        setRows([]);
-        return;
-      }
-      setRows((data ?? []).filter((r) => r.plays > 0));
-    });
+    type StatsQuery = {
+      select(c: string): {
+        eq(
+          col: string,
+          val: string,
+        ): PromiseLike<{ data: ArcadeStatRow[] | null; error: { message: string } | null }>;
+      };
+    };
+    (supabase as unknown as { from(t: string): StatsQuery })
+      .from("arcade_stats")
+      .select("game_slug, plays, best_score, best_streak")
+      .eq("user_id", userId)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        // Supabase returns errors rather than throwing; a failed read just
+        // means the section shows the comet total alone.
+        if (error) {
+          console.error("[profile] arcade stats read failed:", error.message);
+          setRows([]);
+          return;
+        }
+        setRows((data ?? []).filter((r) => r.plays > 0));
+      });
     return () => {
       cancelled = true;
     };

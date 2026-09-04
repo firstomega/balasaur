@@ -74,14 +74,18 @@ async function fetchWalletTotal(userId: string): Promise<number | null> {
   // The generated Database types predate arcade_wallets, so the own-row
   // select goes through one loose cast here and nowhere else; the result is
   // typed on read. Supabase returns errors rather than throwing.
-  const { data, error } = (await (supabase as unknown as { from(t: string): any })
+  type WalletRead = PromiseLike<{
+    data: { comets: number } | null;
+    error: { message: string } | null;
+  }>;
+  type WalletQuery = {
+    select(c: string): { eq(col: string, val: string): { maybeSingle(): WalletRead } };
+  };
+  const { data, error } = await (supabase as unknown as { from(t: string): WalletQuery })
     .from("arcade_wallets")
     .select("comets")
     .eq("user_id", userId)
-    .maybeSingle()) as {
-    data: { comets: number } | null;
-    error: { message: string } | null;
-  };
+    .maybeSingle();
   if (error) {
     console.error("[comets] wallet read failed:", error.message);
     return null;

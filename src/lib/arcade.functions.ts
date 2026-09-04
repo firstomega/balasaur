@@ -689,14 +689,27 @@ interface PoolOpts {
   limit?: number;
 }
 
+/** A hand-typed slice of the PostgREST filter builder, used where the real
+ *  generics blow up TypeScript's instantiation depth (TS2589) on json-path
+ *  filters. Results are typed at the read site. */
+interface LoosePoolQuery extends PromiseLike<{ data: unknown; error: { message: string } | null }> {
+  eq(col: string, val: unknown): LoosePoolQuery;
+  gte(col: string, val: unknown): LoosePoolQuery;
+  neq(col: string, val: unknown): LoosePoolQuery;
+  not(col: string, op: string, val: unknown): LoosePoolQuery;
+  order(col: string, opts: { ascending: boolean }): LoosePoolQuery;
+  range(
+    from: number,
+    to: number,
+  ): PromiseLike<{ data: unknown; error: { message: string } | null }>;
+}
+
 /** The popular pool, paged at 1000 (PostgREST clamps silently above that). */
 async function fetchPool(opts: PoolOpts): Promise<ArcadePoolRow[] | null> {
   const sb = await db();
   const out: ArcadePoolRow[] = [];
   for (let from = 0; ; from += PAGE) {
-    // The json-path filters below blow up supabase-js generic inference
-    // (TS2589); the chain is cast loose once here, results are typed on read.
-    let q = (sb as { from(t: string): any })
+    let q = (sb as unknown as { from(t: string): { select(c: string): LoosePoolQuery } })
       .from("media")
       .select(opts.cols)
       .eq("suggestive", false)

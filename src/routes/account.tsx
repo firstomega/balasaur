@@ -310,23 +310,26 @@ function ArcadeSection({ userId }: { userId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    (
-      (supabase as unknown as { from(t: string): any })
-        .from("profiles")
-        .select("country")
-        .eq("id", userId)
-        .maybeSingle() as PromiseLike<{
-        data: { country: string | null } | null;
-        error: { message: string } | null;
-      }>
-    ).then(({ data, error }) => {
-      if (cancelled) return;
-      // Supabase returns errors rather than throwing; a failed read just
-      // starts the selector at "Not set".
-      if (error) console.error("[account] country read failed:", error.message);
-      setCountry(data?.country ?? "");
-      setLoaded(true);
-    });
+    type CountryRead = PromiseLike<{
+      data: { country: string | null } | null;
+      error: { message: string } | null;
+    }>;
+    type CountryQuery = {
+      select(c: string): { eq(col: string, val: string): { maybeSingle(): CountryRead } };
+    };
+    (supabase as unknown as { from(t: string): CountryQuery })
+      .from("profiles")
+      .select("country")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        // Supabase returns errors rather than throwing; a failed read just
+        // starts the selector at "Not set".
+        if (error) console.error("[account] country read failed:", error.message);
+        setCountry(data?.country ?? "");
+        setLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -336,10 +339,15 @@ function ArcadeSection({ userId }: { userId: string }) {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
-    const { error } = (await (supabase as unknown as { from(t: string): any })
+    type CountryWrite = {
+      update(values: Record<string, unknown>): {
+        eq(col: string, val: string): PromiseLike<{ error: { message: string } | null }>;
+      };
+    };
+    const { error } = await (supabase as unknown as { from(t: string): CountryWrite })
       .from("profiles")
       .update({ country: country || null, updated_at: new Date().toISOString() })
-      .eq("id", userId)) as { error: { message: string } | null };
+      .eq("id", userId);
     setBusy(false);
     if (error) setMsg({ kind: "err", text: error.message });
     else setMsg({ kind: "ok", text: "Saved." });
