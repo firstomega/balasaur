@@ -64,7 +64,7 @@ export const Route = createFileRoute("/play/")({
         description:
           "Eleven movie games drawn from 76,000 titles and the Balasaur Score. Same board for everyone, new at midnight. No sign-up.",
         url,
-        image: `${SITE_ORIGIN}/og-play.png`,
+        image: `${SITE_ORIGIN}/og-play.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [

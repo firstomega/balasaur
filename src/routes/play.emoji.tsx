@@ -68,7 +68,7 @@ export const Route = createFileRoute("/play/emoji")({
         description:
           "A movie plot told in emoji, five puzzles a day. Three guesses each, then the answer. Yesterday's set stays up so you can settle arguments.",
         url,
-        image: `${SITE_ORIGIN}/og-play-emoji.png`,
+        image: `${SITE_ORIGIN}/og-play-emoji.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

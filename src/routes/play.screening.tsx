@@ -70,7 +70,7 @@ export const Route = createFileRoute("/play/screening")({
         description:
           "Ten questions a day drawn from 76,000 movies and shows: box office, Oscars, casts, years. Same ten for everyone, one shared board, new at midnight.",
         url,
-        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.png`,
+        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

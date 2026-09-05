@@ -62,7 +62,7 @@ export const Route = createFileRoute("/play/taglines")({
         description:
           "Five real taglines, five posters, one board a day. Pair each line with its movie. Sin is a choice. One man saw it coming. You know more of these than you think.",
         url,
-        image: `${SITE_ORIGIN}/og-play-taglines.png`,
+        image: `${SITE_ORIGIN}/og-play-taglines.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

@@ -1,5 +1,5 @@
-// Renders the arcade's share cards: public/og-play.png for the hub and
-// public/og-play-<slug>.png for each game, 1200x630, from one inline HTML
+// Renders the arcade's share cards: public/og-play.jpg for the hub and
+// public/og-play-<slug>.jpg for each game, 1200x630, from one inline HTML
 // template. Each card is the game's face: hue ground, the mark, the name in
 // the display weight, the hook, and the URL. Run once per registry change:
 //
@@ -157,13 +157,19 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
 
   const jobs = [
-    { file: "og-play.png", html: hubCard() },
-    ...Object.values(GAMES).map((g) => ({ file: `og-play-${g.slug}.png`, html: gameCard(g) })),
+    { file: "og-play.jpg", html: hubCard() },
+    ...Object.values(GAMES).map((g) => ({ file: `og-play-${g.slug}.jpg`, html: gameCard(g) })),
   ];
   for (const job of jobs) {
     await page.setContent(job.html, { waitUntil: "load" });
     await page.evaluate(() => document.fonts.ready);
-    const png = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: W, height: H } });
+    // JPEG at 82: a 1200x630 card lands near 60 KB instead of 320 KB as PNG,
+    // so a pasted link unfurls fast and the repo does not carry megabytes of art.
+    const png = await page.screenshot({
+      type: "jpeg",
+      quality: 82,
+      clip: { x: 0, y: 0, width: W, height: H },
+    });
     writeFileSync(resolve(OUT, job.file), png);
     console.log(`wrote public/${job.file} (${Math.round(png.length / 1024)} KB)`);
   }

@@ -67,7 +67,7 @@ export const Route = createFileRoute("/play/sequel-or-fake")({
         description:
           "Ten sequel titles, some real, some made up. Call each one, then read the story behind it. Disney really made a sequel to Old Yeller. A new ten every day.",
         url,
-        image: `${SITE_ORIGIN}/og-play-sequel-or-fake.png`,
+        image: `${SITE_ORIGIN}/og-play-sequel-or-fake.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],
