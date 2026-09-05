@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
+import { useHydrated } from "@/hooks/useHydrated";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthCtx {
@@ -73,16 +74,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, [qc]);
 
+  // The session is withheld until the tree has hydrated. The server renders
+  // every page signed-out (one cached page for everyone), and the session is
+  // already in storage on the client, so any consumer that read it during the
+  // hydrating render (the header's avatar, the filter rail, the home grid's
+  // region) disagreed with the HTML and React rebuilt that whole boundary on
+  // every signed-in load. One gate here covers every consumer on every page.
+  const hydrated = useHydrated();
   const value = useMemo<AuthCtx>(
     () => ({
-      user: session?.user ?? null,
-      session,
-      loading,
+      user: hydrated ? (session?.user ?? null) : null,
+      session: hydrated ? session : null,
+      loading: hydrated ? loading : true,
       signOut: async () => {
         await supabase.auth.signOut();
       },
     }),
-    [session, loading],
+    [hydrated, session, loading],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
