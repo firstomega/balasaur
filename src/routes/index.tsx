@@ -33,6 +33,7 @@ import { ssrBudget } from "@/lib/ssrBudget";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
+import { useHydrated } from "@/hooks/useHydrated";
 import {
   isNotInterested,
   primaryOf,
@@ -250,7 +251,15 @@ function HomePage() {
     }
   };
   const { seenIds, statuses, recordStatus } = useUserStatus();
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
+  // The session is applied only after this boundary has hydrated. The server
+  // renders the home grid signed-out (the CDN serves one page to everyone);
+  // if the client's hydrating render already had the user, its inputs
+  // (region, home country, the hero's presence) would differ from the HTML
+  // and React would throw the grid away and rebuild it on every signed-in
+  // load. That was the intermittent hydration error for signed-in visitors.
+  const hydrated = useHydrated();
+  const user = hydrated ? authUser : null;
   // Per-country streaming: filter availability by the viewer's account region.
   // Falls back to US for signed-out visitors / accounts with no region set.
   const region = (user?.user_metadata?.region as string | undefined) || "US";
