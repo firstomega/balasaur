@@ -1,20 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
-import { QuizBoard } from "@/components/arcade/QuizBoard";
+import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import { QuizBoard, type QuizMedia } from "@/components/arcade/QuizBoard";
+import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import type { SnippetRow } from "@/components/arcade/LeaderboardSnippet";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
 import { screeningPayout, totalComets } from "@/lib/arcade/comets";
 import { shareScreening } from "@/lib/arcade/share";
+import { recordResult } from "@/lib/arcade/stats";
 import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun, arcadeDayBoard } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
 import { useViewerCountry } from "@/hooks/useCatalog";
 import {
   getScreeningSet,
   getYesterday,
+  judgeScreeningPick,
   type ArcadeYesterday,
   type ScreeningSet,
 } from "@/lib/arcade.functions";
@@ -22,14 +28,28 @@ import { SITE_ORIGIN, buildMeta, cacheSsrResponse, canonicalLink, jsonLdScript }
 import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
 
 // The 8PM Screening. Ten trivia questions, one shared set per UTC day, one
-// shared score board. Doors open at 8PM Eastern as the nightly ritual, and
-// the same ten questions stand all day, so the board fills as people play.
-// Twenty seconds a question; a pass scores nothing and moves on.
+// shared board. The same ten stand all day, so the board fills as people
+// play. Twenty seconds a question; a pass scores nothing and moves on. The
+// page carries no answers: every pick is judged on the server, because the
+// night's board ranks people and a board anyone can top with a console is
+// worth nothing.
+//
+// One number per run: right answers out of ten. The board is submitted in
+// the server's units (a hundred a question) and mapped back to the same
+// count before it renders.
 
 const GAME = GAMES.screening;
+const QUESTION_COUNT = 10;
 const QUESTION_SECONDS = 20;
+const SCORE_PER_RIGHT = 100;
 const REVEAL_BEAT_MS = 1400;
 const BOARD_POLL_MS = 30000;
+const HOW_TO = [
+  "Ten questions, four answers each, twenty seconds a question.",
+  "A pick locks at once and the right answer shows before the next question.",
+  "Every right answer pays 3 comets. A perfect ten pays 10 more.",
+];
+const LOST_HINT = "A right answer pays 3 comets.";
 
 export const Route = createFileRoute("/play/screening")({
   loader: async () => {
@@ -48,8 +68,9 @@ export const Route = createFileRoute("/play/screening")({
       meta: buildMeta({
         title: "The 8PM Screening: Ten Movie Trivia Questions a Day",
         description:
-          "Ten questions a day drawn from 76,000 movies and shows: box office, Oscars, casts, years. Doors open at 8PM Eastern, one shared board, one score to beat.",
+          "Ten questions a day drawn from 76,000 movies and shows: box office, Oscars, casts, years. Same ten for everyone, one shared board, new at midnight.",
         url,
+        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.png`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],
@@ -85,25 +106,31 @@ function MoreGames() {
   return (
     <section className="mt-8">
       <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <ScrollRail className="mt-2 gap-2.5">
         {ENABLED_SLUGS.filter((s) => s !== GAME.slug).map((s) => (
-          <Link
-            key={s}
-            to={GAMES[s].path}
-            className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-          >
-            {GAMES[s].name}
-          </Link>
+          <ArcadeTile key={s} game={GAMES[s]} className="w-[168px] shrink-0" />
         ))}
-        <Link
-          to="/play"
-          className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-        >
-          All games
-        </Link>
-      </div>
+      </ScrollRail>
+      <Link
+        to="/play"
+        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
+      >
+        All games
+      </Link>
     </section>
   );
+}
+
+function tierFor(correct: number): string | undefined {
+  if (correct === QUESTION_COUNT) return "Perfect ten";
+  if (correct >= 8) return "Sharp";
+  return undefined;
+}
+
+interface Verdict {
+  correctIndex: number;
+  note: string;
+  media: QuizMedia | null;
 }
 
 function ScreeningPage() {
@@ -118,8 +145,11 @@ function ScreeningPage() {
 
   const [qIndex, setQIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
-  const [reveal, setReveal] = useState<{ correctIndex: number } | null>(null);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [results, setResults] = useState<(boolean | null)[]>([]);
   const [board, setBoard] = useState<SnippetRow[]>([]);
+  const [stats, setStats] = useState<GameStats | null>(null);
+  const [firstComets, setFirstComets] = useState(false);
   const answersRef = useRef<boolean[]>([]);
   const resolvedRef = useRef<boolean[]>([]);
   const startedAtRef = useRef(0);
@@ -136,6 +166,7 @@ function ScreeningPage() {
   const submitRun = (o: { score: number; won: boolean; earned: number }) => {
     if (!set || submittedRef.current) return;
     submittedRef.current = true;
+    if (o.earned > 0 && comets.ready && comets.total === 0) setFirstComets(true);
     if (!user) {
       comets.creditLocal(GAME.slug, set.dayKey, o.earned);
       return;
@@ -164,26 +195,49 @@ function ScreeningPage() {
     if (!set) return;
     const correct = answersRef.current.filter(Boolean).length;
     const lines = screeningPayout({ correct });
+    setStats(
+      recordResult(GAME.slug, set.dayKey, { won: correct === QUESTION_COUNT, bucket: correct }),
+    );
     api.finish(lines);
-    submitRun({ score: correct * 100, won: correct === 10, earned: totalComets(lines) });
+    submitRun({
+      score: correct * SCORE_PER_RIGHT,
+      won: correct === QUESTION_COUNT,
+      earned: totalComets(lines),
+    });
   };
 
   const startQuestion = (i: number) => {
     setQIndex(i);
     setPicked(null);
-    setReveal(null);
-    api.startTimer(QUESTION_SECONDS, () => resolveRef.current(null, i));
+    setVerdict(null);
+    api.startTimer(QUESTION_SECONDS, () => void resolveRef.current(null, i));
   };
 
-  const resolve = (choice: number | null, i: number) => {
+  /** Lock the pick, ask the server, then color the board. A null choice is
+   *  the clock: wrong, and the answer still shows. */
+  const resolve = async (choice: number | null, i: number) => {
     if (!set || resolvedRef.current[i]) return;
     resolvedRef.current[i] = true;
     api.stopTimer();
     const item = set.items[i];
-    const correct = choice === item.answer;
     if (choice !== null) setPicked(choice);
-    setReveal({ correctIndex: item.answer });
+
+    let v: Awaited<ReturnType<typeof judgeScreeningPick>> = null;
+    try {
+      v = await judgeScreeningPick({ data: { itemId: item.itemId, choice } });
+    } catch (e) {
+      console.error("[screening] judge unreachable:", e);
+    }
+    const correct = v?.correct ?? false;
+    setVerdict({
+      correctIndex: v ? v.answer : -1,
+      note: v ? v.note : "The answer did not come back. This one counts as a miss.",
+      media: v?.media
+        ? { title: v.media.title, year: v.media.year, posterUrl: v.media.posterUrl }
+        : null,
+    });
     answersRef.current[i] = correct;
+    setResults(answersRef.current.slice());
     if (correct) {
       api.addScore(1);
       api.hitCombo();
@@ -204,6 +258,7 @@ function ScreeningPage() {
     if (api.phase === "playing" && prevPhase.current !== "playing" && set) {
       answersRef.current = [];
       resolvedRef.current = [];
+      setResults([]);
       submittedRef.current = false;
       startedAtRef.current = Date.now();
       startQuestion(0);
@@ -213,6 +268,8 @@ function ScreeningPage() {
   }, [api.phase, set]);
 
   // The shared board, polled while it is on screen (the end screen shows it).
+  // Scores come back in the server's units and are mapped to right answers
+  // so the board and the headline count the same thing.
   useEffect(() => {
     if (api.phase !== "ended") return;
     let dead = false;
@@ -225,7 +282,9 @@ function ScreeningPage() {
             b.rows.map((r) => ({
               rank: r.rank,
               name: r.display_name || r.username,
-              score: r.score,
+              handle: r.username,
+              avatarPreset: r.avatar_preset,
+              score: Math.round(r.score / SCORE_PER_RIGHT),
               durationMs: r.duration_ms ?? 0,
             })),
           );
@@ -243,30 +302,43 @@ function ScreeningPage() {
   }, [api.phase]);
 
   const item = set?.items[qIndex] ?? null;
-  const correct = answersRef.current.filter(Boolean).length;
+
+  const end = useMemo<EndScreenContent>(() => {
+    if (!set) return { headline: "", shareText: "" };
+    const answers = answersRef.current.slice(0, set.items.length);
+    const correct = answers.filter(Boolean).length;
+    const text = shareScreening({ day: set.dayKey, answers });
+    const headline = `${correct} of ${QUESTION_COUNT} right`;
+    const tier = tierFor(correct);
+    return {
+      tier,
+      headline,
+      grid: [text.split("\n")[1] ?? ""],
+      stats: stats ?? undefined,
+      shareText: text,
+      shareImage: { title: headline, subtitle: tier ?? "Same ten for everyone." },
+      leaderboard: { rows: board, label: "Tonight's board. Right answers out of ten." },
+      lost: correct === 0,
+      lostHint: LOST_HINT,
+      firstComets,
+      moreGames: false,
+    };
+    // results is the render-time mirror of answersRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [set, results, board, stats, firstComets]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8">
+      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 lg:max-w-[880px]">
         {set ? (
           <GameShell
             game={GAME}
             api={api}
             comets={comets}
             dayNumber={set.dayKey}
-            readyExtra={
-              <p className="mt-2 text-[13.5px] text-text-muted">
-                Doors open at 8PM Eastern. The same ten questions stand all day, twenty seconds
-                each, one shared board.
-              </p>
-            }
-            end={{
-              headline: `${correct} of ${set.items.length} right`,
-              shareText: shareScreening({ day: set.dayKey, answers: answersRef.current }),
-              nextGameLine: "Next screening at 8PM Eastern.",
-              leaderboard: { rows: board, label: "Tonight's board" },
-            }}
+            howTo={HOW_TO}
+            end={end}
           >
             {item && (
               <QuizBoard
@@ -275,33 +347,26 @@ function ScreeningPage() {
                 questionIndex={qIndex}
                 questionCount={set.items.length}
                 picked={picked}
-                reveal={reveal}
-                note={item.note}
-                onPick={(i) => resolve(i, qIndex)}
+                reveal={verdict ? { correctIndex: verdict.correctIndex } : null}
+                note={verdict?.note ?? null}
+                results={results}
+                timer={api.timer}
+                media={verdict?.media ?? null}
+                onPick={(i) => void resolve(i, qIndex)}
               />
             )}
           </GameShell>
         ) : (
           <section>
-            <h1 className="text-[20px] font-bold tracking-tight text-text-bright">{GAME.name}</h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.tagline}</p>
+            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+              {GAME.name}
+            </h1>
+            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
             <p className="mt-6 text-[14px] text-text-muted">
               Tonight's questions did not load. Try again in a minute.
             </p>
           </section>
         )}
-
-        <section className="mt-8">
-          <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-            How to play
-          </h2>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-text-muted">
-            Ten questions, four answers each, twenty seconds a question. A pick locks instantly and
-            the right answer shows before the next question lands; letting the clock run scores
-            nothing and moves on. Everyone answers the same ten, and the night's board ranks the
-            scores.
-          </p>
-        </section>
 
         <YesterdaySolved y={yesterday} />
         <MoreGames />

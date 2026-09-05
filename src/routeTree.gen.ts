@@ -49,6 +49,7 @@ import { Route as PlayBalasaurdleRouteImport } from './routes/play.balasaurdle'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as NightCodeRouteImport } from './routes/night.$code'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
+import { Route as DevArcadeRouteImport } from './routes/dev.arcade'
 import { Route as BestSlugRouteImport } from './routes/best.$slug'
 import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
 import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
@@ -255,6 +256,11 @@ const MovieIdRoute = MovieIdRouteImport.update({
   path: '/movie/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevArcadeRoute = DevArcadeRouteImport.update({
+  id: '/dev/arcade',
+  path: '/dev/arcade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BestSlugRoute = BestSlugRouteImport.update({
   id: '/best/$slug',
   path: '/best/$slug',
@@ -301,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
+  '/dev/arcade': typeof DevArcadeRoute
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByTo {
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
+  '/dev/arcade': typeof DevArcadeRoute
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -394,6 +402,7 @@ export interface FileRoutesById {
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
+  '/dev/arcade': typeof DevArcadeRoute
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -442,6 +451,7 @@ export interface FileRouteTypes {
     | '/triage'
     | '/watched'
     | '/best/$slug'
+    | '/dev/arcade'
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
@@ -488,6 +498,7 @@ export interface FileRouteTypes {
     | '/triage'
     | '/watched'
     | '/best/$slug'
+    | '/dev/arcade'
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
@@ -534,6 +545,7 @@ export interface FileRouteTypes {
     | '/triage'
     | '/watched'
     | '/best/$slug'
+    | '/dev/arcade'
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
@@ -581,6 +593,7 @@ export interface RootRouteChildren {
   TriageRoute: typeof TriageRoute
   WatchedRoute: typeof WatchedRoute
   BestSlugRoute: typeof BestSlugRoute
+  DevArcadeRoute: typeof DevArcadeRoute
   MovieIdRoute: typeof MovieIdRoute
   NightCodeRoute: typeof NightCodeRoute
   PersonIdRoute: typeof PersonIdRoute
@@ -886,6 +899,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MovieIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/arcade': {
+      id: '/dev/arcade'
+      path: '/dev/arcade'
+      fullPath: '/dev/arcade'
+      preLoaderRoute: typeof DevArcadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/best/$slug': {
       id: '/best/$slug'
       path: '/best/$slug'
@@ -942,6 +962,7 @@ const rootRouteChildren: RootRouteChildren = {
   TriageRoute: TriageRoute,
   WatchedRoute: WatchedRoute,
   BestSlugRoute: BestSlugRoute,
+  DevArcadeRoute: DevArcadeRoute,
   MovieIdRoute: MovieIdRoute,
   NightCodeRoute: NightCodeRoute,
   PersonIdRoute: PersonIdRoute,

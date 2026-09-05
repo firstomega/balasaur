@@ -1,78 +1,130 @@
-// Share text builders, one per game, Wordle-convention like shareText in
-// src/lib/daily.ts: a result line, an emoji grid line, then the game's URL.
-// Balasaurdle's own builder stays in daily.ts; it is not duplicated here.
+// Share text builders, one per game, Wordle-convention: a result line that
+// opens with the game's glyph and the day number, a square grid, then the
+// game's URL. Every game shares the same shape so two friends can tell at a
+// glance that they played the same board.
 
 import { GAMES } from "./games";
 import type { GameSlug } from "./types";
 
-function urlLine(slug: GameSlug): string {
-  return `balasaur.com${GAMES[slug].path}`;
+/** The leading glyph per game. The emoji palette is the game's identity in
+ *  a group chat, the way Framed leads with a camera. */
+export const SHARE_GLYPH: Record<GameSlug, string> = {
+  balasaurdle: "🎬",
+  "poster-reveal": "🖼️",
+  "quote-match": "💬",
+  taglines: "🎞️",
+  "casting-call": "🎭",
+  "link-up": "🔗",
+  timeline: "📅",
+  screening: "🎟️",
+  emoji: "🍿",
+  "speed-sort": "⏱️",
+  "sequel-or-fake": "🎲",
+};
+
+export const SQUARE = {
+  right: "🟩",
+  wrong: "🟥",
+  unused: "⬛",
+  over: "🟨",
+} as const;
+
+/** One square per result in order, then unused squares up to the board size. */
+export function squares(results: boolean[], total: number = results.length): string {
+  const row = results.map((r) => (r ? SQUARE.right : SQUARE.wrong)).join("");
+  return row + SQUARE.unused.repeat(Math.max(0, total - results.length));
 }
 
-/** Green square per hit, red per miss, in a fixed-size board. */
+/** Green square per hit, red per miss, in a fixed-size board with no order. */
 function boardSquares(hits: number, total: number): string {
-  return "🟩".repeat(hits) + "🟥".repeat(total - hits);
-}
-
-/** Green square per result in order. */
-function orderedSquares(results: boolean[]): string {
-  return results.map((r) => (r ? "🟩" : "🟥")).join("");
+  return SQUARE.right.repeat(hits) + SQUARE.wrong.repeat(total - hits);
 }
 
 /** Open-ended runs: up to ten squares, then a plain count. Zero is one red. */
-function streakSquares(n: number): string {
-  if (n <= 0) return "🟥";
-  return "🟩".repeat(Math.min(n, 10)) + (n > 10 ? ` +${n - 10}` : "");
+function countSquares(n: number): string {
+  if (n <= 0) return SQUARE.wrong;
+  return SQUARE.right.repeat(Math.min(n, 10)) + (n > 10 ? ` +${n - 10}` : "");
 }
 
-export function shareTaglines(o: { matches: number; clean: boolean }): string {
+/** Guess-count games: reds for the misses, one green on the solve, unused
+ *  squares to six so the grid shows how much room was left. */
+function guessSquares(guesses: number, won: boolean, max = 6): string {
+  if (!won) return SQUARE.wrong.repeat(max);
+  return SQUARE.wrong.repeat(guesses - 1) + SQUARE.right + SQUARE.unused.repeat(max - guesses);
+}
+
+function build(slug: GameSlug, day: number, result: string, grid: string): string {
+  return `${SHARE_GLYPH[slug]} ${GAMES[slug].name} #${day} ${result}\n${grid}\nbalasaur.com${GAMES[slug].path}`;
+}
+
+export function shareBalasaurdle(o: {
+  day: number;
+  guesses: number;
+  won: boolean;
+  hints?: number;
+}): string {
+  const hints = o.hints ?? 0;
+  const score = o.won ? `${o.guesses}/6` : "X/6";
+  const hintTag = hints > 0 ? ` (${hints} hint${hints === 1 ? "" : "s"})` : "";
+  return build("balasaurdle", o.day, `${score}${hintTag}`, guessSquares(o.guesses, o.won));
+}
+
+export function sharePosterReveal(o: { day: number; guesses: number; won: boolean }): string {
+  const score = o.won ? `${o.guesses}/6` : "X/6";
+  return build("poster-reveal", o.day, score, guessSquares(o.guesses, o.won));
+}
+
+export function shareQuoteMatch(o: { day: number; matches: number; clean: boolean }): string {
   const cleanTag = o.matches === 5 && o.clean ? " clean" : "";
-  return `Tagline Roulette ${o.matches}/5${cleanTag}\n${boardSquares(o.matches, 5)}\n${urlLine("taglines")}`;
+  return build("quote-match", o.day, `${o.matches}/5${cleanTag}`, boardSquares(o.matches, 5));
 }
 
-export function shareQuoteMatch(o: { matches: number; clean: boolean }): string {
+export function shareTaglines(o: { day: number; matches: number; clean: boolean }): string {
   const cleanTag = o.matches === 5 && o.clean ? " clean" : "";
-  return `Quote Match ${o.matches}/5${cleanTag}\n${boardSquares(o.matches, 5)}\n${urlLine("quote-match")}`;
+  return build("taglines", o.day, `${o.matches}/5${cleanTag}`, boardSquares(o.matches, 5));
 }
 
-export function shareCastingCall(o: { streak: number }): string {
-  return `Casting Call ${o.streak} right\n${streakSquares(o.streak)}\n${urlLine("casting-call")}`;
+/** One square per round in order, so a miss shows where it happened. */
+export function shareCastingCall(o: { day: number; results: boolean[] }): string {
+  const right = o.results.filter(Boolean).length;
+  return build("casting-call", o.day, `${right}/${o.results.length}`, squares(o.results));
 }
 
-export function shareLinkUp(o: { solved: boolean; steps: number; par: number }): string {
-  if (!o.solved) {
-    return `Link Up X, par ${o.par}\n🟥\n${urlLine("link-up")}`;
-  }
-  const grid = "🟩".repeat(Math.min(o.steps, o.par)) + "🟨".repeat(Math.max(0, o.steps - o.par));
-  return `Link Up: done in ${o.steps}, par ${o.par}\n${grid}\n${urlLine("link-up")}`;
+export function shareLinkUp(o: {
+  day: number;
+  solved: boolean;
+  steps: number;
+  par: number;
+}): string {
+  if (!o.solved) return build("link-up", o.day, `X, par ${o.par}`, SQUARE.wrong);
+  const grid =
+    SQUARE.right.repeat(Math.min(o.steps, o.par)) +
+    SQUARE.over.repeat(Math.max(0, o.steps - o.par));
+  return build("link-up", o.day, `done in ${o.steps}, par ${o.par}`, grid);
 }
 
-export function shareTimeline(o: { slots: boolean[] }): string {
-  const correct = o.slots.filter(Boolean).length;
-  return `Timeline ${correct}/5\n${orderedSquares(o.slots)}\n${urlLine("timeline")}`;
+export function shareTimeline(o: { day: number; slots: boolean[] }): string {
+  const right = o.slots.filter(Boolean).length;
+  return build("timeline", o.day, `${right}/5`, squares(o.slots, 5));
 }
 
 export function shareScreening(o: { day: number; answers: boolean[] }): string {
-  const correct = o.answers.filter(Boolean).length;
-  return `The 8PM Screening #${o.day} ${correct}/10\n${orderedSquares(o.answers)}\n${urlLine("screening")}`;
+  const right = o.answers.filter(Boolean).length;
+  return build("screening", o.day, `${right}/10`, squares(o.answers, 10));
 }
 
-export function shareEmoji(o: { results: boolean[] }): string {
+export function shareEmoji(o: { day: number; results: boolean[] }): string {
   const solved = o.results.filter(Boolean).length;
-  return `Emoji Plots ${solved}/${o.results.length}\n${orderedSquares(o.results)}\n${urlLine("emoji")}`;
+  return build("emoji", o.day, `${solved}/${o.results.length}`, squares(o.results));
 }
 
 export function shareSpeedSort(o: { day: number; sorted: number; missed: number }): string {
   const missTag = o.missed > 0 ? `, ${o.missed} missed` : "";
-  return `Speed Sort #${o.day} ${o.sorted} in 60s${missTag}\n${streakSquares(o.sorted)}\n${urlLine("speed-sort")}`;
+  return build("speed-sort", o.day, `${o.sorted} in 60s${missTag}`, countSquares(o.sorted));
 }
 
-export function shareSequelOrFake(o: { streak: number }): string {
-  return `Sequel or Fake ${o.streak} straight\n${streakSquares(o.streak)}\n${urlLine("sequel-or-fake")}`;
-}
-
-export function sharePosterReveal(o: { day: number; guesses: number; won: boolean }): string {
-  const squares = o.won ? "🟥".repeat(o.guesses - 1) + "🟩" : "🟥".repeat(6);
-  const score = o.won ? `${o.guesses}/6` : "X/6";
-  return `Poster Reveal #${o.day} ${score}\n${squares}\n${urlLine("poster-reveal")}`;
+/** One square per call in order, ten calls a day. */
+export function shareSequelOrFake(o: { day: number; results: boolean[] }): string {
+  const right = o.results.filter(Boolean).length;
+  return build("sequel-or-fake", o.day, `${right}/${o.results.length}`, squares(o.results));
 }

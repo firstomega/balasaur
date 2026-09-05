@@ -50,11 +50,17 @@ describe("balasaurdlePayout", () => {
     expectReconstructable(lines);
     expect(totalComets(lines)).toBe(6);
   });
-  it("floors a hint-heavy last-guess win at 2", () => {
+  it("floors a hint-heavy last-guess win at 2 with a single Solved line", () => {
     const lines = balasaurdlePayout({ guesses: 6, won: true, hints: 3 });
     expectReconstructable(lines);
     expect(totalComets(lines)).toBe(2);
-    expect(lines.some((l) => l.label === "Minimum payout")).toBe(true);
+    expect(JSON.stringify(lines)).toBe(JSON.stringify([{ label: "Solved", value: 2 }]));
+  });
+  it("keeps the hint line when the total stays above the floor", () => {
+    const lines = balasaurdlePayout({ guesses: 2, won: true, hints: 1 });
+    expectReconstructable(lines);
+    expect(totalComets(lines)).toBe(8);
+    expect(lines.map((l) => l.label).join(",")).toBe("Solved,Guesses to spare,Hints");
   });
 });
 
@@ -106,14 +112,12 @@ describe("linkUpPayout", () => {
   it("pays nothing unsolved", () => {
     expect(totalComets(linkUpPayout({ solved: false, steps: 3, par: 4 }))).toBe(0);
   });
-  it("pays the base at par and over par", () => {
+  it("pays 8 flat at par, over par, and under par", () => {
     expect(totalComets(linkUpPayout({ solved: true, steps: 4, par: 4 }))).toBe(8);
     expect(totalComets(linkUpPayout({ solved: true, steps: 6, par: 4 }))).toBe(8);
-  });
-  it("pays 4 more per step under par", () => {
-    const lines = linkUpPayout({ solved: true, steps: 2, par: 4 });
-    expectReconstructable(lines);
-    expect(totalComets(lines)).toBe(16);
+    expect(JSON.stringify(linkUpPayout({ solved: true, steps: 2, par: 4 }))).toBe(
+      JSON.stringify([{ label: "Chain complete", value: 8 }]),
+    );
   });
 });
 

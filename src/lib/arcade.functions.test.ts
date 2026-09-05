@@ -6,6 +6,7 @@ import {
   buildCastingPins,
   buildLinkChain,
   buildSequelIds,
+  castWithRoles,
   containsShortTitle,
   daySeed,
   decodeMediaPin,
@@ -14,6 +15,7 @@ import {
   eraBandFor,
   impostorFromSource,
   linkDistance,
+  parseScreeningPayload,
   pickBalanced,
   pickDistinctIndexes,
   pickDistinctYears,
@@ -203,6 +205,48 @@ describe("actorNames", () => {
       ),
     ).toBe(json(["Daniel Radcliffe"]));
     expect(json(actorNames(null))).toBe(json([]));
+  });
+});
+
+describe("castWithRoles", () => {
+  it("keeps the part played, drops crew, and nulls a blank role", () => {
+    expect(
+      json(
+        castWithRoles([
+          { name: "Al Pacino", role: "Lt. Vincent Hanna" },
+          { name: "Robert De Niro", role: "  " },
+          { name: "Michael Mann", role: "Director" },
+        ]),
+      ),
+    ).toBe(
+      json([
+        { name: "Al Pacino", role: "Lt. Vincent Hanna" },
+        { name: "Robert De Niro", role: null },
+      ]),
+    );
+    expect(json(castWithRoles(undefined))).toBe(json([]));
+  });
+});
+
+describe("parseScreeningPayload", () => {
+  const good = { q: "Which film won 11 Oscars?", choices: ["Titanic", "Heat"], answer: 0 };
+
+  it("accepts a well-formed question and defaults the note", () => {
+    expect(json(parseScreeningPayload(good))).toBe(json({ ...good, note: "" }));
+    expect(parseScreeningPayload({ ...good, note: "Tied with Ben-Hur." })!.note).toBe(
+      "Tied with Ben-Hur.",
+    );
+  });
+
+  it("rejects a missing question, thin choices, or an answer off the board", () => {
+    expect(parseScreeningPayload(null)).toBe(null);
+    expect(parseScreeningPayload({ ...good, q: "" })).toBe(null);
+    expect(parseScreeningPayload({ ...good, choices: ["Titanic"] })).toBe(null);
+    expect(parseScreeningPayload({ ...good, choices: ["Titanic", 7] })).toBe(null);
+    expect(parseScreeningPayload({ ...good, answer: 2 })).toBe(null);
+    expect(parseScreeningPayload({ ...good, answer: -1 })).toBe(null);
+    expect(parseScreeningPayload({ ...good, answer: "0" })).toBe(null);
+    expect(parseScreeningPayload({ ...good, answer: 0.5 })).toBe(null);
   });
 });
 

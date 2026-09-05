@@ -2,26 +2,37 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Search } from "lucide-react";
 import { searchTitles, type SearchHit } from "@/lib/catalog.functions";
+import { cn } from "@/lib/utils";
 
-// The title-guess combobox, extracted verbatim from Balasaurdle (the
-// GuessInput in the old src/routes/play.tsx) so every guessing game shares
-// one input: debounced catalog search, six hits, keyboard nav. The only
-// addition is the optional placeholder, which also labels the field.
+// The title-guess combobox every guessing game shares: debounced catalog
+// search, six hits, keyboard nav. It paints its focus ring in the game hue
+// (var(--game), set by GameShell) and shakes on a miss: the route bumps the
+// `shake` counter after a wrong guess and the box shudders once, flashes its
+// border red, and takes focus back so the next guess can be typed at once.
+// Reduced motion: the shake is off (styles.css), the red flash still shows.
 
 export function GuessBox({
   onGuess,
   disabled,
   placeholder = "Guess a movie or show",
+  shake = 0,
+  autoFocus = false,
 }: {
   onGuess: (hit: SearchHit) => void;
   disabled: boolean;
   placeholder?: string;
+  /** A counter. Every increment plays one shake. 0 never shakes. */
+  shake?: number;
+  autoFocus?: boolean;
 }) {
   const search = useServerFn(searchTitles);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [active, setActive] = useState(0);
+  const [missed, setMissed] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const shakeSeen = useRef(shake);
 
   useEffect(() => {
     const t = q.trim();
@@ -47,6 +58,28 @@ export function GuessBox({
     };
   }, [q, search]);
 
+  // A miss: restart the shake by removing the class, forcing a reflow, and
+  // adding it back, so two misses in a row both shudder. Focus returns to
+  // the field so the next guess needs no tap.
+  useEffect(() => {
+    if (shake === shakeSeen.current) return;
+    shakeSeen.current = shake;
+    if (shake <= 0) return;
+    const el = boxRef.current;
+    if (el) {
+      el.classList.remove("arcade-shake");
+      void el.offsetWidth;
+      el.classList.add("arcade-shake");
+    }
+    setMissed(true);
+    const t = setTimeout(() => {
+      setMissed(false);
+      el?.classList.remove("arcade-shake");
+    }, 450);
+    if (!disabled) inputRef.current?.focus();
+    return () => clearTimeout(t);
+  }, [shake, disabled]);
+
   function pick(hit: SearchHit) {
     setQ("");
     setHits([]);
@@ -57,10 +90,11 @@ export function GuessBox({
     <div ref={boxRef} className="relative">
       <label className="relative block">
         <Search
-          className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-dim"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim"
           aria-hidden="true"
         />
         <input
+          ref={inputRef}
           type="search"
           role="combobox"
           aria-expanded={hits.length > 0}
@@ -69,6 +103,7 @@ export function GuessBox({
           aria-activedescendant={hits.length > 0 ? `guess-opt-${active}` : undefined}
           value={q}
           disabled={disabled}
+          autoFocus={autoFocus}
           onChange={(e) => setQ(e.target.value)}
           onBlur={() => setTimeout(() => setHits([]), 150)}
           onKeyDown={(e) => {
@@ -89,7 +124,11 @@ export function GuessBox({
           }}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="h-10 w-full rounded-[5px] border border-border bg-panel pl-8 pr-3 font-mono text-[13px] text-foreground placeholder:text-text-dim focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50"
+          className={cn(
+            "h-12 w-full rounded-[6px] border bg-panel pl-10 pr-3 text-[15px] text-text-bright placeholder:text-text-dim focus:outline-none disabled:opacity-50",
+            "focus:border-[var(--game,var(--primary))] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--game,var(--primary))_35%,transparent)]",
+            missed ? "border-destructive" : "border-border-strong",
+          )}
         />
       </label>
       {hits.length > 0 && (
@@ -97,7 +136,7 @@ export function GuessBox({
           id="guess-listbox"
           role="listbox"
           aria-label="Matches"
-          className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 overflow-hidden rounded-[5px] border border-border bg-panel shadow-lg"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 overflow-hidden rounded-[6px] border border-border bg-panel shadow-lg"
         >
           {hits.map((h, i) => (
             <li key={h.id} id={`guess-opt-${i}`} role="option" aria-selected={i === active}>
@@ -105,13 +144,15 @@ export function GuessBox({
                 type="button"
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(h)}
-                className={
-                  "flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-[13px] " +
-                  (i === active ? "bg-background text-text-bright" : "text-text")
-                }
+                className={cn(
+                  "flex w-full items-baseline justify-between gap-3 px-3 py-2.5 text-left text-[14px]",
+                  i === active
+                    ? "bg-[color-mix(in_oklab,var(--game,var(--primary))_18%,var(--color-panel))] text-text-bright"
+                    : "text-text",
+                )}
               >
                 <span className="truncate">{h.title}</span>
-                <span className="shrink-0 font-mono text-[12px] text-text-dim">
+                <span className="shrink-0 font-mono text-[12px] tabular-nums text-text-dim">
                   {h.year || h.mediaType}
                 </span>
               </button>

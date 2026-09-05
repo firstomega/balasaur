@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import {
   leaksTitle,
+  loadDaily,
+  saveDaily,
   titlePattern,
   DAILY_EPOCH_UTC,
   dayNumber,
@@ -133,5 +135,74 @@ describe("redactTitle stopwords", () => {
     const out = redactTitle("The show must go on for Truman", "The Truman Show");
     expect(out.startsWith("The ")).toBe(true);
     expect(out).not.toContain("Truman");
+  });
+});
+
+describe("loadDaily guesses", () => {
+  const store = new Map<string, string>();
+  const g = globalThis as { window?: unknown };
+  /** A bare window with an in-memory localStorage, fresh per test. */
+  const useFakeWindow = () => {
+    store.clear();
+    g.window = {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+      },
+    };
+  };
+  const json = (v: unknown) => JSON.stringify(v);
+
+  it("keeps each guess with its title across a reload", () => {
+    useFakeWindow();
+    const s = loadDaily(18);
+    saveDaily({
+      ...s,
+      guessedIds: ["movie-1", "movie-2"],
+      guesses: [
+        { id: "movie-1", title: "Blade Runner" },
+        { id: "movie-2", title: "Dark City" },
+      ],
+    });
+    const back = loadDaily(18);
+    expect(json(back.guesses.map((x) => x.title))).toBe(json(["Blade Runner", "Dark City"]));
+    expect(json(back.guessedIds)).toBe(json(["movie-1", "movie-2"]));
+    delete g.window;
+  });
+
+  it("rebuilds blank titles from a blob written before titles were kept", () => {
+    useFakeWindow();
+    store.set(
+      "balasaur:daily",
+      json({ day: 18, guessedIds: ["movie-1", "movie-2"], solved: false, gaveUp: false }),
+    );
+    const s = loadDaily(18);
+    expect(json(s.guesses)).toBe(
+      json([
+        { id: "movie-1", title: "" },
+        { id: "movie-2", title: "" },
+      ]),
+    );
+    expect(s.hintsUsed).toBe(0);
+    delete g.window;
+  });
+
+  it("starts a new day with no guesses", () => {
+    useFakeWindow();
+    store.set(
+      "balasaur:daily",
+      json({
+        day: 17,
+        guessedIds: ["movie-1"],
+        guesses: [{ id: "movie-1", title: "Heat" }],
+        solved: true,
+        streak: 3,
+      }),
+    );
+    const s = loadDaily(18);
+    expect(json(s.guesses)).toBe("[]");
+    expect(json(s.guessedIds)).toBe("[]");
+    expect(s.streak).toBe(3);
+    delete g.window;
   });
 });
