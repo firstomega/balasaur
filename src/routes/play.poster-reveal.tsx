@@ -71,7 +71,7 @@ export const Route = createFileRoute("/play/poster-reveal")({
         description:
           "The poster starts as a blur and sharpens with every wrong guess. Name the movie or show in six guesses before it comes into focus. Same poster for everyone, new at midnight.",
         url,
-        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.png`,
+        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

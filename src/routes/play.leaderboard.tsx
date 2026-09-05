@@ -27,7 +27,7 @@ export const Route = createFileRoute("/play/leaderboard")({
           title: "Arcade Leaderboard | Balasaur",
           description: "This week's comet standings across every game in the arcade.",
           url,
-          image: `${SITE_ORIGIN}/og-play.png`,
+          image: `${SITE_ORIGIN}/og-play.jpg`,
         }),
         noindexMeta(),
       ],

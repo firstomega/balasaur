@@ -64,7 +64,7 @@ export const Route = createFileRoute("/play/quote-match")({
         description:
           "Five famous lines, five movies, one board a day. Match each quote to the movie it comes from. May the Force be with you. You know where that one goes.",
         url,
-        image: `${SITE_ORIGIN}/og-play-quote-match.png`,
+        image: `${SITE_ORIGIN}/og-play-quote-match.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

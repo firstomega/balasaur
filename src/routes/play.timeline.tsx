@@ -65,7 +65,7 @@ export const Route = createFileRoute("/play/timeline")({
         description:
           "Five titles, one correct order, thirty seconds. Place each movie by release year and find out which decade you have all wrong. Same five for everyone, new at midnight.",
         url,
-        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.png`,
+        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

@@ -63,7 +63,7 @@ export const Route = createFileRoute("/play/link-up")({
         description:
           "Two actors, one chain of movies between them. Pick the film that features the actor in hand until the chain closes, in as few picks as par. Same pair for everyone, new at midnight.",
         url,
-        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.png`,
+        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

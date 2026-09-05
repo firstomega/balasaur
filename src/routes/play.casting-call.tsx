@@ -77,7 +77,7 @@ export const Route = createFileRoute("/play/casting-call")({
         description:
           "One movie, four actors, one was never in it. Five seconds to call each of eight movies. Right calls build a combo. A new eight every day.",
         url,
-        image: `${SITE_ORIGIN}/og-play-casting-call.png`,
+        image: `${SITE_ORIGIN}/og-play-casting-call.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],

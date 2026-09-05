@@ -84,7 +84,7 @@ export const Route = createFileRoute("/play/balasaurdle")({
         description:
           "One title a day, six clues. How few do you need? The same clues for everyone, new at midnight.",
         url,
-        image: `${SITE_ORIGIN}/og-play-balasaurdle.png`,
+        image: `${SITE_ORIGIN}/og-play-balasaurdle.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd("Balasaurdle", url))],

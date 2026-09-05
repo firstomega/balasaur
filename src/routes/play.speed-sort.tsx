@@ -69,7 +69,7 @@ export const Route = createFileRoute("/play/speed-sort")({
         description:
           "Two bins, sixty seconds, thirty titles. Sort each movie or show into the right bin before the clock runs out. Same deck for everyone, new bins at midnight.",
         url,
-        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.png`,
+        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.jpg`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],
