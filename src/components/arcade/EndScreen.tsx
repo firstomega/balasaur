@@ -18,7 +18,7 @@ import { CometBurst } from "./CometBurst";
 import { CometMark } from "./CometChip";
 import { LeaderboardSnippet, type SnippetRow } from "./LeaderboardSnippet";
 import { NextCountdown } from "./NextCountdown";
-import { ResultGrid } from "./ResultGrid";
+import { ResultGrid, gridCells } from "./ResultGrid";
 import { StatsBlock, type Distribution, type StatsNumbers } from "./StatsBlock";
 
 // The shared end-of-run panel, sequenced on a 400ms beat: the tier word in
@@ -49,6 +49,9 @@ export interface EndScreenContent {
   /** The round's answers, rendered as cards linking to detail pages. */
   answers?: MediaItem[];
   answersLabel?: string;
+  /** One-answer games: the line under the title, e.g. the clue that
+   *  cracked it ("Clue 4: Won 4 Oscars."). */
+  answerNote?: string;
   leaderboard?: { rows: SnippetRow[]; you?: SnippetRow | null; label?: string };
   /** A run that paid nothing. No ledger; lostHint says what would have. */
   lost?: boolean;
@@ -58,6 +61,28 @@ export interface EndScreenContent {
   firstComets?: boolean;
   /** Routes that render their own More games block pass false. */
   moreGames?: boolean;
+}
+
+/** Split the share grid into its squares and the count it could not fit.
+ *  Speed Sort's row ends " +11" past ten squares; on screen that number must
+ *  not sit beside the comet numeral, so it becomes its own line below.
+ *  Pure, tested. */
+export function splitGrid(rows: string[]): { squares: string[]; overflow: string | null } {
+  const squares: string[] = [];
+  let overflow: string | null = null;
+  for (const row of rows) {
+    let kept = "";
+    for (const cell of gridCells(row)) {
+      if (cell.kind === "square") {
+        kept += { green: "🟩", red: "🟥", black: "⬛", yellow: "🟨" }[cell.tone];
+      } else {
+        const m = cell.text.match(/^\+(\d+)$/);
+        overflow = m ? `+${m[1]} more` : cell.text;
+      }
+    }
+    squares.push(kept);
+  }
+  return { squares, overflow };
 }
 
 /** The arithmetic as one line: "4 matches x 2, clean board +5". */
@@ -115,6 +140,7 @@ export function EndScreen({
   shareImage,
   answers,
   answersLabel = "The answers",
+  answerNote,
   leaderboard,
   lost = false,
   lostHint,
@@ -185,6 +211,7 @@ export function EndScreen({
   };
 
   const others = ENABLED_SLUGS.filter((s) => s !== game.slug);
+  const gridParts = splitGrid(grid ?? []);
 
   return (
     <div className="mt-6">
@@ -233,7 +260,14 @@ export function EndScreen({
       )}
 
       {grid && grid.length > 0 && shown(STEP.grid) && (
-        <ResultGrid rows={grid} className={cn(ENTER, "mt-5")} />
+        <div className={cn(ENTER, "mt-5")}>
+          <ResultGrid rows={gridParts.squares} />
+          {gridParts.overflow && (
+            <p className="mt-1.5 font-mono text-[11.5px] tabular-nums text-text-dim">
+              {gridParts.overflow}
+            </p>
+          )}
+        </div>
       )}
 
       {stats && shown(STEP.stats) && (
@@ -249,7 +283,7 @@ export function EndScreen({
           <button
             type="button"
             onClick={share}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--game,var(--primary))] px-5 py-2.5 text-[14px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] hover:brightness-110"
+            className="arcade-focus inline-flex items-center gap-2 rounded-full bg-[var(--game,var(--primary))] px-5 py-2.5 text-[14px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] hover:brightness-110"
           >
             {copied ? (
               <Check className="h-4 w-4" aria-hidden="true" />
@@ -304,7 +338,7 @@ export function EndScreen({
             {answersLabel}
           </p>
           {answers.length === 1 ? (
-            <AnswerRow item={answers[0]} />
+            <AnswerRow item={answers[0]} note={answerNote} />
           ) : (
             <div className="relative">
               <ScrollRail className="gap-2.5">
@@ -349,10 +383,11 @@ export function EndScreen({
 }
 
 // A one-answer game (Balasaurdle, Poster Reveal, Emoji Plots) shows the
-// title as one row: the poster at 200px, then the name, the year and the
-// Balasaur Score beside it. A lone 130px card left the rest of the column
-// empty; a row uses the width the column already has.
-function AnswerRow({ item }: { item: MediaItem }) {
+// title as one row: the poster at 200px, then the name, the year, the
+// Balasaur Score and the route's note (the clue that cracked it) centered
+// on the poster's height beside it. A lone 130px card left the rest of the
+// column empty; a row uses the width the column already has.
+function AnswerRow({ item, note }: { item: MediaItem; note?: string }) {
   const rawId = item.id.replace(/^(movie|tv)-/, "");
   const linkable = (item.mediaType === "movie" || item.mediaType === "tv") && /^\d+$/.test(rawId);
   const slug = mediaSlug(rawId, item.title);
@@ -387,7 +422,7 @@ function AnswerRow({ item }: { item: MediaItem }) {
     </span>
   );
   return (
-    <div className="flex items-start gap-4 sm:gap-5">
+    <div className="flex items-center gap-4 sm:gap-5">
       <div className="w-[150px] shrink-0 sm:w-[200px]">
         {linkable ? (
           <Link
@@ -402,7 +437,7 @@ function AnswerRow({ item }: { item: MediaItem }) {
           art
         )}
       </div>
-      <div className="min-w-0 pt-1">
+      <div className="min-w-0">
         {linkable ? (
           <Link
             to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
@@ -420,6 +455,7 @@ function AnswerRow({ item }: { item: MediaItem }) {
             <ScoreBadge score={score} size="md" />
           </div>
         )}
+        {note && <p className="mt-3 text-[14px] leading-snug text-text-muted">{note}</p>}
       </div>
     </div>
   );

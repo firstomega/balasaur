@@ -40,8 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       const uid = s?.user?.id ?? null;
+      // The first event after mount reports the session that was already in
+      // storage. It is the baseline, not a change: every query keyed on the
+      // user starts once `user` is set, and the shared ones do not depend on
+      // who is signed in. Invalidating here cancelled and restarted every
+      // fetch the page had just started, on every load, for anyone signed
+      // in, right on top of hydration.
+      if (event === "INITIAL_SESSION") {
+        lastUserId.current = uid;
+        return;
+      }
       // Only invalidate when who's signed in actually changes (sign in / out /
-      // switch user) or the user record was updated — not on token refresh.
+      // switch user) or the user record was updated, not on token refresh.
       if (uid !== lastUserId.current || event === "USER_UPDATED") {
         lastUserId.current = uid;
         void qc.invalidateQueries();

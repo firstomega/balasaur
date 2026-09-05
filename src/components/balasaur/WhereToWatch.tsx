@@ -24,12 +24,11 @@ const REGION_OPTIONS: { code: string; label: string }[] = [
 
 const STORAGE_KEY = "balasaur:region";
 
-function getInitialRegion(fallback: string): string {
-  if (typeof window === "undefined") return fallback;
+function storedRegion(): string | null {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) || fallback;
+    return window.localStorage.getItem(STORAGE_KEY);
   } catch {
-    return fallback;
+    return null;
   }
 }
 
@@ -101,15 +100,26 @@ function Group({
 export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
   const providersAll = detail.providersAll;
   const defaultRegion = detail.providers?.region ?? "US";
-  const [region, setRegion] = useState<string>(() => getInitialRegion(defaultRegion));
+  // The server renders the title's own default region for every visitor.
+  // The remembered region is personal, so it applies after mount; read during
+  // render it made the first client render disagree with the HTML. Only a
+  // region the visitor picked is stored: writing the default on every mount
+  // left one title's default behind to collide with the next title's.
+  const [region, setRegion] = useState<string>(defaultRegion);
 
   useEffect(() => {
+    const stored = storedRegion();
+    if (stored && stored !== defaultRegion) setRegion(stored);
+  }, [defaultRegion]);
+
+  const choose = (next: string) => {
+    setRegion(next);
     try {
-      window.localStorage.setItem(STORAGE_KEY, region);
+      window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       /* ignore */
     }
-  }, [region]);
+  };
 
   if (!detail.providers && !providersAll) return null;
 
@@ -133,7 +143,7 @@ export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
         <MicroLabel>Where to watch</MicroLabel>
         <select
           value={region}
-          onChange={(e) => setRegion(e.target.value)}
+          onChange={(e) => choose(e.target.value)}
           aria-label="Region"
           className="h-6 rounded-[4px] border border-border bg-background px-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright focus:border-border-strong focus:outline-none"
         >

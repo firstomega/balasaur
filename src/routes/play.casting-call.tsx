@@ -15,7 +15,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { castingCallPayout, totalComets } from "@/lib/arcade/comets";
 import { shareCastingCall } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -160,12 +160,6 @@ function MoreGames() {
   );
 }
 
-function tierFor(correct: number): string | undefined {
-  if (correct === ROUNDS) return "Perfect eight";
-  if (correct >= ROUNDS - 2) return "Close";
-  return undefined;
-}
-
 function CastingCallPage() {
   const { round, yesterday } = Route.useLoaderData();
   const api = useArcadeGame();
@@ -298,7 +292,7 @@ function CastingCallPage() {
     const results = resultsRef.current;
     const correct = results.filter(Boolean).length;
     const text = shareCastingCall({ day: round.dayKey, results });
-    const tier = tierFor(correct);
+    const tier = correct === 0 ? undefined : tierFor(GAME.slug, correct / ROUNDS);
     const headline = `${correct} of ${ROUNDS} right`;
     return {
       tier,

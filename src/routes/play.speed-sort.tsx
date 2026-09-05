@@ -11,7 +11,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { speedSortPayout, totalComets } from "@/lib/arcade/comets";
 import { shareSpeedSort } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, hueVars } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, hueVars, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -172,13 +172,6 @@ function MoreGames() {
   );
 }
 
-function tierFor(sorted: number, missed: number, deck: number): string | undefined {
-  if (sorted === deck && missed === 0) return "Whole deck, clean";
-  if (sorted > 0 && missed === 0) return "Clean minute";
-  if (sorted === deck) return "Whole deck";
-  return undefined;
-}
-
 function SpeedSortPage() {
   const { round, yesterday } = Route.useLoaderData() as {
     round: SpeedSortRound | null;
@@ -321,7 +314,9 @@ function SpeedSortPage() {
         : missed === 0
           ? `${sorted} sorted, none missed`
           : `${sorted} sorted, ${missed} missed`;
-    const tier = tierFor(sorted, missed, round.titles.length);
+    // Accuracy over the cards seen: 21 right of 24 is Sharp however many
+    // were left in the deck.
+    const tier = sorted === 0 ? undefined : tierFor(GAME.slug, sorted / (sorted + missed));
     return {
       tier,
       headline,

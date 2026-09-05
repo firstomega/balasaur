@@ -195,11 +195,20 @@
 }
 
 /* Keyboard focus: one consistent, visible ring everywhere (the browser default
-   is nearly invisible on the dark panels). Mouse clicks don't trigger it. */
-:focus-visible {
+   is nearly invisible on the dark panels). Mouse clicks don't trigger it.
+   This sits outside every cascade layer on purpose, so it beats any utility;
+   the one exception is `.arcade-focus`, which a hue-colored control (the
+   Play pill, the Share button) wears so its ring follows the control's own
+   radius in the game's hue instead of a site-blue rectangle. */
+:focus-visible:not(.arcade-focus) {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+.arcade-focus:focus-visible {
+  outline: 2px solid var(--game, var(--primary));
+  outline-offset: 3px;
 }
 
 /* Self-hosted webfonts (latin subset, variable weight). Served from our own

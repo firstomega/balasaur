@@ -255,9 +255,13 @@ export function MatchBoard({
                   {shake && <span aria-hidden="true" className="absolute inset-0 bg-warn/40" />}
                 </button>
               </div>
+              {/* Two lines at every width, the slot reserved so the row of
+                  five keeps one height; a title past two lines ends in an
+                  ellipsis, never a cut inside a word. The button's
+                  aria-label carries the full title. */}
               <p
                 className={cn(
-                  "mt-1 truncate text-center text-[10.5px] leading-tight text-text-muted sm:text-[12.5px]",
+                  "mt-1 line-clamp-2 min-h-[calc(2*1.2em)] text-center text-[10.5px] leading-[1.2] text-text-muted [text-wrap:balance] sm:text-[12.5px]",
                   spent && "text-text-dim",
                 )}
                 aria-hidden="true"

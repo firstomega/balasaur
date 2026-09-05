@@ -116,7 +116,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Emoji Plots",
     path: "/play/emoji",
     hue: "sun",
-    hook: "A whole movie in four emoji. Name it.",
+    hook: "A whole movie in emoji. Name it.",
     rule: "Five plots told in emoji. Name each title in three guesses.",
     payoutRule: "2 comets a solved plot, 1 more when the first guess lands.",
     minutes: "2 min",
@@ -160,19 +160,49 @@ export const HUB_SECTIONS: { title: string; slugs: GameSlug[] }[] = [
   { title: "Pair and order", slugs: ["link-up", "quote-match", "taglines", "timeline"] },
 ];
 
-/** The hook as it fits on a hub or rail tile: two lines at 13px in a
- *  138px column, no ellipsis. Games missing here use the registry hook
- *  unchanged; the game pages always use the registry hook. */
+/** The hook as it fits on a hub or rail tile: two lines at 13px in the
+ *  narrowest tile (129px of text at 390, 136px in the More games rail),
+ *  measured against the Archivo file. Games missing here use the registry
+ *  hook unchanged; the game pages always use the registry hook. Every entry
+ *  and every fallback stays at or under TILE_HOOK_MAX characters. */
 const TILE_HOOKS: Partial<Record<GameSlug, string>> = {
   "quote-match": "You know these lines. Prove it.",
+  taglines: "Five taglines. Five posters. Match them.",
   "casting-call": "Three were in it. One never was.",
+  "link-up": "Two actors, three movies. Link them.",
   timeline: "Which came first? Everyone is wrong.",
+  screening: "Ten questions. One board.",
   "speed-sort": "Sixty seconds. Two bins. Go.",
   "sequel-or-fake": "Titanic II is real. Which are not?",
 };
 
+/** The longest hook that still fits two lines on the narrowest tile. */
+export const TILE_HOOK_MAX = 40;
+
 export function tileHook(game: GameDef): string {
   return TILE_HOOKS[game.slug] ?? game.hook;
+}
+
+/** Games scored by how many guesses the solve took rather than by a
+ *  fraction of a board. Their tier is the count itself. */
+export const GUESS_COUNT_GAMES: ReadonlySet<GameSlug> = new Set(["balasaurdle", "poster-reveal"]);
+
+/** One tier vocabulary for every end screen, so 8 of 10 is the same word on
+ *  every game. `ratio` is right over possible, 0 to 1: matches of five,
+ *  questions of ten, slots of five, right sorts of cards seen. Guess-count
+ *  games pass the solve's guess count instead and get "Solved in N"; without
+ *  a count they fall through to the ladder. Callers decide whether a losing
+ *  run shows a tier at all. */
+export function tierFor(slug: GameSlug, ratio: number, guesses?: number): string {
+  if (GUESS_COUNT_GAMES.has(slug) && typeof guesses === "number" && guesses >= 1) {
+    return `Solved in ${Math.round(guesses)}`;
+  }
+  const r = Number.isFinite(ratio) ? Math.min(1, Math.max(0, ratio)) + 1e-9 : 0;
+  if (r >= 1) return "Perfect";
+  if (r >= 0.8) return "Sharp";
+  if (r >= 0.6) return "Solid";
+  if (r >= 0.4) return "Close";
+  return "Rough";
 }
 
 /** Flat hub order, derived from the sections so the two cannot disagree.

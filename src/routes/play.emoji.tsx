@@ -12,7 +12,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { emojiPayout, totalComets } from "@/lib/arcade/comets";
 import { shareEmoji } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,8 +39,8 @@ import type { MediaItem } from "@/types/media";
 const GAME = GAMES.emoji;
 const PUZZLES = 5;
 const MAX_GUESSES = 3;
-// The pack runs three to five emoji a plot (most are four), so this page
-// says "a few" where the registry's tile copy says four.
+// The pack runs three to five emoji a plot (most are four), so nothing on
+// this page names a count.
 const HOOK = "A whole movie in a few emoji. Name it.";
 const HOW_TO = [
   "A whole movie in a few emoji. Type the title; any movie or show in the catalog counts.",
@@ -160,12 +160,6 @@ const eqTitle = (a: string, b: string) => a.trim().toLowerCase() === b.trim().to
 interface PlotResult {
   solved: boolean;
   firstTry: boolean;
-}
-
-function tierFor(solved: number, firstTry: number): string | undefined {
-  if (solved === PUZZLES) return firstTry === PUZZLES ? "Five first guesses" : "All five";
-  if (solved >= PUZZLES - 1) return "Close";
-  return undefined;
 }
 
 function EmojiPage() {
@@ -294,9 +288,8 @@ function EmojiPage() {
     if (!round) return { headline: "", shareText: "" };
     const done = resultsRef.current;
     const solved = done.filter((r) => r.solved).length;
-    const firstTry = done.filter((r) => r.firstTry).length;
     const text = shareEmoji({ day: round.dayKey, results: done.map((r) => r.solved) });
-    const tier = tierFor(solved, firstTry);
+    const tier = solved === 0 ? undefined : tierFor(GAME.slug, solved / PUZZLES);
     const headline = `${solved} of ${PUZZLES} plots solved`;
     return {
       tier,

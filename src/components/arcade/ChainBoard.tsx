@@ -252,7 +252,8 @@ export function ChainBoard({
               {chain.length > 0 && stepBack("quiet")}
             </div>
             {/* Four columns across the path's width at every size. The
-                caption is one line, cut with an ellipsis, never split
+                caption runs two lines with the slot reserved, so a long
+                title ends in an ellipsis on the second line and is never cut
                 inside a word; the aria-label carries the full title. */}
             <div
               role="group"
@@ -295,7 +296,7 @@ export function ChainBoard({
                         </span>
                       )}
                     </span>
-                    <span className="mt-1.5 block truncate text-[12px] font-semibold leading-tight text-text-bright sm:text-[12.5px]">
+                    <span className="mt-1.5 line-clamp-2 min-h-[calc(2*1.2em)] text-[11px] font-semibold leading-[1.2] text-text-bright [text-wrap:balance] sm:text-[12.5px]">
                       {c.label}
                     </span>
                     {c.sub && (

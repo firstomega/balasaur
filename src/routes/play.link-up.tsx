@@ -11,7 +11,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { linkUpPayout, totalComets } from "@/lib/arcade/comets";
 import { shareLinkUp } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, hueVars } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, hueVars, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -294,7 +294,8 @@ function LinkUpPage() {
     if (!round) return { headline: "", shareText: "" };
     const text = shareLinkUp({ day: round.dayKey, solved: true, steps: picks, par: round.par });
     const headline = `Done in ${picks} pick${picks === 1 ? "" : "s"}, par ${round.par}`;
-    const tier = wrong === 0 ? "Par" : `${wrong} over par`;
+    // Par over picks: the share of picks that counted. On par is Perfect.
+    const tier = tierFor(GAME.slug, round.par / picks);
     return {
       tier,
       headline,
@@ -305,7 +306,7 @@ function LinkUpPage() {
       firstComets,
       moreGames: false,
     };
-  }, [round, picks, wrong, stats, firstComets]);
+  }, [round, picks, stats, firstComets]);
 
   const board = round ? (
     <ChainBoard

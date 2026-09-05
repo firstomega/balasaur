@@ -12,7 +12,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { screeningPayout, totalComets } from "@/lib/arcade/comets";
 import { shareScreening } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun, arcadeDayBoard } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -119,12 +119,6 @@ function MoreGames() {
       </Link>
     </section>
   );
-}
-
-function tierFor(correct: number): string | undefined {
-  if (correct === QUESTION_COUNT) return "Perfect ten";
-  if (correct >= 8) return "Sharp";
-  return undefined;
 }
 
 interface Verdict {
@@ -309,7 +303,7 @@ function ScreeningPage() {
     const correct = answers.filter(Boolean).length;
     const text = shareScreening({ day: set.dayKey, answers });
     const headline = `${correct} of ${QUESTION_COUNT} right`;
-    const tier = tierFor(correct);
+    const tier = correct === 0 ? undefined : tierFor(GAME.slug, correct / QUESTION_COUNT);
     return {
       tier,
       headline,

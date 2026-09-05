@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ledgerLine } from "./EndScreen";
+import { ledgerLine, splitGrid } from "./EndScreen";
 
 describe("ledgerLine", () => {
   it("reads count lines as count x per and flat lines as a signed bonus", () => {
@@ -20,5 +20,19 @@ describe("ledgerLine", () => {
         { label: "Hints", value: -2 },
       ]),
     ).toBe("solved +12, hints -2");
+  });
+});
+
+describe("splitGrid", () => {
+  it("keeps the squares and moves an overflow count to its own line", () => {
+    const parts = splitGrid(["🟩🟩🟩 +11"]);
+    expect(JSON.stringify(parts.squares)).toBe(JSON.stringify(["🟩🟩🟩"]));
+    expect(parts.overflow).toBe("+11 more");
+  });
+
+  it("returns no overflow for rows that are squares only", () => {
+    const parts = splitGrid(["🟩🟥⬛", "🟨🟨"]);
+    expect(JSON.stringify(parts.squares)).toBe(JSON.stringify(["🟩🟥⬛", "🟨🟨"]));
+    expect(parts.overflow).toBe(null);
   });
 });
