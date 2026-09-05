@@ -1,15 +1,22 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { GuessBox } from "@/components/arcade/GuessBox";
+import { EmojiStage } from "@/components/arcade/EmojiStage";
+import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
 import { emojiPayout, totalComets } from "@/lib/arcade/comets";
 import { shareEmoji } from "@/lib/arcade/share";
+import { recordResult } from "@/lib/arcade/stats";
 import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewerCountry } from "@/hooks/useCatalog";
 import type { SearchHit } from "@/lib/catalog.functions";
 import {
   getEmojiRound,
@@ -20,15 +27,27 @@ import {
 } from "@/lib/arcade.functions";
 import { mediaSlug } from "@/lib/slug";
 import { SITE_ORIGIN, buildMeta, cacheSsrResponse, canonicalLink, jsonLdScript } from "@/lib/seo";
+import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
 import type { MediaItem } from "@/types/media";
 
 // Emoji Plots. Five plots told in emoji, one shared set per UTC day, pinned
-// server-side from the authored puzzle pack. Three guesses a plot; after the
-// first miss the authored decoys appear as tappable chips.
+// server-side from the authored puzzle pack. Three guesses a plot. The emoji
+// are the hero on a hue card; the authored decoys appear only on the third
+// guess, as a lifeline, so a single miss does not turn the puzzle into a
+// multiple choice. On solve the poster flips in beside the emoji.
 
 const GAME = GAMES.emoji;
 const PUZZLES = 5;
 const MAX_GUESSES = 3;
+// The pack runs three to five emoji a plot (most are four), so this page
+// says "a few" where the registry's tile copy says four.
+const HOOK = "A whole movie in a few emoji. Name it.";
+const HOW_TO = [
+  "A whole movie in a few emoji. Type the title; any movie or show in the catalog counts.",
+  "Three guesses a plot. On the last one, a short list of suspects appears.",
+  "Five plots. A solve pays 2 comets, 1 more when the first guess lands.",
+];
+const LOST_HINT = "A solved plot pays 2 comets, 3 when the first guess lands.";
 
 export const Route = createFileRoute("/play/emoji")({
   loader: async () => {
@@ -49,19 +68,10 @@ export const Route = createFileRoute("/play/emoji")({
         description:
           "A movie plot told in emoji, five puzzles a day. Three guesses each, then the answer. Yesterday's set stays up so you can settle arguments.",
         url,
+        image: `${SITE_ORIGIN}/og-play-emoji.png`,
       }),
       links: [canonicalLink(url)],
-      scripts: [
-        jsonLdScript({
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Balasaur", item: SITE_ORIGIN },
-            { "@type": "ListItem", position: 2, name: "Play", item: `${SITE_ORIGIN}/play` },
-            { "@type": "ListItem", position: 3, name: GAME.name, item: url },
-          ],
-        }),
-      ],
+      scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],
     };
   },
   component: EmojiPage,
@@ -83,12 +93,14 @@ function toMediaItem(c: ArcadeMediaCard): MediaItem {
   };
 }
 
-function MediaLink({ media }: { media: SolvedMedia }) {
+function MediaLink({ media, className }: { media: SolvedMedia; className?: string }) {
   return (
     <Link
       to={media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
       params={{ id: mediaSlug(media.id.replace(/^(movie|tv)-/, ""), media.title) }}
-      className="font-semibold text-text-bright hover:text-primary"
+      className={
+        className ?? "font-semibold text-text-bright hover:text-[var(--game,var(--primary))]"
+      }
     >
       {media.title}
     </Link>
@@ -128,23 +140,17 @@ function MoreGames() {
   return (
     <section className="mt-8">
       <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {ENABLED_SLUGS.filter((s) => s !== GAME.slug).map((s) => (
-          <Link
-            key={s}
-            to={GAMES[s].path}
-            className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-          >
-            {GAMES[s].name}
-          </Link>
+      <ScrollRail className="mt-2 gap-2.5">
+        {ENABLED_SLUGS.filter((slug) => slug !== GAME.slug).map((slug) => (
+          <ArcadeTile key={slug} game={GAMES[slug]} className="w-[168px] shrink-0" />
         ))}
-        <Link
-          to="/play"
-          className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-        >
-          All games
-        </Link>
-      </div>
+      </ScrollRail>
+      <Link
+        to="/play"
+        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
+      >
+        All games
+      </Link>
     </section>
   );
 }
@@ -156,15 +162,25 @@ interface PlotResult {
   firstTry: boolean;
 }
 
+function tierFor(solved: number, firstTry: number): string | undefined {
+  if (solved === PUZZLES) return firstTry === PUZZLES ? "Five first guesses" : "All five";
+  if (solved >= PUZZLES - 1) return "Close";
+  return undefined;
+}
+
 function EmojiPage() {
   const { round, yesterday } = Route.useLoaderData();
   const api = useArcadeGame();
   const comets = useComets();
   const { user } = useAuth();
+  const viewerCountry = useViewerCountry();
 
   const [idx, setIdx] = useState(0);
   const [wrongTitles, setWrongTitles] = useState<string[]>([]);
   const [revealed, setRevealed] = useState<null | { solved: boolean; guesses: number }>(null);
+  const [misses, setMisses] = useState(0);
+  const [stats, setStats] = useState<GameStats | null>(null);
+  const [firstComets, setFirstComets] = useState(false);
   const resultsRef = useRef<PlotResult[]>([]);
   const startedAtRef = useRef(0);
   const submittedRef = useRef(false);
@@ -186,6 +202,7 @@ function EmojiPage() {
   const submitRun = (o: { score: number; won: boolean; earned: number }) => {
     if (!round || submittedRef.current) return;
     submittedRef.current = true;
+    if (o.earned > 0 && comets.ready && comets.total === 0) setFirstComets(true);
     if (!user) {
       comets.creditLocal(GAME.slug, round.dayKey, o.earned);
       return;
@@ -197,6 +214,7 @@ function EmojiPage() {
       durationMs: Date.now() - startedAtRef.current,
       won: o.won,
       comets: o.earned,
+      country: viewerCountry || null,
     })
       .then((r) => {
         // The RPC reports failure as {error}; it does not throw.
@@ -210,12 +228,15 @@ function EmojiPage() {
   };
 
   const endRun = () => {
+    if (!round) return;
     const results = resultsRef.current;
     const solved = results.filter((r) => r.solved).length;
     const firstTry = results.filter((r) => r.firstTry).length;
     const lines = emojiPayout({ solved, firstTry });
+    const won = solved === PUZZLES;
+    setStats(recordResult(GAME.slug, round.dayKey, { won, bucket: solved }));
     api.finish(lines);
-    submitRun({ score: solved * 20, won: solved === PUZZLES, earned: totalComets(lines) });
+    submitRun({ score: solved * 20, won, earned: totalComets(lines) });
   };
 
   const item = round?.items[Math.min(idx, PUZZLES - 1)];
@@ -234,6 +255,7 @@ function EmojiPage() {
 
   const miss = (title: string) => {
     api.breakCombo();
+    setMisses((m) => m + 1);
     if (wrongTitles.length + 1 >= MAX_GUESSES) {
       resolvePlot(false);
       setWrongTitles((w) => [...w, title]);
@@ -266,7 +288,32 @@ function EmojiPage() {
   };
 
   const results = resultsRef.current;
-  const solvedCount = results.filter((r) => r.solved).length;
+  const lastGuess = !revealed && wrongTitles.length === MAX_GUESSES - 1;
+
+  const end = useMemo<EndScreenContent>(() => {
+    if (!round) return { headline: "", shareText: "" };
+    const done = resultsRef.current;
+    const solved = done.filter((r) => r.solved).length;
+    const firstTry = done.filter((r) => r.firstTry).length;
+    const text = shareEmoji({ day: round.dayKey, results: done.map((r) => r.solved) });
+    const tier = tierFor(solved, firstTry);
+    const headline = `${solved} of ${PUZZLES} plots solved`;
+    return {
+      tier,
+      headline,
+      grid: [text.split("\n")[1] ?? ""],
+      stats: stats ?? undefined,
+      shareText: text,
+      shareImage: { title: headline, subtitle: tier ?? HOOK },
+      answers: round.items.map((i) => toMediaItem(i.media)),
+      answersLabel: "Today's five",
+      lost: solved === 0,
+      lostHint: LOST_HINT,
+      firstComets,
+    };
+    // resultsRef is complete by the time the phase flips; stats changes with it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round, stats, firstComets, api.phase]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -277,118 +324,109 @@ function EmojiPage() {
             game={GAME}
             api={api}
             comets={comets}
-            end={{
-              headline: `${solvedCount} of ${PUZZLES} plots solved`,
-              shareText: shareEmoji({ results: results.map((r) => r.solved) }),
-              nextGameLine: "New plots at midnight UTC.",
-              answers: round.items.map((i) => toMediaItem(i.media)),
-              answersLabel: "Today's five",
-            }}
+            dayNumber={round.dayKey}
+            howTo={HOW_TO}
+            end={end}
+            narrow
           >
             <div>
-              <p className="text-center text-[44px] leading-relaxed" aria-label="The plot in emoji">
-                {item.emoji}
-              </p>
-
-              {!revealed ? (
-                <div className="mt-4 space-y-3">
-                  <GuessBox onGuess={onGuess} disabled={false} placeholder="Name the title" />
-
-                  {wrongTitles.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5" aria-label="Wrong guesses">
-                      {wrongTitles.map((t, i) => (
-                        <span
-                          key={i}
-                          className="rounded-[4px] border border-border px-2 py-0.5 font-mono text-[12px] text-text-dim line-through"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {wrongTitles.length > 0 && (
-                    <div aria-label="Possible answers">
-                      <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-                        It is one of these
-                      </p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {item.choices.map((c) => {
-                          const spent = wrongTitles.some((w) => eqTitle(w, c));
-                          return (
-                            <button
-                              key={c}
-                              type="button"
-                              disabled={spent}
-                              onClick={() => guessChip(c)}
-                              className={`min-h-[32px] rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[13px] text-text hover:border-primary hover:text-primary disabled:opacity-50 ${
-                                spent ? "line-through" : ""
-                              }`}
-                            >
-                              {c}
-                            </button>
-                          );
-                        })}
+              <EmojiStage
+                key={idx}
+                emoji={item.emoji}
+                plot={idx + 1}
+                total={PUZZLES}
+                results={results.map((r) => r.solved)}
+                guess={wrongTitles.length + 1}
+                maxGuesses={MAX_GUESSES}
+                revealed={
+                  revealed
+                    ? {
+                        posterUrl: item.media.posterUrl,
+                        title: item.media.title,
+                        solved: revealed.solved,
+                      }
+                    : null
+                }
+                lifelines={
+                  lastGuess
+                    ? { choices: item.choices, spent: wrongTitles, onPick: guessChip }
+                    : null
+                }
+              >
+                {!revealed ? (
+                  <div className="space-y-2.5">
+                    <GuessBox
+                      onGuess={onGuess}
+                      disabled={false}
+                      placeholder="Name the title"
+                      shake={misses}
+                      autoFocus
+                    />
+                    {wrongTitles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5" aria-label="Wrong guesses">
+                        {wrongTitles.map((t, i) => (
+                          <span
+                            key={i}
+                            className="rounded-[4px] border border-border px-2 py-0.5 font-mono text-[12px] text-text-dim line-through"
+                          >
+                            {t}
+                          </span>
+                        ))}
                       </div>
+                    )}
+                    <div className="flex justify-end whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => resolvePlot(false)}
+                        className="inline-flex items-center rounded-full border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-text-dim hover:border-text-dim hover:text-text-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--game,var(--primary))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        Reveal the answer
+                      </button>
                     </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-                      Guess {wrongTitles.length + 1} of {MAX_GUESSES}
-                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 rounded-[6px] border border-[var(--game,var(--primary))] [background:color-mix(in_oklab,var(--game,var(--primary))_14%,var(--color-panel))] p-3.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--game,var(--primary))]">
+                        {revealed.solved ? `Solved in ${revealed.guesses}` : "It was"}
+                      </p>
+                      <MediaLink
+                        media={item.media}
+                        className="mt-1 block text-[20px] font-black leading-tight tracking-[-0.02em] text-text-bright hover:text-[var(--game,var(--primary))]"
+                      />
+                      <p className="mt-0.5 font-mono text-[11px] tabular-nums text-text-muted">
+                        {item.media.year}
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => resolvePlot(false)}
-                      className="font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-muted"
+                      onClick={advance}
+                      autoFocus
+                      className="shrink-0 rounded-full bg-[var(--game,var(--primary))] px-5 py-2.5 text-[14px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] hover:brightness-110"
                     >
-                      Reveal the answer
+                      {idx < PUZZLES - 1 ? "Next plot" : "See the results"}
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-[6px] border border-border bg-panel p-4">
-                  <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-                    {revealed.solved ? `Solved in ${revealed.guesses}` : "The answer was"}
-                  </p>
-                  <p className="mt-1 text-[16px]">
-                    <MediaLink media={item.media} />{" "}
-                    <span className="font-mono text-[11px] text-text-dim">{item.media.year}</span>
-                  </p>
-                  <button
-                    type="button"
-                    onClick={advance}
-                    className="mt-3 w-full rounded-[5px] bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
-                  >
-                    {idx < PUZZLES - 1 ? "Next plot" : "See the results"}
-                  </button>
-                </div>
-              )}
+                )}
+              </EmojiStage>
             </div>
           </GameShell>
         ) : (
           <section>
-            <h1 className="text-[20px] font-bold tracking-tight text-text-bright">{GAME.name}</h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.tagline}</p>
+            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+              {GAME.name}
+            </h1>
+            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
             <p className="mt-6 text-[14px] text-text-muted">
               Today's puzzles did not load. Try again in a minute.
             </p>
           </section>
         )}
 
-        <section className="mt-8">
-          <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-            How to play
-          </h2>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-text-muted">
-            Each puzzle is one plot told in emoji. Type the title you think it is; after a miss the
-            possible answers appear as chips, and three misses reveal it. Five puzzles a day, the
-            same five for everyone.
-          </p>
-        </section>
-
         <YesterdaySolved y={yesterday} />
-        <MoreGames />
+        {api.phase !== "ended" && <MoreGames />}
+
+        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );

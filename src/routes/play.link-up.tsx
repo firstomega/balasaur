@@ -1,19 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
+import { ArcadeTile } from "@/components/arcade/ArcadeTile";
 import { ChainBoard, type ChainStep } from "@/components/arcade/ChainBoard";
+import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
 import { linkUpPayout, totalComets } from "@/lib/arcade/comets";
 import { shareLinkUp } from "@/lib/arcade/share";
-import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import { recordResult } from "@/lib/arcade/stats";
+import { ENABLED_SLUGS, GAMES, hueVars } from "@/lib/arcade/games";
+import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
 import { useViewerCountry } from "@/hooks/useCatalog";
 import {
   getLinkUpRound,
   getYesterday,
+  judgeLinkPick,
   type ArcadeMediaCard,
   type ArcadeYesterday,
   type LinkUpRound,
@@ -22,15 +28,21 @@ import {
 import { mediaSlug } from "@/lib/slug";
 import { SITE_ORIGIN, buildMeta, cacheSsrResponse, canonicalLink, jsonLdScript } from "@/lib/seo";
 import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
-import type { MediaItem } from "@/types/media";
 
 // Link Up. One actor pair per UTC day, connected through the movies they
-// share. Each step offers four titles; only one features the actor in hand.
-// A wrong pick is a dead end you step back from, and every wrong pick counts
-// against par.
+// share. Each step offers four titles; only one features the actor in hand,
+// and which one is decided on the server (the page carries no answer id and
+// no cast list). A wrong pick is a dead end: the movie's cast shows so the
+// miss teaches, the option stays marked, and stepping back is the only way
+// on. The run has one number, picks, stated once on the end screen. The
+// closed chain stays on screen under the end panel.
 
 const GAME = GAMES["link-up"];
-const COMPLETE_BEAT_MS = 1400;
+const HOW_TO = [
+  "Start from one actor. Four movies are offered; pick the one they were in.",
+  "A right pick hands you the next actor. A wrong pick is a dead end: step back, try another.",
+  "Reach the second actor to close the chain. Par is the shortest chain; every dead end adds a pick.",
+];
 
 export const Route = createFileRoute("/play/link-up")({
   loader: async () => {
@@ -49,8 +61,9 @@ export const Route = createFileRoute("/play/link-up")({
       meta: buildMeta({
         title: "Link Up: Connect Two Actors Through Their Movies",
         description:
-          "Two actors, one chain of movies between them. Pick the film that features the actor in hand until the chain closes, in as few picks as par. A new pair every day.",
+          "Two actors, one chain of movies between them. Pick the film that features the actor in hand until the chain closes, in as few picks as par. Same pair for everyone, new at midnight.",
         url,
+        image: `${SITE_ORIGIN}/og-play-${GAME.slug}.png`,
       }),
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],
@@ -59,28 +72,12 @@ export const Route = createFileRoute("/play/link-up")({
   component: LinkUpPage,
 });
 
-function toMediaItem(c: ArcadeMediaCard): MediaItem {
-  return {
-    id: c.id,
-    mediaType: c.mediaType,
-    title: c.title,
-    year: c.year,
-    overview: "",
-    posterUrl: c.posterUrl,
-    ratings: {},
-    genres: [],
-    streaming: [],
-    lengthLabel: "",
-    people: [],
-  };
-}
-
 function MediaLink({ media }: { media: SolvedMedia }) {
   return (
     <Link
       to={media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
       params={{ id: mediaSlug(media.id.replace(/^(movie|tv)-/, ""), media.title) }}
-      className="font-semibold text-text-bright hover:text-primary"
+      className="font-semibold text-text-bright hover:text-[var(--game,var(--primary))]"
     >
       {media.title}
     </Link>
@@ -120,25 +117,30 @@ function MoreGames() {
   return (
     <section className="mt-8">
       <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <ScrollRail className="mt-2 gap-2.5">
         {ENABLED_SLUGS.filter((s) => s !== GAME.slug).map((s) => (
-          <Link
-            key={s}
-            to={GAMES[s].path}
-            className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-          >
-            {GAMES[s].name}
-          </Link>
+          <ArcadeTile key={s} game={GAMES[s]} className="w-[168px] shrink-0" />
         ))}
-        <Link
-          to="/play"
-          className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-        >
-          All games
-        </Link>
-      </div>
+      </ScrollRail>
+      <Link
+        to="/play"
+        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
+      >
+        All games
+      </Link>
     </section>
   );
+}
+
+function movieStep(opt: ArcadeMediaCard, cast?: string[]): ChainStep {
+  return {
+    kind: "movie",
+    id: opt.id,
+    label: opt.title,
+    sub: opt.year,
+    posterUrl: opt.posterUrl,
+    cast: cast ?? null,
+  };
 }
 
 function LinkUpPage() {
@@ -155,21 +157,21 @@ function LinkUpPage() {
   const [stepIdx, setStepIdx] = useState(0);
   const [deadEnd, setDeadEnd] = useState(false);
   const [complete, setComplete] = useState(false);
+  /** Option ids dead-ended at each step. Cleared for a step once it is
+   *  passed on a right pick. */
+  const [tried, setTried] = useState<Record<number, string[]>>({});
+  const [wrong, setWrong] = useState(0);
+  const [stats, setStats] = useState<GameStats | null>(null);
+  const [firstComets, setFirstComets] = useState(false);
+  const judgingRef = useRef(false);
   const wrongRef = useRef(0);
   const startedAtRef = useRef(0);
   const submittedRef = useRef(false);
-  const beatRef = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (beatRef.current) window.clearTimeout(beatRef.current);
-    },
-    [],
-  );
 
   const submitRun = (o: { score: number; won: boolean; earned: number }) => {
     if (!round || submittedRef.current) return;
     submittedRef.current = true;
+    if (o.earned > 0 && comets.ready && comets.total === 0) setFirstComets(true);
     if (!user) {
       comets.creditLocal(GAME.slug, round.dayKey, o.earned);
       return;
@@ -194,20 +196,20 @@ function LinkUpPage() {
       .catch((e) => console.error("[link-up] submit unreachable:", e));
   };
 
-  const endRun = () => {
+  /** The chain closed: credit it, record the day, and hand the shell the
+   *  payout at once. The closed chain stays mounted under the end panel. */
+  const endRun = (wrongPicks: number) => {
     if (!round) return;
-    const wrong = wrongRef.current;
-    const picks = round.par + wrong;
+    const picks = round.par + wrongPicks;
     const lines = linkUpPayout({ solved: true, steps: picks, par: round.par });
+    setStats(recordResult(GAME.slug, round.dayKey, { won: wrongPicks === 0, bucket: picks }));
     api.finish(lines);
     submitRun({
-      score: Math.max(20, 100 - wrong * 20),
-      won: wrong === 0,
+      score: Math.max(20, 100 - wrongPicks * 20),
+      won: wrongPicks === 0,
       earned: totalComets(lines),
     });
   };
-  const endRef = useRef(endRun);
-  endRef.current = endRun;
 
   // Reset the run state on every ready -> playing transition.
   const prevPhase = useRef(api.phase);
@@ -217,7 +219,10 @@ function LinkUpPage() {
       setStepIdx(0);
       setDeadEnd(false);
       setComplete(false);
+      setTried({});
+      setWrong(0);
       wrongRef.current = 0;
+      judgingRef.current = false;
       submittedRef.current = false;
       startedAtRef.current = Date.now();
     }
@@ -226,40 +231,52 @@ function LinkUpPage() {
 
   const step = round?.steps[stepIdx] ?? null;
 
-  const onChoose = (id: string) => {
-    if (!round || !step || deadEnd || complete) return;
+  const onChoose = async (id: string) => {
+    if (!round || !step || deadEnd || complete || judgingRef.current) return;
     const opt = step.options.find((o) => o.id === id);
-    if (!opt) return;
-    const movieStep: ChainStep = {
-      kind: "movie",
-      id: opt.id,
-      label: opt.title,
-      sub: opt.year,
-      posterUrl: opt.posterUrl,
-    };
-    if (id === step.answerId) {
+    if (!opt || tried[stepIdx]?.includes(id)) return;
+    judgingRef.current = true;
+    let verdict: Awaited<ReturnType<typeof judgeLinkPick>> = null;
+    try {
+      verdict = await judgeLinkPick({
+        data: { dayKey: round.dayKey, step: stepIdx, optionId: id },
+      });
+    } catch (e) {
+      console.error("[link-up] judge unreachable:", e);
+    }
+    judgingRef.current = false;
+    if (!verdict) return;
+
+    if (verdict.correct) {
       const isLast = stepIdx === round.steps.length - 1;
+      const nextActor = verdict.nextActor ?? round.target;
       setChain((c) =>
         isLast
-          ? [...c, movieStep]
-          : [...c, movieStep, { kind: "actor", id: step.nextActor, label: step.nextActor }],
+          ? [...c, movieStep(opt)]
+          : [...c, movieStep(opt), { kind: "actor", id: nextActor, label: nextActor }],
       );
+      setTried((t) => {
+        const next = { ...t };
+        delete next[stepIdx];
+        return next;
+      });
       if (isLast) {
         setComplete(true);
-        // Let the closed chain land before the end screen takes over.
-        beatRef.current = window.setTimeout(() => endRef.current(), COMPLETE_BEAT_MS);
+        endRun(wrongRef.current);
       } else {
         setStepIdx((i) => i + 1);
       }
     } else {
       wrongRef.current += 1;
-      setChain((c) => [...c, movieStep]);
+      setWrong(wrongRef.current);
+      setTried((t) => ({ ...t, [stepIdx]: [...(t[stepIdx] ?? []), id] }));
+      setChain((c) => [...c, movieStep(opt, verdict.cast)]);
       setDeadEnd(true);
     }
   };
 
   const onStepBack = () => {
-    if (complete) return;
+    if (complete || judgingRef.current) return;
     if (deadEnd) {
       setChain((c) => c.slice(0, -1));
       setDeadEnd(false);
@@ -271,81 +288,98 @@ function LinkUpPage() {
     setStepIdx((i) => i - 1);
   };
 
-  const wrong = wrongRef.current;
   const picks = round ? round.par + wrong : 0;
+
+  const end = useMemo<EndScreenContent>(() => {
+    if (!round) return { headline: "", shareText: "" };
+    const text = shareLinkUp({ day: round.dayKey, solved: true, steps: picks, par: round.par });
+    const headline = `Done in ${picks} pick${picks === 1 ? "" : "s"}, par ${round.par}`;
+    const tier = wrong === 0 ? "Par" : `${wrong} over par`;
+    return {
+      tier,
+      headline,
+      grid: [text.split("\n")[1] ?? ""],
+      stats: stats ?? undefined,
+      shareText: text,
+      shareImage: { title: headline, subtitle: `${round.start} to ${round.target}` },
+      firstComets,
+      moreGames: false,
+    };
+  }, [round, picks, wrong, stats, firstComets]);
+
+  const board = round ? (
+    <ChainBoard
+      start={round.start}
+      target={round.target}
+      par={round.par}
+      chain={chain}
+      choices={
+        step && !complete
+          ? step.options.map((o) => ({
+              id: o.id,
+              label: o.title,
+              sub: o.year,
+              posterUrl: o.posterUrl,
+            }))
+          : []
+      }
+      tried={tried[stepIdx] ?? []}
+      deadEnd={deadEnd}
+      complete={complete}
+      disabled={api.phase !== "playing"}
+      onChoose={(id) => void onChoose(id)}
+      onStepBack={onStepBack}
+    />
+  ) : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8">
+      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 lg:max-w-[880px]">
         {round ? (
-          <GameShell
-            game={GAME}
-            api={api}
-            comets={comets}
-            showScoreStrip={false}
-            readyExtra={
-              <p className="mt-2 text-[13.5px] text-text-muted">
-                Today: get from{" "}
-                <span className="font-semibold text-text-bright">{round.start}</span> to{" "}
-                <span className="font-semibold text-text-bright">{round.target}</span>. Par{" "}
-                {round.par}.
-              </p>
-            }
-            end={{
-              headline: `Done in ${picks} pick${picks === 1 ? "" : "s"}. Par ${round.par}.`,
-              shareText: shareLinkUp({ solved: true, steps: picks, par: round.par }),
-              nextGameLine: "A new pair at midnight UTC.",
-              answers: round.steps
-                .map((s) => s.options.find((o) => o.id === s.answerId))
-                .filter((o): o is NonNullable<typeof o> => !!o)
-                .map(toMediaItem),
-              answersLabel: "The chain",
-            }}
-          >
-            <ChainBoard
-              start={round.start}
-              target={round.target}
-              par={round.par}
-              chain={chain}
-              choosing="movie"
-              choices={
-                step
-                  ? step.options.map((o) => ({
-                      id: o.id,
-                      label: o.title,
-                      sub: o.year,
-                      posterUrl: o.posterUrl,
-                    }))
-                  : []
+          <>
+            <GameShell
+              game={GAME}
+              api={api}
+              comets={comets}
+              dayNumber={round.dayKey}
+              showScoreStrip={false}
+              howTo={HOW_TO}
+              readyExtra={
+                <p className="text-center text-[13.5px] text-text-muted">
+                  Today: <span className="font-semibold text-text-bright">{round.start}</span> to{" "}
+                  <span className="font-semibold text-text-bright">{round.target}</span>. Par{" "}
+                  {round.par}.
+                </p>
               }
-              deadEnd={deadEnd}
-              complete={complete}
-              onChoose={onChoose}
-              onStepBack={onStepBack}
-            />
-          </GameShell>
+              end={end}
+            >
+              {board}
+            </GameShell>
+
+            {api.phase === "ended" && complete && (
+              <section
+                style={hueVars(GAME.slug)}
+                className="mx-auto mt-8 w-full border-t border-border pt-5 lg:max-w-[880px]"
+              >
+                <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                  Your chain
+                </h2>
+                {board}
+              </section>
+            )}
+          </>
         ) : (
           <section>
-            <h1 className="text-[20px] font-bold tracking-tight text-text-bright">{GAME.name}</h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.tagline}</p>
+            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+              {GAME.name}
+            </h1>
+            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
             <p className="mt-6 text-[14px] text-text-muted">
               Today's pair did not load. Try again in a minute.
             </p>
           </section>
         )}
-
-        <section className="mt-8">
-          <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-            How to play
-          </h2>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-text-muted">
-            Start from one actor and reach the other through movies they share. Each step offers
-            four titles; pick the one that features the actor in hand, and it hands you the next
-            actor in the chain. A wrong pick is a dead end you step back from, and every wrong pick
-            counts against par. The pair is the same for everyone and changes at midnight UTC.
-          </p>
-        </section>
 
         <YesterdaySolved y={yesterday} />
         <MoreGames />

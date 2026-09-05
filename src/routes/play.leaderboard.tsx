@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { CometChip } from "@/components/arcade/CometChip";
+import { WeeklyBoardList } from "@/components/arcade/WeeklyBoard";
 import { arcadeWeeklyBoard, type ArcadeWeeklyBoard } from "@/lib/arcade";
+import { weekSpan } from "@/lib/arcade/week";
 import { useViewerCountry } from "@/hooks/useCatalog";
+import { useMyProfile } from "@/hooks/useMyProfile";
 import { SITE_ORIGIN, buildMeta, cacheSsrResponse, canonicalLink, noindexMeta } from "@/lib/seo";
 
 // The weekly comet board. Client-rendered and noindexed: the rows churn
@@ -24,6 +27,7 @@ export const Route = createFileRoute("/play/leaderboard")({
           title: "Arcade Leaderboard | Balasaur",
           description: "This week's comet standings across every game in the arcade.",
           url,
+          image: `${SITE_ORIGIN}/og-play.png`,
         }),
         noindexMeta(),
       ],
@@ -35,6 +39,7 @@ export const Route = createFileRoute("/play/leaderboard")({
 
 function LeaderboardPage() {
   const country = useViewerCountry();
+  const { data: me } = useMyProfile();
   const [scope, setScope] = useState<"global" | "country">("global");
   const [board, setBoard] = useState<ArcadeWeeklyBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,22 +72,27 @@ function LeaderboardPage() {
   }, [scope, country]);
 
   const rows = board?.rows ?? [];
+  const span = board ? weekSpan(board.week_key) : "";
+  const myName = me?.username ?? null;
+  const myRow = myName ? rows.find((r) => r.username === myName) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <TopBar />
       <main id="main" className="mx-auto w-full max-w-[560px] flex-1 px-5 py-8">
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-[24px] font-bold tracking-tight text-text-bright">
-            Weekly leaderboard
-          </h1>
+          <div className="min-w-0">
+            <h1 className="text-[28px] font-black leading-none tracking-[-0.02em] text-text-bright">
+              This week's comets
+            </h1>
+            <p className="mt-2 text-[13.5px] text-text-muted">
+              Comets won in every arcade game this week by signed-in players.
+            </p>
+          </div>
           <CometChip className="mt-1 shrink-0" />
         </div>
-        <p className="mt-1 text-[13.5px] text-text-muted">
-          Comets won this week by signed-in players, across every game.
-        </p>
 
-        <div className="mt-5 flex items-center justify-between">
+        <div className="mt-5 flex h-7 items-center justify-between">
           {country ? (
             <div className="flex gap-1.5" role="group" aria-label="Board scope">
               <ScopeButton active={scope === "global"} onClick={() => setScope("global")}>
@@ -95,15 +105,15 @@ function LeaderboardPage() {
           ) : (
             <span />
           )}
-          {board && (
+          {span && (
             <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-              {board.week_key}
+              {span}
             </span>
           )}
         </div>
 
         {loading ? (
-          <div className="mt-4 h-40 animate-pulse rounded-[6px] border border-border bg-panel" />
+          <div className="mt-4 h-64 animate-pulse rounded-[6px] border border-border bg-panel" />
         ) : failed ? (
           <p className="mt-4 text-[14px] text-text-muted">
             The board did not load. Try again in a minute.
@@ -117,36 +127,47 @@ function LeaderboardPage() {
               to="/play"
               className="mt-3 inline-flex items-center rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
             >
-              Play today's games
+              Play tonight's games
             </Link>
           </div>
         ) : (
-          <div className="mt-4 rounded-[6px] border border-border bg-panel px-3 py-2">
-            <div className="flex items-baseline gap-2 border-b border-border py-1 font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
-              <span className="w-7 shrink-0">#</span>
+          <div className="mt-4 rounded-[6px] border border-border bg-panel px-3 py-1">
+            <div className="flex items-center gap-2.5 border-b border-border py-1.5 font-mono text-[10.5px] uppercase tracking-wider text-text-dim">
+              <span className="w-6 shrink-0">#</span>
               <span className="min-w-0 flex-1">Player</span>
               <span className="shrink-0">Comets</span>
             </div>
-            {rows.map((row) => (
-              <div
-                key={`${row.rank}-${row.username}`}
-                className="flex items-baseline gap-2 py-1 font-mono text-[12.5px] text-text"
-              >
-                <span className="w-7 shrink-0 tabular-nums text-text-dim">{row.rank}</span>
-                <span className="min-w-0 flex-1 truncate">
-                  {row.display_name || row.username}
-                  {row.country && (
-                    <span className="ml-1.5 text-[11px] text-text-dim">{row.country}</span>
-                  )}
-                </span>
-                <span className="shrink-0 tabular-nums">{row.comets}</span>
-              </div>
-            ))}
+            <WeeklyBoardList rows={rows} me={myName} showCountry />
           </div>
+        )}
+
+        {!loading && !failed && (
+          <p className="mt-3 text-[12.5px] text-text-dim">
+            {myName
+              ? myRow
+                ? `You are ${ordinal(myRow.rank)} with ${myRow.comets} ${myRow.comets === 1 ? "comet" : "comets"}.`
+                : "Finish a game today and your comets go on this board."
+              : "Sign in and your comets go on the board."}
+          </p>
         )}
       </main>
     </div>
   );
+}
+
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
 }
 
 function ScopeButton({

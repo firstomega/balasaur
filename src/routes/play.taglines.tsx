@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { MatchBoard, type MatchPair } from "@/components/arcade/MatchBoard";
+import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
 import { taglinesPayout, totalComets } from "@/lib/arcade/comets";
 import { shareTaglines } from "@/lib/arcade/share";
+import { recordResult } from "@/lib/arcade/stats";
 import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewerCountry } from "@/hooks/useCatalog";
 import {
   getTaglineRound,
   getYesterday,
@@ -19,6 +25,7 @@ import {
 } from "@/lib/arcade.functions";
 import { mediaSlug } from "@/lib/slug";
 import { SITE_ORIGIN, buildMeta, cacheSsrResponse, canonicalLink, jsonLdScript } from "@/lib/seo";
+import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
 import type { MediaItem } from "@/types/media";
 
 // Tagline Roulette. Five real taglines against five posters, one shared board
@@ -27,6 +34,14 @@ import type { MediaItem } from "@/types/media";
 
 const GAME = GAMES.taglines;
 const BOARD_SIZE = 5;
+const HOW_TO = [
+  "Tap a tagline, then tap the poster it was printed on.",
+  "A right pair locks. A wrong pair shakes and stays open.",
+  "Only first-try pairs score. Five clean pairs is the best board.",
+];
+const LOST_HINT = "A first-try match pays 2 comets. Five of them pay 15.";
+// How long the last pair's glow and stamp hold before the end screen.
+const LAST_PAIR_BEAT_MS = 1500;
 
 export const Route = createFileRoute("/play/taglines")({
   loader: async () => {
@@ -47,19 +62,10 @@ export const Route = createFileRoute("/play/taglines")({
         description:
           "Five real taglines, five posters, one board a day. Pair each line with its movie. Sin is a choice. One man saw it coming. You know more of these than you think.",
         url,
+        image: `${SITE_ORIGIN}/og-play-taglines.png`,
       }),
       links: [canonicalLink(url)],
-      scripts: [
-        jsonLdScript({
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Balasaur", item: SITE_ORIGIN },
-            { "@type": "ListItem", position: 2, name: "Play", item: `${SITE_ORIGIN}/play` },
-            { "@type": "ListItem", position: 3, name: GAME.name, item: url },
-          ],
-        }),
-      ],
+      scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],
     };
   },
   component: TaglinesPage,
@@ -86,7 +92,7 @@ function MediaLink({ media }: { media: SolvedMedia }) {
     <Link
       to={media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
       params={{ id: mediaSlug(media.id.replace(/^(movie|tv)-/, ""), media.title) }}
-      className="font-semibold text-text-bright hover:text-primary"
+      className="font-semibold text-text-bright hover:text-[var(--game,var(--primary))]"
     >
       {media.title}
     </Link>
@@ -126,25 +132,25 @@ function MoreGames() {
   return (
     <section className="mt-8">
       <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {ENABLED_SLUGS.filter((s) => s !== GAME.slug).map((s) => (
-          <Link
-            key={s}
-            to={GAMES[s].path}
-            className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-          >
-            {GAMES[s].name}
-          </Link>
+      <ScrollRail className="mt-2 gap-2.5">
+        {ENABLED_SLUGS.filter((slug) => slug !== GAME.slug).map((slug) => (
+          <ArcadeTile key={slug} game={GAMES[slug]} className="w-[168px] shrink-0" />
         ))}
-        <Link
-          to="/play"
-          className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-        >
-          All games
-        </Link>
-      </div>
+      </ScrollRail>
+      <Link
+        to="/play"
+        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
+      >
+        All games
+      </Link>
     </section>
   );
+}
+
+function tierFor(matches: number, clean: boolean): string | undefined {
+  if (matches === BOARD_SIZE) return clean ? "Clean board" : "All five";
+  if (matches >= 3) return "Close";
+  return undefined;
 }
 
 function TaglinesPage() {
@@ -152,8 +158,11 @@ function TaglinesPage() {
   const api = useArcadeGame();
   const comets = useComets();
   const { user } = useAuth();
+  const viewerCountry = useViewerCountry();
 
   const [matched, setMatched] = useState<MatchPair[]>([]);
+  const [stats, setStats] = useState<GameStats | null>(null);
+  const [firstComets, setFirstComets] = useState(false);
   const matchedRef = useRef<MatchPair[]>([]);
   const wrongRef = useRef<Set<string>>(new Set());
   const firstTryRef = useRef(0);
@@ -185,6 +194,7 @@ function TaglinesPage() {
   const submitRun = (o: { score: number; won: boolean; earned: number }) => {
     if (!round || submittedRef.current) return;
     submittedRef.current = true;
+    if (o.earned > 0 && comets.ready && comets.total === 0) setFirstComets(true);
     if (!user) {
       comets.creditLocal(GAME.slug, round.dayKey, o.earned);
       return;
@@ -196,6 +206,7 @@ function TaglinesPage() {
       durationMs: Date.now() - startedAtRef.current,
       won: o.won,
       comets: o.earned,
+      country: viewerCountry || null,
     })
       .then((r) => {
         // The RPC reports failure as {error}; it does not throw.
@@ -209,9 +220,11 @@ function TaglinesPage() {
   };
 
   const endRun = () => {
+    if (!round) return;
     const matches = firstTryRef.current;
     const clean = matches === BOARD_SIZE;
     const lines = taglinesPayout({ matches, clean });
+    setStats(recordResult(GAME.slug, round.dayKey, { won: clean, bucket: matches }));
     api.finish(lines);
     submitRun({ score: matches * 20, won: clean, earned: totalComets(lines) });
   };
@@ -234,31 +247,49 @@ function TaglinesPage() {
     matchedRef.current = next;
     setMatched(next);
     if (next.length === round.taglines.length) {
-      // Let the last pair collapse before the end screen takes over.
-      beatRef.current = window.setTimeout(endRun, 700);
+      // Let the last poster land and its check stamp in before the end
+      // screen takes over.
+      beatRef.current = window.setTimeout(endRun, LAST_PAIR_BEAT_MS);
     }
     return true;
   };
 
-  const matches = firstTryRef.current;
-  const clean = matches === BOARD_SIZE;
+  const end = useMemo<EndScreenContent>(() => {
+    if (!round) return { headline: "", shareText: "" };
+    const matches = firstTryRef.current;
+    const clean = matches === BOARD_SIZE;
+    const text = shareTaglines({ day: round.dayKey, matches, clean });
+    const tier = tierFor(matches, clean);
+    const headline = `${matches} of ${BOARD_SIZE} on the first try`;
+    return {
+      tier,
+      headline,
+      grid: [text.split("\n")[1] ?? ""],
+      stats: stats ?? undefined,
+      shareText: text,
+      shareImage: { title: headline, subtitle: tier ?? GAME.hook },
+      answers: round.titles.map(toMediaItem),
+      answersLabel: "Today's five",
+      lost: matches === 0,
+      lostHint: LOST_HINT,
+      firstComets,
+    };
+    // firstTryRef is settled by the time the phase flips; stats changes with it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round, stats, firstComets, api.phase]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8">
+      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 lg:max-w-[880px]">
         {round ? (
           <GameShell
             game={GAME}
             api={api}
             comets={comets}
-            end={{
-              headline: `${matches} of ${BOARD_SIZE} on the first try`,
-              shareText: shareTaglines({ matches, clean }),
-              nextGameLine: "New taglines at midnight UTC.",
-              answers: round.titles.map(toMediaItem),
-              answersLabel: "Today's five",
-            }}
+            dayNumber={round.dayKey}
+            howTo={HOW_TO}
+            end={end}
           >
             <MatchBoard
               prompts={round.taglines.map((t) => ({ id: t.id, text: t.text }))}
@@ -269,27 +300,20 @@ function TaglinesPage() {
           </GameShell>
         ) : (
           <section>
-            <h1 className="text-[20px] font-bold tracking-tight text-text-bright">{GAME.name}</h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.tagline}</p>
+            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+              {GAME.name}
+            </h1>
+            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
             <p className="mt-6 text-[14px] text-text-muted">
               Today's board did not load. Try again in a minute.
             </p>
           </section>
         )}
 
-        <section className="mt-8">
-          <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-            How to play
-          </h2>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-text-muted">
-            Five taglines sit beside five posters. Tap a tagline, then tap the poster it belongs to;
-            pairing on the first try is what scores. The board is the same for everyone and changes
-            at midnight UTC.
-          </p>
-        </section>
-
         <YesterdaySolved y={yesterday} />
-        <MoreGames />
+        {api.phase !== "ended" && <MoreGames />}
+
+        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );

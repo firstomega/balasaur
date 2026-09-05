@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
-import { BinSort, type BinDef } from "@/components/arcade/BinSort";
+import { BinSort, type BinCard, type BinDef } from "@/components/arcade/BinSort";
+import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
 import { sequelOrFakePayout, totalComets } from "@/lib/arcade/comets";
 import { shareSequelOrFake } from "@/lib/arcade/share";
+import { recordResult } from "@/lib/arcade/stats";
 import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewerCountry } from "@/hooks/useCatalog";
 import {
   getSequelRound,
   getYesterday,
@@ -17,10 +23,13 @@ import {
   type SequelRoundItem,
 } from "@/lib/arcade.functions";
 import { SITE_ORIGIN, buildMeta, cacheSsrResponse, canonicalLink, jsonLdScript } from "@/lib/seo";
+import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
 
 // Sequel or Fake. Ten sequel titles, half real, half invented, one shared
-// deck per UTC day from the authored pack. Sort each into Real or Fake and
-// read the story behind it; right calls in a row build the combo.
+// deck per UTC day from the authored pack. Sort each into Real or Fake; the
+// verdict lands on the card itself (a REAL or FAKE stamp, then the card
+// flips to the story and holds until a tap). Right calls in a row build the
+// combo, and the ten stories are listed again under the end screen.
 
 const GAME = GAMES["sequel-or-fake"];
 const DECK = 10;
@@ -28,6 +37,16 @@ const BINS: [BinDef, BinDef] = [
   { key: "real", label: "Real" },
   { key: "fake", label: "Fake" },
 ];
+const HOW_TO = [
+  "Each card names a sequel and the film it claims to follow.",
+  "Swipe left for Real, right for Fake. Tap a bin or use the arrow keys.",
+  "The card turns over with the story. Ten cards, 1 comet a right call.",
+];
+const LOST_HINT = "A right call pays 1 comet. Ten in a row pay 15.";
+// How long a verdict card holds on screen: stamp, flip, story hold, exit.
+// The last card gets this long before the end screen takes over.
+const VERDICT_HOLD_MS = 2500;
+const LAST_CARD_BEAT_MS = 650 + 420 + VERDICT_HOLD_MS + 320;
 
 export const Route = createFileRoute("/play/sequel-or-fake")({
   loader: async () => {
@@ -48,23 +67,45 @@ export const Route = createFileRoute("/play/sequel-or-fake")({
         description:
           "Ten sequel titles, some real, some made up. Call each one, then read the story behind it. Disney really made a sequel to Old Yeller. A new ten every day.",
         url,
+        image: `${SITE_ORIGIN}/og-play-sequel-or-fake.png`,
       }),
       links: [canonicalLink(url)],
-      scripts: [
-        jsonLdScript({
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Balasaur", item: SITE_ORIGIN },
-            { "@type": "ListItem", position: 2, name: "Play", item: `${SITE_ORIGIN}/play` },
-            { "@type": "ListItem", position: 3, name: GAME.name, item: url },
-          ],
-        }),
-      ],
+      scripts: [jsonLdScript(arcadeBreadcrumbJsonLd(GAME.name, url))],
     };
   },
   component: SequelOrFakePage,
 });
+
+/** One authored story with its verdict, the row shape both lists share. */
+function StoryRow({
+  title,
+  real,
+  story,
+  called,
+}: {
+  title: string;
+  real: boolean;
+  story?: string | null;
+  /** Set on today's list: whether the player called it. */
+  called?: boolean;
+}) {
+  return (
+    <li className="rounded-[5px] border border-border bg-panel px-3 py-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[13px] font-semibold leading-snug text-text-bright">{title}</span>
+        <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider">
+          <span className={real ? "text-rating" : "text-warn"}>{real ? "Real" : "Fake"}</span>
+          {called !== undefined && (
+            <span className={called ? "text-text-dim" : "text-destructive"}>
+              {called ? " · called it" : " · missed"}
+            </span>
+          )}
+        </span>
+      </div>
+      {story && <p className="mt-0.5 text-[12px] leading-snug text-text-muted">{story}</p>}
+    </li>
+  );
+}
 
 function YesterdaySolved({ y }: { y: ArcadeYesterday | null }) {
   if (!y || y.entries.length === 0) return null;
@@ -75,23 +116,12 @@ function YesterdaySolved({ y }: { y: ArcadeYesterday | null }) {
       </h2>
       <ul className="mt-2 space-y-1.5">
         {y.entries.map((e, i) => (
-          <li key={i} className="rounded-[5px] border border-border bg-panel px-3 py-2">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-[13px] font-semibold leading-snug text-text-bright">
-                {e.prompt}
-              </span>
-              <span
-                className={`shrink-0 font-mono text-[11px] uppercase tracking-wider ${
-                  e.answer === "Real" ? "text-emerald-300" : "text-orange-300"
-                }`}
-              >
-                {e.answer}
-              </span>
-            </div>
-            {e.detail && (
-              <p className="mt-0.5 text-[12px] leading-snug text-text-muted">{e.detail}</p>
-            )}
-          </li>
+          <StoryRow
+            key={i}
+            title={e.prompt ?? e.answer}
+            real={e.answer === "Real"}
+            story={e.detail}
+          />
         ))}
       </ul>
     </section>
@@ -102,23 +132,17 @@ function MoreGames() {
   return (
     <section className="mt-8">
       <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {ENABLED_SLUGS.filter((s) => s !== GAME.slug).map((s) => (
-          <Link
-            key={s}
-            to={GAMES[s].path}
-            className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-          >
-            {GAMES[s].name}
-          </Link>
+      <ScrollRail className="mt-2 gap-2.5">
+        {ENABLED_SLUGS.filter((slug) => slug !== GAME.slug).map((slug) => (
+          <ArcadeTile key={slug} game={GAMES[slug]} className="w-[168px] shrink-0" />
         ))}
-        <Link
-          to="/play"
-          className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12.5px] text-text hover:border-primary hover:text-primary"
-        >
-          All games
-        </Link>
-      </div>
+      </ScrollRail>
+      <Link
+        to="/play"
+        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
+      >
+        All games
+      </Link>
     </section>
   );
 }
@@ -128,15 +152,39 @@ interface Call {
   ok: boolean;
 }
 
+function tierFor(correct: number): string | undefined {
+  if (correct === DECK) return "Perfect ten";
+  if (correct >= DECK - 2) return "Close";
+  return undefined;
+}
+
+function toCard(item: SequelRoundItem | undefined): BinCard | null {
+  if (!item) return null;
+  return {
+    id: String(item.itemId),
+    label: item.title,
+    sub: `sequel to ${item.anchor}`,
+    // Fake sequels have no poster; the face is drawn from the anchor title so
+    // every claimed sequel to the same film shares a look.
+    faceKey: item.anchor,
+    verdict: { stamp: item.real ? "REAL" : "FAKE", story: item.reveal },
+  };
+}
+
 function SequelOrFakePage() {
   const { round, yesterday } = Route.useLoaderData();
   const api = useArcadeGame();
   const comets = useComets();
   const { user } = useAuth();
+  const viewerCountry = useViewerCountry();
 
   const [idx, setIdx] = useState(0);
   const [calls, setCalls] = useState<Call[]>([]);
+  const [stats, setStats] = useState<GameStats | null>(null);
+  const [firstComets, setFirstComets] = useState(false);
   const statRef = useRef({ correct: 0, streak: 0, best: 0 });
+  // One boolean per call in order, for the share grid.
+  const resultsRef = useRef<boolean[]>([]);
   const startedAtRef = useRef(0);
   const submittedRef = useRef(false);
   const beatRef = useRef<number | null>(null);
@@ -153,6 +201,7 @@ function SequelOrFakePage() {
   useEffect(() => {
     if (api.phase === "playing" && prevPhase.current !== "playing") {
       statRef.current = { correct: 0, streak: 0, best: 0 };
+      resultsRef.current = [];
       setIdx(0);
       setCalls([]);
       submittedRef.current = false;
@@ -164,6 +213,7 @@ function SequelOrFakePage() {
   const submitRun = (o: { score: number; won: boolean; earned: number }) => {
     if (!round || submittedRef.current) return;
     submittedRef.current = true;
+    if (o.earned > 0 && comets.ready && comets.total === 0) setFirstComets(true);
     if (!user) {
       comets.creditLocal(GAME.slug, round.dayKey, o.earned);
       return;
@@ -175,6 +225,7 @@ function SequelOrFakePage() {
       durationMs: Date.now() - startedAtRef.current,
       won: o.won,
       comets: o.earned,
+      country: viewerCountry || null,
     })
       .then((r) => {
         // The RPC reports failure as {error}; it does not throw.
@@ -188,10 +239,13 @@ function SequelOrFakePage() {
   };
 
   const endRun = () => {
+    if (!round) return;
     const { correct, best } = statRef.current;
     const lines = sequelOrFakePayout({ correct, bestStreak: best });
+    const won = correct === DECK;
+    setStats(recordResult(GAME.slug, round.dayKey, { won, bucket: correct }));
     api.finish(lines);
-    submitRun({ score: correct * 10, won: correct === DECK, earned: totalComets(lines) });
+    submitRun({ score: correct * 10, won, earned: totalComets(lines) });
   };
 
   const onChoose = (bin: 0 | 1): boolean => {
@@ -210,64 +264,68 @@ function SequelOrFakePage() {
       s.streak = 0;
       api.breakCombo();
     }
+    resultsRef.current.push(ok);
     setCalls((c) => [...c, { item, ok }]);
     setIdx(idx + 1);
-    if (idx + 1 < DECK) {
-      api.nextRound();
-    } else {
-      // Let the last card fly (and a wrong call flash its bin) first.
-      beatRef.current = window.setTimeout(endRun, ok ? 500 : 1000);
+    if (idx + 1 >= DECK) {
+      // The last card stamps, flips to its story and holds before the end
+      // screen takes over.
+      beatRef.current = window.setTimeout(endRun, LAST_CARD_BEAT_MS);
     }
     return ok;
   };
 
-  const toCard = (item: SequelRoundItem | undefined) =>
-    item ? { id: String(item.itemId), label: item.title, sub: `sequel to ${item.anchor}` } : null;
-
-  const last = calls.length > 0 ? calls[calls.length - 1] : null;
-  const { correct, best } = statRef.current;
+  const end = useMemo<EndScreenContent>(() => {
+    if (!round) return { headline: "", shareText: "" };
+    const results = resultsRef.current;
+    const correct = results.filter(Boolean).length;
+    const text = shareSequelOrFake({ day: round.dayKey, results });
+    const tier = tierFor(correct);
+    const headline = `${correct} of ${DECK} right`;
+    return {
+      tier,
+      headline,
+      grid: [text.split("\n")[1] ?? ""],
+      stats: stats ?? undefined,
+      shareText: text,
+      shareImage: { title: headline, subtitle: tier ?? GAME.hook },
+      lost: correct === 0,
+      lostHint: LOST_HINT,
+      firstComets,
+      // The ten stories render under the shell; the tiles follow them.
+      moreGames: false,
+    };
+    // resultsRef is complete by the time the phase flips; stats changes with it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round, stats, firstComets, api.phase]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8">
+      <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 lg:max-w-[880px]">
         {round ? (
           <GameShell
             game={GAME}
             api={api}
             comets={comets}
-            end={{
-              headline: `${correct} of ${DECK} right`,
-              shareText: shareSequelOrFake({ streak: best }),
-              nextGameLine: "A new ten at midnight UTC.",
-            }}
+            dayNumber={round.dayKey}
+            howTo={HOW_TO}
+            end={end}
           >
-            <div>
-              <BinSort
-                card={toCard(round.items[idx])}
-                nextCard={toCard(round.items[idx + 1])}
-                bins={BINS}
-                onChoose={onChoose}
-              />
-              {last && (
-                <p className="mt-3 rounded-[5px] border border-border bg-panel px-3 py-2 text-[12.5px] leading-snug text-text-muted">
-                  <span
-                    className={`font-mono text-[11px] uppercase tracking-wider ${
-                      last.ok ? "text-emerald-300" : "text-orange-300"
-                    }`}
-                  >
-                    {last.ok ? "Right" : "Wrong"}
-                  </span>{" "}
-                  <span className="font-semibold text-text-bright">{last.item.title}</span> is{" "}
-                  {last.item.real ? "real" : "fake"}. {last.item.reveal}
-                </p>
-              )}
-            </div>
+            <BinSort
+              card={toCard(round.items[idx])}
+              nextCard={toCard(round.items[idx + 1])}
+              bins={BINS}
+              onChoose={onChoose}
+              verdictHoldMs={VERDICT_HOLD_MS}
+            />
           </GameShell>
         ) : (
           <section>
-            <h1 className="text-[20px] font-bold tracking-tight text-text-bright">{GAME.name}</h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.tagline}</p>
+            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+              {GAME.name}
+            </h1>
+            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
             <p className="mt-6 text-[14px] text-text-muted">
               Today's deck did not load. Try again in a minute.
             </p>
@@ -281,38 +339,22 @@ function SequelOrFakePage() {
             </h2>
             <ul className="mt-2 space-y-1.5">
               {calls.map((c, i) => (
-                <li key={i} className="rounded-[5px] border border-border bg-panel px-3 py-2">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[13px] font-semibold leading-snug text-text-bright">
-                      {c.item.title}
-                    </span>
-                    <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider">
-                      <span className={c.item.real ? "text-emerald-300" : "text-orange-300"}>
-                        {c.item.real ? "Real" : "Fake"}
-                      </span>
-                      <span className="text-text-dim">{c.ok ? " · called it" : " · missed"}</span>
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-[12px] leading-snug text-text-muted">{c.item.reveal}</p>
-                </li>
+                <StoryRow
+                  key={i}
+                  title={c.item.title}
+                  real={c.item.real}
+                  story={c.item.reveal}
+                  called={c.ok}
+                />
               ))}
             </ul>
           </section>
         )}
 
-        <section className="mt-8">
-          <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-            How to play
-          </h2>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-text-muted">
-            Each card names a sequel and the film it claims to follow. Sort it into Real or Fake
-            with a tap, a swipe, or the arrow keys. Ten cards a day, and every answer comes with the
-            story behind it.
-          </p>
-        </section>
-
         <YesterdaySolved y={yesterday} />
         <MoreGames />
+
+        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );

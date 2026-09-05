@@ -7,7 +7,11 @@ import type { MediaPerson } from "@/types/media";
 // per UTC day: the picks are PINNED in arcade_daily on first request
 // (insert-then-reread, the daily_challenges pattern), because an offset into
 // a live-counted pool shifts whenever the nightly sync changes membership.
-// Payloads include the answers (Wordle posture, same as Balasaurdle).
+// Most payloads include the answers (Wordle posture, same as Balasaurdle).
+// The two games where that costs trust judge on the server instead: Link Up
+// (judgeLinkPick) ships no answer id or cast, and The 8PM Screening
+// (judgeScreeningPick) ships no answer index, because its night board ranks
+// people.
 //
 // The pure helpers at the top are IO-free and tested in
 // arcade.functions.test.ts. The supabase client is imported lazily inside
@@ -170,9 +174,45 @@ export function pickTaglineSet(
 /** Actor names from the people jsonb. role is the character name for actors
  *  and the literal 'Director'/'Creator' for the one crew entry. */
 export function actorNames(people: MediaPerson[] | null | undefined): string[] {
+  return castWithRoles(people).map((p) => p.name);
+}
+
+export interface CastingActor {
+  name: string;
+  /** The character played, when the ingest kept it. Null for the impostor. */
+  role: string | null;
+}
+
+/** Actors with the part they played, crew dropped, in billing order. */
+export function castWithRoles(people: MediaPerson[] | null | undefined): CastingActor[] {
   return (people ?? [])
     .filter((p) => p?.name && p.role !== "Director" && p.role !== "Creator")
-    .map((p) => p.name);
+    .map((p) => ({ name: p.name, role: p.role?.trim() ? p.role.trim() : null }));
+}
+
+export interface ScreeningPayload {
+  q: string;
+  choices: string[];
+  answer: number;
+  note: string;
+}
+
+/** The authored screening question, or null when the row is malformed. One
+ *  parser for the set, the judge, and yesterday's answers so the three
+ *  cannot disagree on what a valid question is. */
+export function parseScreeningPayload(payload: unknown): ScreeningPayload | null {
+  const p = (payload ?? {}) as { q?: unknown; choices?: unknown; answer?: unknown; note?: unknown };
+  if (typeof p.q !== "string" || !p.q) return null;
+  if (!Array.isArray(p.choices) || p.choices.length < 2) return null;
+  if (!p.choices.every((c) => typeof c === "string")) return null;
+  if (typeof p.answer !== "number" || !Number.isInteger(p.answer)) return null;
+  if (p.answer < 0 || p.answer >= p.choices.length) return null;
+  return {
+    q: p.q,
+    choices: p.choices as string[],
+    answer: p.answer,
+    note: typeof p.note === "string" ? p.note : "",
+  };
 }
 
 export function sameDecade(yearA: string, yearB: string): boolean {
@@ -527,8 +567,9 @@ export interface TaglineRound {
 
 export interface CastingRoundItem {
   movie: ArcadeMediaCard;
-  /** Four names, shuffled: three from the cast plus the impostor. */
-  actors: string[];
+  /** Four actors, shuffled: three from the cast with the part they played,
+   *  plus the impostor with no role. */
+  actors: CastingActor[];
   impostor: string;
 }
 
@@ -565,18 +606,11 @@ export interface SpeedSortRound {
   }[];
 }
 
-export interface LinkUpOption extends ArcadeMediaCard {
-  actors: string[];
-}
-
 export interface LinkUpStep {
-  /** The actor this step links from. */
-  actor: string;
-  /** Shuffled titles; exactly one features the step's actor. */
-  options: LinkUpOption[];
-  answerId: string;
-  /** The actor the correct title hands to the next step (the target, last). */
-  nextActor: string;
+  /** Shuffled titles; exactly one features the actor in hand. Which one,
+   *  the cast, and the actor it hands over stay on the server: the route
+   *  asks judgeLinkPick. */
+  options: ArcadeMediaCard[];
 }
 
 export interface LinkUpRound {
@@ -585,6 +619,16 @@ export interface LinkUpRound {
   target: string;
   par: number;
   steps: LinkUpStep[];
+}
+
+/** The server's verdict on one Link Up pick. */
+export interface LinkPickVerdict {
+  correct: boolean;
+  /** The picked title's leading cast, so a dead end teaches something. */
+  cast: string[];
+  /** On a right pick: the actor the title hands to the next step (the
+   *  target on the last step). Null on a wrong pick. */
+  nextActor: string | null;
 }
 
 export interface PosterRound {
@@ -636,14 +680,24 @@ export interface ScreeningItem {
   itemId: number;
   question: string;
   choices: string[];
-  answer: number;
-  note: string;
   difficulty: number;
 }
 
+/** The answer index, the note, and the poster never ride in the page: the
+ *  route asks judgeScreeningPick, because the night's board ranks people. */
 export interface ScreeningSet {
   dayKey: number;
   items: ScreeningItem[];
+}
+
+export interface ScreeningVerdict {
+  correct: boolean;
+  /** Index of the right choice. */
+  answer: number;
+  /** One fact about the answer, shown under the reveal. */
+  note: string;
+  /** The title the question is about, when the item names one. */
+  media: ArcadeMediaCard | null;
 }
 
 export interface SolvedMedia {
@@ -934,12 +988,12 @@ export const getCastingRound = createServerFn({ method: "GET" }).handler(
     for (let i = 0; i < 8; i++) {
       const movie = rows[i];
       const source = rows[i + 8];
-      const cast = actorNames(movie.people).slice(0, 3);
+      const cast = castWithRoles(movie.people).slice(0, 3);
       const impostor = impostorFromSource(source, movie);
       if (cast.length < 3 || !impostor) return null;
       rounds.push({
         movie: toCard(movie),
-        actors: seededShuffle([...cast, impostor], daySeed(day, 200 + i)),
+        actors: seededShuffle([...cast, { name: impostor, role: null }], daySeed(day, 200 + i)),
         impostor,
       });
     }
@@ -1073,22 +1127,22 @@ export const getLinkUpRound = createServerFn({ method: "GET" }).handler(
     const steps: LinkUpStep[] = [];
     for (let i = 0; i < chain.length; i++) {
       const fromActor = i === 0 ? actors.start : actors.links[i - 1];
-      const nextActor = i < chain.length - 1 ? actors.links[i] : actors.target;
       const from = fromActor.toLowerCase();
       const decoys = seededShuffle(
         rows.filter((r) => !chainIds.has(r.id) && !r.actors.some((n) => n.toLowerCase() === from)),
         daySeed(day, 300 + i),
       ).slice(0, LINK_DECOYS);
       if (decoys.length < LINK_DECOYS) return null;
+      // Cards only. The answer id and every cast list stay here so the page
+      // source cannot be read for the chain.
       const options = seededShuffle([chain[i], ...decoys], daySeed(day, 400 + i)).map((r) => ({
         id: r.id,
         mediaType: r.mediaType,
         title: r.title,
         year: r.year,
         posterUrl: r.posterUrl,
-        actors: r.actors.slice(0, LINK_ACTORS_SHOWN),
       }));
-      steps.push({ actor: fromActor, options, answerId: chain[i].id, nextActor });
+      steps.push({ options });
     }
     return {
       dayKey: day,
@@ -1099,6 +1153,44 @@ export const getLinkUpRound = createServerFn({ method: "GET" }).handler(
     };
   },
 );
+
+/** Judge one Link Up pick against the pinned chain. The pin is the truth
+ *  for a day, so the verdict needs no recomputation of the round: the step's
+ *  answer is the step's pinned title. A right pick also returns the actor
+ *  handed to the next step; any pick returns the title's leading cast. */
+export const judgeLinkPick = createServerFn({ method: "POST" })
+  .inputValidator((p: { dayKey: number; step: number; optionId: string }) => p)
+  .handler(async ({ data: p }): Promise<LinkPickVerdict | null> => {
+    const day = Number(p.dayKey);
+    const step = Number(p.step);
+    const optionId = typeof p.optionId === "string" ? p.optionId : "";
+    if (!Number.isInteger(day) || day < 1 || day > dayNumber()) return null;
+    if (!Number.isInteger(step) || step < 0 || encodeMediaPin(optionId) === null) return null;
+
+    const pin = await readPin("link-up", day);
+    if (!pin || step >= pin.length) return null;
+    const ids = pin.map(decodeMediaPin);
+    const correct = ids[step] === optionId;
+
+    const wanted = correct ? ids : [optionId];
+    const rows = await fetchMediaByIds(wanted, LINK_COLS);
+    if (!rows) return null;
+    const picked = rows.get(optionId);
+    if (!picked) return null;
+    const cast = actorNames(picked.people).slice(0, LINK_ACTORS_SHOWN);
+    if (!correct) return { correct: false, cast, nextActor: null };
+
+    const chain: LinkRow[] = [];
+    for (const id of ids) {
+      const r = rows.get(id);
+      if (!r) return null;
+      chain.push(toLinkRow(r));
+    }
+    const actors = deriveLinkActors(chain);
+    if (!actors) return null;
+    const nextActor = step < chain.length - 1 ? actors.links[step] : actors.target;
+    return { correct: true, cast, nextActor };
+  });
 
 /** Balasaurdle's pool floor (see POOL_MIN_VOTES in daily.functions.ts). */
 const BALASAURDLE_MIN_VOTES = 1500;
@@ -1324,29 +1416,53 @@ export const getScreeningSet = createServerFn({ method: "GET" }).handler(
 
     const items: ScreeningItem[] = [];
     for (const r of rows) {
-      const p = r.payload as { q?: string; choices?: string[]; answer?: number; note?: string };
-      if (
-        !p.q ||
-        !Array.isArray(p.choices) ||
-        p.choices.length < 2 ||
-        typeof p.answer !== "number" ||
-        p.answer < 0 ||
-        p.answer >= p.choices.length
-      ) {
-        return null;
-      }
+      const p = parseScreeningPayload(r.payload);
+      if (!p) return null;
       items.push({
         itemId: r.id,
         question: p.q,
         choices: p.choices,
-        answer: p.answer,
-        note: p.note ?? "",
         difficulty: r.difficulty,
       });
     }
     return { dayKey: day, items };
   },
 );
+
+/** Judge one screening pick. Reads the question by id, so the answer index
+ *  never leaves the server before the pick is made. A null choice is the
+ *  clock running out: wrong, and the answer still comes back. */
+export const judgeScreeningPick = createServerFn({ method: "POST" })
+  .inputValidator((p: { itemId: number; choice: number | null }) => p)
+  .handler(async ({ data: p }): Promise<ScreeningVerdict | null> => {
+    const itemId = Number(p.itemId);
+    if (!Number.isInteger(itemId) || itemId < 1) return null;
+    const choice =
+      typeof p.choice === "number" && Number.isInteger(p.choice) && p.choice >= 0 ? p.choice : null;
+
+    const sb = await db();
+    const { data, error } = await sb
+      .from("arcade_items")
+      .select("id, media_id, payload")
+      .eq("game_slug", "screening")
+      .eq("id", itemId)
+      .maybeSingle();
+    if (error) {
+      console.error("[arcade] screening judge read failed:", error.message);
+      return null;
+    }
+    const row = data as { media_id: string | null; payload: unknown } | null;
+    const q = row ? parseScreeningPayload(row.payload) : null;
+    if (!row || !q) return null;
+
+    let media: ArcadeMediaCard | null = null;
+    if (row.media_id) {
+      const m = await fetchMediaByIds([row.media_id], POOL_CARD_COLS);
+      const r = m?.get(row.media_id);
+      if (r) media = toCard(r);
+    }
+    return { correct: choice === q.answer, answer: q.answer, note: q.note, media };
+  });
 
 // ---------------------------------------------------------------------------
 // Yesterday, solved
@@ -1514,11 +1630,9 @@ async function solvedEntries(game: string, day: number): Promise<SolvedEntry[] |
   if (game === "screening") {
     const entries: SolvedEntry[] = [];
     for (const r of rows) {
-      const p = r.payload as { q?: string; choices?: string[]; answer?: number; note?: string };
-      if (!p.q || !Array.isArray(p.choices) || typeof p.answer !== "number") return null;
-      const answer = p.choices[p.answer];
-      if (typeof answer !== "string") return null;
-      entries.push({ prompt: p.q, answer, detail: p.note ?? "" });
+      const p = parseScreeningPayload(r.payload);
+      if (!p) return null;
+      entries.push({ prompt: p.q, answer: p.choices[p.answer], detail: p.note });
     }
     return entries;
   }

@@ -135,9 +135,19 @@ export function shareText(gameNumber: number, guesses: number, won: boolean, hin
   return `Balasaurdle #${gameNumber} ${score}${hintTag}\n${squares}\nbalasaur.com/play/balasaurdle`;
 }
 
+/** One guess as it was made: the catalog id and the title the player saw,
+ *  so a reload mid-game can still show what was tried. */
+export interface DailyGuess {
+  id: string;
+  title: string;
+}
+
 export interface DailyState {
   day: number;
   guessedIds: string[];
+  /** Every guess in order with its title. Same length and order as
+   *  guessedIds; a blob written before titles were kept fills in blanks. */
+  guesses: DailyGuess[];
   solved: boolean;
   gaveUp: boolean;
   streak: number;
@@ -154,6 +164,7 @@ export function loadDaily(today: number): DailyState {
   const fresh: DailyState = {
     day: today,
     guessedIds: [],
+    guesses: [],
     solved: false,
     gaveUp: false,
     streak: 0,
@@ -167,7 +178,7 @@ export function loadDaily(today: number): DailyState {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return fresh;
     const s = JSON.parse(raw) as DailyState & { lastFinishedDay?: number };
-    if (s.day === today) return { ...fresh, ...s };
+    if (s.day === today) return { ...fresh, ...s, guesses: guessesOf(s) };
     // New day: carry the streak only if yesterday was finished with a win.
     const carried = s.solved && s.day === today - 1 ? s.streak : 0;
     return {
@@ -180,6 +191,17 @@ export function loadDaily(today: number): DailyState {
   } catch {
     return fresh;
   }
+}
+
+/** The guess list with titles, rebuilt from ids alone when a blob predates
+ *  the titles field. Ids stay the record; titles are display only. */
+function guessesOf(s: Partial<DailyState>): DailyGuess[] {
+  const ids = Array.isArray(s.guessedIds) ? s.guessedIds : [];
+  const kept = Array.isArray(s.guesses) ? s.guesses : [];
+  return ids.map((id, i) => {
+    const g = kept[i];
+    return g && g.id === id && typeof g.title === "string" ? g : { id, title: "" };
+  });
 }
 
 export function saveDaily(s: DailyState): void {

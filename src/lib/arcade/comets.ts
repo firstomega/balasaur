@@ -11,15 +11,16 @@ export function totalComets(lines: PayoutLine[]): number {
 }
 
 /** Guess-count games pay 2 for the solve plus 2 per guess left unused,
- *  never below 2 on a win. A loss pays nothing. */
+ *  never below 2 on a win. When hints would pull the total under the floor,
+ *  the floor is the whole story: one "Solved" line worth 2 and no
+ *  correction row. A loss pays nothing. */
 function guessCountLines(guesses: number, won: boolean, hints: number): PayoutLine[] {
   if (!won) return [];
   const lines: PayoutLine[] = [{ label: "Solved", value: 2 }];
   const spare = Math.max(0, 6 - guesses);
   if (spare > 0) lines.push({ label: "Guesses to spare", count: spare, per: 2, value: spare * 2 });
   if (hints > 0) lines.push({ label: "Hints", count: hints, per: -2, value: hints * -2 });
-  const raw = totalComets(lines);
-  if (raw < 2) lines.push({ label: "Minimum payout", value: 2 - raw });
+  if (totalComets(lines) < 2) return [{ label: "Solved", value: 2 }];
   return lines;
 }
 
@@ -58,14 +59,11 @@ export function castingCallPayout(o: { correct: number }): PayoutLine[] {
   return [{ label: "Right calls", count: o.correct, per: 2, value: o.correct * 2 }];
 }
 
-/** Link Up: 8 for completing the chain, 4 more per step under par. Over par
- *  still pays the base. Unsolved pays nothing. */
+/** Link Up: 8 flat for completing the chain, at any number of picks.
+ *  Unsolved pays nothing. */
 export function linkUpPayout(o: { solved: boolean; steps: number; par: number }): PayoutLine[] {
   if (!o.solved) return [];
-  const lines: PayoutLine[] = [{ label: "Chain complete", value: 8 }];
-  const under = Math.max(0, o.par - o.steps);
-  if (under > 0) lines.push({ label: "Under par", count: under, per: 4, value: under * 4 });
-  return lines;
+  return [{ label: "Chain complete", value: 8 }];
 }
 
 /** Timeline: 2 a right slot, 5 more when all five land. */

@@ -3,11 +3,24 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Horizontal scroller with hover arrow buttons and a hidden native scrollbar —
- * replaces the bare `overflow-x-auto` rows (the "ugly scrollbar"). Touch/trackpad
- * swipe still works; arrows appear on hover (desktop) and only when there's more
- * to scroll in that direction. Pass gap/snap utilities via `className`.
+ * Horizontal scroller with hover arrow buttons and a hidden native scrollbar.
+ * Replaces the bare `overflow-x-auto` rows (the "ugly scrollbar"). Touch and
+ * trackpad swipe still work; arrows appear on hover (desktop) and only when
+ * there is more to scroll in that direction. Whichever edge has more behind
+ * it fades out over 48px, so the card cut off at the edge reads as "more
+ * this way" instead of a word sliced in half, and a 24px end pad keeps the
+ * last card off the edge. Pass gap/snap utilities via `className`.
  */
+
+const FADE = 48;
+
+/** The scroller's mask for the edges that have more content behind them. */
+function edgeMask(left: boolean, right: boolean): string | undefined {
+  if (!left && !right) return undefined;
+  const start = left ? `transparent, #000 ${FADE}px` : "#000";
+  const end = right ? `#000 calc(100% - ${FADE}px), transparent` : "#000";
+  return `linear-gradient(to right, ${start}, ${end})`;
+}
 export function ScrollRail({
   children,
   className,
@@ -41,12 +54,15 @@ export function ScrollRail({
     if (el) el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
   };
 
+  const mask = edgeMask(canLeft, canRight);
+
   return (
     <div className="group/rail relative">
       <div
         ref={ref}
+        style={{ maskImage: mask, WebkitMaskImage: mask }}
         className={cn(
-          "flex overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "flex overflow-x-auto scroll-smooth pb-2 pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           className,
         )}
       >
