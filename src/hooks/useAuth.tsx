@@ -1,4 +1,5 @@
 import {
+  startTransition,
   createContext,
   useContext,
   useEffect,
@@ -38,7 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      setSession(s);
+      // As a transition: the first session arrives while React may still be
+      // hydrating a Suspense boundary (the home grid). A plain state update
+      // there makes React abandon hydration and client-render the boundary,
+      // which is the intermittent #418 for signed-in visitors. A transition
+      // lets hydration finish first and applies the session afterwards.
+      startTransition(() => setSession(s));
       const uid = s?.user?.id ?? null;
       // The first event after mount reports the session that was already in
       // storage. It is the baseline, not a change: every query keyed on the
@@ -59,8 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     supabase.auth.getSession().then(({ data }) => {
       lastUserId.current = data.session?.user?.id ?? null;
-      setSession(data.session);
-      setLoading(false);
+      startTransition(() => {
+        setSession(data.session);
+        setLoading(false);
+      });
     });
     return () => sub.subscription.unsubscribe();
   }, [qc]);
