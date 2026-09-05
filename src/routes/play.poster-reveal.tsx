@@ -12,7 +12,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { posterRevealPayout, totalComets } from "@/lib/arcade/comets";
 import { sharePosterReveal } from "@/lib/arcade/share";
 import { distribution, recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, hueVars } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, hueVars, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,7 +43,6 @@ const GAME = GAMES["poster-reveal"];
 const MAX_GUESSES = POSTER_MAX_GUESSES;
 // Solve on guess 1 through 6; the score falls with each blur step used.
 const SCORE_BY_GUESS = [100, 85, 70, 55, 40, 25];
-const TIERS = ["First try", "Two", "Sharp", "Solid", "Close", "Phew"];
 const DIST_LABELS = ["1", "2", "3", "4", "5", "6"];
 const HOW_TO = [
   "One poster a day, blurred past recognition. Type any movie or show to guess.",
@@ -51,6 +50,13 @@ const HOW_TO = [
   "Guess one pays 12 comets, guess six pays 2.",
 ];
 const LOST_HINT = "Solving on guess six pays 2 comets. Guess one pays 12.";
+
+/** The end-screen word for a solve, from how much of the guess budget was
+ *  left: guess one is Perfect, guess six is Rough. The headline carries the
+ *  count itself. */
+function solveTier(guesses: number): string {
+  return tierFor(GAME.slug, 1 - (guesses - 1) / MAX_GUESSES);
+}
 
 export const Route = createFileRoute("/play/poster-reveal")({
   loader: async () => {
@@ -253,7 +259,7 @@ function PosterRevealPage() {
     if (!round) return { headline: "", shareText: "" };
     const { won, guesses, gaveUp } = outcome;
     const text = sharePosterReveal({ day: round.dayKey, guesses, won });
-    const tier = won ? TIERS[guesses - 1] : undefined;
+    const tier = won ? solveTier(guesses) : undefined;
     const headline = won
       ? `Solved in ${guesses} of ${MAX_GUESSES}`
       : gaveUp

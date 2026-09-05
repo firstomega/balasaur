@@ -2,36 +2,44 @@
 // two renderers: GameMark draws them as inline SVG, shareImage draws them on
 // a canvas through Path2D. Stroke-based, 2px at 24px, round caps and joins;
 // a path flagged `fill` is painted solid in the same color (the lit slot,
-// the bubble dots). Each mark is the game's own board shape.
+// the bubble dots); `ink` dims a path to a fraction of the color so a mark
+// can hold two weights (the spent clue rows, the blur around a poster).
+// Each mark is the game's own board shape.
 
 import type { GameSlug } from "@/lib/arcade/types";
 
 export interface MarkPath {
   d: string;
   fill?: boolean;
+  /** Opacity, 0 to 1. Omitted means full color. */
+  ink?: number;
 }
 
 export const MARK_VIEWBOX = 24;
 
 export const MARK_PATHS: Record<GameSlug, MarkPath[]> = {
-  // Six clue slots in two columns, reading order, the last one filled.
-  // Six single-column rows cannot be hollow at 24 units with a 2-unit
-  // stroke (each needs 4 units plus a gap), so the slots pair up.
+  // The board's clue strip: six rows in one column, the five spent ones as
+  // dim bars, the sixth solid and wider. Reads as a list of clues with the
+  // last one lit, not as a grid of apps.
   balasaurdle: [
-    { d: "M4.5 5h5.5a1 1 0 0 1 0 2H4.5a1 1 0 0 1 0-2z" },
-    { d: "M15.5 5h5.5a1 1 0 0 1 0 2h-5.5a1 1 0 0 1 0-2z" },
-    { d: "M4.5 11h5.5a1 1 0 0 1 0 2H4.5a1 1 0 0 1 0-2z" },
-    { d: "M15.5 11h5.5a1 1 0 0 1 0 2h-5.5a1 1 0 0 1 0-2z" },
-    { d: "M4.5 17h5.5a1 1 0 0 1 0 2H4.5a1 1 0 0 1 0-2z" },
-    { d: "M15.5 16h5.5a2 2 0 0 1 0 4h-5.5a2 2 0 0 1 0-4z", fill: true },
+    { d: "M6 2.5h12", ink: 0.55 },
+    { d: "M6 6h12", ink: 0.55 },
+    { d: "M6 9.5h12", ink: 0.55 },
+    { d: "M6 13h12", ink: 0.55 },
+    { d: "M6 16.5h12", ink: 0.55 },
+    { d: "M5.25 19.5h13.5a1.75 1.75 0 0 1 0 3.5H5.25a1.75 1.75 0 0 1 0-3.5z", fill: true },
   ],
-  // A 2:3 frame with a round focus ring and a sharp center dot.
+  // A 2:3 poster frame, sharp, with the picture inside still a soft block:
+  // the art before it comes into focus.
   "poster-reveal": [
     {
       d: "M7 2.5h10a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H7a1.5 1.5 0 0 1-1.5-1.5V4A1.5 1.5 0 0 1 7 2.5z",
     },
-    { d: "M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7z" },
-    { d: "M12 10.75a1.25 1.25 0 1 0 0 2.5a1.25 1.25 0 1 0 0-2.5z", fill: true },
+    {
+      d: "M9.5 6h5a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 8 16.5v-9A1.5 1.5 0 0 1 9.5 6z",
+      fill: true,
+      ink: 0.45,
+    },
   ],
   // Two big closing quote marks.
   "quote-match": [
@@ -40,12 +48,13 @@ export const MARK_PATHS: Record<GameSlug, MarkPath[]> = {
     { d: "M14 11V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4z" },
     { d: "M14 13c0 3 1.2 5 3.5 6" },
   ],
-  // A small poster with a speech bubble under it, tail up at the poster.
+  // A poster at the top left and, hanging from its corner, the speech
+  // bubble that carries its tagline: the tail runs down out of the poster
+  // into the bubble at the bottom right, with the line of copy inside.
   taglines: [
-    { d: "M8.5 1.5h7a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" },
-    {
-      d: "M5 18h3l1.5-2 1.5 2H19a2 2 0 0 1 2 2v0.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V20a2 2 0 0 1 2-2z",
-    },
+    { d: "M3.5 1.5h6a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z" },
+    { d: "M12 13.5h8a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-2.5L7 13z" },
+    { d: "M13 17.75h5.5", ink: 0.55 },
   ],
   // A clapperboard, flap open.
   "casting-call": [

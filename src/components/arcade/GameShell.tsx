@@ -91,8 +91,12 @@ export function GameShell({
                 <GameMark slug={game.slug} size={22} />
               </span>
               <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-2">
-                  <h1 className="truncate text-[20px] font-black leading-none tracking-[-0.02em] text-text-bright sm:text-[22px]">
+                {/* The name is never cut. At phone width it shrinks with the
+                    viewport first (17px at 354, 20px from 416), and the day
+                    chip drops to a second line when the two still do not
+                    share one. */}
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <h1 className="min-w-0 text-[clamp(17px,4.8vw,20px)] font-black leading-none tracking-[-0.02em] text-text-bright sm:text-[22px]">
                     {game.name}
                   </h1>
                   {chip && (
@@ -131,7 +135,7 @@ export function GameShell({
                 type="button"
                 onClick={api.start}
                 autoFocus
-                className="mt-5 inline-flex min-w-[160px] items-center justify-center rounded-full bg-[var(--game,var(--primary))] px-8 py-3 text-[16px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--game,var(--primary))] focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
+                className="arcade-focus mt-5 inline-flex min-w-[160px] items-center justify-center rounded-full bg-[var(--game,var(--primary))] px-8 py-3 text-[16px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.03] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
               >
                 {startLabel}
               </button>

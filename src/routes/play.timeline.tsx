@@ -11,7 +11,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { timelinePayout, totalComets } from "@/lib/arcade/comets";
 import { shareTimeline } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, hueVars } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, hueVars, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -133,12 +133,6 @@ function MoreGames() {
   );
 }
 
-function tierFor(correctSlots: number): string | undefined {
-  if (correctSlots === BOARD_SIZE) return "Perfect order";
-  if (correctSlots === BOARD_SIZE - 1) return "Close";
-  return undefined;
-}
-
 function TimelinePage() {
   const { round, yesterday } = Route.useLoaderData() as {
     round: TimelineRound | null;
@@ -246,7 +240,7 @@ function TimelinePage() {
     const correctSlots = slots.filter(Boolean).length;
     const text = shareTimeline({ day: round.dayKey, slots });
     const headline = `${correctSlots} of ${BOARD_SIZE} in order`;
-    const tier = tierFor(correctSlots);
+    const tier = correctSlots === 0 ? undefined : tierFor(GAME.slug, correctSlots / BOARD_SIZE);
     return {
       tier,
       headline,

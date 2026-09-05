@@ -24,7 +24,11 @@ import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 export const Route = createFileRoute("/collections")({
   loader: async () => {
     await cacheSsrResponse();
-    return listCollections();
+    // The month decides which occasions lead. Decided here, once, in UTC, so
+    // the cached page and every client's first render agree. Read from the
+    // viewer's clock it differed across the month boundary and the server
+    // and client rendered different sections.
+    return { collections: await listCollections(), month: new Date().getUTCMonth() + 1 };
   },
   head: () => ({
     meta: buildMeta({
@@ -583,7 +587,7 @@ function DualIndexMatrix({
 }
 
 function CollectionsPage() {
-  const collections = Route.useLoaderData();
+  const { collections, month } = Route.useLoaderData();
   const [q, setQ] = useState("");
   // Personal, so it arrives after mount: the page itself is cached for six
   // hours and served identically to everyone. Until it lands, and for every
@@ -608,7 +612,6 @@ function CollectionsPage() {
   // Occasions are the human-shaped shelves ("Date Night Movies"). Those whose
   // season covers the current month lead, so October surfaces the Halloween
   // list without anyone touching it.
-  const month = new Date().getMonth() + 1;
   const occasions = byKind("occasion");
   const inSeason = occasions.filter((c: CollectionSummary) => c.season_months?.includes(month));
   const everyday = occasions.filter((c: CollectionSummary) => !c.season_months?.includes(month));

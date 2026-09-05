@@ -80,7 +80,7 @@ export function QuizBoard({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[800px]">
+    <div className="w-full">
       {/* Ten pips: the night at a glance. */}
       <div
         className="flex items-center gap-1"

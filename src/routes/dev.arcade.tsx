@@ -53,7 +53,7 @@ import {
   shareTimeline,
 } from "@/lib/arcade/share";
 import { distribution } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, hueVars } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, hueVars, tierFor } from "@/lib/arcade/games";
 import type { GameSlug, GameStats, PayoutLine } from "@/lib/arcade/types";
 import type { ArcadeMediaCard, SequelRoundItem } from "@/lib/arcade.functions";
 import type { SearchHit } from "@/lib/catalog.functions";
@@ -329,12 +329,6 @@ const MATCH_LOST_HINT = "A first-try match pays 2 comets. Five of them pay 15.";
 const MATCH_SIZE = 5;
 const LAST_PAIR_BEAT_MS = 1500;
 
-function matchTier(matches: number, clean: boolean): string | undefined {
-  if (matches === MATCH_SIZE) return clean ? "Clean board" : "All five";
-  if (matches >= 3) return "Close";
-  return undefined;
-}
-
 function MatchHarness({ slug, state }: { slug: "quote-match" | "taglines"; state: HarnessState }) {
   const GAME = GAMES[slug];
   const payout = slug === "quote-match" ? quoteMatchPayout : taglinesPayout;
@@ -400,7 +394,7 @@ function MatchHarness({ slug, state }: { slug: "quote-match" | "taglines"; state
     const matches = result?.matches ?? 0;
     const clean = result?.clean ?? false;
     const text = share({ day: DAY, matches, clean });
-    const tier = matchTier(matches, clean);
+    const tier = matches === 0 ? undefined : tierFor(slug, matches / MATCH_SIZE);
     const headline = `${matches} of ${MATCH_SIZE} on the first try`;
     return {
       tier,
@@ -414,7 +408,7 @@ function MatchHarness({ slug, state }: { slug: "quote-match" | "taglines"; state
       lost: matches === 0,
       lostHint: MATCH_LOST_HINT,
     };
-  }, [result, share, GAME.hook]);
+  }, [result, share, slug, GAME.hook]);
 
   return (
     <>
@@ -534,12 +528,6 @@ const CASTING_HOW_TO = [
 const CASTING_LOST_HINT = "A right call pays 2 comets. Eight of them pay 16.";
 const CASTING_END_RESULTS = [true, true, false, true, true, true, false, true];
 
-function castingTier(correct: number): string | undefined {
-  if (correct === CASTING_ROUNDS) return "Perfect eight";
-  if (correct >= CASTING_ROUNDS - 2) return "Close";
-  return undefined;
-}
-
 function CastingHarness({ state }: { state: HarnessState }) {
   const GAME = GAMES["casting-call"];
   const resultsRef = useRef<boolean[]>(
@@ -615,7 +603,7 @@ function CastingHarness({ state }: { state: HarnessState }) {
     const results = resultsRef.current;
     const correct = results.filter(Boolean).length;
     const text = shareCastingCall({ day: DAY, results });
-    const tier = castingTier(correct);
+    const tier = correct === 0 ? undefined : tierFor("casting-call", correct / CASTING_ROUNDS);
     const headline = `${correct} of ${CASTING_ROUNDS} right`;
     return {
       tier,
@@ -797,7 +785,7 @@ function LinkUpHarness({ state }: { state: HarnessState }) {
   const end = useMemo<EndScreenContent>(() => {
     const text = shareLinkUp({ day: DAY, solved: true, steps: picks, par: LINK_PAR });
     const headline = `Done in ${picks} pick${picks === 1 ? "" : "s"}, par ${LINK_PAR}`;
-    const tier = wrong === 0 ? "Par" : `${wrong} over par`;
+    const tier = tierFor("link-up", LINK_PAR / picks);
     return {
       tier,
       headline,
@@ -807,7 +795,7 @@ function LinkUpHarness({ state }: { state: HarnessState }) {
       shareImage: { title: headline, subtitle: `${LINK_START} to ${LINK_TARGET}` },
       moreGames: false,
     };
-  }, [picks, wrong]);
+  }, [picks]);
 
   const board = (
     <ChainBoard
@@ -890,12 +878,6 @@ const TIMELINE_HOW_TO = [
 ];
 const TIMELINE_LOST_HINT = "A title in its right slot pays 2 comets.";
 
-function timelineTier(correctSlots: number): string | undefined {
-  if (correctSlots === TIMELINE_SIZE) return "Perfect order";
-  if (correctSlots === TIMELINE_SIZE - 1) return "Close";
-  return undefined;
-}
-
 function TimelineHarness({ state }: { state: HarnessState }) {
   const GAME = GAMES.timeline;
   const endSlots = TIMELINE_START_ORDER.map((id, i) => id === TIMELINE_CORRECT[i]);
@@ -934,7 +916,7 @@ function TimelineHarness({ state }: { state: HarnessState }) {
     const correctSlots = slots.filter(Boolean).length;
     const text = shareTimeline({ day: DAY, slots });
     const headline = `${correctSlots} of ${TIMELINE_SIZE} in order`;
-    const tier = timelineTier(correctSlots);
+    const tier = correctSlots === 0 ? undefined : tierFor("timeline", correctSlots / TIMELINE_SIZE);
     return {
       tier,
       headline,
@@ -1089,12 +1071,6 @@ const BOARD_ROWS: SnippetRow[] = [
   { rank: 5, name: "popcorn_pat", handle: "popcorn_pat", score: 7, durationMs: 120_000 },
 ];
 
-function screeningTier(correct: number): string | undefined {
-  if (correct === SCREENING_COUNT) return "Perfect ten";
-  if (correct >= 8) return "Sharp";
-  return undefined;
-}
-
 function ScreeningHarness({ state }: { state: HarnessState }) {
   const GAME = GAMES.screening;
   const answersRef = useRef<boolean[]>(
@@ -1166,7 +1142,7 @@ function ScreeningHarness({ state }: { state: HarnessState }) {
     const correct = answers.filter(Boolean).length;
     const text = shareScreening({ day: DAY, answers });
     const headline = `${correct} of ${SCREENING_COUNT} right`;
-    const tier = screeningTier(correct);
+    const tier = correct === 0 ? undefined : tierFor("screening", correct / SCREENING_COUNT);
     return {
       tier,
       headline,
@@ -1215,38 +1191,39 @@ function ScreeningHarness({ state }: { state: HarnessState }) {
 
 // ---------------------------------------------------------------------------
 // Emoji Plots: plot 3 of 5, two misses in so the third-guess lifeline is up.
+// Four emoji a plot, the pack's usual length (it runs three to five).
 
 const EMOJI: { media: ArcadeMediaCard; emoji: string; choices: string[] }[] = [
   {
     media: MATRIX,
-    emoji: "🐇🕳️💊🔴🔵🕶️",
+    emoji: "🐇🕳️💊🕶️",
     choices: ["The Matrix", "Blade Runner", "Total Recall", "Dark City"],
   },
   {
     media: INCEPTION,
-    emoji: "🌀🛌💭🎯🏙️",
+    emoji: "🌀🛌💭🏙️",
     choices: ["Inception", "Paprika", "Shutter Island", "Tenet"],
   },
   {
     media: JURASSIC,
-    emoji: "🦖🏝️🧬⛈️🚙",
+    emoji: "🦖🏝️🧬⛈️",
     choices: ["Jurassic Park", "King Kong", "The Lost World", "Godzilla"],
   },
   {
     media: TITANIC,
-    emoji: "🚢🧊💔🎻🌊",
+    emoji: "🚢🧊💔🌊",
     choices: ["Titanic", "The Poseidon Adventure", "Life of Pi", "The Perfect Storm"],
   },
   {
     media: GODFATHER,
-    emoji: "🍊🐴🛏️🔫👨‍👦",
+    emoji: "🍊🐴🛏️🔫",
     choices: ["The Godfather", "Goodfellas", "Casino", "Scarface"],
   },
 ];
 const EMOJI_PUZZLES = 5;
 const EMOJI_MAX_GUESSES = 3;
 const EMOJI_HOW_TO = [
-  "Read the emoji, type the title. Any movie or show in the catalog counts.",
+  "A whole movie in a few emoji. Type the title; any movie or show in the catalog counts.",
   "Three guesses a plot. On the last one, a short list of suspects appears.",
   "Five plots. A solve pays 2 comets, 1 more when the first guess lands.",
 ];
@@ -1265,14 +1242,6 @@ const EMOJI_END: PlotResult[] = [
   { solved: true, firstTry: true },
   { solved: true, firstTry: false },
 ];
-
-function emojiTier(solved: number, firstTry: number): string | undefined {
-  if (solved === EMOJI_PUZZLES) {
-    return firstTry === EMOJI_PUZZLES ? "Five first guesses" : "All five";
-  }
-  if (solved >= EMOJI_PUZZLES - 1) return "Close";
-  return undefined;
-}
 
 function EmojiHarness({ state }: { state: HarnessState }) {
   const GAME = GAMES.emoji;
@@ -1365,9 +1334,8 @@ function EmojiHarness({ state }: { state: HarnessState }) {
   const end = useMemo<EndScreenContent>(() => {
     const finished = resultsRef.current;
     const solved = finished.filter((r) => r.solved).length;
-    const firstTry = finished.filter((r) => r.firstTry).length;
     const text = shareEmoji({ day: DAY, results: finished.map((r) => r.solved) });
-    const tier = emojiTier(solved, firstTry);
+    const tier = solved === 0 ? undefined : tierFor("emoji", solved / EMOJI_PUZZLES);
     const headline = `${solved} of ${EMOJI_PUZZLES} plots solved`;
     return {
       tier,
@@ -1540,13 +1508,6 @@ const SPEED_END: { sorted: number; misses: SpeedMiss[] } = {
   ],
 };
 
-function speedTier(sorted: number, missed: number, deck: number): string | undefined {
-  if (sorted === deck && missed === 0) return "Whole deck, clean";
-  if (sorted > 0 && missed === 0) return "Clean minute";
-  if (sorted === deck) return "Whole deck";
-  return undefined;
-}
-
 /** Every miss with the bin it belonged in, under the end screen. */
 function MissList({ misses }: { misses: SpeedMiss[] }) {
   if (misses.length === 0) return null;
@@ -1655,7 +1616,7 @@ function SpeedSortHarness({ state }: { state: HarnessState }) {
         : missed === 0
           ? `${sorted} sorted, none missed`
           : `${sorted} sorted, ${missed} missed`;
-    const tier = speedTier(sorted, missed, 30);
+    const tier = sorted === 0 ? undefined : tierFor("speed-sort", sorted / (sorted + missed));
     return {
       tier,
       headline,
@@ -1810,12 +1771,6 @@ interface Call {
 /** The ended fixture: two misses, best streak six. */
 const SEQUEL_END_CALLS: Call[] = SEQUELS.map((item, i) => ({ item, ok: i !== 2 && i !== 7 }));
 
-function sequelTier(correct: number): string | undefined {
-  if (correct === SEQUEL_DECK) return "Perfect ten";
-  if (correct >= SEQUEL_DECK - 2) return "Close";
-  return undefined;
-}
-
 function sequelCard(item: SequelRoundItem | undefined): BinCard | null {
   if (!item) return null;
   return {
@@ -1929,7 +1884,7 @@ function SequelHarness({ state }: { state: HarnessState }) {
     const results = callsRef.current.map((c) => c.ok);
     const correct = results.filter(Boolean).length;
     const text = shareSequelOrFake({ day: DAY, results });
-    const tier = sequelTier(correct);
+    const tier = correct === 0 ? undefined : tierFor("sequel-or-fake", correct / SEQUEL_DECK);
     const headline = `${correct} of ${SEQUEL_DECK} right`;
     return {
       tier,
@@ -1993,7 +1948,6 @@ function SequelHarness({ state }: { state: HarnessState }) {
 // ---------------------------------------------------------------------------
 // Poster Reveal: PosterBoard two wrong guesses in; ended = solved on three.
 
-const POSTER_TIERS = ["First try", "Two", "Sharp", "Solid", "Close", "Phew"];
 const POSTER_HOW_TO = [
   "One poster a day, blurred past recognition. Type any movie or show to guess.",
   "A wrong guess sharpens it one step. Six guesses.",
@@ -2067,7 +2021,7 @@ function PosterRevealHarness({ state }: { state: HarnessState }) {
   const end = useMemo<EndScreenContent>(() => {
     const { won, guesses, gaveUp } = outcome;
     const text = sharePosterReveal({ day: DAY, guesses, won });
-    const tier = won ? POSTER_TIERS[guesses - 1] : undefined;
+    const tier = won ? tierFor("poster-reveal", 1 - (guesses - 1) / POSTER_MAX_GUESSES) : undefined;
     const headline = won
       ? `Solved in ${guesses} of ${POSTER_MAX_GUESSES}`
       : gaveUp
@@ -2191,7 +2145,10 @@ const DAILY_CLUES = [
   "Directed by the Wachowskis, with Laurence Fishburne in the cast.",
   "Keanu Reeves stars. The tagline: Welcome to the Real World.",
 ];
-const DAILY_TIERS = ["First try", "Two", "Sharp", "Solid", "Close", "Phew"];
+/** Guess one is Perfect, guess six is Rough; the headline carries the count. */
+function dailyTier(guesses: number): string {
+  return tierFor("balasaurdle", 1 - (guesses - 1) / DAILY_MAX_GUESSES);
+}
 // Blur radius of the hint poster after the first, second and third hint.
 const HINT_BLUR_PX = [18, 10, 5];
 const DAILY_HOW_TO = [
@@ -2217,6 +2174,7 @@ function dailyPayout(s: DailyRun): PayoutLine[] {
   return balasaurdlePayout({ guesses: s.guesses.length, won: s.solved, hints: s.hintsUsed });
 }
 
+const DAILY_SCORE = 87;
 const DAILY_MISSES = [
   { id: "movie-78", title: "Blade Runner" },
   { id: "movie-861", title: "Total Recall" },
@@ -2326,11 +2284,12 @@ function BalasaurdleHarness({ state }: { state: HarnessState }) {
     const guesses = run.guesses.length;
     const won = run.solved;
     const text = shareBalasaurdle({ day: DAY, guesses, won, hints: run.hintsUsed });
-    const tier = won ? DAILY_TIERS[guesses - 1] : undefined;
+    const tier = won ? dailyTier(guesses) : undefined;
+    const lastClue = Math.min(guesses - (won ? 1 : 0) + 1, DAILY_MAX_GUESSES);
     const headline = won
       ? `Solved in ${guesses} of ${DAILY_MAX_GUESSES}`
       : run.gaveUp
-        ? `Revealed on clue ${Math.min(guesses + 1, DAILY_MAX_GUESSES)}`
+        ? `Revealed on clue ${lastClue}`
         : "Six guesses, no match";
     const hintTag =
       run.hintsUsed > 0 ? `, ${run.hintsUsed} hint${run.hintsUsed === 1 ? "" : "s"}` : "";
@@ -2348,8 +2307,11 @@ function BalasaurdleHarness({ state }: { state: HarnessState }) {
         title: headline,
         subtitle: won ? `${tier}${hintTag}` : "Same six clues for everyone.",
       },
-      answers: [toMediaItem(challenge)],
+      // The live route carries the title's Balasaur Score; the fixture
+      // carries one so the answer row renders the badge.
+      answers: [{ ...toMediaItem(challenge), ratings: { balasaur: DAILY_SCORE } }],
       answersLabel: won ? "The answer" : "It was",
+      answerNote: `Clue ${lastClue}: ${DAILY_CLUES[lastClue - 1]}`,
       lost: !won,
       lostHint: DAILY_LOST_HINT,
     };
@@ -2402,7 +2364,7 @@ function BalasaurdleHarness({ state }: { state: HarnessState }) {
               />
               <div className="min-w-0">
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--game,var(--primary))]">
-                  {run.solved ? DAILY_TIERS[run.guesses.length - 1] : "The answer"}
+                  {run.solved ? dailyTier(run.guesses.length) : "The answer"}
                 </p>
                 <Link
                   to={to}

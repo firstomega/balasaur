@@ -30,7 +30,10 @@ export function Footer() {
               Cookie settings
             </button>
           </nav>
-          <p>© {year} Balasaur.</p>
+          {/* The year is read from the clock at render. Around New Year the
+              cached page and a visitor's clock can disagree for a few hours;
+              a text difference here is not worth rebuilding the page over. */}
+          <p suppressHydrationWarning>© {year} Balasaur.</p>
         </div>
       </div>
     </footer>

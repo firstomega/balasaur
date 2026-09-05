@@ -11,7 +11,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { sequelOrFakePayout, totalComets } from "@/lib/arcade/comets";
 import { shareSequelOrFake } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -152,12 +152,6 @@ interface Call {
   ok: boolean;
 }
 
-function tierFor(correct: number): string | undefined {
-  if (correct === DECK) return "Perfect ten";
-  if (correct >= DECK - 2) return "Close";
-  return undefined;
-}
-
 function toCard(item: SequelRoundItem | undefined): BinCard | null {
   if (!item) return null;
   return {
@@ -280,7 +274,7 @@ function SequelOrFakePage() {
     const results = resultsRef.current;
     const correct = results.filter(Boolean).length;
     const text = shareSequelOrFake({ day: round.dayKey, results });
-    const tier = tierFor(correct);
+    const tier = correct === 0 ? undefined : tierFor(GAME.slug, correct / DECK);
     const headline = `${correct} of ${DECK} right`;
     return {
       tier,

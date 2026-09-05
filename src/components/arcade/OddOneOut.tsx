@@ -1,12 +1,15 @@
 // OddOneOut: one movie, four actor names, one was never in it. A pip strip
-// counts the night's rounds; the poster is the anchor beside the prompt; the
-// four answers are large cards in four tints with the name centered; the
-// countdown is a bar right under the cards and shows nothing but the clock.
+// counts the night's rounds; the prompt is a hue stage across the board's
+// width (the same stage The 8PM Screening uses) with the poster on the left
+// and the title large beside it; the four answers are large cards in four
+// tints with the name centered; the countdown is a bar right under the
+// cards and shows nothing but the clock. It stays mounted, dimmed, through
+// the reveal so the board's height never changes mid-round.
 // On reveal the odd one fills with the game hue and the three real actors
 // show the part they played. Controlled: reveal state comes in as a prop,
 // the pick goes out as a callback, the clock belongs to the game route.
 
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import type { ArcadeTimer } from "@/lib/arcade/useArcadeGame";
@@ -79,6 +82,11 @@ export function OddOneOut({
   onPick,
 }: OddOneOutProps) {
   const open = !disabled && !reveal;
+  // The route drops the clock once a pick lands; the board keeps drawing
+  // the last one it saw, dimmed, until the next round hands it a fresh one.
+  const lastTimer = useRef<ArcadeTimer | null>(timer ?? null);
+  if (timer) lastTimer.current = timer;
+  const shownTimer = timer ?? (reveal !== null ? lastTimer.current : null);
 
   // Keys 1-4 answer while the round is open.
   useEffect(() => {
@@ -122,7 +130,7 @@ export function OddOneOut({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[800px]">
+    <div className="w-full">
       {/* The pips: the run at a glance, right or wrong per round. */}
       {count && (
         <div
@@ -148,11 +156,21 @@ export function OddOneOut({
         </div>
       )}
 
-      {/* The prompt: poster as the anchor, the title in display type. */}
-      <div className="flex items-center gap-4 sm:gap-6">
+      {/* The prompt: a hue stage across the width, the poster as the anchor,
+          the title in display type. */}
+      <div
+        className="flex items-center gap-4 rounded-[6px] p-3 sm:gap-6 sm:p-5"
+        style={{
+          background:
+            "linear-gradient(160deg, color-mix(in oklch, var(--game) 70%, #0b0d10), color-mix(in oklch, var(--game) 30%, #0b0d10))",
+        }}
+      >
         <div
-          className="w-[96px] shrink-0 overflow-hidden rounded-[6px] border border-border bg-panel sm:w-[160px]"
-          style={{ aspectRatio: "2 / 3" }}
+          className="w-[96px] shrink-0 overflow-hidden rounded-[5px] sm:w-[160px]"
+          style={{
+            aspectRatio: "2 / 3",
+            background: "color-mix(in oklab, #0b0d10 45%, transparent)",
+          }}
         >
           {posterUrl ? (
             <img
@@ -163,26 +181,18 @@ export function OddOneOut({
               className="arcade-flip-in h-full w-full object-cover"
             />
           ) : (
-            <span
-              className="flex h-full w-full items-center justify-center px-2 text-center text-[13px] font-black leading-tight tracking-[-0.02em] text-text-bright sm:text-[18px]"
-              style={{
-                background:
-                  "linear-gradient(160deg, color-mix(in oklch, var(--game) 70%, #0b0d10), color-mix(in oklch, var(--game) 30%, #0b0d10))",
-              }}
-            >
+            <span className="flex h-full w-full items-center justify-center px-2 text-center text-[13px] font-black leading-tight tracking-[-0.02em] text-white sm:text-[18px]">
               {title}
             </span>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--game)]">
-            Never in
-          </p>
-          <h2 className="mt-1 text-[24px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright sm:text-[36px]">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-white/70">Never in</p>
+          <h2 className="mt-1 text-[24px] font-black leading-[1.05] tracking-[-0.02em] text-white sm:text-[40px] lg:text-[48px]">
             {title}
           </h2>
           {year ? (
-            <p className="mt-1 font-mono text-[12px] text-text-muted sm:text-[13px]">{year}</p>
+            <p className="mt-1 font-mono text-[12px] text-white/70 sm:text-[13px]">{year}</p>
           ) : null}
         </div>
       </div>
@@ -242,10 +252,18 @@ export function OddOneOut({
         })}
       </div>
 
-      {/* The clock, right under what it times. Height reserved between rounds. */}
+      {/* The clock, right under what it times. It stays through the reveal,
+          dimmed, and the slot keeps its height between rounds. */}
       <div className="mt-3 min-h-[40px] sm:mt-4">
-        {timer && reveal === null ? (
-          <TimerBar remaining={timer.remaining} total={timer.total} />
+        {shownTimer ? (
+          <TimerBar
+            remaining={shownTimer.remaining}
+            total={shownTimer.total}
+            className={cn(
+              "transition-opacity duration-300 motion-reduce:transition-none",
+              reveal !== null && "opacity-40",
+            )}
+          />
         ) : null}
       </div>
 

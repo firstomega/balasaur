@@ -13,7 +13,7 @@ import type { SearchHit } from "@/lib/catalog.functions";
 import { useViewerCountry } from "@/hooks/useCatalog";
 import { useAuth } from "@/hooks/useAuth";
 import { arcadeSubmitRun } from "@/lib/arcade";
-import { GAMES, ENABLED_SLUGS } from "@/lib/arcade/games";
+import { GAMES, ENABLED_SLUGS, tierFor } from "@/lib/arcade/games";
 import { balasaurdlePayout, totalComets } from "@/lib/arcade/comets";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
@@ -53,7 +53,6 @@ import type { MediaItem } from "@/types/media";
 const GAME = GAMES.balasaurdle;
 // Blur radius of the hint poster after the first, second and third hint.
 const HINT_BLUR_PX = [18, 10, 5];
-const TIERS = ["First try", "Two", "Sharp", "Solid", "Close", "Phew"];
 const DIST_LABELS = ["1", "2", "3", "4", "5", "6"];
 const HOW_TO = [
   "One clue at a time. Type any movie or show to guess.",
@@ -63,6 +62,13 @@ const HOW_TO = [
 const LOST_HINT = "Solving on clue six pays 2 comets. Clue one pays 12.";
 // The answer's poster holds on the board before the end screen takes over.
 const HOLD_MS = REVEAL_HOLD_MS + 500;
+
+/** The end-screen word for a solve, from how much of the guess budget was
+ *  left: guess one is Perfect, guess six is Rough. The headline carries the
+ *  count itself. */
+function solveTier(guesses: number): string {
+  return tierFor(GAME.slug, 1 - (guesses - 1) / MAX_GUESSES);
+}
 
 export const Route = createFileRoute("/play/balasaurdle")({
   loader: async () => {
@@ -365,11 +371,14 @@ function PlayPage() {
       won,
       hints: state.hintsUsed,
     });
-    const tier = won ? TIERS[guesses - 1] : undefined;
+    const tier = won ? solveTier(guesses) : undefined;
+    // The last clue on the board when the run ended: the one that cracked
+    // it, or the one it stalled on.
+    const lastClue = Math.min(guesses - (won ? 1 : 0) + 1, MAX_GUESSES);
     const headline = won
       ? `Solved in ${guesses} of ${MAX_GUESSES}`
       : state.gaveUp
-        ? `Revealed on clue ${Math.min(guesses + 1, MAX_GUESSES)}`
+        ? `Revealed on clue ${lastClue}`
         : "Six guesses, no match";
     const hintTag =
       state.hintsUsed > 0 ? `, ${state.hintsUsed} hint${state.hintsUsed === 1 ? "" : "s"}` : "";
@@ -388,6 +397,9 @@ function PlayPage() {
       },
       answers: [toMediaItem(challenge)],
       answersLabel: won ? "The answer" : "It was",
+      answerNote: challenge.clues[lastClue - 1]
+        ? `Clue ${lastClue}: ${challenge.clues[lastClue - 1]}`
+        : undefined,
       lost: !won,
       lostHint: LOST_HINT,
       firstComets,
@@ -485,7 +497,7 @@ function PlayPage() {
                   />
                   <div className="min-w-0">
                     <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--game,var(--primary))]">
-                      {state.solved ? TIERS[state.guessedIds.length - 1] : "The answer"}
+                      {state.solved ? solveTier(state.guessedIds.length) : "The answer"}
                     </p>
                     <Link
                       to={challenge.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}

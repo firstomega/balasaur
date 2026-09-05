@@ -11,7 +11,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { taglinesPayout, totalComets } from "@/lib/arcade/comets";
 import { shareTaglines } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
+import { ENABLED_SLUGS, GAMES, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -147,12 +147,6 @@ function MoreGames() {
   );
 }
 
-function tierFor(matches: number, clean: boolean): string | undefined {
-  if (matches === BOARD_SIZE) return clean ? "Clean board" : "All five";
-  if (matches >= 3) return "Close";
-  return undefined;
-}
-
 function TaglinesPage() {
   const { round, yesterday } = Route.useLoaderData();
   const api = useArcadeGame();
@@ -259,7 +253,7 @@ function TaglinesPage() {
     const matches = firstTryRef.current;
     const clean = matches === BOARD_SIZE;
     const text = shareTaglines({ day: round.dayKey, matches, clean });
-    const tier = tierFor(matches, clean);
+    const tier = matches === 0 ? undefined : tierFor(GAME.slug, matches / BOARD_SIZE);
     const headline = `${matches} of ${BOARD_SIZE} on the first try`;
     return {
       tier,
