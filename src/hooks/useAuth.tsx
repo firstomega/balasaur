@@ -1,4 +1,5 @@
 import {
+  startTransition,
   createContext,
   useContext,
   useEffect,
@@ -9,6 +10,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
+import { useHydrated } from "@/hooks/useHydrated";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthCtx {
@@ -38,7 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      setSession(s);
+      // As a transition: the first session arrives while React may still be
+      // hydrating a Suspense boundary (the home grid). A plain state update
+      // there makes React abandon hydration and client-render the boundary,
+      // which is the intermittent #418 for signed-in visitors. A transition
+      // lets hydration finish first and applies the session afterwards.
+      startTransition(() => setSession(s));
       const uid = s?.user?.id ?? null;
       // The first event after mount reports the session that was already in
       // storage. It is the baseline, not a change: every query keyed on the
@@ -59,22 +66,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     supabase.auth.getSession().then(({ data }) => {
       lastUserId.current = data.session?.user?.id ?? null;
-      setSession(data.session);
-      setLoading(false);
+      startTransition(() => {
+        setSession(data.session);
+        setLoading(false);
+      });
     });
     return () => sub.subscription.unsubscribe();
   }, [qc]);
 
+  // The session is withheld until the tree has hydrated. The server renders
+  // every page signed-out (one cached page for everyone), and the session is
+  // already in storage on the client, so any consumer that read it during the
+  // hydrating render (the header's avatar, the filter rail, the home grid's
+  // region) disagreed with the HTML and React rebuilt that whole boundary on
+  // every signed-in load. One gate here covers every consumer on every page.
+  const hydrated = useHydrated();
   const value = useMemo<AuthCtx>(
     () => ({
-      user: session?.user ?? null,
-      session,
-      loading,
+      user: hydrated ? (session?.user ?? null) : null,
+      session: hydrated ? session : null,
+      loading: hydrated ? loading : true,
       signOut: async () => {
         await supabase.auth.signOut();
       },
     }),
-    [session, loading],
+    [hydrated, session, loading],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

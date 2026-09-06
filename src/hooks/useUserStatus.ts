@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import type { MediaItem } from "@/types/media";
 
 const KEY = "balasaur:userStatus";
+/** Rows per sign-in migration request; see the migration effect. */
+const MIGRATE_BATCH = 200;
 
 export type SeenStatus = "seen" | "unseen" | "skipped";
 export type Sentiment = "liked" | "disliked";
@@ -177,13 +179,28 @@ export function useUserStatus() {
   }, [user]);
 
   // Signed in: migrate any local-only rows once, then load from the table.
+  //
+  // The migration is batched and deferred on purpose. One upsert with every
+  // local pick in it froze the tab: the database client builds the request's
+  // column list with a quadratic reduce over the rows, on the main thread,
+  // before the request is sent. Eight thousand stored picks cost three
+  // minutes of blocked script, and Chrome kills a tab that stays blocked
+  // that long. Batches of 200 keep each call near-instant, a yield between
+  // batches lets the page paint, and a failed upload is attempted once per
+  // mount instead of on every token refresh (each refresh hands React a new
+  // `user` object, which re-ran this effect while the retry kept failing).
+  const migrationAttemptedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
 
     (async () => {
       // 1. Migrate any localStorage entries the user accumulated while anon.
-      if (migratedRef.current !== user.id) {
+      if (migratedRef.current !== user.id && migrationAttemptedFor.current !== user.id) {
+        migrationAttemptedFor.current = user.id;
+        // Let hydration and the first paint finish before any of this runs.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        if (cancelled) return;
         const local = read();
         // Skip malformed entries (missing record / unusable timestamp) so one
         // corrupt localStorage row can't fail the whole batch upsert.
@@ -192,10 +209,22 @@ export function useUserStatus() {
         );
         if (entries.length > 0) {
           const rows = entries.map(([id, rec]) => recordToInsert(user.id, id, rec));
-          // onConflict ignore so we don't stomp newer server state.
-          const { error: migrateErr } = await supabase
-            .from("user_media_status")
-            .upsert(rows, { onConflict: "user_id,media_id", ignoreDuplicates: true });
+          let migrateErr: { message: string } | null = null;
+          for (let i = 0; i < rows.length && !cancelled; i += MIGRATE_BATCH) {
+            // onConflict ignore so we don't stomp newer server state.
+            const { error } = await supabase
+              .from("user_media_status")
+              .upsert(rows.slice(i, i + MIGRATE_BATCH), {
+                onConflict: "user_id,media_id",
+                ignoreDuplicates: true,
+              });
+            if (error) {
+              migrateErr = error;
+              break;
+            }
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          }
+          if (cancelled) return;
           // Supabase RETURNS the error rather than throwing, so it must be checked
           // before clearing local data — otherwise a failed write silently destroys
           // the user's picks while the UI tells them they were saved.
@@ -204,7 +233,7 @@ export function useUserStatus() {
             // Keep localStorage and leave migratedRef unset so a later load retries.
           } else {
             clearLocal();
-            if (!cancelled) setJustMigrated(entries.length);
+            setJustMigrated(entries.length);
             migratedRef.current = user.id;
           }
         } else {
