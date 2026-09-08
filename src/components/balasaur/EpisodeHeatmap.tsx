@@ -1,32 +1,70 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import {
   buildEpisodeHeatmap,
-  ratingBand,
+  scaleBand,
+  RAMP_STEPS,
   type EpisodeRating,
+  type RatingScale,
   type SeasonSize,
 } from "@/lib/episodes";
 import { cn } from "@/lib/utils";
 
 // One column per season, one cell per episode. The colour is the only thing a
-// cell says, so the scale is printed under the grid: five swatches with the
-// rating each band starts at. Nothing here animates, so there is nothing for
-// prefers-reduced-motion to turn off.
+// cell says, so the ramp is printed beside the grid with the rating at each of
+// its ends, and every season carries its own average under its column.
+// Nothing here animates, so there is nothing for prefers-reduced-motion to
+// turn off.
 
-/** Five steps, low to high: red, orange, amber, yellow-green, then the site's rating green.
- *  These paint the legend swatches. The cells themselves are painted by the
- *  `[&_.b0]:bg-[…]` rules on the grid below, which have to spell each hex out
- *  literally for Tailwind to see it. Change a colour in both places. Doing it
- *  this way keeps a cell down to `<span class="b3"></span>`: The Simpsons is
- *  792 cells, and an inline style on each one was 35 KB of HTML on a page
- *  Google is already slow to crawl. */
-const BAND_HEX = ["#d1584f", "#e0955a", "#e8c96a", "#c6df85", "#9fe6a0"] as const;
-const BAND_CLASS = ["b0", "b1", "b2", "b3", "b4"] as const;
-/** The rating each band starts at, in the same order. */
-const BAND_FLOOR = ["<6", "6", "7", "8", "9"] as const;
-/** An episode nobody rated. Neutral on purpose: a grey cell is not a bad episode. */
-const NO_RATING_CLASS = "bx";
+/** Seven steps, dark to bright. The lightness climbs about ten points a step,
+ *  which is what makes a 9.3 season read as the strongest column instead of
+ *  another patch of yellow-green; it also survives being seen in grey.
+ *  These paint the legend. The cells are painted by the `[&_.r0]:bg-[…]` rules
+ *  below, which have to spell each hex out literally for Tailwind to see it.
+ *  Change a colour in both places. Doing it this way keeps a cell down to
+ *  `<span class="r3"></span>`: The Simpsons is 792 cells, and an inline style
+ *  on each one was 35 KB of HTML on a page Google is already slow to crawl. */
+const RAMP_MASTER = [
+  "#6b2f31",
+  "#8a4032",
+  "#a95c33",
+  "#c07f36",
+  "#cda63f",
+  "#c6cd5b",
+  "#a9f78b",
+  "#7fe08a",
+  "#5fd58c",
+] as const;
+
+/**
+ * Which seven of the nine the show gets. Hue has to mean the same thing on
+ * every page: red is a bad episode, green is a great one. The first version
+ * stretched the full red-to-green ramp across whatever range the show happened
+ * to occupy, so a show whose worst season still averaged 7.2 was painted in
+ * dark red and read as a disaster before the eye reached the legend. The
+ * window is chosen from the show's own floor instead, so the seven steps carry
+ * position within the show while the colours keep telling the truth about
+ * quality. A show that really is bad still starts at red.
+ */
+export function rampWindow(lo: number): number {
+  const start = Math.round(lo) - 3;
+  return Math.min(RAMP_MASTER.length - RAMP_STEPS, Math.max(0, start));
+}
+
+function rampHex(lo: number): string[] {
+  const start = rampWindow(lo);
+  return RAMP_MASTER.slice(start, start + RAMP_STEPS) as unknown as string[];
+}
+
+const RAMP_CLASS = ["r0", "r1", "r2", "r3", "r4", "r5", "r6"] as const;
+const NO_RATING_CLASS = "rx";
 const CELL_STYLE =
-  "[&_.b0]:bg-[#d1584f] [&_.b1]:bg-[#e0955a] [&_.b2]:bg-[#e8c96a] [&_.b3]:bg-[#c6df85] [&_.b4]:bg-[#9fe6a0] [&_.bx]:bg-[#1f242c] [&_span:hover]:ring-1 [&_span:hover]:ring-white/70 [&_span]:block [&_span]:h-[var(--cell-h)] [&_span]:rounded-[1px]";
+  "[&_.r0]:bg-[var(--c0)] [&_.r1]:bg-[var(--c1)] [&_.r2]:bg-[var(--c2)] [&_.r3]:bg-[var(--c3)] [&_.r4]:bg-[var(--c4)] [&_.r5]:bg-[var(--c5)] [&_.r6]:bg-[var(--c6)] [&_.rx]:bg-[#1f242c] [&_span:hover]:ring-1 [&_span:hover]:ring-white/70 [&_span]:block [&_span]:h-[var(--cell-h)] [&_span]:rounded-[1px]";
+
+/** The seven window colours as custom properties, set once on the grid. */
+function rampVars(lo: number): Record<string, string> {
+  const hex = rampHex(lo);
+  return Object.fromEntries(hex.map((h, i) => [`--c${i}`, h]));
+}
 
 /**
  * Cell width cap, by how many columns there are. Only a cap: the grid tracks
@@ -35,39 +73,30 @@ const CELL_STYLE =
  * 700px column, and a thirty-season show would need a scrollbar on both.
  */
 function maxCellWidth(seasonCount: number): number {
-  if (seasonCount <= 4) return 64;
-  if (seasonCount <= 8) return 48;
+  if (seasonCount <= 4) return 72;
+  if (seasonCount <= 8) return 60;
   if (seasonCount <= 16) return 34;
   return 26;
 }
 
-/** Every season is labelled while the labels fit; past that, every fifth. */
-function labelStep(seasonCount: number): number {
-  return seasonCount <= 12 ? 1 : 5;
+/**
+ * The gap between seasons. Without it the columns fuse into one block and the
+ * shape of a season stops being a thing you can see. It shrinks as the show
+ * gets longer so ten seasons still fit a 390px phone without a scrollbar.
+ */
+function seasonGap(seasonCount: number): number {
+  if (seasonCount <= 8) return 8;
+  if (seasonCount <= 12) return 6;
+  return 4;
 }
 
-/**
- * Which seasons get a number under their column, and how it sits in a column
- * that may be 8px wide. The first and last are always named, pinned to their
- * outside edges so they overflow inwards over empty columns instead of being
- * clipped by the scroll box. A tick landing next to either one is dropped
- * rather than printed on top of it.
- */
-function columnLabel(
-  season: number,
-  i: number,
-  count: number,
-  step: number,
-): { show: boolean; align: string } {
-  if (step === 1) return { show: true, align: "text-center" };
-  if (i === 0) return { show: true, align: "text-left" };
-  if (i === count - 1) return { show: true, align: "text-right" };
-  return { show: i > 1 && i < count - 2 && season % step === 0, align: "text-center" };
-}
+/** Past this many columns an average per season stops fitting under one. */
+const DENSE_SEASONS = 12;
 
 /** A column is one season: its episodes in order, with a gap where a rating is missing. */
 interface Column {
   season: number;
+  average: number;
   /** Index into the flat episode list, or null for an episode with no rating. */
   slots: (number | null)[];
 }
@@ -77,13 +106,17 @@ interface Model {
   episodes: EpisodeRating[];
   cellWidth: number;
   cellHeight: number;
+  gap: number;
+  gridWidth: number;
+  peakSeason: number;
+  scale: RatingScale;
   sentence: string;
   rated: number;
   expected: number;
 }
 
 /** Longest column, in pixels, before cells start getting shorter than square. */
-const GRID_TARGET_HEIGHT = 320;
+const GRID_TARGET_HEIGHT = 340;
 /** A column stops here. Nothing in the catalog reaches it; a bad episode number would. */
 const MAX_COLUMN = 300;
 
@@ -106,21 +139,26 @@ function buildModel(rows: EpisodeRating[], seasons: SeasonSize[]): Model | null 
       }
       slots.push(episodes.push(ep) - 1);
     }
-    return { season: s.season, slots };
+    return { season: s.season, average: s.average, slots };
   });
 
   const longest = columns.reduce((m, c) => Math.max(m, c.slots.length), 1);
   const cellWidth = maxCellWidth(columns.length);
+  const gap = seasonGap(columns.length);
   // Keep the block from becoming a tower. A two-season show is two columns
   // wide, so its cells become bricks rather than 40px squares stacked 300px
   // high; a long-running show is already wide and gets the full height.
-  const gridWidth = columns.length * cellWidth + (columns.length - 1) * 2;
+  const gridWidth = columns.length * cellWidth + (columns.length - 1) * gap;
   const targetHeight = Math.min(GRID_TARGET_HEIGHT, Math.max(120, Math.round(gridWidth * 1.4)));
   return {
     columns,
     episodes,
     cellWidth,
     cellHeight: Math.max(4, Math.min(cellWidth, Math.floor(targetHeight / longest))),
+    gap,
+    gridWidth,
+    peakSeason: map.peak.season,
+    scale: map.scale,
     sentence: map.sentence,
     rated: map.rated,
     expected: map.expected,
@@ -151,7 +189,7 @@ function episodeTitle(ep: EpisodeRating): string {
 
 /**
  * The cells. Split out and memoized because hovering changes only the line
- * under the grid, and a long-running show is a thousand cells to re-render.
+ * beside the grid, and a long-running show is a thousand cells to re-render.
  * One listener on the container reads the cell index off the target, so a cell
  * carries no handlers of its own.
  */
@@ -196,11 +234,13 @@ const Cells = memo(function Cells({
     <div
       role="img"
       aria-label={label}
-      className={cn("grid justify-start gap-[2px]", CELL_STYLE)}
+      className={cn("grid justify-start", CELL_STYLE)}
       style={
         {
           gridTemplateColumns: `repeat(${model.columns.length}, minmax(8px, ${model.cellWidth}px))`,
+          columnGap: `${model.gap}px`,
           "--cell-h": `${model.cellHeight}px`,
+          ...rampVars(model.scale.lo),
         } as React.CSSProperties
       }
       onMouseOver={pick}
@@ -213,7 +253,9 @@ const Cells = memo(function Cells({
             <span
               key={idx}
               className={
-                i === null ? NO_RATING_CLASS : BAND_CLASS[ratingBand(model.episodes[i].rating)]
+                i === null
+                  ? NO_RATING_CLASS
+                  : RAMP_CLASS[scaleBand(model.episodes[i].rating, model.scale)]
               }
             />
           ))}
@@ -242,88 +284,152 @@ export function EpisodeHeatmap({ rows, seasons, className }: EpisodeHeatmapProps
   const clear = useCallback(() => setActive(null), []);
   if (!model) return null;
 
-  const step = labelStep(model.columns.length);
-  const columnTemplate = `repeat(${model.columns.length}, minmax(8px, ${model.cellWidth}px))`;
+  const count = model.columns.length;
+  const dense = count > DENSE_SEASONS;
+  const columnTemplate = `repeat(${count}, minmax(8px, ${model.cellWidth}px))`;
   const ep = active === null ? null : (model.episodes[active] ?? null);
+  const peakIndex = model.columns.findIndex((c) => c.season === model.peakSeason);
+  const ramp = rampHex(model.scale.lo);
+  const topHex = ramp[RAMP_STEPS - 1];
 
   return (
     <section className={cn(className)}>
-      <h2 className="mb-2 text-[18px] font-black tracking-[-0.02em] text-text-bright">
+      <h2 className="mb-3 text-[18px] font-black tracking-[-0.02em] text-text-bright">
         Episode ratings
       </h2>
 
-      <div className="overflow-x-auto pb-1">
-        <Cells
-          model={model}
-          onPick={setActive}
-          onClear={clear}
-          label={`Episode ratings by season. ${model.sentence}`}
-        />
+      <div className="flex flex-col gap-5 md:flex-row md:items-start md:gap-8">
         <div
-          className="mt-1 grid justify-start gap-[2px]"
-          style={{ gridTemplateColumns: columnTemplate }}
+          className="min-w-0 overflow-x-auto pb-1 md:shrink-0"
+          style={{ maxWidth: `${model.gridWidth}px` }}
         >
-          {model.columns.map((c, i) => {
-            const label = columnLabel(c.season, i, model.columns.length, step);
-            return (
-              <div
-                key={c.season}
-                aria-hidden="true"
-                className={cn(
-                  "whitespace-nowrap font-mono text-[9px] leading-4 text-text-dim",
-                  label.align,
-                )}
-              >
-                {label.show ? c.season : ""}
-              </div>
-            );
-          })}
+          <Cells
+            model={model}
+            onPick={setActive}
+            onClear={clear}
+            label={`Episode ratings by season. ${model.sentence}`}
+          />
+          {/* The season axis. Each column carries its own average, which is the
+              number the caption's claim is made of, and the strongest season
+              gets the bar and the bright type so it is found before the caption
+              is read. */}
+          <div
+            aria-hidden="true"
+            className="mt-1.5 grid justify-start"
+            style={{ gridTemplateColumns: columnTemplate, columnGap: `${model.gap}px` }}
+          >
+            {model.columns.map((c, i) => {
+              const peak = c.season === model.peakSeason;
+              const label = axisLabel(c.season, i, count, dense, peak, peakIndex);
+              return (
+                <div key={c.season} className={cn("min-w-0", label.align)}>
+                  <div
+                    className="h-[3px] rounded-[1px]"
+                    style={{ background: peak ? topHex : "transparent" }}
+                  />
+                  <div
+                    className={cn(
+                      "mt-1 whitespace-nowrap text-[10px] leading-[13px]",
+                      peak ? "font-bold text-text-bright" : "text-text-dim",
+                    )}
+                  >
+                    {label.number ? label.text : ""}
+                  </div>
+                  <div
+                    className={cn(
+                      "whitespace-nowrap font-mono text-[11px] leading-[15px] tabular-nums",
+                      peak ? "font-bold text-text-bright" : "text-text-muted",
+                    )}
+                  >
+                    {label.average ? c.average.toFixed(1) : ""}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          {/* One slot, two jobs: the ramp until a cell is picked, then that
+              episode. Its height is fixed so a long episode title does not
+              shove the caption down the page. */}
+          <div className="min-h-[52px]">
+            {ep ? (
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13px] text-text-bright">
+                <span className="font-mono text-[11px] tabular-nums text-text-dim">
+                  S{ep.season}E{ep.episode}
+                </span>
+                <span>{episodeTitle(ep)}</span>
+                <span className="font-mono text-[11px] tabular-nums text-rating">
+                  {ep.rating.toFixed(1)}
+                </span>
+                {ep.airDate ? (
+                  <span className="font-mono text-[11px] text-text-dim">
+                    {airDateLabel(ep.airDate)}
+                  </span>
+                ) : null}
+              </p>
+            ) : (
+              <>
+                <div className="flex max-w-[220px] gap-[2px]">
+                  {ramp.map((hex) => (
+                    <span
+                      key={hex}
+                      className="h-[10px] flex-1 rounded-[1px]"
+                      style={{ background: hex }}
+                    />
+                  ))}
+                </div>
+                <div className="mt-1 flex max-w-[220px] justify-between font-mono text-[11px] tabular-nums text-text-dim">
+                  <span>{model.scale.lo.toFixed(1)}</span>
+                  <span>{model.scale.hi.toFixed(1)}</span>
+                </div>
+                <p className="mt-2 font-mono text-[11px] tabular-nums text-text-dim">
+                  {model.rated.toLocaleString("en-US")} of {model.expected.toLocaleString("en-US")}{" "}
+                  episodes rated on TMDB
+                </p>
+              </>
+            )}
+          </div>
+
+          <p className="mt-3 max-w-[46ch] text-[14px] leading-relaxed text-text-muted">
+            {model.sentence}
+          </p>
         </div>
       </div>
-
-      {/* One slot, two jobs: the scale until a cell is picked, then that
-          episode. Its height is fixed at two lines so a long episode title
-          does not shove the sentence below it down the page. */}
-      <div className="mt-2 flex min-h-[44px] flex-wrap items-start gap-x-4 gap-y-1">
-        {ep ? (
-          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13px] text-text-bright">
-            <span className="font-mono text-[11px] tabular-nums text-text-dim">
-              S{ep.season}E{ep.episode}
-            </span>
-            <span>{episodeTitle(ep)}</span>
-            <span className="font-mono text-[11px] tabular-nums text-rating">
-              {ep.rating.toFixed(1)}
-            </span>
-            {ep.airDate ? (
-              <span className="font-mono text-[11px] text-text-dim">
-                {airDateLabel(ep.airDate)}
-              </span>
-            ) : null}
-          </p>
-        ) : (
-          <>
-            <div className="flex items-end gap-[3px]">
-              {BAND_HEX.map((hex, i) => (
-                <div key={hex}>
-                  <span
-                    className="block h-[10px] w-[18px] rounded-[1px]"
-                    style={{ background: hex }}
-                  />
-                  <span className="mt-0.5 block text-center font-mono text-[9px] tabular-nums text-text-dim">
-                    {BAND_FLOOR[i]}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="font-mono text-[11px] tabular-nums text-text-dim">
-              {model.rated.toLocaleString("en-US")} of {model.expected.toLocaleString("en-US")}{" "}
-              episodes rated on TMDB
-            </p>
-          </>
-        )}
-      </div>
-
-      <p className="mt-2 text-[13px] leading-relaxed text-text-muted">{model.sentence}</p>
     </section>
   );
+}
+
+/**
+ * What fits under one column. Every season is named while the labels fit. Past
+ * that only the first, the last, the peak and every fifth are, a tick that
+ * would land on top of one of those is dropped, and the averages go with them.
+ * The peak keeps its number and its average no matter how long the show ran.
+ */
+function axisLabel(
+  season: number,
+  i: number,
+  count: number,
+  dense: boolean,
+  peak: boolean,
+  peakIndex: number,
+): { number: boolean; average: boolean; align: string; text: string } {
+  if (!dense || peak) {
+    return { number: true, average: true, align: "text-center", text: `S${season}` };
+  }
+  const text = String(season);
+  const clearOfPeak = Math.abs(i - peakIndex) > 1;
+  if (i === 0) {
+    return { number: clearOfPeak, average: false, align: "text-left", text };
+  }
+  if (i === count - 1) {
+    return { number: clearOfPeak, average: false, align: "text-right", text };
+  }
+  return {
+    number: clearOfPeak && i > 1 && i < count - 2 && season % 5 === 0,
+    average: false,
+    align: "text-center",
+    text,
+  };
 }

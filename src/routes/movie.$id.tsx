@@ -16,6 +16,7 @@ import {
 import { breadcrumbJsonLd, movieJsonLd } from "@/lib/jsonld";
 import { mediaSlug, parseMediaId } from "@/lib/slug";
 import { ssrBudget } from "@/lib/ssrBudget";
+import { getPosterColors } from "@/lib/posterColor.functions";
 
 export const Route = createFileRoute("/movie/$id")({
   loader: async ({ context, params }) => {
@@ -52,7 +53,16 @@ export const Route = createFileRoute("/movie/$id")({
     // shipped and did nothing. The budget keeps a slow shelf lookup from
     // holding the page up: on a timeout the module simply renders client-side,
     // which is where it started.
-    await ssrBudget(context.queryClient.prefetchQuery(appearsInQueryOptions(`movie-${id}`)), 800);
+    //
+    // The poster's stored colors are read alongside it, not after it, for the
+    // same reason: the glow they paint is behind the title in the first byte of
+    // HTML, and a second budget in sequence would put another 600ms in front of
+    // it. A title with no stored colors, or a lookup that runs long, resolves
+    // to nothing and the page keeps its flat ground.
+    const [, colors] = await Promise.all([
+      ssrBudget(context.queryClient.prefetchQuery(appearsInQueryOptions(`movie-${id}`)), 800),
+      ssrBudget(getPosterColors({ data: { mediaId: `movie-${id}` } }), 600),
+    ]);
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
     if (data?.title) {
       const canonical = mediaSlug(id, data.title);
@@ -60,7 +70,7 @@ export const Route = createFileRoute("/movie/$id")({
         throw redirect({ to: "/movie/$id", params: { id: canonical }, statusCode: 301 });
       }
     }
-    return data;
+    return { ...data, glow: colors ?? null };
   },
   head: ({ loaderData, params }) => {
     const d = loaderData;
@@ -89,7 +99,8 @@ export const Route = createFileRoute("/movie/$id")({
 
 function MoviePage() {
   const id = parseMediaId(Route.useParams().id);
-  return <MediaDetail mediaType="movie" id={id} />;
+  const { glow } = Route.useLoaderData();
+  return <MediaDetail mediaType="movie" id={id} colorA={glow?.colorA} colorB={glow?.colorB} />;
 }
 
 function DetailError({ reset }: { error: Error; reset: () => void }) {

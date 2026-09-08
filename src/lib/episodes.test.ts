@@ -1,8 +1,12 @@
+import { rampWindow } from "@/components/balasaur/EpisodeHeatmap";
 import { describe, expect, it } from "bun:test";
 import {
   buildEpisodeHeatmap,
   peakTroughSentence,
-  ratingBand,
+  ratingScale,
+  scaleBand,
+  RAMP_MIN_SPREAD,
+  RAMP_STEPS,
   summarizeSeasons,
   type EpisodeRating,
   type SeasonSize,
@@ -24,18 +28,70 @@ function sizes(...pairs: [number, number][]): SeasonSize[] {
   return pairs.map(([seasonNumber, episodeCount]) => ({ seasonNumber, episodeCount }));
 }
 
-describe("ratingBand", () => {
-  it("puts each rating in the band its legend claims", () => {
-    expect(ratingBand(9.6)).toBe(4);
-    expect(ratingBand(9)).toBe(4);
-    expect(ratingBand(8.9)).toBe(3);
-    expect(ratingBand(8)).toBe(3);
-    expect(ratingBand(7.9)).toBe(2);
-    expect(ratingBand(7)).toBe(2);
-    expect(ratingBand(6.9)).toBe(1);
-    expect(ratingBand(6)).toBe(1);
-    expect(ratingBand(5.9)).toBe(0);
-    expect(ratingBand(0.1)).toBe(0);
+/** The ratings of one flat list of episodes, for the scale tests. */
+function ramp(from: number, to: number, n: number): number[] {
+  return Array.from({ length: n }, (_, i) => from + ((to - from) * i) / (n - 1));
+}
+
+describe("ratingScale", () => {
+  it("spends the whole ramp on the band this show's episodes actually live in", () => {
+    const scale = ratingScale(ramp(7, 9.4, 40));
+    expect(scale.lo).toBeGreaterThan(6.9);
+    expect(scale.hi).toBeLessThan(9.5);
+    expect(scale.hi - scale.lo).toBeGreaterThan(RAMP_MIN_SPREAD);
+  });
+
+  it("refuses to exaggerate a show whose episodes are all the same", () => {
+    // Every episode between 9.2 and 9.5. Without a floor on the spread the
+    // 9.2s would be painted the darkest step, which is a lie told by arithmetic.
+    const scale = ratingScale(ramp(9.2, 9.5, 20));
+    expect(scale.hi - scale.lo).toBeCloseTo(RAMP_MIN_SPREAD, 5);
+    const bands = ramp(9.2, 9.5, 20).map((r) => scaleBand(r, scale));
+    expect(Math.max(...bands) - Math.min(...bands) <= 1).toBe(true);
+    expect(Math.min(...bands) >= 4).toBe(true);
+  });
+
+  it("keeps the window inside 0 to 10 without narrowing it", () => {
+    const scale = ratingScale(ramp(9.7, 10, 20));
+    expect(scale.hi).toBe(10);
+    expect(scale.hi - scale.lo).toBeCloseTo(RAMP_MIN_SPREAD, 5);
+    expect(ratingScale([0.2, 0.2, 0.3]).lo).toBe(0);
+  });
+
+  it("does not let one review-bombed episode flatten the rest", () => {
+    // Nineteen episodes between 8.4 and 9.2, and one 2.1 finale.
+    const withBomb = [...ramp(8.4, 9.2, 19), 2.1];
+    const scale = ratingScale(withBomb);
+    expect(scale.lo).toBeGreaterThan(7.5);
+    expect(scaleBand(2.1, scale)).toBe(0);
+    // The 8.4 and the 9.2 still land in different steps.
+    expect(scaleBand(9.2, scale)).toBeGreaterThan(scaleBand(8.4, scale));
+  });
+
+  it("puts the ends of the ramp at the ends of the scale", () => {
+    const scale = ratingScale(ramp(6, 9, 50));
+    expect(scaleBand(scale.lo, scale)).toBe(0);
+    expect(scaleBand(scale.hi, scale)).toBe(RAMP_STEPS - 1);
+    expect(scaleBand(scale.lo - 3, scale)).toBe(0);
+    expect(scaleBand(scale.hi + 3, scale)).toBe(RAMP_STEPS - 1);
+  });
+
+  it("never goes backwards", () => {
+    const scale = ratingScale(ramp(5.5, 9.6, 60));
+    let last = -1;
+    for (const r of ramp(4, 10, 200)) {
+      const band = scaleBand(r, scale);
+      expect(band >= last).toBe(true);
+      last = band;
+    }
+  });
+
+  it("survives an empty list and a flat one", () => {
+    expect(ratingScale([]).lo).toBe(0);
+    expect(ratingScale([]).hi).toBe(10);
+    const flat = ratingScale([8, 8, 8]);
+    expect(flat.hi - flat.lo).toBeCloseTo(RAMP_MIN_SPREAD, 5);
+    expect(scaleBand(8, flat)).toBe(3);
   });
 });
 
@@ -155,6 +211,9 @@ describe("buildEpisodeHeatmap coverage gate", () => {
     expect(map!.peak.season).toBe(2);
     expect(map!.trough.season).toBe(1);
     expect(map!.longestSeason).toBe(2);
+    // The ramp is cut from this show's own four episodes, not from 0 to 10.
+    expect(map!.scale.hi - map!.scale.lo >= RAMP_MIN_SPREAD).toBe(true);
+    expect(map!.scale.hi <= 10).toBe(true);
   });
 
   it("refuses a show rated in only one season", () => {
@@ -213,5 +272,25 @@ describe("buildEpisodeHeatmap coverage gate", () => {
     expect(map!.sentence).toBe(
       "Season 2 is the peak: 9.5 average across 2 episodes. Season 1 drops to 8.0.",
     );
+  });
+});
+
+describe("rampWindow", () => {
+  // Hue has to keep meaning the same thing on every page. Regression for a
+  // grade finding: a show whose worst season averaged 7.2 was painted in
+  // red-brown and read as a disaster before the eye reached the legend.
+  it("lifts the ramp off red for a show that is never bad", () => {
+    expect(rampWindow(7.2)).toBe(2);
+    expect(rampWindow(8.4)).toBe(2);
+  });
+
+  it("keeps red for a show that earns it", () => {
+    expect(rampWindow(2.1)).toBe(0);
+    expect(rampWindow(3.0)).toBe(0);
+  });
+
+  it("moves with the floor in between", () => {
+    expect(rampWindow(5.0)).toBe(2);
+    expect(rampWindow(4.0)).toBe(1);
   });
 });

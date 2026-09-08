@@ -50,25 +50,86 @@ export interface EpisodeHeatmap {
   sentence: string;
   /** Episodes in the longest column, so a grid can size its rows once. */
   longestSeason: number;
+  /** The ramp this show's cells are coloured against. */
+  scale: RatingScale;
 }
 
 /** A show below either of these gets no heatmap. A partial grid is a lie. */
 export const EPISODE_COVERAGE_MIN = 0.6;
 export const EPISODE_SEASONS_MIN = 2;
 
-/**
- * Band edges for the 5 step colour scale, highest first: 9 and up, 8 to 9,
- * 7 to 8, 6 to 7, under 6. A legend can read these off directly.
- */
-export const EPISODE_RATING_BAND_EDGES = [9, 8, 7, 6] as const;
+/** Steps in the colour ramp. Seven is what fits a legend strip and still puts
+ *  a visible gap between a 7.4 and an 8.1 on a show whose episodes live there. */
+export const RAMP_STEPS = 7;
 
-/** 4 is the top band, 0 the bottom. */
-export function ratingBand(rating: number): 0 | 1 | 2 | 3 | 4 {
-  if (rating >= EPISODE_RATING_BAND_EDGES[0]) return 4;
-  if (rating >= EPISODE_RATING_BAND_EDGES[1]) return 3;
-  if (rating >= EPISODE_RATING_BAND_EDGES[2]) return 2;
-  if (rating >= EPISODE_RATING_BAND_EDGES[3]) return 1;
-  return 0;
+/**
+ * The narrowest window the ramp will stretch across, in rating points.
+ *
+ * Without it, a show whose episodes all sit between 9.2 and 9.5 would paint
+ * the 9.2s the same dark red as the worst episode of anything, which is a lie
+ * told by arithmetic. Two points is wide enough that a show that really is
+ * uniform reads as uniform.
+ */
+export const RAMP_MIN_SPREAD = 2;
+
+/** The rating at each end of the ramp for one show. Both are printed. */
+export interface RatingScale {
+  /** Bottom of the ramp. Anything at or under it takes the darkest step. */
+  lo: number;
+  /** Top of the ramp. Anything at or over it takes the brightest step. */
+  hi: number;
+}
+
+/** Linear-interpolated quantile of an ascending list. */
+function quantile(sorted: number[], q: number): number {
+  const pos = (sorted.length - 1) * q;
+  const i = Math.floor(pos);
+  const next = sorted[i + 1];
+  return next === undefined ? sorted[i] : sorted[i] + (next - sorted[i]) * (pos - i);
+}
+
+/**
+ * The ramp for one show, from its own episodes rather than from an absolute
+ * 0 to 10. A drama that lives between 7.2 and 9.4 spends the whole ramp on
+ * that band, so its best season is visibly its best season.
+ *
+ * The ends are the 5th and 95th percentile, not the min and max: one
+ * review-bombed finale would otherwise take the bottom of the ramp for itself
+ * and flatten everything above it. Episodes outside the window take the end
+ * step, so nothing is hidden, and both ends are printed under the legend.
+ */
+export function ratingScale(ratings: number[]): RatingScale {
+  const sorted = ratings.filter((r) => Number.isFinite(r)).sort((a, b) => a - b);
+  if (sorted.length === 0) return { lo: 0, hi: 10 };
+
+  let lo = quantile(sorted, 0.05);
+  let hi = quantile(sorted, 0.95);
+  if (hi - lo < RAMP_MIN_SPREAD) {
+    const mid = (lo + hi) / 2;
+    lo = mid - RAMP_MIN_SPREAD / 2;
+    hi = mid + RAMP_MIN_SPREAD / 2;
+  }
+  // Ratings are 0 to 10. Slide the window back inside rather than squashing it,
+  // so a show of 9.8s keeps a full-width ramp instead of a one-colour block.
+  if (hi > 10) {
+    lo -= hi - 10;
+    hi = 10;
+  }
+  if (lo < 0) {
+    hi = Math.min(10, hi - lo);
+    lo = 0;
+  }
+  // Round to the decimal the legend prints, so the number under the ramp is
+  // exactly the number the bands were cut with.
+  return { lo: oneDecimal(lo), hi: oneDecimal(hi) };
+}
+
+/** Step 0 is the darkest, `RAMP_STEPS - 1` the brightest. */
+export function scaleBand(rating: number, scale: RatingScale): number {
+  const span = scale.hi - scale.lo;
+  if (!(span > 0)) return RAMP_STEPS - 1;
+  const step = Math.floor(((rating - scale.lo) / span) * RAMP_STEPS);
+  return Math.min(RAMP_STEPS - 1, Math.max(0, step));
 }
 
 function oneDecimal(n: number): number {
@@ -198,5 +259,6 @@ export function buildEpisodeHeatmap(
     trough: pickTrough(seasons),
     sentence: peakTroughSentence(seasons),
     longestSeason: seasons.reduce((max, s) => Math.max(max, s.rated), 0),
+    scale: ratingScale(seasons.flatMap((s) => s.episodes.map((e) => e.rating))),
   };
 }

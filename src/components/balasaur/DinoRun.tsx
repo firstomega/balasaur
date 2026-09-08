@@ -49,13 +49,17 @@ export function DinoRun() {
       <span className="text-[13px] font-black uppercase tracking-[0.14em] text-primary/70">
         Rawr
       </span>
-      <DinoMark mood="chomp" size={44} className="h-11 w-11 text-primary" />
+      <DinoMark mood="chomp" size={44} filled className="h-11 w-11 text-primary" />
     </div>
   );
 
   return (
+    // z-20 puts the dino under every fixed control on the site: the cookie bar
+    // sits at z-50 and the top bar at z-30, so a joke can no longer cover a
+    // consent button. It ran at z-60 and drew straight across the banner. It is
+    // also pointer-events-none, so nothing under it can be blocked from a tap.
     <div
-      className="pointer-events-none fixed bottom-3 left-0 z-[60] w-full overflow-hidden"
+      className="pointer-events-none fixed bottom-3 left-0 z-20 w-full overflow-hidden"
       aria-hidden="true"
     >
       {mode === "run" ? (

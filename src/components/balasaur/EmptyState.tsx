@@ -10,6 +10,11 @@ import { DinoMark, type DinoMood } from "./DinoMark";
  * the controls that do it. A dead end with no exit is the failure this
  * component exists to prevent, so `action` is expected on anything the visitor
  * can act on.
+ *
+ * The box is capped at 480px and centred. Stretched to the full 1050px of a
+ * desktop main column it held a small mark and two short lines across a void,
+ * which read as a broken layout rather than as a dead end. 480px is the
+ * measure the two lines actually want, and the mark is sized to that box.
  */
 export interface EmptyStateProps {
   /** The claim. One sentence, no adjectives, no apology for the design. */
@@ -54,21 +59,21 @@ export function EmptyState({
       style={style}
       className={
         (inline
-          ? "flex flex-col items-center px-4 py-6 text-center"
-          : "flex flex-col items-center rounded-[5px] border border-border bg-panel px-6 py-10 text-center") +
+          ? "mx-auto flex w-full max-w-[480px] flex-col items-center px-4 py-6 text-center"
+          : "mx-auto flex w-full max-w-[480px] flex-col items-center rounded-[5px] border border-border bg-panel px-8 py-12 text-center") +
         (className ? " " + className : "")
       }
     >
       <DinoMark
         mood={mood}
-        size={inline ? 28 : 64}
-        className={inline ? "h-7 w-7 text-primary/70" : "h-16 w-16 text-primary/80"}
+        size={inline ? 32 : 96}
+        className={inline ? "h-8 w-8 text-primary/70" : "h-24 w-24 text-primary/80"}
       />
       <p
         className={
           inline
-            ? "mt-3 max-w-md text-[14px] font-bold leading-snug tracking-[-0.01em] text-text-bright"
-            : "mt-5 max-w-md text-[18px] font-black leading-snug tracking-[-0.02em] text-text-bright"
+            ? "mt-3 text-[14px] font-bold leading-snug tracking-[-0.01em] text-text-bright"
+            : "mt-5 text-[19px] font-black leading-snug tracking-[-0.02em] text-text-bright"
         }
       >
         {line}
@@ -77,8 +82,8 @@ export function EmptyState({
         <p
           className={
             inline
-              ? "mt-1 max-w-md text-[12.5px] leading-relaxed text-text-muted"
-              : "mt-2 max-w-md text-[13.5px] leading-relaxed text-text-muted"
+              ? "mt-1 text-[12.5px] leading-relaxed text-text-muted"
+              : "mt-2 text-[13.5px] leading-relaxed text-text-muted"
           }
         >
           {hint}

@@ -50,6 +50,10 @@ export interface TitleFact {
   /** Origin bucket keys, as `media.origins` stores them. */
   origins: string[];
   posterUrl?: string;
+  /** Dominant poster colour as #rrggbb (media.color_a), when the catalog has one. */
+  colorA?: string;
+  /** Second poster colour as #rrggbb (media.color_b). */
+  colorB?: string;
   /** Balasaur Score, 0 to 100. */
   score?: number;
   /** Critic score, 0 to 100. Metacritic when present, else Rotten Tomatoes. */
@@ -91,6 +95,10 @@ export interface CardPoster {
   title: string;
   posterUrl: string;
   score?: number;
+  /** The poster's own colours, when the catalog has them. The card lights its
+   *  ground from these, so a card looks like the films that are on it. */
+  colorA?: string;
+  colorB?: string;
 }
 
 export interface Contrarian {
@@ -431,6 +439,8 @@ function postersOf(rows: Row[]): CardPoster[] {
       title: r.fact.title,
       posterUrl: r.fact.posterUrl!,
       score: r.fact.score,
+      colorA: r.fact.colorA,
+      colorB: r.fact.colorB,
     }));
 }
 
@@ -542,4 +552,84 @@ function wideNet(shape: Shape, topGenres: GenreShare[]): Archetype {
     ? `No genre is more than ${pct(top.share)}% of ${phraseOf(shape.basis)}.`
     : `${shape.total} titles, and no genre on any of them.`;
   return { key: WIDE_NET.key, name: WIDE_NET.name, evidence };
+}
+
+// ---------------------------------------------------------------------------
+// The card's ground colour
+//
+// A card lit in the house blue looks the same for everyone, which is the
+// opposite of what it claims to be. These two colours come off the posters the
+// card is printing, so the ground of a horror card is not the ground of a
+// romance card. The maths is here rather than in the drawing code so it can be
+// tested without a canvas, and so the page and the image cannot disagree.
+// ---------------------------------------------------------------------------
+
+/** The two lamps behind the card, as lowercase #rrggbb. */
+export interface CardTint {
+  a: string;
+  b: string;
+}
+
+/** Used when no title on the card has a stored colour and no poster pixel could
+ *  be read: the site's own blue and the rating green. */
+export const HOUSE_TINT: CardTint = { a: "#3b82f6", b: "#9fe6a0" };
+
+/** The card's ground, near black. Every tint is blended onto this. */
+export const CARD_GROUND: readonly [number, number, number] = [8, 9, 11];
+
+const HEX6 = /^#[0-9a-f]{6}$/i;
+
+/** #rrggbb to bytes. Null for anything else, so a bad value is never painted. */
+export function parseHex(hex: string | null | undefined): [number, number, number] | null {
+  if (!hex || !HEX6.test(hex)) return null;
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function channelLum(c: number): number {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+}
+
+/** WCAG relative luminance, 0 to 1. */
+export function luminance([r, g, b]: readonly [number, number, number]): number {
+  return 0.2126 * channelLum(r) + 0.7152 * channelLum(g) + 0.0722 * channelLum(b);
+}
+
+/**
+ * The strongest this colour may be painted over the card ground before white
+ * type stops clearing 6:1, which leaves the proof sentence above 4.5:1 as well.
+ * Bright yellows come back weak, deep reds come back strong, and a card is never
+ * washed out by whatever the posters happened to be. Stepped rather than solved
+ * so the answer is stable and easy to check.
+ */
+export function tintAlpha(hex: string, maxLuminance = 0.115): number {
+  const rgb = parseHex(hex);
+  if (!rgb) return 0;
+  for (let a = 40; a >= 10; a--) {
+    const alpha = a / 100;
+    const blend: [number, number, number] = [
+      rgb[0] * alpha + CARD_GROUND[0] * (1 - alpha),
+      rgb[1] * alpha + CARD_GROUND[1] * (1 - alpha),
+      rgb[2] * alpha + CARD_GROUND[2] * (1 - alpha),
+    ];
+    if (luminance(blend) <= maxLuminance) return alpha;
+  }
+  return 0.1;
+}
+
+/**
+ * Two colours for the ground, taken from the titles the card prints, in the
+ * order it prints them: the first poster that has a colour lights the top of
+ * the card, and a second, different title lights the other side. One title with
+ * two stored colours supplies both. Nothing stored anywhere falls back to the
+ * house pair, which is the only case where two cards can match.
+ */
+export function cardTint(posters: readonly CardPoster[]): CardTint {
+  const first = posters.find((p) => parseHex(p.colorA));
+  if (!first) return HOUSE_TINT;
+  const a = first.colorA!.toLowerCase();
+  const other = posters.find((p) => p.id !== first.id && parseHex(p.colorA));
+  const b = other ? other.colorA! : parseHex(first.colorB) ? first.colorB! : a;
+  return { a, b: b.toLowerCase() };
 }

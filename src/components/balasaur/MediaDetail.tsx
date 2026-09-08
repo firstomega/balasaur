@@ -23,6 +23,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
 import { EpisodeHeatmap } from "./EpisodeHeatmap";
 import { ScoreBadge } from "./ScoreBadge";
+import { AmbientGlow } from "./AmbientGlow";
 import { ScrollRail } from "./ScrollRail";
 import { computeBalasaurScore } from "@/lib/score";
 import { displayYear } from "@/lib/mediaFormat";
@@ -254,9 +255,13 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
 function DetailInner({
   detail,
   episodeRatings,
+  colorA,
+  colorB,
 }: {
   detail: MediaDetailType;
   episodeRatings?: EpisodeRating[];
+  colorA?: string | null;
+  colorB?: string | null;
 }) {
   const { ratings, facts, external } = detail;
   const [trailerOpen, setTrailerOpen] = useState(false);
@@ -326,7 +331,19 @@ function DetailInner({
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-[1100px] px-4 pt-[168px] md:pt-[260px]">
+        <div className="relative isolate z-10 mx-auto max-w-[1100px] px-4 pt-[168px] md:pt-[260px]">
+          {/* The poster's own light, thrown across the top of the page. It is
+              mounted inside this z-10 column rather than under the backdrop
+              block, because the backdrop is opaque: a glow behind it would be
+              invisible for 440px and then appear all at once at its bottom
+              edge, which is the horizontal seam the first version drew. The box
+              is pushed down to start at the poster, so the light is behind the
+              poster, title and score instead of over the banner. */}
+          <AmbientGlow
+            colorA={colorA}
+            colorB={colorB}
+            className="bottom-0 top-[120px] h-auto md:top-[190px]"
+          />
           <div className="flex flex-col gap-5 md:flex-row md:items-end">
             <div className="w-[160px] shrink-0 overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)] md:w-[220px]">
               <div className="aspect-[2/3] w-full">
@@ -859,13 +876,19 @@ function DetailFetcher({
   type,
   id,
   episodeRatings,
+  colorA,
+  colorB,
 }: {
   type: "movie" | "tv";
   id: string;
   episodeRatings?: EpisodeRating[];
+  colorA?: string | null;
+  colorB?: string | null;
 }) {
   const { data } = useMediaDetail(type, id);
-  return <DetailInner detail={data} episodeRatings={episodeRatings} />;
+  return (
+    <DetailInner detail={data} episodeRatings={episodeRatings} colorA={colorA} colorB={colorB} />
+  );
 }
 
 function BackBar() {
@@ -903,18 +926,30 @@ export function MediaDetail({
   mediaType,
   id,
   episodeRatings,
+  colorA,
+  colorB,
 }: {
   mediaType: "movie" | "tv";
   id: string;
   /** TV only: stored per-episode ratings, loaded by the /tv/$id route. */
   episodeRatings?: EpisodeRating[];
+  /** The title's stored poster colors (media.color_a / color_b), read by the
+   *  route loader so the glow is in the server-rendered HTML. */
+  colorA?: string | null;
+  colorB?: string | null;
 }) {
   return (
     <div className="relative min-h-screen bg-background">
       <TopBar />
       <BackBar />
       <Suspense fallback={<DetailLoader />}>
-        <DetailFetcher type={mediaType} id={id} episodeRatings={episodeRatings} />
+        <DetailFetcher
+          type={mediaType}
+          id={id}
+          episodeRatings={episodeRatings}
+          colorA={colorA}
+          colorB={colorB}
+        />
       </Suspense>
     </div>
   );

@@ -18,7 +18,7 @@ import { MAX_FACT_IDS, type TitleFact } from "@/lib/taste";
 const CHUNK = 200;
 
 const COLS =
-  "media_id, media_type, title, year, poster_url, genres, origins, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb";
+  "media_id, media_type, title, year, poster_url, color_a, color_b, genres, origins, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb";
 
 interface FactRow {
   media_id: string;
@@ -26,6 +26,8 @@ interface FactRow {
   title: string;
   year: string | null;
   poster_url: string | null;
+  color_a: string | null;
+  color_b: string | null;
   genres: string[] | null;
   origins: string[] | null;
   rating_imdb: number | null;
@@ -53,6 +55,8 @@ function toFact(r: FactRow): TitleFact {
     genres: r.genres ?? [],
     origins: r.origins ?? [],
     posterUrl: r.poster_url ?? undefined,
+    colorA: r.color_a ?? undefined,
+    colorB: r.color_b ?? undefined,
     score: computeBalasaurScore({
       imdb: r.rating_imdb,
       rottenTomatoes: r.rating_rotten_tomatoes,

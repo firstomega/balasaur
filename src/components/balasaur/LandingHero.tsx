@@ -13,6 +13,12 @@ interface Props {
 // proof and lives in the subhead. No catalog count anywhere in the hero, on
 // purpose: the grid's own counter renders on this same screen, and any
 // second figure would contradict it.
+//
+// The subhead names the disagreement, not the pipeline. Listing IMDb, Rotten
+// Tomatoes, Metacritic and TMDB described how the number is made, which is a
+// sentence four other sites could print. The four sources are already on
+// every title page and in the footer; what none of them can say is that the
+// argument between critics and everyone else has one answer here.
 export function LandingHero({ onBrowse }: Props) {
   return (
     <section
@@ -36,8 +42,8 @@ export function LandingHero({ onBrowse }: Props) {
               Stop scrolling. Start watching.
             </h1>
             <p className="mt-1.5 max-w-xl text-[15px] leading-relaxed text-text-muted">
-              One score, built from IMDb, Rotten Tomatoes, Metacritic and TMDB, tells you which
-              movies and TV shows are worth your night.
+              Critics and audiences disagree about most things. Every title here carries one score
+              that settles it.
             </p>
           </div>
 

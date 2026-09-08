@@ -11,6 +11,7 @@ import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { SortControl } from "@/components/balasaur/SortControl";
 import { MobileFilterStrip } from "@/components/balasaur/MobileFilterStrip";
 import { LandingHero } from "@/components/balasaur/LandingHero";
+import { AmbientGlow } from "@/components/balasaur/AmbientGlow";
 import { EmptyState, EMPTY_ACTION_QUIET_CLASS } from "@/components/balasaur/EmptyState";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
 import { ShareButton } from "@/components/balasaur/ShareButton";
@@ -70,6 +71,9 @@ function pageOffset(raw: string | undefined): number {
 }
 
 const BASE_TITLE = "Balasaur: Stop Scrolling, Start Watching";
+
+/** The homepage's light is the brand's own blue. See the mount below. */
+const BRAND_GLOW = "#3b82f6";
 
 /** True when anything other than the page cursor is narrowing the catalog. */
 function isFiltered(search: FilterSearch | undefined): boolean {
@@ -379,9 +383,23 @@ function HomePage() {
         )}
 
         <main id="main" className="min-w-0 flex-1">
-          {!user && <LandingHero onBrowse={scrollToGrid} />}
+          {!user && (
+            // The hero panel is opaque, so the light has to be bigger than it
+            // is: the box reaches past the panel on every side and the panel
+            // sits in the middle of it. Signed out only, and the same blue for
+            // both lamps, because the homepage has no title of its own to take
+            // a color from and reading one out of the database would put a
+            // query in front of the slowest page on the site.
+            <div className="relative isolate">
+              <AmbientGlow colorA={BRAND_GLOW} className="-top-10 h-[calc(100%+5rem)]" />
+              <LandingHero onBrowse={scrollToGrid} />
+            </div>
+          )}
           <WatchlistNudge wantIds={wantIds} region={region} />
-          <div ref={gridRef} tabIndex={-1} className="scroll-mt-16">
+          {/* No tabIndex here. Nothing ever moved focus to this container, but a
+              click anywhere in it did, and the next key pressed lit a
+              full-width focus ring around the whole results region. */}
+          <div ref={gridRef} className="scroll-mt-16">
             <Suspense fallback={<MediaGridSkeleton />}>
               <GridWithControls
                 filters={filters}

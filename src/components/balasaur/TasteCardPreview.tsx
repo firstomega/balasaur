@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image as ImageIcon, Share2 } from "lucide-react";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import {
@@ -21,10 +21,21 @@ import {
  * disabled until those bytes exist: Safari only opens the share sheet from a
  * call made inside the click itself, and a share that had to wait for a render
  * first would be refused.
+ *
+ * `example` is the state the taste page opens in, before it knows whose list it
+ * is looking at. It draws a card from a sample shelf, says so on the image
+ * frame, and hands the buttons over to whatever gets the visitor their own:
+ * an example card is never shareable, because it is not about anybody.
  */
 export interface TasteCardPreviewProps {
   options: TasteCardOptions;
   className?: string;
+  /** Mark the card as a sample and hide the share controls. */
+  example?: boolean;
+  /** Replaces Share and Save. Required in the example state. */
+  action?: ReactNode;
+  /** One line under the card, above whatever the controls are. */
+  note?: ReactNode;
 }
 
 const SHARE_BTN =
@@ -40,7 +51,13 @@ function outcomeLine(o: TasteCardOutcome | null): string | null {
   return null;
 }
 
-export function TasteCardPreview({ options, className }: TasteCardPreviewProps) {
+export function TasteCardPreview({
+  options,
+  className,
+  example,
+  action,
+  note,
+}: TasteCardPreviewProps) {
   const [src, setSrc] = useState<string | null>(null);
   const [drawFailed, setDrawFailed] = useState(false);
   const [busy, setBusy] = useState<"share" | "save" | null>(null);
@@ -84,7 +101,7 @@ export function TasteCardPreview({ options, className }: TasteCardPreviewProps) 
     setOutcome(result === "shared" || result === "cancelled" ? null : result);
   };
 
-  const alt = `${options.name}. ${options.evidence} ${options.counts.liked} Loved, ${options.counts.watched} watched, ${options.counts.want} on the watchlist.`;
+  const alt = `${example ? "Example card. " : ""}${options.name}. ${options.evidence} ${options.counts.liked} Loved, ${options.counts.watched} watched, ${options.counts.want} on the watchlist.`;
 
   return (
     <div className={className}>
@@ -98,34 +115,51 @@ export function TasteCardPreview({ options, className }: TasteCardPreviewProps) 
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <DinoMark size={40} mood={drawFailed ? "sleep" : "calm"} className="text-primary/70" />
             <p className="text-[13px] text-text-muted">
-              {drawFailed ? "This browser did not draw the card." : "Drawing your card."}
+              {drawFailed ? "This browser did not draw the card." : "Drawing the card."}
             </p>
           </div>
         )}
+        {example && (
+          <span className="absolute right-3 top-3 rounded-full bg-background/85 px-3 py-1 font-mono text-[11px] tracking-[0.08em] text-text-muted">
+            EXAMPLE
+          </span>
+        )}
       </div>
+
+      {note && (
+        <p className="mx-auto mt-4 max-w-[420px] text-center text-[13px] leading-relaxed text-text-dim">
+          {note}
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={() => run("share")}
-          disabled={!!busy || !src}
-          className={SHARE_BTN}
-        >
-          <Share2 className="h-4 w-4" aria-hidden="true" />
-          {busy === "share" ? "Sharing" : "Share"}
-        </button>
-        <button
-          type="button"
-          onClick={() => run("save")}
-          disabled={!!busy || !src}
-          className={SAVE_BTN}
-        >
-          <ImageIcon className="h-4 w-4" aria-hidden="true" />
-          {busy === "save" ? "Saving" : "Save image"}
-        </button>
+        {example ? (
+          action
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => run("share")}
+              disabled={!!busy || !src}
+              className={SHARE_BTN}
+            >
+              <Share2 className="h-4 w-4" aria-hidden="true" />
+              {busy === "share" ? "Sharing" : "Share"}
+            </button>
+            <button
+              type="button"
+              onClick={() => run("save")}
+              disabled={!!busy || !src}
+              className={SAVE_BTN}
+            >
+              <ImageIcon className="h-4 w-4" aria-hidden="true" />
+              {busy === "save" ? "Saving" : "Save image"}
+            </button>
+          </>
+        )}
       </div>
 
-      {outcomeLine(outcome) && (
+      {!example && outcomeLine(outcome) && (
         <p className="mt-2 text-center text-[12.5px] text-text-muted">{outcomeLine(outcome)}</p>
       )}
     </div>

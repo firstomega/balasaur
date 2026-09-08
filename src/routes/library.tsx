@@ -140,6 +140,12 @@ const ROOM_CSS = `
 .libtools{position:absolute; top:9px; right:8px; z-index:5; display:flex; align-items:center; gap:3px;}
 `;
 
+/** A count inside a sentence. Mono is for the figure only: the words beside it
+ *  are prose and set in the body face like the rest of the page. */
+function Num({ children }: { children: React.ReactNode }) {
+  return <span className="font-mono tabular-nums text-[#e4d8c0]">{children}</span>;
+}
+
 function LibraryPage() {
   const { statuses, ready: statusReady } = useUserStatus();
   const { shelves, ready: shelvesReady, update } = useShelves();
@@ -569,17 +575,23 @@ function LibraryPage() {
               <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-[#f7f2e7]">
                 My Library
               </h1>
-              <p className="mt-0.5 font-mono text-[12px] tabular-nums text-[#bdb29c]">
-                {shelves.length} {shelves.length === 1 ? "shelf" : "shelves"} · {totalShelved}{" "}
-                shelved · {unshelved.length} unshelved
-              </p>
+              {/* Three zeros over an empty room said nothing the empty state
+                  below did not already say in a sentence, so the line waits
+                  until there is something to count. Numbers keep the mono
+                  face; the words around them do not. */}
+              {!empty && mounted && statusReady && shelvesReady && (
+                <p className="mt-0.5 text-[12.5px] text-[#bdb29c]">
+                  <Num>{shelves.length}</Num> {shelves.length === 1 ? "shelf" : "shelves"} ·{" "}
+                  <Num>{totalShelved}</Num> on the shelves · <Num>{unshelved.length}</Num> waiting
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Link
                 to="/lists"
                 className="text-[13px] font-semibold text-[#8d8472] underline-offset-2 hover:text-[#f7f2e7] hover:underline"
               >
-                Buckets view
+                My lists
               </Link>
               <span className="text-[12px] font-semibold text-[#8d8472]">Lights</span>
               <button
@@ -741,7 +753,7 @@ function LibraryPage() {
                 <section className="mt-9">
                   <div className="flex flex-wrap items-baseline gap-3">
                     <span className="text-[17px] font-black tracking-[-0.02em] text-[#e4d8c0]">
-                      Unshelved{" "}
+                      Not on a shelf yet{" "}
                       <span className="font-mono text-[13px] tabular-nums text-[#8d8472]">
                         {q ? `${unshelvedShown.length} of ${unshelved.length}` : unshelved.length}
                       </span>
@@ -751,14 +763,11 @@ function LibraryPage() {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Find a title"
-                      aria-label="Find an unshelved title"
+                      aria-label="Find a title that is not on a shelf"
                       className="ml-auto w-[190px] rounded-[5px] border border-[#3d3325] bg-[#1b1712] px-3 py-1.5 text-[13px] text-[#f7f2e7] placeholder:text-[#8d8472] focus:border-primary focus:outline-none"
                     />
                   </div>
-                  <p className="mb-2 mt-1 text-[12.5px] text-[#8d8472]">
-                    Everything you have seen or saved that is not on a shelf yet.
-                  </p>
-                  <div className="libwall border-b-2 border-dashed border-[#3d3325] pb-2">
+                  <div className="libwall mt-2 border-b-2 border-dashed border-[#3d3325] pb-2">
                     <div
                       className="librow"
                       data-container="unshelved"
@@ -778,7 +787,7 @@ function LibraryPage() {
                       ))}
                       {unshelvedShown.length === 0 && (
                         <div className="m-auto self-center text-[13px] text-[#8d8472]">
-                          No unshelved title matches.
+                          No title here matches.
                         </div>
                       )}
                     </div>
@@ -869,7 +878,7 @@ function ShelfItem({
       aria-label={
         item.title +
         (container === "unshelved"
-          ? ", unshelved"
+          ? ", not on a shelf"
           : `, position ${pos} of ${total} on ${shelfName}`)
       }
       onPointerDown={(e) => onPointerDown(e, item.id, container)}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { TopBar } from "@/components/balasaur/TopBar";
-import { EmptyState, EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
+import { EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
 import { TasteCardPreview } from "@/components/balasaur/TasteCardPreview";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { getTasteFacts } from "@/lib/taste.functions";
@@ -12,16 +12,23 @@ import {
   MIN_BASIS_TITLES,
   computeTaste,
   tasteReadiness,
+  type TasteProfile,
   type TitleFact,
 } from "@/lib/taste";
+import { SAMPLE_SIZE, sampleTasteProfile } from "@/lib/tasteSample";
 import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
 
-// The page a shared card links back to. It carries two audiences at once: a
-// stranger arriving from an image, who has never rated anything and needs to
-// know what the thing they are looking at claims, and the visitor who came to
-// draw their own. The explanation and the archetype table are server-rendered
-// and identical for everyone, so the CDN can hold the page; the card is drawn
-// in the browser from the visitor's own list after mount.
+// The page a shared card links back to, so most of the people who ever see it
+// arrive from somebody else's image having rated nothing. It therefore opens on
+// a card every time: an example drawn from a fixed shelf of catalog titles until
+// the visitor's own list can name them, and theirs from that moment on. There is
+// no state of this page in which the first thing is a locked box.
+//
+// The card is the heading. It prints the archetype and the sentence that proves
+// it, so the page does not print them again above it.
+//
+// The explanation and the archetype table are server-rendered and identical for
+// everyone, so the CDN can hold the page; every card is drawn in the browser.
 
 export const Route = createFileRoute("/taste")({
   head: () => ({
@@ -50,9 +57,7 @@ function TastePage() {
           Taste Card
         </h1>
         <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-text-muted">
-          One image, 1080 by 1920, carrying the name your list earns, the sentence that proves it,
-          your four highest-scoring titles with their scores, and the one you liked that critics did
-          not.
+          Eight rated titles name what you watch, and name the one you liked that critics did not.
         </p>
 
         <CardSection />
@@ -79,6 +84,17 @@ function TastePage() {
       </main>
     </div>
   );
+}
+
+function cardOptions(profile: TasteProfile) {
+  return {
+    name: profile.archetype!.name,
+    evidence: profile.archetype!.evidence,
+    counts: profile.counts,
+    decades: profile.decadeCount,
+    posters: profile.posters,
+    contrarian: profile.contrarian?.line ?? null,
+  };
 }
 
 /** Everything personal, after mount. Nothing here reaches the server render. */
@@ -121,86 +137,59 @@ function CardSection() {
   }, [idKey]);
 
   const profile = useMemo(() => (facts ? computeTaste(statuses, facts) : null), [statuses, facts]);
+  const sample = useMemo(() => sampleTasteProfile(), []);
 
-  if (!ready) {
-    return <p className="mt-8 text-[14px] text-text-dim">Reading your list.</p>;
-  }
-
-  if (!readiness.ready) {
-    const rated = Math.max(readiness.liked, readiness.watched);
+  // Theirs the moment it exists. Until then, the example.
+  if (profile?.archetype) {
     return (
-      <div className="mt-8">
-        <EmptyState
-          line={
-            rated === 0
-              ? `The card draws at ${MIN_BASIS_TITLES} titles.`
-              : `You have rated ${rated}. The card draws at ${MIN_BASIS_TITLES}.`
-          }
-          hint="Anything you mark watched or Loved counts, signed in or not."
-          mood="calm"
-          action={
-            <Link to="/watched" className={EMPTY_ACTION_CLASS}>
-              Rate titles
-            </Link>
-          }
-        />
-      </div>
-    );
-  }
-
-  if (factsFailed) {
-    return (
-      <p className="mt-8 text-[14px] text-text-muted">
-        The catalog did not answer. Reload to draw the card.
-      </p>
-    );
-  }
-
-  if (!profile) {
-    return <p className="mt-8 text-[14px] text-text-dim">Reading your list.</p>;
-  }
-
-  if (!profile.archetype) {
-    return (
-      <div className="mt-8">
-        <EmptyState
-          line={`${profile.total} of your titles are in the catalog. The card draws at ${MIN_BASIS_TITLES}.`}
-          hint="Rate a few more and it fills in."
-          mood="calm"
-          action={
-            <Link to="/watched" className={EMPTY_ACTION_CLASS}>
-              Rate titles
-            </Link>
-          }
-        />
-      </div>
+      <section className="mt-9">
+        <TasteCardPreview options={cardOptions(profile)} />
+        {profile.contrarian && (
+          <p className="mt-4 text-center text-[13px] text-text-dim">
+            Critic score from {profile.contrarian.criticSource}
+          </p>
+        )}
+      </section>
     );
   }
 
   return (
     <section className="mt-9">
-      <h2 className="text-[28px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright sm:text-[34px]">
-        {profile.archetype.name}
-      </h2>
-      <p className="mt-2 text-[15px] leading-relaxed text-text-muted">
-        {profile.archetype.evidence}
-      </p>
       <TasteCardPreview
-        className="mt-6"
-        options={{
-          name: profile.archetype.name,
-          evidence: profile.archetype.evidence,
-          counts: profile.counts,
-          decades: profile.decadeCount,
-          posters: profile.posters,
-          contrarian: profile.contrarian?.line ?? null,
-        }}
+        options={cardOptions(sample)}
+        example
+        note={exampleLine(ready, readiness.ready, readiness.needed, factsFailed, profile)}
+        action={
+          <Link to="/watched" className={EMPTY_ACTION_CLASS}>
+            Rate titles
+          </Link>
+        }
       />
-      {profile.contrarian && (
-        <p className="mt-5 text-center text-[13px] text-text-dim">
-          Critic score from {profile.contrarian.criticSource}
-        </p>
-      )}
     </section>
   );
+}
+
+/**
+ * What the example card is, and what stands between the visitor and their own.
+ * Every branch names a number they can check against their own list.
+ */
+function exampleLine(
+  statusesReady: boolean,
+  enough: boolean,
+  needed: number,
+  factsFailed: boolean,
+  profile: TasteProfile | null,
+): string {
+  const shelf = `Drawn from a shelf of ${SAMPLE_SIZE} titles.`;
+  if (factsFailed) return `${shelf} The catalog did not answer for yours. Reload to draw it.`;
+  if (!statusesReady || (enough && !profile)) return `${shelf} Yours is on its way.`;
+  if (!enough) {
+    return needed === MIN_BASIS_TITLES
+      ? `${shelf} Yours draws at ${MIN_BASIS_TITLES} rated titles.`
+      : `${shelf} Yours draws at ${MIN_BASIS_TITLES} rated titles, and you are ${needed} short.`;
+  }
+  if (profile) {
+    return `${shelf} ${profile.total} of your titles are in the catalog, and a name needs ${MIN_BASIS_TITLES}.`;
+  }
+  return shelf;
 }

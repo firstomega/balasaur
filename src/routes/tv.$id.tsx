@@ -18,6 +18,7 @@ import {
 import { breadcrumbJsonLd, tvJsonLd } from "@/lib/jsonld";
 import { mediaSlug, parseMediaId } from "@/lib/slug";
 import { ssrBudget } from "@/lib/ssrBudget";
+import { getPosterColors } from "@/lib/posterColor.functions";
 
 export const Route = createFileRoute("/tv/$id")({
   loader: async ({ context, params }) => {
@@ -59,9 +60,16 @@ export const Route = createFileRoute("/tv/$id")({
     // not after: two 800ms budgets in sequence would put 1.6s in front of the
     // first byte on a slow database. A show with no stored episode ratings
     // resolves to an empty array and the grid renders nothing.
-    await Promise.all([
+    //
+    // The poster's stored colors join the same batch. The glow they paint sits
+    // behind the title in the first byte of HTML, and a third budget in
+    // sequence would put another 600ms in front of it. A show with no stored
+    // colors, or a lookup that runs long, resolves to nothing and the page
+    // keeps its flat ground.
+    const [, , colors] = await Promise.all([
       ssrBudget(context.queryClient.prefetchQuery(appearsInQueryOptions(`tv-${id}`)), 800),
       ssrBudget(context.queryClient.prefetchQuery(episodeRatingsQueryOptions(`tv-${id}`)), 800),
+      ssrBudget(getPosterColors({ data: { mediaId: `tv-${id}` } }), 600),
     ]);
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
     if (data?.title) {
@@ -70,7 +78,7 @@ export const Route = createFileRoute("/tv/$id")({
         throw redirect({ to: "/tv/$id", params: { id: canonical }, statusCode: 301 });
       }
     }
-    return data;
+    return { ...data, glow: colors ?? null };
   },
   head: ({ loaderData, params }) => {
     const d = loaderData;
@@ -100,7 +108,16 @@ function TvPage() {
   // Prefetched in the loader, so this reads the cache during SSR and the grid
   // is in the HTML. If the loader's budget ran out, it fetches on the client.
   const { data: episodeRatings } = useQuery(episodeRatingsQueryOptions(`tv-${id}`));
-  return <MediaDetail mediaType="tv" id={id} episodeRatings={episodeRatings} />;
+  const { glow } = Route.useLoaderData();
+  return (
+    <MediaDetail
+      mediaType="tv"
+      id={id}
+      episodeRatings={episodeRatings}
+      colorA={glow?.colorA}
+      colorB={glow?.colorB}
+    />
+  );
 }
 
 function DetailError({ reset }: { error: Error; reset: () => void }) {

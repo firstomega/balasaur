@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { TopBar } from "@/components/balasaur/TopBar";
-import { EmptyState, EMPTY_ACTION_QUIET_CLASS } from "@/components/balasaur/EmptyState";
+import {
+  EmptyState,
+  EMPTY_ACTION_CLASS,
+  EMPTY_ACTION_QUIET_CLASS,
+} from "@/components/balasaur/EmptyState";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
@@ -630,6 +634,12 @@ function CollectionsPage() {
   );
   const originPairs = originGenrePairs(byKind("origin-genre"));
   const originCols = [...new Set(originPairs.map((p) => p.col))].sort();
+  // Every tier below is guarded on its own kind being non-empty, so a loader
+  // that returns nothing used to render the page chrome over a blank viewport
+  // with a lone "Every collection 0" in the middle of it. Nothing on the page
+  // is usable in that state, including the find box, so the whole body is
+  // replaced by the one dead end that has a way out of it.
+  const none = collections.length === 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -641,15 +651,39 @@ function CollectionsPage() {
               Collections
             </h1>
           </div>
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Find a collection"
-            aria-label="Find a collection"
-            className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
-          />
+          {!none && (
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Find a collection"
+              aria-label="Find a collection"
+              className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
+            />
+          )}
         </div>
+
+        {none && (
+          <EmptyState
+            className="mt-9"
+            line="The collection index did not load."
+            hint="Try again, or start from the catalog."
+            action={
+              <>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className={EMPTY_ACTION_CLASS}
+                >
+                  Try again
+                </button>
+                <Link to="/" className={EMPTY_ACTION_QUIET_CLASS}>
+                  Browse the catalog
+                </Link>
+              </>
+            }
+          />
+        )}
 
         {matches && (
           <section className="mt-7">
@@ -693,7 +727,7 @@ function CollectionsPage() {
           </section>
         )}
 
-        <div className={matches ? "hidden" : undefined}>
+        <div className={matches || none ? "hidden" : undefined}>
           {/* Tier 1: featured */}
           <div className="mt-7 grid grid-cols-1 gap-5 lg:grid-cols-2">
             {featured.map((c) => (
@@ -765,10 +799,12 @@ function CollectionsPage() {
           {/* Tier 3: the full index */}
           <section className="mt-13 border-t border-border pt-7">
             <div className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
-              Every collection{" "}
-              <span className="font-mono text-[14px] tabular-nums text-text-dim">
-                {collections.length}
-              </span>
+              Every collection
+              {collections.length > 0 && (
+                <span className="ml-2 font-mono text-[14px] tabular-nums text-text-dim">
+                  {collections.length}
+                </span>
+              )}
             </div>
 
             <div className="lg:grid lg:grid-cols-2 lg:gap-x-10">
