@@ -26,6 +26,6 @@ insert into collection_redirects (from_slug, to_slug) values
   ('best-2010s-romance', 'best-romance-movies'),
   ('best-1990s-action', 'best-action-movies'),
   ('best-war', 'best-war-movies'),
-  ('best-british-dramas', 'best-british-drama-movies'),
+  ('best-british-dramas', 'best-british-drama-shows'),
   ('best-family-on-netflix', 'best-family-movies-on-netflix')
 on conflict (from_slug) do nothing;
