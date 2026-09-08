@@ -11,7 +11,7 @@ import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { SortControl } from "@/components/balasaur/SortControl";
 import { MobileFilterStrip } from "@/components/balasaur/MobileFilterStrip";
 import { LandingHero } from "@/components/balasaur/LandingHero";
-import { DinoMark } from "@/components/balasaur/DinoMark";
+import { EmptyState, EMPTY_ACTION_QUIET_CLASS } from "@/components/balasaur/EmptyState";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
 import { ShareButton } from "@/components/balasaur/ShareButton";
 import {
@@ -355,7 +355,7 @@ function HomePage() {
                 <PanelLeftClose className="h-4 w-4" />
               </button>
             </div>
-            <Suspense fallback={<div className="font-mono text-[11px] text-text-dim">…</div>}>
+            <Suspense fallback={<div className="text-[13px] text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
                 setFilters={setFilters}
@@ -371,7 +371,7 @@ function HomePage() {
               onClick={() => setRail(false)}
               aria-label="Show filters"
               title="Show filters"
-              className="sticky top-12 flex cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-panel px-2 py-2 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+              className="sticky top-12 flex cursor-pointer items-center rounded-[4px] border border-border bg-panel px-2 py-2 text-text-muted hover:border-border-strong hover:text-text-bright"
             >
               <PanelLeftOpen className="h-4 w-4" />
             </button>
@@ -408,7 +408,7 @@ function HomePage() {
           {actionItem && (
             <>
               <SheetHeader className="pb-2">
-                <SheetTitle className="font-mono text-[13px] uppercase tracking-wider text-text-bright">
+                <SheetTitle className="text-[17px] font-black leading-tight tracking-[-0.02em] text-text-bright">
                   {actionItem.title}
                 </SheetTitle>
               </SheetHeader>
@@ -432,7 +432,7 @@ function HomePage() {
                       setActionItem(null);
                     }}
                     className={
-                      "w-full cursor-pointer rounded-[5px] border px-3 py-2.5 text-left font-mono text-[12px] uppercase tracking-wider transition-colors " +
+                      "w-full cursor-pointer rounded-[5px] border px-3 py-2.5 text-left text-[14px] font-bold tracking-[-0.01em] transition-colors " +
                       (a.active
                         ? "border-primary bg-primary/15 text-primary"
                         : "border-border bg-background text-text-bright hover:border-border-strong")
@@ -462,14 +462,12 @@ function HomePage() {
         >
           <SheetHeader>
             <div className="flex items-center justify-between">
-              <SheetTitle className="font-mono text-[12px] uppercase tracking-wider">
-                Filters
-              </SheetTitle>
+              <SheetTitle className="text-[18px] font-black tracking-[-0.02em]">Filters</SheetTitle>
               {countActive(filters) > 0 && (
                 <button
                   type="button"
                   onClick={() => setFilters(() => defaultFilterState())}
-                  className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
+                  className="cursor-pointer text-[13px] font-semibold text-text-muted underline hover:text-text-bright"
                 >
                   Clear all
                 </button>
@@ -477,7 +475,7 @@ function HomePage() {
             </div>
           </SheetHeader>
           <div className="mt-3 pb-16">
-            <Suspense fallback={<div className="font-mono text-[11px] text-text-dim">…</div>}>
+            <Suspense fallback={<div className="text-[13px] text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
                 setFilters={setFilters}
@@ -551,7 +549,7 @@ function CrawlTrail({
           to="/"
           search={to(page - 1)}
           rel="prev"
-          className="rounded-[4px] border border-border px-2.5 py-1 font-mono text-[11px] text-text-muted hover:border-primary hover:text-primary"
+          className="rounded-[4px] border border-border px-2.5 py-1 text-[13px] font-semibold text-text-muted hover:border-primary hover:text-primary"
         >
           Previous
         </Link>
@@ -559,14 +557,14 @@ function CrawlTrail({
       {shown.map((n, i) => (
         <span key={n} className="flex items-center gap-1.5">
           {i > 0 && shown[i - 1] !== n - 1 && (
-            <span className="font-mono text-[11px] text-text-dim">…</span>
+            <span className="font-mono text-[12px] text-text-dim">…</span>
           )}
           <Link
             to="/"
             search={to(n)}
             aria-current={n === page ? "page" : undefined}
             className={
-              "rounded-[4px] border px-2.5 py-1 font-mono text-[11px] " +
+              "rounded-[4px] border px-2.5 py-1 font-mono text-[12px] tabular-nums " +
               (n === page
                 ? "border-primary bg-primary/15 text-primary"
                 : "border-border text-text-muted hover:border-primary hover:text-primary")
@@ -581,7 +579,7 @@ function CrawlTrail({
           to="/"
           search={to(page + 1)}
           rel="next"
-          className="rounded-[4px] border border-border px-2.5 py-1 font-mono text-[11px] text-text-muted hover:border-primary hover:text-primary"
+          className="rounded-[4px] border border-border px-2.5 py-1 text-[13px] font-semibold text-text-muted hover:border-primary hover:text-primary"
         >
           Next
         </Link>
@@ -610,15 +608,18 @@ function BrowseBreak({
 
   return (
     <div className="my-5 flex flex-wrap items-center gap-2 rounded-[5px] border border-border bg-panel/60 px-3 py-2.5">
-      <span className="font-mono text-[12px] uppercase tracking-wider text-text-muted">
-        {browsed.toLocaleString("en-US")} titles browsed · narrow it down?
+      <span className="text-[13px] text-text-muted">
+        <span className="font-mono tabular-nums text-text-bright">
+          {browsed.toLocaleString("en-US")}
+        </span>{" "}
+        titles browsed. Narrow it down?
       </span>
       {suggestions.map((g) => (
         <button
           key={g}
           type="button"
           onClick={() => setFilters((p) => ({ ...p, genres: new Set([...p.genres, g]) }))}
-          className="cursor-pointer rounded-[4px] border border-border bg-panel px-2 py-[3px] font-mono text-[12px] uppercase tracking-wide text-text-muted transition-colors hover:border-primary hover:text-primary"
+          className="cursor-pointer rounded-[4px] border border-border bg-panel px-2 py-[3px] text-[13px] font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
         >
           {g}
         </button>
@@ -626,7 +627,7 @@ function BrowseBreak({
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="ml-auto cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-dim hover:text-text-bright"
+        className="ml-auto cursor-pointer text-[13px] font-semibold text-text-dim hover:text-text-bright"
       >
         Back to top ↑
       </button>
@@ -649,7 +650,7 @@ function MobileResultsBar({
       <button
         type="button"
         onClick={onClose}
-        className="w-full cursor-pointer rounded-[5px] bg-primary px-3 py-2.5 font-mono text-[11.5px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+        className="w-full cursor-pointer rounded-[5px] bg-primary px-3 py-2.5 text-[15px] font-bold tabular-nums tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
       >
         {typeof facets?.total === "number"
           ? `Show ${facets.total.toLocaleString("en-US")} results`
@@ -809,15 +810,13 @@ function GridWithControls({
 
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-2">
-        <span className="hidden font-mono text-[12px] text-text-muted md:inline">
-          <AnimatedCount value={total} className="text-text-bright" /> results
+        <span className="hidden text-[13px] text-text-muted md:inline">
+          <AnimatedCount value={total} className="font-mono tabular-nums text-text-bright" />{" "}
+          results
         </span>
 
         {refreshing && (
-          <span
-            role="status"
-            className="animate-pulse font-mono text-[11px] uppercase tracking-wider text-primary"
-          >
+          <span role="status" className="animate-pulse text-[13px] font-semibold text-primary">
             Updating…
           </span>
         )}
@@ -830,9 +829,7 @@ function GridWithControls({
               checked={filters.hideSeen}
               onCheckedChange={(v) => setFilters((p) => ({ ...p, hideSeen: !!v }))}
             />
-            <span className="font-mono text-[12px] uppercase tracking-wider text-text-muted">
-              Hide seen
-            </span>
+            <span className="text-[13px] font-semibold text-text-muted">Hide seen</span>
           </label>
           <SortControl
             value={filters.sort}
@@ -888,64 +885,52 @@ function GridWithControls({
             filters={filters}
           />
           {isFetchingNextPage && (
-            <div className="py-6 text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">
-              Loading more…
-            </div>
+            <div className="py-6 text-center text-[13px] text-text-dim">Loading more…</div>
           )}
         </>
       )}
 
       {!isLoading && total === 0 && (
-        <div className="mt-10 flex flex-col items-center rounded-[5px] border border-border bg-panel p-8 text-center">
-          <DinoMark className="h-8 w-8 text-primary opacity-80" />
-          <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.12em] text-text-dim">
-            No matches
-          </p>
-          {suggestions.length > 0 ? (
-            <>
-              <p className="mt-2 text-[13.5px] text-text-bright">
-                Nothing fits. Try removing a filter:
-              </p>
-              <div className="mt-4 flex w-full max-w-xs flex-col gap-1.5">
-                {suggestions.map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => setFilters(() => s.next)}
-                    className="group flex cursor-pointer items-center justify-between gap-3 rounded-[5px] border border-border-strong bg-background px-3 py-2 text-left transition-colors hover:border-primary"
-                  >
-                    <span className="flex min-w-0 items-center gap-1.5 font-mono text-[11px] text-text-bright">
-                      <X className="h-3.5 w-3.5 shrink-0 text-text-muted group-hover:text-primary" />
-                      <span className="truncate">{s.label}</span>
-                    </span>
-                    <span className="shrink-0 font-mono text-[11px] text-primary">
-                      +{s.unlock.toLocaleString("en-US")}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => setFilters(() => defaultFilterState())}
-                className="mt-4 cursor-pointer font-mono text-[12px] uppercase tracking-wider text-text-muted underline hover:text-text-bright"
-              >
-                Clear all filters
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-[13.5px] text-text-bright">
-                Nothing fits the current filters. Try loosening one.
-              </p>
-              <button
-                type="button"
-                onClick={() => setFilters(() => defaultFilterState())}
-                className="mt-5 cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Clear all filters
-              </button>
-            </>
-          )}
+        <div className="mt-10">
+          <EmptyState
+            line="No title matches every filter at once."
+            hint={
+              suggestions.length > 0
+                ? "Drop one and see how many come back."
+                : "Loosen a filter, or clear them and start again."
+            }
+            action={
+              <>
+                {suggestions.length > 0 && (
+                  <div className="flex w-full max-w-xs flex-col gap-1.5">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s.key}
+                        type="button"
+                        onClick={() => setFilters(() => s.next)}
+                        className="group flex cursor-pointer items-center justify-between gap-3 rounded-[5px] border border-border-strong bg-background px-3 py-2 text-left transition-colors hover:border-primary"
+                      >
+                        <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-text-bright">
+                          <X className="h-3.5 w-3.5 shrink-0 text-text-muted group-hover:text-primary" />
+                          <span className="truncate">{s.label}</span>
+                        </span>
+                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-primary">
+                          +{s.unlock.toLocaleString("en-US")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFilters(() => defaultFilterState())}
+                  className={EMPTY_ACTION_QUIET_CLASS}
+                >
+                  Clear all filters
+                </button>
+              </>
+            }
+          />
         </div>
       )}
     </>
@@ -959,10 +944,10 @@ function HomeError({ error }: { error: Error }) {
       <TopBar />
       <main id="main" className="mx-auto max-w-[1600px] px-4 py-10">
         <div className="rounded-[5px] border border-border bg-panel p-6">
-          <h2 className="font-mono text-[12px] uppercase tracking-wider text-text-bright">
+          <h2 className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
             Couldn't load the firehose
           </h2>
-          <p className="mt-2 font-mono text-[11px] text-text-muted">
+          <p className="mt-2 text-[14px] leading-relaxed text-text-muted">
             Something went wrong on our end. Try refreshing in a moment.
           </p>
         </div>

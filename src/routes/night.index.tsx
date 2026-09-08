@@ -101,7 +101,7 @@ function NightEntry() {
           }}
         />
         <main className="relative mx-auto w-full max-w-[560px] px-4 pb-16 pt-10 sm:pt-14">
-          <h1 className="text-[30px] font-bold leading-tight tracking-tight text-text-bright sm:text-[36px]">
+          <h1 className="text-[32px] font-black leading-[1.03] tracking-[-0.02em] text-text-bright sm:text-[38px]">
             Movie Night
           </h1>
           <p className="mt-1.5 text-[15px] leading-relaxed text-text-muted">
@@ -113,9 +113,11 @@ function NightEntry() {
               THEN revealed a form, which was two taps to reach one field. */}
           <div className="mt-8 space-y-3">
             <div className="rounded-[8px] border border-primary/40 bg-primary/[0.07] p-4 sm:p-5">
-              <h2 className="text-[18px] font-semibold text-text-bright">With friends</h2>
+              <h2 className="text-[19px] font-black tracking-[-0.02em] text-text-bright">
+                With friends
+              </h2>
               <label className="mt-3 block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                <span className="mb-1.5 block text-[13px] font-semibold text-text-muted">
                   Your name in the room
                 </span>
                 <input
@@ -149,7 +151,7 @@ function NightEntry() {
           </div>
 
           <div className="mt-7 flex flex-wrap items-center gap-2 border-t border-border pt-5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+            <span className="text-[14px] font-bold tracking-[-0.01em] text-text-dim">
               Have a code?
             </span>
             <input
@@ -167,7 +169,7 @@ function NightEntry() {
               type="button"
               disabled={code.length < 4 || busy}
               onClick={() => void navigate({ to: "/night/$code", params: { code } })}
-              className="cursor-pointer rounded-[5px] border border-border-strong bg-panel px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-text-bright transition-colors hover:border-primary disabled:opacity-40"
+              className="cursor-pointer rounded-[5px] border border-border-strong bg-panel px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-text-bright transition-colors hover:border-primary disabled:opacity-40"
             >
               Join
             </button>

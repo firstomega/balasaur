@@ -10,6 +10,7 @@ import {
 } from "@/lib/catalog.functions";
 import { mediaSlug } from "@/lib/slug";
 import { tmdbImage } from "@/lib/tmdbImage";
+import { EmptyState } from "./EmptyState";
 import { ScoreBadge } from "./ScoreBadge";
 
 const TYPE_COLOR: Record<string, string> = {
@@ -158,7 +159,7 @@ export function TopBarSearch() {
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder="Search titles and people…"
-          className="h-8 w-full rounded-[5px] border border-border bg-panel pl-8 pr-8 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
+          className="h-8 w-full rounded-[5px] border border-border bg-panel pl-8 pr-8 text-[13px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
         />
         {query && (
           <button
@@ -182,9 +183,11 @@ export function TopBarSearch() {
           className="absolute left-0 right-0 top-[calc(100%+4px)] z-40 max-h-[70vh] overflow-y-auto rounded-[5px] border border-border bg-panel shadow-[0_12px_32px_-12px_rgba(0,0,0,0.8)]"
         >
           {results.length === 0 && people.length === 0 ? (
-            <div className="px-3 py-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
-              No matches
-            </div>
+            <EmptyState
+              variant="inline"
+              line="No title or person by that name."
+              hint="Try fewer words, or check the spelling."
+            />
           ) : (
             <ul className="py-1">
               {results.map((hit, i) => {
@@ -220,11 +223,11 @@ export function TopBarSearch() {
                         <span className="truncate text-[13px] font-semibold text-text-bright">
                           {hit.title}
                         </span>
-                        <span className="shrink-0 font-mono text-[12px] text-text-dim">
+                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-text-dim">
                           {hit.year || "—"}
                         </span>
                       </div>
-                      <div className="mt-0.5 flex items-center gap-2 font-mono text-[11px]">
+                      <div className="mt-0.5 flex items-center gap-2 font-mono text-[11px] tabular-nums">
                         <span
                           className={`uppercase tracking-wider ${TYPE_COLOR[hit.mediaType] ?? "text-text-muted"}`}
                         >
@@ -242,7 +245,7 @@ export function TopBarSearch() {
           )}
           {people.length > 0 && (
             <div className="border-t border-border">
-              <div className="px-3 pb-0.5 pt-1.5 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+              <div className="px-3 pb-0.5 pt-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-dim">
                 People
               </div>
               <ul className="pb-1">
@@ -279,7 +282,7 @@ export function TopBarSearch() {
                         <span className="truncate text-[13px] font-semibold text-text-bright">
                           {hit.name}
                         </span>
-                        <div className="mt-0.5 font-mono text-[12px] text-text-dim">
+                        <div className="mt-0.5 font-mono text-[12px] tabular-nums text-text-dim">
                           {hit.titles} titles here
                         </div>
                       </div>
@@ -289,7 +292,7 @@ export function TopBarSearch() {
               </ul>
             </div>
           )}
-          <div className="border-t border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          <div className="border-t border-border px-3 py-1.5 font-mono text-[11px] text-text-dim">
             ↑↓ navigate · ↵ open · esc close
           </div>
         </div>

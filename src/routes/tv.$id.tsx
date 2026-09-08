@@ -1,5 +1,7 @@
 import { createFileRoute, Link, notFound, redirect, useRouter } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
+import { episodeRatingsQueryOptions } from "@/lib/episodes.functions";
 import { appearsInQueryOptions, mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
 import {
@@ -52,7 +54,15 @@ export const Route = createFileRoute("/tv/$id")({
     // shipped and did nothing. The budget keeps a slow shelf lookup from
     // holding the page up: on a timeout the module simply renders client-side,
     // which is where it started.
-    await ssrBudget(context.queryClient.prefetchQuery(appearsInQueryOptions(`tv-${id}`)), 800);
+    //
+    // The episode heatmap is loaded here for the same reason and in parallel,
+    // not after: two 800ms budgets in sequence would put 1.6s in front of the
+    // first byte on a slow database. A show with no stored episode ratings
+    // resolves to an empty array and the grid renders nothing.
+    await Promise.all([
+      ssrBudget(context.queryClient.prefetchQuery(appearsInQueryOptions(`tv-${id}`)), 800),
+      ssrBudget(context.queryClient.prefetchQuery(episodeRatingsQueryOptions(`tv-${id}`)), 800),
+    ]);
     // Canonicalize: 301 bare-id or stale-slug URLs to "<id>-<title-slug>".
     if (data?.title) {
       const canonical = mediaSlug(id, data.title);
@@ -87,7 +97,10 @@ export const Route = createFileRoute("/tv/$id")({
 
 function TvPage() {
   const id = parseMediaId(Route.useParams().id);
-  return <MediaDetail mediaType="tv" id={id} />;
+  // Prefetched in the loader, so this reads the cache during SSR and the grid
+  // is in the HTML. If the loader's budget ran out, it fetches on the client.
+  const { data: episodeRatings } = useQuery(episodeRatingsQueryOptions(`tv-${id}`));
+  return <MediaDetail mediaType="tv" id={id} episodeRatings={episodeRatings} />;
 }
 
 function DetailError({ reset }: { error: Error; reset: () => void }) {
@@ -106,13 +119,13 @@ function DetailError({ reset }: { error: Error; reset: () => void }) {
               router.invalidate();
               reset();
             }}
-            className="rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-primary-foreground"
+            className="rounded-[5px] bg-primary px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground"
           >
             Try again
           </button>
           <Link
             to="/"
-            className="rounded-[5px] border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright"
+            className="rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
           >
             Back to grid
           </Link>
@@ -133,7 +146,7 @@ function DetailNotFound() {
         </p>
         <Link
           to="/"
-          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright"
+          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
         >
           Back to grid
         </Link>

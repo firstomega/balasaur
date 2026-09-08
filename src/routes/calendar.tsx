@@ -94,7 +94,7 @@ function CalendarPage() {
       <main id="main" className="mx-auto w-full max-w-[1240px] flex-1 px-5 py-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-[28px] font-bold leading-tight tracking-tight text-text-bright">
+            <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
               Release calendar
             </h1>
             <p className="mt-1 text-[14px] text-text-muted">
@@ -106,7 +106,7 @@ function CalendarPage() {
               <Link
                 to="/calendar"
                 search={{ m: prev }}
-                className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-primary hover:text-primary"
+                className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[12px] tracking-wider text-text-muted hover:border-primary hover:text-primary"
               >
                 <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
                 {monthLabel(prev)}
@@ -116,7 +116,7 @@ function CalendarPage() {
               <Link
                 to="/calendar"
                 search={{ m: next }}
-                className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-primary hover:text-primary"
+                className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[12px] tracking-wider text-text-muted hover:border-primary hover:text-primary"
               >
                 {monthLabel(next)}
                 <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -134,15 +134,17 @@ function CalendarPage() {
             {data.days.map((day) => (
               <section key={day.date} aria-label={dayLabel(day.date)}>
                 <h2 className="mb-2.5 flex items-baseline gap-2 border-b border-border pb-1.5">
-                  <span className="font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-text-bright">
+                  <span className="text-[17px] font-black tracking-[-0.02em] text-text-bright">
                     {dayLabel(day.date)}
                   </span>
                   {day.date === today && (
-                    <span className="rounded-[3px] bg-primary/15 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-primary">
+                    <span className="rounded-[3px] bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">
                       Today
                     </span>
                   )}
-                  <span className="font-mono text-[12px] text-text-dim">{day.items.length}</span>
+                  <span className="font-mono text-[12px] tabular-nums text-text-dim">
+                    {day.items.length}
+                  </span>
                 </h2>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
                   {day.items.map((item) => (

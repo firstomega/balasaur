@@ -5,9 +5,11 @@ export function Footer() {
   const year = new Date().getFullYear();
   return (
     <footer className="border-t border-border bg-background">
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-6 font-mono text-[11px] leading-relaxed text-text-dim md:flex-row md:items-start md:justify-between">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-6 text-[12px] leading-relaxed text-text-dim md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
-          <p className="text-[12px] text-text-muted">Your personal entertainment database.</p>
+          <p className="text-[13px] font-semibold text-text-muted">
+            Your personal entertainment database.
+          </p>
           <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
           <p>Streaming availability data provided by JustWatch.</p>
           <p>Ratings via OMDb (IMDb, Rotten Tomatoes, Metacritic).</p>

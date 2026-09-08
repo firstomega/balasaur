@@ -77,13 +77,16 @@
 :root {
   /* Balasaur — utilitarian dark (single theme). */
   --radius: 0.3125rem; /* 5px */
-  --background: #101216;
+  /* OLED ground. On a phone this is pixels that are off, and every panel above
+     it reads as a raised surface instead of a slightly different gray. */
+  --background: #08090b;
   --panel: #171b21;
   --foreground: #d4d8e0;
   --text-bright: #ffffff;
   --text-muted: #a1a29b;
-  /* 3.76 against the ground, below the 4.5 floor. 5.28 passes; one step
-     lighter, still clearly quieter than muted. */
+  /* The dim gray before this one measured 3.76 against the ground, below the
+     4.5 floor. This one measures 5.6 on #08090b, and is still clearly quieter
+     than muted. */
   --text-dim: #8a887f;
   --card: #171b21;
   --card-foreground: #d4d8e0;
@@ -209,6 +212,15 @@
 .arcade-focus:focus-visible {
   outline: 2px solid var(--game, var(--primary));
   outline-offset: 3px;
+}
+
+/* A raised surface catches light along its top edge. One step brighter than the
+   rest of the frame is the whole trick, and it only works against a near-black
+   ground. Color only, on a border the element already has, so nothing moves.
+   Unlayered for the same reason the focus ring is: `border-border` is a utility
+   and would otherwise repaint this edge back to flat. */
+.specular-top {
+  border-top-color: rgba(255, 255, 255, 0.06);
 }
 
 /* Self-hosted webfonts (latin subset, variable weight). Served from our own

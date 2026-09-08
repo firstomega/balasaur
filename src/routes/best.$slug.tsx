@@ -162,10 +162,7 @@ function CollectionPage() {
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
       <main id="main" className="mx-auto max-w-[1160px] px-4 py-6">
-        <nav
-          aria-label="Breadcrumb"
-          className="mb-3 font-mono text-[11px] uppercase tracking-wider text-text-dim"
-        >
+        <nav aria-label="Breadcrumb" className="mb-3 text-[13px] font-semibold text-text-dim">
           <Link to="/collections" className="hover:text-primary">
             Collections
           </Link>
@@ -173,7 +170,7 @@ function CollectionPage() {
           <span className="text-text-muted">{row.title}</span>
         </nav>
 
-        <h1 className="max-w-[30ch] text-[26px] font-bold leading-tight tracking-tight text-text-bright">
+        <h1 className="max-w-[30ch] text-[30px] font-black leading-[1.08] tracking-[-0.02em] text-text-bright">
           {row.title}
         </h1>
         <p className="mt-2 max-w-[76ch] text-[15px] leading-relaxed text-text">{dek}</p>
@@ -188,7 +185,7 @@ function CollectionPage() {
           {updated && <MetaChip>Updated {updated}</MetaChip>}
           <Link
             to="/methodology"
-            className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+            className="rounded-[4px] border border-border bg-panel px-2.5 py-1 text-[13px] font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
           >
             Ranked by Balasaur Score
           </Link>
@@ -199,7 +196,7 @@ function CollectionPage() {
               </MetaChip>
               <button
                 onClick={() => setHideSeen(!hideSeen)}
-                className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+                className="rounded-[4px] border border-border bg-panel px-2.5 py-1 text-[13px] font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
               >
                 {hideSeen ? "Show seen" : "Hide seen"}
               </button>
@@ -233,7 +230,7 @@ function CollectionPage() {
                 </FilterChip>
               ))}
             {filtered && (
-              <span className="ml-1 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+              <span className="ml-1 font-mono text-[12px] tabular-nums text-text-muted">
                 Showing {displayItems.length} of {ranked.length}
               </span>
             )}
@@ -250,7 +247,7 @@ function CollectionPage() {
               posterOverlay={
                 <span
                   aria-hidden="true"
-                  className="font-mono text-[30px] font-bold leading-none text-white/95 [text-shadow:0_2px_10px_rgba(0,0,0,0.95)]"
+                  className="font-mono text-[30px] font-bold tabular-nums leading-none text-white/95 [text-shadow:0_2px_10px_rgba(0,0,0,0.95)]"
                 >
                   {rank}
                 </span>
@@ -266,7 +263,7 @@ function CollectionPage() {
           </p>
           <Link
             to="/watched"
-            className="ml-auto shrink-0 rounded-[5px] bg-primary px-3.5 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="ml-auto shrink-0 rounded-[5px] bg-primary px-3.5 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
           >
             Start rating
           </Link>
@@ -283,9 +280,12 @@ function CollectionPage() {
                   key={r.slug}
                   to="/best/$slug"
                   params={{ slug: r.slug }}
-                  className="rounded-[4px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+                  className="rounded-[4px] border border-border bg-panel px-2.5 py-1.5 text-[13px] font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
                 >
-                  {r.title} <span className="ml-1 opacity-70">{r.item_count}</span>
+                  {r.title}{" "}
+                  <span className="ml-1 font-mono text-[12px] tabular-nums opacity-70">
+                    {r.item_count}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -310,7 +310,7 @@ function FilterChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`cursor-pointer rounded-[4px] border px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+      className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-semibold tabular-nums tracking-[-0.01em] transition-colors ${
         active
           ? "border-primary bg-primary/15 text-primary"
           : "border-border bg-panel text-text-muted hover:border-primary/60 hover:text-text-bright"
@@ -323,7 +323,7 @@ function FilterChip({
 
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+    <span className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11.5px] tabular-nums text-text-muted">
       {children}
     </span>
   );
@@ -340,7 +340,7 @@ function CollectionNotFound() {
         </p>
         <Link
           to="/collections"
-          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-primary hover:text-primary"
+          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
         >
           All collections
         </Link>

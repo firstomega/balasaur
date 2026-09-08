@@ -255,7 +255,7 @@ export function ProviderIcon({
           {mark.glyph}
         </svg>
       ) : (
-        <span className="font-mono text-[8px] uppercase tracking-wider">
+        <span className="text-[8px] font-black uppercase tracking-wider">
           {displayLabel.slice(0, 3)}
         </span>
       )}
@@ -287,7 +287,7 @@ export function ProviderIcon({
             {tile}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="font-mono text-[11px] uppercase tracking-wider">
+        <TooltipContent side="bottom" className="text-[12px] font-semibold">
           {displayLabel}
         </TooltipContent>
       </Tooltip>

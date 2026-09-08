@@ -108,7 +108,7 @@ export function MediaTypeSwitch({
               tabIndex={-1}
               onClick={() => onChange(s.mode)}
               className={
-                "z-10 flex items-center justify-center font-mono text-[11px] uppercase tracking-wider transition-colors " +
+                "z-10 flex items-center justify-center text-[13px] font-bold tracking-[-0.01em] transition-colors " +
                 (active ? "text-primary" : "text-text-muted hover:text-text-bright")
               }
             >

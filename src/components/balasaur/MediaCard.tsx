@@ -34,6 +34,7 @@ export function MediaCard({
   imgSizes,
   eager = false,
   showVotes = false,
+  tint,
 }: {
   item: MediaItem;
   /** When provided, shows desktop hover quick actions on the poster: save to
@@ -57,6 +58,9 @@ export function MediaCard({
   eager?: boolean;
   /** Show vote counts under the Balasaur score. */
   showVotes?: boolean;
+  /** The poster's dominant color (media.color_a), painted behind the image so a
+   *  lazy poster arrives out of its own color instead of a gray hole. */
+  tint?: string | null;
 }) {
   const rawId = item.id.replace(/^(movie|tv)-/, "");
   // An id-less item must not render a link: an empty route param leaves the
@@ -80,6 +84,7 @@ export function MediaCard({
               imgSizes={imgSizes}
               eager={eager}
               showVotes={showVotes}
+              tint={tint}
             />
           </Link>
         ) : (
@@ -89,6 +94,7 @@ export function MediaCard({
             imgSizes={imgSizes}
             eager={eager}
             showVotes={showVotes}
+            tint={tint}
           />
         )}
 
@@ -108,7 +114,7 @@ export function MediaCard({
               aria-pressed={saved}
               title={saved ? "On your watchlist" : "Want to Watch"}
               className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[11px] uppercase tracking-wider backdrop-blur-sm transition-all",
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] backdrop-blur-sm transition-all",
                 saved
                   ? "border-[#e8b84b]/70 bg-[#e8b84b]/25 text-[#e8b84b] opacity-100"
                   : "border-white/30 bg-black/70 text-white opacity-0 hover:border-[#e8b84b] hover:bg-[#e8b84b] hover:text-black group-hover:opacity-100",
@@ -128,7 +134,7 @@ export function MediaCard({
               aria-pressed={watched}
               title={watched ? "Watched" : "Mark as watched"}
               className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 font-mono text-[11px] uppercase tracking-wider backdrop-blur-sm transition-all",
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] backdrop-blur-sm transition-all",
                 watched
                   ? "border-rating/60 bg-rating/25 text-rating opacity-100"
                   : "border-white/30 bg-black/70 text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
@@ -177,7 +183,7 @@ export function MediaCard({
               {item.title}
             </h3>
           )}
-          <p className="mt-1 font-mono text-[12px] text-text-muted">
+          <p className="mt-1 font-mono text-[12px] tabular-nums text-text-muted">
             {displayYear(item)}
             {(() => {
               // Media type already shown as the tag on the poster, so the caption only
@@ -210,22 +216,34 @@ export function MediaCard({
   );
 }
 
+const HEX = /^#[0-9a-f]{6}$/i;
+
 function CardArt({
   item,
   posterOverlay,
   imgSizes,
   eager = false,
   showVotes = false,
+  tint,
 }: {
   item: MediaItem;
   posterOverlay?: React.ReactNode;
   imgSizes?: string;
   eager?: boolean;
   showVotes?: boolean;
+  tint?: string | null;
 }) {
+  // The color rides on the item once the catalog query selects it; the prop is
+  // for callers that fetched it separately. Anything that is not a plain hex is
+  // dropped, because it lands in a style attribute.
+  const raw = tint ?? (item as { colorA?: string | null }).colorA ?? null;
+  const placeholder = raw && HEX.test(raw) ? raw : null;
   return (
-    <div className="relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
-      <div className="aspect-[2/3] w-full">
+    <div className="specular-top relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
+      <div
+        className="aspect-[2/3] w-full"
+        style={placeholder ? { backgroundColor: placeholder } : undefined}
+      >
         {item.posterUrl ? (
           <img
             src={tmdbImage(item.posterUrl, "w342")}
@@ -250,7 +268,7 @@ function CardArt({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-accent text-text-dim">
-            <span className="font-mono text-[11px] uppercase">No art</span>
+            <span className="text-[12px] font-semibold">No art</span>
           </div>
         )}
       </div>
@@ -272,7 +290,7 @@ function CardArt({
         <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
           <ScoreBadge score={item.ratings.balasaur} />
           {showVotes && item.voteCount != null && (
-            <span className="rounded-[4px] bg-background/85 px-1 py-0.5 font-mono text-[11px] text-text-muted backdrop-blur-sm">
+            <span className="rounded-[4px] bg-background/85 px-1 py-0.5 font-mono text-[11px] tabular-nums text-text-muted backdrop-blur-sm">
               {Intl.NumberFormat("en-US", { notation: "compact" }).format(item.voteCount)} ratings
             </span>
           )}

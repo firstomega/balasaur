@@ -92,10 +92,10 @@ export function AuthDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-border bg-panel text-foreground sm:max-w-[380px]">
         <DialogHeader>
-          <DialogTitle className="font-mono text-[13px] uppercase tracking-wider text-text-bright">
+          <DialogTitle className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
             {mode === "signin" ? "Sign in" : "Create account"}
           </DialogTitle>
-          <DialogDescription className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          <DialogDescription className="text-[14px] text-text-dim">
             {reason ?? "Save your library across devices"}
           </DialogDescription>
         </DialogHeader>
@@ -105,12 +105,12 @@ export function AuthDialog({
             <button
               type="button"
               onClick={google}
-              className="w-full cursor-pointer rounded-[5px] border border-border bg-background px-3 py-2 font-mono text-[12px] uppercase tracking-wider text-text-bright hover:border-border-strong"
+              className="w-full cursor-pointer rounded-[5px] border border-border bg-background px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright hover:border-border-strong"
             >
               Continue with Google
             </button>
 
-            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+            <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-text-dim">
               <span className="h-px flex-1 bg-border" />
               or
               <span className="h-px flex-1 bg-border" />
@@ -125,7 +125,7 @@ export function AuthDialog({
             placeholder="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-9 w-full rounded-[5px] border border-border bg-background px-2.5 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
+            className="h-9 w-full rounded-[5px] border border-border bg-background px-2.5 text-[14px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
           />
           {mode !== "magic" && (
             <input
@@ -135,15 +135,15 @@ export function AuthDialog({
               placeholder="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-9 w-full rounded-[5px] border border-border bg-background px-2.5 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
+              className="h-9 w-full rounded-[5px] border border-border bg-background px-2.5 text-[14px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
           )}
-          {error && <p className="font-mono text-[12px] text-red-400">{error}</p>}
-          {notice && <p className="font-mono text-[12px] text-primary">{notice}</p>}
+          {error && <p className="text-[13px] text-red-400">{error}</p>}
+          {notice && <p className="text-[13px] text-primary">{notice}</p>}
           <button
             type="submit"
             disabled={busy}
-            className="w-full cursor-pointer rounded-[5px] bg-primary px-3 py-2 font-mono text-[12px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="w-full cursor-pointer rounded-[5px] bg-primary px-3 py-2 text-[15px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
             {busy
               ? "…"
@@ -159,7 +159,7 @@ export function AuthDialog({
           <button
             type="button"
             onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="cursor-pointer text-left font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+            className="cursor-pointer text-left text-[13px] font-semibold text-text-muted hover:text-text-bright"
           >
             {mode === "signin" ? "No account? Create one" : "Have an account? Sign in"}
           </button>
@@ -167,7 +167,7 @@ export function AuthDialog({
             <button
               type="button"
               onClick={() => setMode("magic")}
-              className="cursor-pointer text-left font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+              className="cursor-pointer text-left text-[13px] font-semibold text-text-muted hover:text-text-bright"
             >
               Or email me a sign-in link (no password)
             </button>

@@ -108,13 +108,13 @@ function DetailError({ reset }: { error: Error; reset: () => void }) {
               router.invalidate();
               reset();
             }}
-            className="rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-primary-foreground"
+            className="rounded-[5px] bg-primary px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground"
           >
             Try again
           </button>
           <Link
             to="/"
-            className="rounded-[5px] border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright"
+            className="rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
           >
             Back to grid
           </Link>
@@ -135,7 +135,7 @@ function DetailNotFound() {
         </p>
         <Link
           to="/"
-          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright"
+          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
         >
           Back to grid
         </Link>

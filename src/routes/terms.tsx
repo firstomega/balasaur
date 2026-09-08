@@ -31,7 +31,7 @@ function TermsPage() {
           <h1 className="font-sans text-3xl font-semibold tracking-tight text-text-bright">
             Terms &amp; Conditions
           </h1>
-          <p className="mt-2 font-mono text-[12px] uppercase tracking-wider text-text-dim">
+          <p className="mt-2 font-mono text-[12px] tabular-nums text-text-dim">
             Effective date: [EFFECTIVE DATE]
           </p>
         </header>
@@ -129,9 +129,7 @@ function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 font-mono text-[13px] font-semibold uppercase tracking-wider text-text-bright">
-        {title}
-      </h2>
+      <h2 className="mb-3 text-[19px] font-black tracking-[-0.02em] text-text-bright">{title}</h2>
       <div className="space-y-3 text-text-muted">{children}</div>
     </section>
   );

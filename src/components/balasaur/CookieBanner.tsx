@@ -62,7 +62,7 @@ export function CookieBanner() {
           at two rows of padding the bar covered a game board's bottom row.
           On a phone the copy and the two buttons share one tight band. */}
       <div className="mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-1.5 md:px-4 md:py-2">
-        <p className="min-w-0 flex-1 font-mono text-[11.5px] leading-snug text-text-muted md:text-[12px]">
+        <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-text-muted md:text-[13px]">
           Cookies keep you signed in. With consent they also count page visits.{" "}
           <Link to="/privacy" className="text-text-bright underline-offset-2 hover:underline">
             Learn more
@@ -80,14 +80,14 @@ export function CookieBanner() {
           <button
             type="button"
             onClick={() => choose("required")}
-            className="rounded-[5px] border border-border-strong bg-background px-2.5 py-1 font-mono text-[11px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary md:px-3 md:py-1.5 md:text-[12px]"
+            className="rounded-[5px] border border-border-strong bg-background px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary md:px-3 md:py-1.5"
           >
             Required only
           </button>
           <button
             type="button"
             onClick={() => choose("all")}
-            className="rounded-[5px] border border-border-strong bg-background px-2.5 py-1 font-mono text-[11px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary md:px-3 md:py-1.5 md:text-[12px]"
+            className="rounded-[5px] border border-border-strong bg-background px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary md:px-3 md:py-1.5"
           >
             Accept all
           </button>

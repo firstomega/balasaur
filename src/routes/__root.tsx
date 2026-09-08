@@ -19,6 +19,7 @@ import { CookieBanner } from "@/components/balasaur/CookieBanner";
 import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
 import { Toaster } from "@/components/ui/sonner";
 import { DinoMark } from "@/components/balasaur/DinoMark";
+import { DinoRun } from "@/components/balasaur/DinoRun";
 import { SITE_ORIGIN, SITE_NAME, SITE_TAGLINE, DEFAULT_OG_IMAGE, jsonLdScript } from "@/lib/seo";
 
 function NotFoundComponent() {
@@ -26,10 +27,10 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-[5px] border border-border bg-panel p-8 text-center">
         <DinoMark className="mx-auto h-10 w-10 text-primary" />
-        <div className="mt-5 font-mono text-[64px] font-semibold leading-none tracking-tighter text-text-bright">
+        <div className="mt-5 font-mono text-[64px] font-semibold tabular-nums leading-none tracking-tighter text-text-bright">
           404
         </div>
-        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
+        <p className="mt-3 text-[15px] font-black tracking-[-0.02em] text-text-dim">
           Signal lost · route not found
         </p>
         <p className="mt-4 text-[13.5px] leading-relaxed text-text-muted">
@@ -38,7 +39,7 @@ function NotFoundComponent() {
         <div className="mt-6 flex justify-center">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Back to grid
           </Link>
@@ -59,10 +60,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-[5px] border border-border bg-panel p-8 text-center">
         <DinoMark className="mx-auto h-10 w-10 text-primary" />
-        <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
+        <p className="mt-5 text-[15px] font-black tracking-[-0.02em] text-text-dim">
           Process halted · error caught
         </p>
-        <h1 className="mt-2 text-[20px] font-semibold tracking-tight text-text-bright">
+        <h1 className="mt-2 text-[24px] font-black tracking-[-0.02em] text-text-bright">
           This page didn't load
         </h1>
         <p className="mt-3 text-[13.5px] leading-relaxed text-text-muted">
@@ -77,13 +78,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
               router.invalidate();
               reset();
             }}
-            className="inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-[5px] border border-border-strong bg-background px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-text-bright transition-colors hover:border-primary hover:text-primary"
+            className="inline-flex items-center justify-center rounded-[5px] border border-border-strong bg-background px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright transition-colors hover:border-primary hover:text-primary"
           >
             Go home
           </a>
@@ -180,7 +181,7 @@ function RootShell({ children }: { children: ReactNode }) {
             through it on every page. Visible only when focused. */}
         <a
           href="#main"
-          className="sr-only z-50 rounded-[5px] bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+          className="sr-only z-50 rounded-[5px] bg-primary px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
         >
           Skip to content
         </a>
@@ -207,6 +208,8 @@ function RootComponent() {
         </div>
         <CookieBanner />
         <Toaster position="bottom-center" />
+        {/* Renders null until someone types rawr. See DinoRun. */}
+        <DinoRun />
       </AuthProvider>
     </QueryClientProvider>
   );

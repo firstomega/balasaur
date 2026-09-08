@@ -14,8 +14,11 @@ import { computeBalasaurScore } from "./score";
 import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
+import type { EpisodeRating } from "./episodes";
+import { posterColorsFromJpeg, type PosterColors } from "./posterColor";
+import { tmdbImage } from "./tmdbImage";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import type { Json, TablesInsert } from "@/integrations/supabase/types";
+import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 type MediaRow = TablesInsert<"media">;
 
@@ -1310,6 +1313,258 @@ async function catalogMaxUpdatedAt(): Promise<string | null> {
   return data?.updated_at ?? null;
 }
 
+// ---------- Poster colors ----------
+
+/**
+ * Two colors per title, read out of the poster on the server so the ambient
+ * glow and the card placeholder tint are already in the HTML. The w92 poster is
+ * about 2 KB and one HTTP hop from the CDN we already talk to.
+ *
+ * These columns are written by their own UPDATE rather than joining the sync
+ * upsert on purpose: PostgREST requires every object in a bulk upsert to carry
+ * the same keys, so a batch where some titles got a color and some did not
+ * would be rejected wholesale, taking the catalog write down with it.
+ *
+ * media.color_a / color_b / color_at arrived in the poster-color migration.
+ * src/integrations/supabase/types.ts is regenerated on its own cadence, so
+ * until it catches up those three columns are addressed through the local
+ * shapes below.
+ */
+const POSTER_COLOR_SIZE = "w92";
+const POSTER_COLOR_TIMEOUT_MS = 5_000;
+/** A w92 poster is ~2 KB. Anything past this is not the file we asked for. */
+const POSTER_COLOR_MAX_BYTES = 512 * 1024;
+/** Titles coloured per sync pass, so a sync never turns into a color job. */
+const POSTER_COLOR_PER_SYNC = 60;
+const POSTER_COLOR_SYNC_MS = 15_000;
+const POSTER_COLOR_BACKFILL_LIMIT = 400;
+const POSTER_COLOR_HARD_CEILING = 2000;
+const POSTER_COLOR_BUDGET_MS = 60_000;
+const POSTER_COLOR_CONCURRENCY = 8;
+
+type PosterColorTarget = { media_id: string; poster_url: string | null };
+
+export interface PosterColorPair {
+  colorA: string | null;
+  colorB: string | null;
+}
+
+export interface PosterColorResult {
+  /** Titles claimed this pass. */
+  scanned: number;
+  /** Titles that now have two colors. */
+  stored: number;
+  /** Posters read successfully with no usable color in them (all black, all white). */
+  noColor: number;
+  /** Posters that could not be fetched. Left unstamped, so the next pass retries. */
+  failed: number;
+  /** Titles still waiting, after this pass. */
+  remaining: number;
+  budgetHit: boolean;
+  durationMs: number;
+}
+
+/**
+ * `looked: true` means the poster was read and this is the answer, so the title
+ * can be stamped and never queued again. `looked: false` means the fetch itself
+ * failed and the title stays in the queue.
+ */
+async function readPosterColors(
+  posterUrl: string | null,
+): Promise<{ colors: PosterColors | null; looked: boolean }> {
+  const url = tmdbImage(posterUrl, POSTER_COLOR_SIZE);
+  if (!url) return { colors: null, looked: true };
+  try {
+    const res = await fetchWithTimeout(url, POSTER_COLOR_TIMEOUT_MS);
+    // A poster TMDB no longer serves is an answer, not a failure.
+    if (res.status === 403 || res.status === 404) return { colors: null, looked: true };
+    if (!res.ok) return { colors: null, looked: false };
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength === 0 || buf.byteLength > POSTER_COLOR_MAX_BYTES) {
+      return { colors: null, looked: true };
+    }
+    return { colors: posterColorsFromJpeg(new Uint8Array(buf)), looked: true };
+  } catch {
+    return { colors: null, looked: false };
+  }
+}
+
+async function stampPosterColors(mediaId: string, colors: PosterColors | null): Promise<boolean> {
+  const patch = {
+    color_a: colors?.colorA ?? null,
+    color_b: colors?.colorB ?? null,
+    color_at: new Date().toISOString(),
+  };
+  const { error } = await supabaseAdmin
+    .from("media")
+    .update(patch as unknown as TablesUpdate<"media">)
+    .eq("media_id", mediaId);
+  if (error) {
+    console.error(`[colors] write failed for ${mediaId}:`, error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Read and store colors for a claimed batch. Never throws. */
+async function colorTargets(
+  targets: PosterColorTarget[],
+  deadline: number,
+): Promise<{ stored: number; noColor: number; failed: number; budgetHit: boolean }> {
+  let stored = 0;
+  let noColor = 0;
+  let failed = 0;
+  let budgetHit = false;
+  await mapWithLimit(targets, POSTER_COLOR_CONCURRENCY, async (t) => {
+    if (Date.now() > deadline) {
+      budgetHit = true;
+      return;
+    }
+    const { colors, looked } = await readPosterColors(t.poster_url);
+    if (!looked) {
+      failed++;
+      return;
+    }
+    const ok = await stampPosterColors(t.media_id, colors);
+    if (!ok) failed++;
+    else if (colors) stored++;
+    else noColor++;
+  });
+  return { stored, noColor, failed, budgetHit };
+}
+
+async function pendingPosterColorCount(): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("media")
+    .select("media_id", { count: "exact", head: true })
+    .filter("color_at", "is", null)
+    .not("poster_url", "is", null);
+  if (error) {
+    console.error("[colors] pending count failed:", error.message);
+    return -1;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Fill in poster colors, most popular first, for titles never looked at.
+ * Called by the nightly workflow through the sync hook (`mode: "posterColors"`)
+ * so the catalog colours itself in over a few nights.
+ */
+export async function backfillPosterColors(opts?: {
+  limit?: number;
+  timeBudgetMs?: number;
+}): Promise<PosterColorResult> {
+  const start = Date.now();
+  const limit = Math.min(
+    Math.max(1, opts?.limit ?? POSTER_COLOR_BACKFILL_LIMIT),
+    POSTER_COLOR_HARD_CEILING,
+  );
+  const deadline = start + (opts?.timeBudgetMs ?? POSTER_COLOR_BUDGET_MS);
+
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select("media_id, poster_url")
+    .filter("color_at", "is", null)
+    .not("poster_url", "is", null)
+    .order("popularity", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw new Error(`poster color select failed: ${error.message}`);
+  const targets = (data ?? []) as PosterColorTarget[];
+
+  const { stored, noColor, failed, budgetHit } = await colorTargets(targets, deadline);
+  console.log(
+    `[colors] ${stored} stored, ${noColor} with nothing to take, ${failed} failed, of ${targets.length} claimed${budgetHit ? " (budget hit)" : ""}`,
+  );
+  return {
+    scanned: targets.length,
+    stored,
+    noColor,
+    failed,
+    remaining: await pendingPosterColorCount(),
+    budgetHit,
+    durationMs: Date.now() - start,
+  };
+}
+
+/**
+ * Colour the titles a sync pass just wrote, so new titles arrive with a glow
+ * instead of waiting for the next backfill. Capped and time-boxed: a sync pass
+ * is never held open for this, and any failure here is logged and dropped.
+ */
+async function colorFreshlySynced(mediaIds: string[], tag: string): Promise<void> {
+  if (mediaIds.length === 0) return;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("media")
+      .select("media_id, poster_url")
+      .in("media_id", mediaIds)
+      .filter("color_at", "is", null)
+      .not("poster_url", "is", null)
+      .limit(POSTER_COLOR_PER_SYNC);
+    if (error) {
+      console.error(`[${tag}] poster color select failed:`, error.message);
+      return;
+    }
+    const targets = (data ?? []) as PosterColorTarget[];
+    if (targets.length === 0) return;
+    const { stored, noColor, failed } = await colorTargets(
+      targets,
+      Date.now() + POSTER_COLOR_SYNC_MS,
+    );
+    console.log(
+      `[${tag}] poster colors: ${stored} stored, ${noColor} empty, ${failed} failed of ${targets.length}`,
+    );
+  } catch (e) {
+    console.error(`[${tag}] poster colors skipped:`, e);
+  }
+}
+
+/** The stored colors for one title, or null when it has none. */
+export async function loadPosterColors(mediaId: string): Promise<PosterColorPair | null> {
+  const { data, error } = await supabaseAdmin
+    .from("media")
+    .select("color_a, color_b")
+    .eq("media_id", mediaId)
+    .maybeSingle();
+  if (error) {
+    console.error(`[colors] read failed for ${mediaId}:`, error.message);
+    return null;
+  }
+  const row = data as unknown as { color_a: string | null; color_b: string | null } | null;
+  if (!row || (!row.color_a && !row.color_b)) return null;
+  return { colorA: row.color_a, colorB: row.color_b };
+}
+
+/** The stored colors for a set of titles, keyed by media_id. Missing ids are absent. */
+export async function loadPosterColorsMany(
+  mediaIds: string[],
+): Promise<Map<string, PosterColorPair>> {
+  const out = new Map<string, PosterColorPair>();
+  if (mediaIds.length === 0) return out;
+  const CHUNK = 500;
+  for (let i = 0; i < mediaIds.length; i += CHUNK) {
+    const { data, error } = await supabaseAdmin
+      .from("media")
+      .select("media_id, color_a, color_b")
+      .in("media_id", mediaIds.slice(i, i + CHUNK));
+    if (error) {
+      console.error("[colors] batch read failed:", error.message);
+      continue;
+    }
+    const rows = (data ?? []) as unknown as {
+      media_id: string;
+      color_a: string | null;
+      color_b: string | null;
+    }[];
+    for (const r of rows) {
+      if (!r.color_a && !r.color_b) continue;
+      out.set(r.media_id, { colorA: r.color_a, colorB: r.color_b });
+    }
+  }
+  return out;
+}
+
 export interface SyncResult {
   discovered: number;
   refreshed: number;
@@ -1476,6 +1731,17 @@ export async function syncCatalog(opts?: {
   //    write so the caller (and the nightly Action) sees red, never green-but-frozen.
   await upsertMediaRowsStrict(rows, "sync");
 
+  // 3b. Read the posters of what we just wrote for their two colors. Capped,
+  //     time-boxed, and skipped outright on a pass that already ran long, so a
+  //     sync request never gets longer because of colors. Whatever is skipped
+  //     here the nightly backfill picks up.
+  if (!budgetHit) {
+    await colorFreshlySynced(
+      rows.map((r) => r.media_id),
+      "sync",
+    );
+  }
+
   // 4. Bust the grid's trending cache when the catalog actually changed, so new
   //    titles appear on the next page load instead of waiting out the 24h TTL.
   //    (fetchTrendingMedia rebuilds it from the `media` table on the next miss.)
@@ -1601,6 +1867,12 @@ export async function refreshStalest(opts?: {
 
   // Throws on any failed/unpersisted write — see upsertMediaRowsStrict.
   await upsertMediaRowsStrict(rows, "refresh");
+  if (!budgetHit) {
+    await colorFreshlySynced(
+      rows.map((r) => r.media_id),
+      "refresh",
+    );
+  }
   if (refreshed > 0) {
     const { error } = await supabaseAdmin.from("trending_cache").delete().eq("key", "trending");
     if (error) console.error("[refresh] trending_cache bust failed:", error.message);
@@ -2600,4 +2872,321 @@ export async function fetchPersonDetail(
   }
 
   return detail;
+}
+
+// ---------- Per-episode ratings (the popular TV pool) ----------
+
+/**
+ * TMDB carries a rating per episode, which is the one thing about a long show
+ * a viewer actually asks: does it stay good. `/tv/{id}/season/{n}` returns a
+ * whole season per request, so the cost is one request per season, not per
+ * episode.
+ *
+ * Gated to shows with vote_count >= 2000 (236 shows, 1,371 seasons today).
+ * Episodes with no votes are not written at all: a stored zero would paint as
+ * a bad episode, and "nobody rated it" is not "it is bad".
+ *
+ * Claimed never-looked-at first, then stalest, so a run that dies halfway
+ * resumes where it stopped. Driven by .github/workflows/episode-ratings.yml
+ * through the sync hook (`mode: "episodeRatings"`).
+ */
+const EPISODE_MIN_VOTE_COUNT = 2000;
+const EPISODE_SHOWS_PER_RUN = 40;
+const EPISODE_SHOW_CEILING = 250;
+const EPISODE_BUDGET_MS = 120_000;
+/** Seasons of one show in flight at once. TMDB tolerates far more; this is polite. */
+const EPISODE_SEASON_CONCURRENCY = 4;
+const EPISODE_SHOW_PAUSE_MS = 150;
+const EPISODE_UPSERT_CHUNK = 500;
+const EPISODE_SEASON_ATTEMPTS = 3;
+
+interface TmdbSeasonEpisode {
+  episode_number?: number;
+  name?: string | null;
+  air_date?: string | null;
+  vote_average?: number | null;
+  vote_count?: number | null;
+}
+
+interface TmdbSeasonPage {
+  episodes?: TmdbSeasonEpisode[];
+}
+
+interface EpisodeRatingRow {
+  media_id: string;
+  season: number;
+  episode: number;
+  rating: number;
+  votes: number;
+  air_date: string | null;
+  name: string | null;
+  updated_at: string;
+}
+
+export interface EpisodeRatingsResult {
+  /** Shows claimed this pass. */
+  shows: number;
+  /** Season requests made. */
+  seasons: number;
+  /** Episode rows written. */
+  episodes: number;
+  /** Episodes TMDB has but nobody has rated. Deliberately not written. */
+  unrated: number;
+  /** Season requests that failed. Their show stays unstamped and is retried. */
+  failedSeasons: number;
+  /** Shows now marked as read. */
+  stamped: number;
+  /** Shows in the pool still never read, after this pass. */
+  remaining: number;
+  budgetHit: boolean;
+  durationMs: number;
+}
+
+/**
+ * `episode_ratings` and `media.episodes_at` postdate the generated Database
+ * types, so both are reached through an untyped builder in this one place
+ * (the arcade.functions.ts convention).
+ */
+interface LooseQuery extends PromiseLike<{
+  data: unknown;
+  error: { message: string } | null;
+  count?: number | null;
+}> {
+  select(cols: string, opts?: { count?: "exact"; head?: boolean }): LooseQuery;
+  update(patch: Record<string, unknown>): LooseQuery;
+  upsert(rows: unknown[], opts?: { onConflict?: string }): LooseQuery;
+  eq(col: string, val: unknown): LooseQuery;
+  gte(col: string, val: unknown): LooseQuery;
+  is(col: string, val: unknown): LooseQuery;
+  order(col: string, opts: { ascending: boolean; nullsFirst?: boolean }): LooseQuery;
+  limit(n: number): LooseQuery;
+}
+
+function looseTable(table: string): LooseQuery {
+  return (supabaseAdmin as unknown as { from: (t: string) => LooseQuery }).from(table);
+}
+
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Season numbers above 0, from the stored `seasons` array. Specials are not a season. */
+function seasonNumbersFrom(seasons: unknown): number[] {
+  if (!Array.isArray(seasons)) return [];
+  const out = new Set<number>();
+  for (const s of seasons) {
+    const n = (s as { seasonNumber?: unknown } | null)?.seasonNumber;
+    if (typeof n === "number" && Number.isFinite(n) && n > 0) out.add(Math.trunc(n));
+  }
+  return [...out].sort((a, b) => a - b);
+}
+
+/**
+ * `looked: true` means TMDB answered and this is the answer, so the show can be
+ * stamped. `looked: false` means the request failed and the show stays queued.
+ */
+async function fetchSeasonEpisodes(
+  tmdbId: string,
+  season: number,
+  key: string,
+): Promise<{ episodes: TmdbSeasonEpisode[]; looked: boolean }> {
+  for (let attempt = 1; attempt <= EPISODE_SEASON_ATTEMPTS; attempt++) {
+    try {
+      const page = await tmdb<TmdbSeasonPage>(`/tv/${tmdbId}/season/${season}`, key);
+      return { episodes: page.episodes ?? [], looked: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // A season TMDB does not serve is an answer, not a failure.
+      if (msg.includes("404")) return { episodes: [], looked: true };
+      if (attempt === EPISODE_SEASON_ATTEMPTS) {
+        console.error(`[episodes] tv/${tmdbId}/season/${season} failed: ${msg}`);
+        return { episodes: [], looked: false };
+      }
+      await pause(msg.includes("429") ? 2_000 * attempt : 500 * attempt);
+    }
+  }
+  return { episodes: [], looked: false };
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Rated episodes only. `unrated` is how many were dropped for having no votes. */
+function episodeRowsFrom(
+  mediaId: string,
+  season: number,
+  episodes: TmdbSeasonEpisode[],
+  stampedAt: string,
+): { rows: EpisodeRatingRow[]; unrated: number } {
+  const rows: EpisodeRatingRow[] = [];
+  let unrated = 0;
+  for (const e of episodes) {
+    const number = e.episode_number;
+    if (typeof number !== "number" || !Number.isFinite(number) || number < 0) continue;
+    const votes = typeof e.vote_count === "number" ? Math.trunc(e.vote_count) : 0;
+    const average = typeof e.vote_average === "number" ? e.vote_average : 0;
+    if (votes < 1 || !(average > 0)) {
+      unrated++;
+      continue;
+    }
+    const name = typeof e.name === "string" ? e.name.trim() : "";
+    rows.push({
+      media_id: mediaId,
+      season,
+      episode: Math.trunc(number),
+      rating: Math.min(10, Math.round(average * 10) / 10),
+      votes,
+      air_date: typeof e.air_date === "string" && ISO_DATE.test(e.air_date) ? e.air_date : null,
+      name: name || null,
+      updated_at: stampedAt,
+    });
+  }
+  return { rows, unrated };
+}
+
+async function writeEpisodeRows(rows: EpisodeRatingRow[]): Promise<boolean> {
+  for (let i = 0; i < rows.length; i += EPISODE_UPSERT_CHUNK) {
+    const chunk = rows.slice(i, i + EPISODE_UPSERT_CHUNK);
+    const { error } = await looseTable("episode_ratings").upsert(chunk, {
+      onConflict: "media_id,season,episode",
+    });
+    if (error) {
+      console.error(`[episodes] write failed for ${chunk[0]?.media_id}:`, error.message);
+      return false;
+    }
+  }
+  return true;
+}
+
+async function stampEpisodesRead(mediaId: string): Promise<void> {
+  const { error } = await looseTable("media")
+    .update({ episodes_at: new Date().toISOString() })
+    .eq("media_id", mediaId);
+  if (error) console.error(`[episodes] stamp failed for ${mediaId}:`, error.message);
+}
+
+async function pendingEpisodeShowCount(): Promise<number> {
+  const { count, error } = await looseTable("media")
+    .select("media_id", { count: "exact", head: true })
+    .eq("media_type", "tv")
+    .gte("vote_count", EPISODE_MIN_VOTE_COUNT)
+    .is("episodes_at", null);
+  if (error) {
+    console.error("[episodes] pending count failed:", error.message);
+    return -1;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Read every season of the claimed shows and store the rated episodes.
+ * Called by the weekly workflow through the sync hook (`mode: "episodeRatings"`).
+ */
+export async function syncEpisodeRatings(opts?: {
+  limit?: number;
+  timeBudgetMs?: number;
+}): Promise<EpisodeRatingsResult> {
+  const start = Date.now();
+  const key = process.env.TMDB_API_KEY;
+  if (!key) {
+    throw new Error(
+      "TMDB_API_KEY is not configured on the server. Episode ratings come from TMDB and cannot be fetched without it; set TMDB_API_KEY in the deployment environment and re-run the Episode ratings workflow.",
+    );
+  }
+  const limit = Math.min(Math.max(1, opts?.limit ?? EPISODE_SHOWS_PER_RUN), EPISODE_SHOW_CEILING);
+  const deadline = start + (opts?.timeBudgetMs ?? EPISODE_BUDGET_MS);
+
+  const { data, error } = await looseTable("media")
+    .select("media_id, seasons")
+    .eq("media_type", "tv")
+    .gte("vote_count", EPISODE_MIN_VOTE_COUNT)
+    .order("episodes_at", { ascending: true, nullsFirst: true })
+    .order("popularity", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw new Error(`episode ratings select failed: ${error.message}`);
+  const shows = (data ?? []) as { media_id: string; seasons: unknown }[];
+
+  let seasonsRead = 0;
+  let episodes = 0;
+  let unrated = 0;
+  let failedSeasons = 0;
+  let stamped = 0;
+  let budgetHit = false;
+
+  for (const show of shows) {
+    if (Date.now() > deadline) {
+      budgetHit = true;
+      break;
+    }
+    const tmdbId = show.media_id.startsWith("tv-") ? show.media_id.slice(3) : "";
+    if (!tmdbId) continue;
+    const seasonNumbers = seasonNumbersFrom(show.seasons);
+
+    const results = await mapWithLimit(seasonNumbers, EPISODE_SEASON_CONCURRENCY, async (n) => {
+      const { episodes: list, looked } = await fetchSeasonEpisodes(tmdbId, n, key);
+      if (!looked) return { rows: [] as EpisodeRatingRow[], unrated: 0, looked: false };
+      const stampedAt = new Date().toISOString();
+      const built = episodeRowsFrom(show.media_id, n, list, stampedAt);
+      return { ...built, looked: true };
+    });
+
+    seasonsRead += results.length;
+    const rows = results.flatMap((r) => r.rows);
+    unrated += results.reduce((acc, r) => acc + r.unrated, 0);
+    const missed = results.filter((r) => !r.looked).length;
+    failedSeasons += missed;
+
+    const wrote = rows.length === 0 ? true : await writeEpisodeRows(rows);
+    if (wrote) episodes += rows.length;
+    // Only mark the show read when every season answered and every row landed.
+    // A half-read show stays in the queue rather than becoming a partial grid.
+    if (wrote && missed === 0) {
+      await stampEpisodesRead(show.media_id);
+      stamped++;
+    }
+    await pause(EPISODE_SHOW_PAUSE_MS);
+  }
+
+  console.log(
+    `[episodes] ${episodes} rows from ${seasonsRead} seasons of ${shows.length} shows, ${unrated} unrated skipped, ${failedSeasons} season requests failed${budgetHit ? " (budget hit)" : ""}`,
+  );
+  return {
+    shows: shows.length,
+    seasons: seasonsRead,
+    episodes,
+    unrated,
+    failedSeasons,
+    stamped,
+    remaining: await pendingEpisodeShowCount(),
+    budgetHit,
+    durationMs: Date.now() - start,
+  };
+}
+
+/** Every stored episode rating for one show, season then episode order. */
+export async function loadEpisodeRatings(mediaId: string): Promise<EpisodeRating[]> {
+  const { data, error } = await looseTable("episode_ratings")
+    .select("season, episode, rating, votes, air_date, name")
+    .eq("media_id", mediaId)
+    .order("season", { ascending: true })
+    .order("episode", { ascending: true });
+  if (error) {
+    console.error(`[episodes] read failed for ${mediaId}:`, error.message);
+    return [];
+  }
+  const rows = (data ?? []) as {
+    season: number;
+    episode: number;
+    rating: number | string;
+    votes: number;
+    air_date: string | null;
+    name: string | null;
+  }[];
+  return rows.map((r) => ({
+    season: r.season,
+    episode: r.episode,
+    rating: Number(r.rating),
+    votes: r.votes,
+    airDate: r.air_date,
+    name: r.name,
+  }));
 }

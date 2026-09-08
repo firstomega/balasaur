@@ -7,11 +7,11 @@ import type { PersonDetail as PersonDetailType } from "@/types/media";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { personProse } from "@/lib/personProse";
 
-function MicroLabel({ children }: { children: React.ReactNode }) {
+function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+    <h2 className="mb-2.5 text-[18px] font-black leading-none tracking-[-0.02em] text-text-bright">
       {children}
-    </div>
+    </h2>
   );
 }
 
@@ -30,7 +30,7 @@ function Bio({ text }: { text: string }) {
   const long = text.length > 360;
   return (
     <section>
-      <MicroLabel>Biography</MicroLabel>
+      <SectionHeading>Biography</SectionHeading>
       <p
         className={
           "whitespace-pre-line text-[15px] leading-relaxed text-text-bright " +
@@ -43,7 +43,7 @@ function Bio({ text }: { text: string }) {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="mt-1.5 font-mono text-[11px] uppercase tracking-wider text-primary hover:underline"
+          className="mt-1.5 text-[13px] font-bold tracking-[-0.01em] text-primary hover:underline"
         >
           {open ? "Show less" : "Read more"}
         </button>
@@ -71,17 +71,17 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center font-mono text-[11px] uppercase text-text-dim">
+              <div className="flex h-full w-full items-center justify-center text-[12px] font-semibold text-text-dim">
                 No photo
               </div>
             )}
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-[28px] font-semibold leading-tight text-text-bright md:text-[36px]">
+          <h1 className="text-[30px] font-black leading-[1.08] tracking-[-0.02em] text-text-bright md:text-[40px]">
             {detail.name}
           </h1>
-          <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          <p className="mt-2 font-mono text-[12px] tabular-nums tracking-wider text-text-muted">
             {[detail.knownForDepartment, life].filter(Boolean).join(" · ")}
           </p>
           {detail.imdbId && (
@@ -89,7 +89,7 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
               href={`https://www.imdb.com/name/${detail.imdbId}/`}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 rounded-[4px] border border-border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-[4px] border border-border px-2 py-1 text-[13px] font-semibold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
             >
               IMDb <ExternalLink className="h-3 w-3" />
             </a>
@@ -115,9 +115,12 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
       <div className="mt-10 space-y-8">
         {detail.groups.map((g) => (
           <section key={g.department}>
-            <MicroLabel>
-              {g.department} · {g.items.length}
-            </MicroLabel>
+            <SectionHeading>
+              {g.department}{" "}
+              <span className="font-mono text-[13px] tabular-nums text-text-dim">
+                {g.items.length}
+              </span>
+            </SectionHeading>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
               {g.items.map((it) => (
                 <MediaCard key={it.id} item={it} />
@@ -126,7 +129,7 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
           </section>
         ))}
         {detail.groups.length === 0 && (
-          <p className="font-mono text-[12px] text-text-dim">
+          <p className="text-[14px] text-text-dim">
             No catalogued movies or TV for this person yet.
           </p>
         )}

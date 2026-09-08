@@ -56,10 +56,10 @@ function sortByCount<T extends string>(
   );
 }
 
-const groupLabelClass = "font-mono text-[11px] uppercase tracking-[0.12em] text-text-bright";
+const groupLabelClass = "text-[15px] font-black tracking-[-0.02em] text-text-bright";
 
 const pillBase =
-  "cursor-pointer select-none rounded-[4px] border px-2 py-[3px] font-mono text-[11px] uppercase tracking-wide transition-colors";
+  "cursor-pointer select-none rounded-[4px] border px-2 py-[3px] text-[12px] font-semibold tracking-[-0.01em] transition-colors";
 
 function Pill({
   active,
@@ -91,7 +91,11 @@ function Pill({
     >
       {children}
       {count !== undefined && (
-        <span className={"ml-1 tabular-nums " + (active ? "text-primary/70" : "text-text-dim")}>
+        <span
+          className={
+            "ml-1 font-mono tabular-nums " + (active ? "text-primary/70" : "text-text-dim")
+          }
+        >
           {count}
         </span>
       )}
@@ -115,7 +119,7 @@ function TriggerLabel({
       <span className="shrink-0">{children}</span>
       {active &&
         (summary ? (
-          <span className="min-w-0 truncate font-mono text-[11px] normal-case tracking-normal text-primary">
+          <span className="min-w-0 truncate text-[12px] font-semibold tracking-normal text-primary">
             {summary}
           </span>
         ) : (
@@ -186,7 +190,7 @@ function GroupClear({ show, onClear }: { show: boolean; onClear: () => void }) {
     <button
       type="button"
       onClick={onClear}
-      className="mb-2 inline-flex cursor-pointer items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+      className="mb-2 inline-flex cursor-pointer items-center gap-1 text-[12px] font-semibold text-text-muted hover:text-text-bright"
     >
       <X className="h-2.5 w-2.5" />
       Clear
@@ -238,7 +242,7 @@ function SavedFilters({
                 type="button"
                 onClick={() => onApply(s.filters)}
                 title={s.name}
-                className="min-w-0 flex-1 truncate rounded-[4px] border border-border bg-panel px-2 py-1 text-left font-mono text-[12px] text-text-bright hover:border-primary hover:text-primary"
+                className="min-w-0 flex-1 truncate rounded-[4px] border border-border bg-panel px-2 py-1 text-left text-[13px] text-text-bright hover:border-primary hover:text-primary"
               >
                 {s.name}
               </button>
@@ -254,7 +258,7 @@ function SavedFilters({
           ))}
         </div>
       ) : (
-        <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+        <p className="text-[13px] text-text-dim">
           {user ? "No saved filters yet" : "Sign in to save filters"}
         </p>
       )}
@@ -270,12 +274,12 @@ function SavedFilters({
               else if (e.key === "Escape") setNaming(false);
             }}
             placeholder="Name this view…"
-            className="min-w-0 flex-1 rounded-[4px] border border-border bg-background px-2 py-1 font-mono text-[12px] text-text-bright outline-none focus:border-primary"
+            className="min-w-0 flex-1 rounded-[4px] border border-border bg-background px-2 py-1 text-[13px] text-text-bright outline-none focus:border-primary"
           />
           <button
             type="button"
             onClick={() => void confirmSave()}
-            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
           >
             Save
           </button>
@@ -285,7 +289,7 @@ function SavedFilters({
           <button
             type="button"
             onClick={startSave}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border border-primary/50 bg-primary/10 px-2 py-1.5 font-mono text-[11px] uppercase tracking-wider text-primary hover:bg-primary/20"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border border-primary/50 bg-primary/10 px-2 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-primary hover:bg-primary/20"
           >
             <Save className="h-3 w-3" />
             Save filter
@@ -669,7 +673,7 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                 <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
                   Balasaur Score
                 </span>
-                <span className="font-mono text-[12px] text-text-bright">
+                <span className="font-mono text-[12px] tabular-nums text-text-bright">
                   {filters.balasaurRange[0]} – {filters.balasaurRange[1]}
                 </span>
               </div>
@@ -688,11 +692,9 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                       setFilters((prev) => ({ ...prev, includeUnratedBalasaur: !!v }))
                     }
                   />
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                    Include unrated
-                  </span>
+                  <span className="text-[12px] text-text-muted">Include unrated</span>
                 </label>
-                <span className="font-mono text-[12px] text-text-dim">
+                <span className="font-mono text-[12px] tabular-nums text-text-dim">
                   {facets?.scored.balasaur ?? 0} of {catalogTotal} scored
                 </span>
               </div>
@@ -733,7 +735,7 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                   );
                 })}
               </div>
-              <div className="mb-2 flex justify-between font-mono text-[12px] text-text-muted">
+              <div className="mb-2 flex justify-between font-mono text-[12px] tabular-nums text-text-muted">
                 <span>{filters.yearRange[0]}</span>
                 <span>{filters.yearRange[1]}</span>
               </div>
@@ -841,7 +843,7 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
             <SlidersHorizontal className="h-3 w-3" />
             {moreOpen ? "Fewer filters" : "More filters"}
             {moreActiveCount > 0 && (
-              <span className="rounded-[3px] bg-primary/20 px-1 font-mono text-[11px] text-primary">
+              <span className="rounded-[3px] bg-primary/20 px-1 font-mono text-[11px] tabular-nums text-primary">
                 {moreActiveCount} active
               </span>
             )}
@@ -1016,7 +1018,7 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                   );
                 })}
               </div>
-              <div className="mt-2 font-mono text-[12px] text-text-dim">
+              <div className="mt-2 font-mono text-[12px] tabular-nums text-text-dim">
                 {originTagged.toLocaleString("en-US")} of {catalogTotal.toLocaleString("en-US")}{" "}
                 tagged
               </div>
@@ -1082,19 +1084,19 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                     checked={filters.awardWinners}
                     onCheckedChange={(v) => setFilters((prev) => ({ ...prev, awardWinners: !!v }))}
                   />
-                  <span className="font-mono text-[11.5px] text-text-bright">Award winners</span>
+                  <span className="text-[13px] text-text-bright">Award winners</span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2">
                   <Checkbox
                     checked={filters.nominated}
                     onCheckedChange={(v) => setFilters((prev) => ({ ...prev, nominated: !!v }))}
                   />
-                  <span className="font-mono text-[11.5px] text-text-bright">Nominated</span>
+                  <span className="text-[13px] text-text-bright">Nominated</span>
                 </label>
               </div>
 
               <div className="mt-3 space-y-2 border-t border-border pt-3">
-                <div className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                <div className="text-[13px] font-bold tracking-[-0.01em] text-text-dim">
                   By award
                 </div>
                 {AWARD_OPTIONS.map((a) => {
@@ -1105,7 +1107,7 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                       : "any";
                   return (
                     <div key={a.key} className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-[11px] text-text-muted">{a.label}</span>
+                      <span className="text-[12px] text-text-muted">{a.label}</span>
                       <div className="inline-flex rounded-[4px] border border-border bg-panel p-[2px]">
                         {(["any", "nominated", "won"] as const).map((s) => {
                           const active = status === s;
@@ -1115,7 +1117,7 @@ export function FilterRail({ filters, setFilters, facets, onRequireAuth }: Props
                               type="button"
                               onClick={() => setAward(a.key, s)}
                               className={
-                                "cursor-pointer rounded-[3px] px-2 py-[3px] font-mono text-[11px] uppercase tracking-wider transition-colors " +
+                                "cursor-pointer rounded-[3px] px-2 py-[3px] text-[12px] font-semibold tracking-[-0.01em] transition-colors " +
                                 (active
                                   ? "bg-accent text-text-bright"
                                   : "text-text-muted hover:text-text-bright")
@@ -1196,7 +1198,7 @@ function RatingSliders({
               <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
                 {row.label}
               </span>
-              <span className="font-mono text-[12px] text-text-bright">
+              <span className="font-mono text-[12px] tabular-nums text-text-bright">
                 {value[0]}
                 {row.suffix ?? ""} – {value[1]}
                 {row.suffix ?? ""}
@@ -1217,11 +1219,9 @@ function RatingSliders({
                     setFilters((prev) => ({ ...prev, [row.includeKey]: !!v }))
                   }
                 />
-                <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                  Include unrated
-                </span>
+                <span className="text-[12px] text-text-muted">Include unrated</span>
               </label>
-              <span className="font-mono text-[12px] text-text-dim">
+              <span className="font-mono text-[12px] tabular-nums text-text-dim">
                 {covered} of {total} scored
               </span>
             </div>
@@ -1283,7 +1283,7 @@ function PeoplePicker({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search a name…"
-        className="h-8 w-full rounded-[4px] border border-border bg-panel px-2 font-mono text-[11.5px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none"
+        className="h-8 w-full rounded-[4px] border border-border bg-panel px-2 text-[13px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none"
       />
       {matches.length > 0 && (
         <ul className="rounded-[4px] border border-border bg-panel">
@@ -1292,7 +1292,7 @@ function PeoplePicker({
               <button
                 type="button"
                 onClick={() => add(name)}
-                className="block w-full cursor-pointer px-2 py-1 text-left font-mono text-[11px] text-text-bright hover:bg-accent"
+                className="block w-full cursor-pointer px-2 py-1 text-left text-[13px] text-text-bright hover:bg-accent"
               >
                 {name}
               </button>
@@ -1305,7 +1305,7 @@ function PeoplePicker({
           {filters.people.map((p) => (
             <span
               key={p}
-              className="inline-flex items-center gap-1 rounded-[4px] border border-primary bg-primary/15 px-1.5 py-[2px] font-mono text-[12px] text-primary"
+              className="inline-flex items-center gap-1 rounded-[4px] border border-primary bg-primary/15 px-1.5 py-[2px] text-[12px] font-semibold text-primary"
             >
               {p}
               <button

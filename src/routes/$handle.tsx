@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { Check } from "lucide-react";
 import {
   getPublicProfile,
   type PublicArcadeBest,
@@ -7,10 +8,12 @@ import {
 } from "@/lib/profile.functions";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
+import { EmptyState, EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
 import { CometMark } from "@/components/arcade/CometChip";
 import { GAMES, HUB_ORDER } from "@/lib/arcade/games";
 import type { GameSlug } from "@/lib/arcade/types";
 import { useMyProfile } from "@/hooks/useMyProfile";
+import { useUserStatus } from "@/hooks/useUserStatus";
 import { SITE_ORIGIN, buildMeta, canonicalLink, clampDescription } from "@/lib/seo";
 import { mediaSlug } from "@/lib/slug";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
@@ -71,11 +74,11 @@ function Centered({ title, sub }: { title: string; sub?: string }) {
   return (
     <Shell>
       <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <h1 className="font-sans text-xl font-semibold text-text-bright">{title}</h1>
-        {sub && <p className="mt-2 font-mono text-[12px] text-text-muted">{sub}</p>}
+        <h1 className="text-[24px] font-black tracking-[-0.02em] text-text-bright">{title}</h1>
+        {sub && <p className="mt-2 text-[14px] leading-relaxed text-text-muted">{sub}</p>}
         <Link
           to="/"
-          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-border-strong"
+          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-border-strong"
         >
           Back to Balasaur
         </Link>
@@ -84,13 +87,23 @@ function Centered({ title, sub }: { title: string; sub?: string }) {
   );
 }
 
-function PosterTile({ item }: { item: PublicMediaItem }) {
+function PosterTile({ item, mine }: { item: PublicMediaItem; mine?: boolean }) {
   const seg = item.mediaType === "tv" ? "tv" : item.mediaType === "movie" ? "movie" : null;
   const rawId = item.mediaId.replace(/^(movie|tv)-/, "");
   const slug = mediaSlug(rawId, item.title);
   const inner = (
     <>
-      <div className="aspect-[2/3] overflow-hidden rounded-[5px] border border-border bg-panel">
+      <div
+        className={`relative aspect-[2/3] overflow-hidden rounded-[5px] border bg-panel ${
+          mine ? "border-rating/60" : "border-border"
+        }`}
+      >
+        {mine && (
+          <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-[5px] border border-rating/60 bg-rating/25 px-1.5 py-0.5 text-[11px] font-bold tracking-[-0.01em] text-rating">
+            <Check className="h-3 w-3" aria-hidden="true" />
+            You too
+          </span>
+        )}
         {item.posterUrl ? (
           <img
             src={tmdbImage(item.posterUrl, "w342")}
@@ -107,13 +120,13 @@ function PosterTile({ item }: { item: PublicMediaItem }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center p-2 text-center font-mono text-[12px] text-text-dim">
+          <div className="flex h-full items-center justify-center p-2 text-center text-[12px] font-semibold text-text-dim">
             {item.title}
           </div>
         )}
       </div>
-      <p className="mt-1.5 line-clamp-1 font-mono text-[11px] text-text-bright">{item.title}</p>
-      {item.year && <p className="font-mono text-[12px] text-text-dim">{item.year}</p>}
+      <p className="mt-1.5 line-clamp-1 text-[12px] font-semibold text-text-bright">{item.title}</p>
+      {item.year && <p className="font-mono text-[12px] tabular-nums text-text-dim">{item.year}</p>}
     </>
   );
   if (seg === "movie")
@@ -131,15 +144,51 @@ function PosterTile({ item }: { item: PublicMediaItem }) {
   return <div>{inner}</div>;
 }
 
-function PosterGrid({ items, empty }: { items: PublicMediaItem[]; empty: string }) {
+function PosterGrid({
+  items,
+  empty,
+  mineIds,
+}: {
+  items: PublicMediaItem[];
+  empty: ReactNode;
+  mineIds: Set<string>;
+}) {
   if (items.length === 0) {
-    return <p className="px-1 py-10 text-center font-mono text-[12px] text-text-dim">{empty}</p>;
+    return <>{empty}</>;
   }
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
       {items.map((it) => (
-        <PosterTile key={it.mediaId} item={it} />
+        <PosterTile key={it.mediaId} item={it} mine={mineIds.has(it.mediaId)} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * The overlap between this profile and the visitor's own list, and the way to
+ * their own card. Client-only: the shared count comes from the visitor's
+ * status store, which is empty on the server and during hydration, so the
+ * cached HTML stays identical for everyone and this appears after mount.
+ *
+ * The count is checkable rather than asserted: every title it counts carries a
+ * "You too" mark in the grid below it.
+ */
+function CompareLine({ shared, tab }: { shared: number; tab: "watched" | "liked" }) {
+  if (shared === 0) return null;
+  return (
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-[5px] border border-border bg-panel/40 px-3.5 py-2.5">
+      <p className="text-[14px] font-semibold text-text-bright">
+        {tab === "liked"
+          ? `You Loved ${shared} of these too.`
+          : `You have watched ${shared} of these too.`}
+      </p>
+      <Link
+        to="/taste"
+        className="text-[13px] font-bold tracking-[-0.01em] text-primary hover:underline"
+      >
+        Your Taste Card
+      </Link>
     </div>
   );
 }
@@ -147,8 +196,12 @@ function PosterGrid({ items, empty }: { items: PublicMediaItem[]; empty: string 
 function Stat({ n, label }: { n: number; label: string }) {
   return (
     <div className="text-center">
-      <div className="font-sans text-xl font-semibold text-text-bright">{n}</div>
-      <div className="font-mono text-[11px] uppercase tracking-wider text-text-dim">{label}</div>
+      <div className="text-[24px] font-black tabular-nums leading-none tracking-[-0.02em] text-text-bright">
+        {n}
+      </div>
+      <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+        {label}
+      </div>
     </div>
   );
 }
@@ -163,8 +216,8 @@ function ArcadeSection({ comets, bests }: { comets: number; bests: PublicArcadeB
   return (
     <section className="mt-6 rounded-[6px] border border-border bg-panel/40 p-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">Arcade</h2>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] text-text-bright">
+        <h2 className="text-[17px] font-black tracking-[-0.02em] text-text-bright">Arcade</h2>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] tabular-nums text-text-bright">
           <CometMark className="h-4 w-4 text-primary" />
           <span className="tabular-nums">{comets}</span> comets
         </span>
@@ -174,10 +227,10 @@ function ArcadeSection({ comets, bests }: { comets: number; bests: PublicArcadeB
           {ordered.map((b) => (
             <span
               key={b.game}
-              className="rounded-[5px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] text-text-muted"
+              className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12px] text-text-muted"
             >
               {GAMES[b.game as GameSlug]?.name ?? b.game}{" "}
-              <span className="text-text-bright">best {b.bestScore}</span>
+              <span className="font-mono tabular-nums text-text-bright">best {b.bestScore}</span>
             </span>
           ))}
         </div>
@@ -198,11 +251,29 @@ function HandleNotFound() {
 function ProfilePage() {
   const loaderData = Route.useLoaderData();
   const { data: me } = useMyProfile();
+  const { statuses } = useUserStatus();
   const [tab, setTab] = useState<"watched" | "liked">("watched");
 
   const { data } = loaderData;
   const p = data.profile!;
   const isOwner = !!me && me.username.toLowerCase() === p.username.toLowerCase();
+
+  const items = useMemo(
+    () => (tab === "watched" ? (data.watched ?? []) : (data.liked ?? [])),
+    [tab, data.watched, data.liked],
+  );
+  // Which of these the visitor has filed too. Every id in here gets a mark on
+  // its tile, so the count above the grid can be checked rather than believed.
+  const mineIds = useMemo(() => {
+    const out = new Set<string>();
+    for (const it of items) {
+      const rec = statuses[it.mediaId];
+      if (!rec || rec.status !== "seen") continue;
+      if (tab === "liked" && rec.sentiment !== "liked") continue;
+      out.add(it.mediaId);
+    }
+    return out;
+  }, [items, statuses, tab]);
 
   if (data.isPrivate) {
     return (
@@ -217,8 +288,6 @@ function ProfilePage() {
     month: "long",
     year: "numeric",
   });
-  const items = tab === "watched" ? (data.watched ?? []) : (data.liked ?? []);
-
   return (
     <Shell>
       {/* Header */}
@@ -231,7 +300,7 @@ function ProfilePage() {
           className="text-[34px]"
         />
         <div className="min-w-0 flex-1">
-          <h1 className="font-sans text-2xl font-semibold tracking-tight text-text-bright">
+          <h1 className="text-[28px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
             {p.displayName || `@${p.username}`}
           </h1>
           <p className="mt-0.5 font-mono text-[13px] text-primary">@{p.username}</p>
@@ -245,16 +314,14 @@ function ProfilePage() {
               {p.favoriteGenres.map((g: string) => (
                 <span
                   key={g}
-                  className="rounded-full border border-border bg-panel px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-text-muted"
+                  className="rounded-full border border-border bg-panel px-2 py-0.5 text-[12px] font-semibold text-text-muted"
                 >
                   {g}
                 </span>
               ))}
             </div>
           )}
-          <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-text-dim">
-            Joined {joined}
-          </p>
+          <p className="mt-3 font-mono text-[12px] tabular-nums text-text-dim">Joined {joined}</p>
         </div>
         <div className="flex items-center gap-5 sm:flex-col sm:items-end sm:gap-3">
           <div className="flex gap-5">
@@ -265,7 +332,7 @@ function ProfilePage() {
           {isOwner && (
             <Link
               to="/profile"
-              className="rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-primary hover:text-primary"
+              className="rounded-[5px] border border-border bg-panel px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
             >
               Edit profile
             </Link>
@@ -282,7 +349,7 @@ function ProfilePage() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-3 py-2 font-mono text-[12px] uppercase tracking-wider ${
+            className={`-mb-px border-b-2 px-3 py-2 text-[14px] font-bold tracking-[-0.01em] ${
               tab === t
                 ? "border-primary text-text-bright"
                 : "border-transparent text-text-dim hover:text-text-muted"
@@ -293,17 +360,48 @@ function ProfilePage() {
         ))}
       </nav>
 
+      <CompareLine shared={mineIds.size} tab={tab} />
+
       <div className="mt-5">
         <PosterGrid
+          mineIds={mineIds}
           items={items}
           empty={
-            tab === "watched"
-              ? isOwner
-                ? "You haven't marked anything watched yet."
-                : "Nothing watched yet."
-              : isOwner
-                ? "You haven't liked anything yet."
-                : "Nothing liked yet."
+            isOwner ? (
+              <EmptyState
+                variant="inline"
+                line={
+                  tab === "watched"
+                    ? "You have not marked anything watched."
+                    : "You have not marked anything Loved."
+                }
+                hint={
+                  tab === "watched"
+                    ? "Swipe right in the deck on what you have seen. It shows up here."
+                    : "Swipe up in the deck on the ones you loved. They show up here."
+                }
+                action={
+                  <Link to="/watched" className={EMPTY_ACTION_CLASS}>
+                    Rate titles
+                  </Link>
+                }
+              />
+            ) : (
+              <EmptyState
+                variant="inline"
+                line={
+                  tab === "watched"
+                    ? "This profile has nothing marked watched."
+                    : "This profile has nothing marked Loved."
+                }
+                hint="Rate a few titles and yours fills in."
+                action={
+                  <Link to="/watched" className={EMPTY_ACTION_CLASS}>
+                    Build your own
+                  </Link>
+                }
+              />
+            )
           }
         />
       </div>

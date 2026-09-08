@@ -7,6 +7,9 @@ import { useMyProfile } from "@/hooks/useMyProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
+import { DinoMark } from "@/components/balasaur/DinoMark";
+import { useUserStatus } from "@/hooks/useUserStatus";
+import { MIN_BASIS_TITLES, tasteReadiness } from "@/lib/taste";
 import { CometMark } from "@/components/arcade/CometChip";
 import { useComets } from "@/lib/arcade/useComets";
 import { GAMES, HUB_ORDER } from "@/lib/arcade/games";
@@ -45,9 +48,9 @@ const GENRES = [
 const BIO_MAX = 280;
 
 const inputCls =
-  "h-9 w-full rounded-[5px] border border-border bg-background px-2.5 font-mono text-[12px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50";
+  "h-9 w-full rounded-[5px] border border-border bg-background px-2.5 text-[14px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50";
 const btnPrimary =
-  "cursor-pointer rounded-[5px] bg-primary px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed";
+  "cursor-pointer rounded-[5px] bg-primary px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed";
 
 type UStatus = { kind: "idle" | "checking" | "ok" | "bad"; msg?: string };
 
@@ -171,7 +174,7 @@ function ProfileEditor() {
       <div className="min-h-screen bg-background text-foreground">
         <TopBar />
         <main id="main" className="mx-auto max-w-[760px] px-5 py-12">
-          <p className="font-mono text-[12px] uppercase tracking-wider text-text-dim">Loading…</p>
+          <p className="text-[14px] text-text-dim">Loading…</p>
         </main>
       </div>
     );
@@ -189,10 +192,10 @@ function ProfileEditor() {
       <TopBar />
       <main id="main" className="mx-auto max-w-[760px] px-5 py-10">
         <header className="mb-7 border-b border-border pb-5">
-          <h1 className="font-sans text-3xl font-semibold tracking-tight text-text-bright">
+          <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
             Edit profile
           </h1>
-          <p className="mt-2 font-mono text-[11px] text-text-dim">
+          <p className="mt-2 text-[14px] leading-relaxed text-text-dim">
             This is your <span className="text-text-bright">public</span> page. It's what other
             people see.{" "}
             <a href={`/@${profile.username}`} className="text-primary hover:underline">
@@ -215,7 +218,7 @@ function ProfileEditor() {
               <p className="truncate font-sans text-lg font-semibold text-text-bright">
                 {displayName || `@${normalizeUsername(username) || profile.username}`}
               </p>
-              <p className="font-mono text-[12px] text-primary">
+              <p className="font-mono text-[13px] text-primary">
                 @{normalizeUsername(username) || profile.username}
               </p>
             </div>
@@ -228,7 +231,7 @@ function ProfileEditor() {
                 type="button"
                 onClick={() => setAvatarPreset(null)}
                 title="Auto (from handle)"
-                className={`h-8 rounded-full border px-3 font-mono text-[11px] uppercase tracking-wider ${
+                className={`h-8 rounded-full border px-3 text-[13px] font-semibold tracking-[-0.01em] ${
                   avatarPreset === null
                     ? "border-primary text-primary"
                     : "border-border text-text-dim hover:border-border-strong"
@@ -281,7 +284,7 @@ function ProfileEditor() {
               />
             </div>
             {usernameChanged && uStatus.msg && (
-              <p className={`font-mono text-[12px] ${uStatusColor}`}>
+              <p className={`text-[13px] ${uStatusColor}`}>
                 {uStatus.kind === "checking" ? "Checking…" : uStatus.msg}
               </p>
             )}
@@ -297,7 +300,7 @@ function ProfileEditor() {
               className={`${inputCls} h-auto py-2`}
               placeholder="A line or two about your taste…"
             />
-            <p className="text-right font-mono text-[12px] text-text-dim">
+            <p className="text-right font-mono text-[12px] tabular-nums text-text-dim">
               {bio.length}/{BIO_MAX}
             </p>
           </Field>
@@ -312,7 +315,7 @@ function ProfileEditor() {
                     key={g}
                     type="button"
                     onClick={() => toggleGenre(g)}
-                    className={`rounded-full border px-2.5 py-1 font-mono text-[11px] ${
+                    className={`rounded-full border px-2.5 py-1 text-[13px] font-semibold ${
                       on
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-text-muted hover:border-border-strong"
@@ -334,7 +337,7 @@ function ProfileEditor() {
                 onChange={(e) => setIsPublic(e.target.checked)}
                 className="h-4 w-4 accent-primary"
               />
-              <span className="font-mono text-[12px] text-text-bright">
+              <span className="text-[14px] font-semibold text-text-bright">
                 Public profile
                 <span className="ml-2 font-normal text-text-dim">
                   {isPublic
@@ -351,13 +354,13 @@ function ProfileEditor() {
             </button>
             <Link
               to="/account"
-              className="font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+              className="text-[13px] font-semibold text-text-muted hover:text-text-bright"
             >
               Account settings →
             </Link>
             {saveMsg && (
               <span
-                className={`font-mono text-[12px] ${
+                className={`text-[13px] ${
                   saveMsg.kind === "ok" ? "text-emerald-400" : "text-red-400"
                 }`}
               >
@@ -367,9 +370,55 @@ function ProfileEditor() {
           </div>
         </form>
 
+        <TasteCardTeaser />
+
         <ArcadeStatsSection userId={user.id} />
       </main>
     </div>
+  );
+}
+
+/** The way to the shareable card, with the one number that decides whether it
+ *  can be drawn. Costs no request: the counts are already in the status store. */
+function TasteCardTeaser() {
+  const { statuses, ready } = useUserStatus();
+  if (!ready) return null;
+  const r = tasteReadiness(statuses);
+  const rated = Math.max(r.liked, r.watched);
+
+  return (
+    <section className="mt-7 flex flex-wrap items-center justify-between gap-4 rounded-[6px] border border-border bg-panel/40 p-5">
+      <div className="flex items-center gap-3.5">
+        <DinoMark
+          size={40}
+          mood={r.ready ? "chomp" : "sleep"}
+          className="h-10 w-10 shrink-0 text-primary/80"
+        />
+        <div>
+          <h2 className="text-[16px] font-black tracking-[-0.02em] text-text-bright">Taste Card</h2>
+          <p className="mt-0.5 text-[13.5px] text-text-muted">
+            {r.ready
+              ? `${rated} titles rated. Your card is ready.`
+              : `${rated} of ${MIN_BASIS_TITLES} titles rated.`}
+          </p>
+        </div>
+      </div>
+      {r.ready ? (
+        <Link
+          to="/taste"
+          className="inline-flex cursor-pointer items-center rounded-full bg-primary px-4 py-2 text-[13px] font-black tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+        >
+          Open your card
+        </Link>
+      ) : (
+        <Link
+          to="/watched"
+          className="inline-flex cursor-pointer items-center rounded-full border border-border-strong bg-background px-4 py-2 text-[13px] font-semibold text-text-bright hover:border-primary hover:text-primary"
+        >
+          Rate titles
+        </Link>
+      )}
+    </section>
   );
 }
 
@@ -429,8 +478,8 @@ function ArcadeStatsSection({ userId }: { userId: string }) {
   return (
     <section className="mt-7 rounded-[6px] border border-border bg-panel/40 p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">Arcade</h2>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] text-text-bright">
+        <h2 className="text-[17px] font-black tracking-[-0.02em] text-text-bright">Arcade</h2>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] tabular-nums text-text-bright">
           <CometMark className="h-4 w-4 text-primary" />
           <span className="tabular-nums">{total}</span> comets
         </span>
@@ -438,14 +487,11 @@ function ArcadeStatsSection({ userId }: { userId: string }) {
       {ordered.length > 0 && (
         <ul className="mt-3 space-y-1">
           {ordered.map((r) => (
-            <li
-              key={r.game_slug}
-              className="flex items-baseline justify-between gap-3 font-mono text-[12px]"
-            >
+            <li key={r.game_slug} className="flex items-baseline justify-between gap-3 text-[13px]">
               <span className="text-text-muted">
                 {GAMES[r.game_slug as GameSlug]?.name ?? r.game_slug}
               </span>
-              <span className="tabular-nums text-text">
+              <span className="font-mono tabular-nums text-text">
                 best {r.best_score} · {r.plays} play{r.plays === 1 ? "" : "s"}
               </span>
             </li>
@@ -467,11 +513,11 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-text-dim">
+      <label className="block text-[14px] font-bold tracking-[-0.01em] text-text-bright">
         {label}
       </label>
       {children}
-      {hint && <p className="font-mono text-[12px] text-text-dim">{hint}</p>}
+      {hint && <p className="text-[13px] text-text-dim">{hint}</p>}
     </div>
   );
 }

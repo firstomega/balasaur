@@ -42,13 +42,13 @@ function MethodologyPage() {
               <table className="w-full max-w-[420px] border-collapse text-[14px]">
                 <thead>
                   <tr className="border-b border-border text-left">
-                    <th className="py-2 pr-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                    <th className="py-2 pr-4 text-[12px] font-bold uppercase tracking-wider text-text-dim">
                       Source
                     </th>
-                    <th className="py-2 pr-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                    <th className="py-2 pr-4 text-[12px] font-bold uppercase tracking-wider text-text-dim">
                       Weight
                     </th>
-                    <th className="py-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                    <th className="py-2 text-[12px] font-bold uppercase tracking-wider text-text-dim">
                       Share when all four are present
                     </th>
                   </tr>

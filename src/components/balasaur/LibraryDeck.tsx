@@ -16,6 +16,8 @@ import {
 import type { UserStatusRecord } from "@/hooks/useUserStatus";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { ScoreBadge } from "./ScoreBadge";
+import { ChompMask } from "./ChompMask";
+import { EmptyState, EMPTY_ACTION_CLASS, EMPTY_ACTION_QUIET_CLASS } from "./EmptyState";
 
 // After this many anonymous picks, nudge the user to sign in to save them.
 const NUDGE_AFTER = 5;
@@ -98,6 +100,9 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
     notInterested: 0,
   });
   const [exit, setExit] = useState<Dir | null>(null);
+  // Loved takes a bite out of the poster corner on the way out. Set only for
+  // "up"; cleared with the exit so the next card starts whole.
+  const [chomp, setChomp] = useState(false);
   const [done, setDone] = useState(false);
   // Mobile only: tapping the card reveals the full synopsis/genres overlay.
   // Desktop and tablet show that panel beside the poster permanently.
@@ -135,9 +140,11 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         if (user) toast.success(`Saved · ${ACTION_LABEL[dir]}`, { duration: 1400 });
       }
       setSessionPicks((n) => n + 1);
+      if (dir === "up") setChomp(true);
       setExit(dir);
       window.setTimeout(() => {
         setExit(null);
+        setChomp(false);
         setInfoOpen(false);
         setIndex((i) => {
           const ni = i + 1;
@@ -202,14 +209,44 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   if (!ready) {
     return (
       <div className="mx-auto flex h-[560px] w-full max-w-md items-center justify-center">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-          Loading…
-        </span>
+        <span className="text-[14px] text-text-dim">Loading…</span>
       </div>
     );
   }
 
   if (done || !current) {
+    // Nothing sorted this session means the deck was already empty on arrival.
+    // That is a dead end, not a result, so it gets the shared empty state.
+    if (summary.total === 0) {
+      return (
+        <div className="mx-auto flex w-full max-w-md items-center px-4 py-10">
+          <EmptyState
+            className="w-full"
+            mood="chomp"
+            line={
+              items.length > 0
+                ? "You have sorted every title in the deck."
+                : "The deck came up empty."
+            }
+            hint={
+              items.length > 0
+                ? "New releases join it overnight. Until then, the grid holds the whole catalog."
+                : "Nothing reached it this time. The grid holds the whole catalog."
+            }
+            action={
+              <>
+                <Link to="/lists" className={EMPTY_ACTION_QUIET_CLASS}>
+                  My library
+                </Link>
+                <Link to="/" className={EMPTY_ACTION_CLASS}>
+                  Browse the grid
+                </Link>
+              </>
+            }
+          />
+        </div>
+      );
+    }
     return (
       <>
         <LibrarySummary
@@ -224,19 +261,19 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
 
   return (
     <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-between gap-4 px-4 py-4 md:max-w-3xl">
-      <div className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+      <div className="font-mono text-[12px] tabular-nums text-text-muted">
         {index + 1} / {deck.length} · sorted {summary.total}
       </div>
 
       {showNudge && (
         <div className="flex w-full max-w-[360px] items-center gap-2 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2">
-          <span className="flex-1 font-mono text-[11px] uppercase tracking-wider text-text-bright">
+          <span className="flex-1 text-[13px] font-semibold text-text-bright">
             Sign in to save your {sessionPicks} picks
           </span>
           <button
             type="button"
             onClick={() => setAuthOpen(true)}
-            className="cursor-pointer rounded-[4px] bg-primary px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="cursor-pointer rounded-[4px] bg-primary px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
           >
             Sign in
           </button>
@@ -263,6 +300,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
           key={current.id}
           item={current}
           forcedExit={exit}
+          chomp={chomp}
           onCommit={(dir) => advance(dir)}
           onTap={() => setInfoOpen((o) => !o)}
           infoOpen={infoOpen}
@@ -275,7 +313,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         <button
           type="button"
           onClick={() => advance("down")}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-border-strong"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-border-strong"
         >
           <SkipForward className="h-3.5 w-3.5" />
           Not now
@@ -284,7 +322,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
           type="button"
           onClick={markNotInterested}
           title="Never show this title again (key: X)"
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
         >
           <X className="h-3.5 w-3.5" />
           Never
@@ -299,12 +337,14 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
 function DraggableCard({
   item,
   forcedExit,
+  chomp = false,
   onCommit,
   onTap,
   infoOpen = false,
 }: {
   item: MediaItem;
   forcedExit: Dir | null;
+  chomp?: boolean;
   onCommit: (dir: Dir) => void;
   onTap?: () => void;
   infoOpen?: boolean;
@@ -390,7 +430,13 @@ function DraggableCard({
         cursor: dragging ? "grabbing" : "grab",
       }}
     >
-      <CardFace item={item} cue={cue} cueIntensity={cueIntensity} infoOpen={infoOpen} />
+      <CardFace
+        item={item}
+        cue={cue}
+        cueIntensity={cueIntensity}
+        infoOpen={infoOpen}
+        chomp={chomp}
+      />
     </div>
   );
 }
@@ -400,7 +446,7 @@ function DeckInfo({ item }: { item: MediaItem }) {
   const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+      <div className="flex flex-wrap items-center gap-2 font-mono text-[12px] tabular-nums text-text-muted">
         <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
         {item.year && <span>· {item.year}</span>}
         {seasons > 0 && (
@@ -410,9 +456,11 @@ function DeckInfo({ item }: { item: MediaItem }) {
         )}
         {score !== undefined && <ScoreBadge score={score} />}
       </div>
-      <h2 className="text-[20px] font-semibold leading-tight text-text-bright">{item.title}</h2>
+      <h2 className="text-[22px] font-black leading-[1.1] tracking-[-0.02em] text-text-bright">
+        {item.title}
+      </h2>
       {item.genres.length > 0 && (
-        <div className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+        <div className="text-[13px] font-semibold text-text-muted">
           {item.genres.slice(0, 4).join(" · ")}
         </div>
       )}
@@ -422,7 +470,7 @@ function DeckInfo({ item }: { item: MediaItem }) {
         </p>
       )}
       {item.streaming.length > 0 && (
-        <div className="mt-auto font-mono text-[11px] uppercase tracking-wider text-text-muted">
+        <div className="mt-auto text-[13px] text-text-muted">
           On {item.streaming.slice(0, 3).join(", ")}
         </div>
       )}
@@ -435,11 +483,13 @@ function CardFace({
   cue,
   cueIntensity = 0,
   infoOpen = false,
+  chomp = false,
 }: {
   item: MediaItem;
   cue?: Dir | null;
   cueIntensity?: number;
   infoOpen?: boolean;
+  chomp?: boolean;
 }) {
   const score = item.ratings.balasaur;
   const cueColor = cue ? ACTION_HEX[cue] : null;
@@ -464,9 +514,13 @@ function CardFace({
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-accent text-text-dim">
-              <span className="font-mono text-[12px] uppercase">No art</span>
+              <span className="text-[13px] font-semibold">No art</span>
             </div>
           )}
+
+          {/* Loved: three scallops out of the poster's top corner, painted in
+              the card's own panel colour so it reads as a bite. */}
+          {chomp && <ChompMask size={54} />}
 
           {/* Mobile bottom gradient: title + meta, and the tap hint. Hidden
               while the detail overlay is up so text never doubles through it. */}
@@ -476,24 +530,22 @@ function CardFace({
               (infoOpen ? " invisible" : "")
             }
           >
-            <div className="mb-1 flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-white/80">
+            <div className="mb-1 flex items-center gap-2 font-mono text-[12px] tabular-nums text-white/80">
               <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
               {item.year && <span>· {item.year}</span>}
               {score !== undefined && <ScoreBadge score={score} />}
             </div>
-            <h2 className="text-[20px] font-semibold leading-tight text-white">{item.title}</h2>
-            <p className="mt-1.5 font-mono text-[11px] uppercase tracking-wider text-white/60">
-              Tap for details
-            </p>
+            <h2 className="text-[22px] font-black leading-[1.1] tracking-[-0.02em] text-white">
+              {item.title}
+            </h2>
+            <p className="mt-1.5 text-[13px] text-white/60">Tap for details</p>
           </div>
 
           {/* Mobile tap-to-reveal detail overlay. */}
           {infoOpen && (
             <div className="absolute inset-0 flex flex-col gap-2.5 overflow-hidden bg-black/95 p-4 md:hidden">
               <DeckInfo item={item} />
-              <p className="font-mono text-[11px] uppercase tracking-wider text-white/50">
-                Tap to close
-              </p>
+              <p className="text-[13px] text-white/50">Tap to close</p>
             </div>
           )}
         </div>
@@ -519,7 +571,7 @@ function CardFace({
       {cue && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span
-            className="rounded-[6px] border-2 px-3 py-1 font-mono text-[12px] uppercase tracking-wider"
+            className="rounded-[6px] border-2 px-3 py-1 text-[14px] font-black uppercase tracking-[-0.01em]"
             style={{
               borderColor: cueColor!,
               color: cueColor!,
@@ -544,7 +596,7 @@ function Legend() {
   ];
   return (
     <div className="w-full max-w-[360px] space-y-1.5 rounded-[5px] border border-border bg-panel/60 p-2">
-      <div className="text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">
+      <div className="text-center text-[12px] text-text-dim">
         Swipe to sort · only Not now comes back
       </div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -560,10 +612,10 @@ function Legend() {
               {r.icon}
             </span>
             <span className="min-w-0">
-              <span className="block truncate font-mono text-[11px] uppercase tracking-wider text-text-bright">
+              <span className="block truncate text-[12px] font-bold tracking-[-0.01em] text-text-bright">
                 {ACTION_LABEL[r.dir]}
               </span>
-              <span className="block truncate font-mono text-[11px] uppercase tracking-wider text-text-dim">
+              <span className="block truncate text-[12px] text-text-dim">
                 {ACTION_SUBLABEL[r.dir]}
               </span>
             </span>
@@ -594,24 +646,22 @@ function LibrarySummary({
   return (
     <div className="mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-6 px-6 py-10 text-center">
       <div>
-        <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted">
-          Session complete
-        </div>
-        <div className="mt-2 text-[40px] font-semibold text-text-bright">
-          You sorted {summary.total}
+        <div className="text-[13px] font-semibold text-text-muted">Session complete</div>
+        <div className="mt-2 text-[40px] font-black leading-none tracking-[-0.02em] text-text-bright">
+          You sorted <span className="tabular-nums">{summary.total}</span>
         </div>
       </div>
 
       {anonUnsaved > 0 && (
         <div className="flex w-full items-center gap-3 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2.5 text-left">
           <Check className="h-4 w-4 shrink-0 text-primary" />
-          <span className="flex-1 font-mono text-[11px] uppercase tracking-wider text-text-bright">
+          <span className="flex-1 text-[13px] font-semibold text-text-bright">
             Saved on this device · sign in to keep your {anonUnsaved} picks
           </span>
           <button
             type="button"
             onClick={onSignIn}
-            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
           >
             Sign in
           </button>
@@ -624,14 +674,14 @@ function LibrarySummary({
             key={l.label}
             className="flex items-center justify-between rounded-[5px] border border-border bg-panel px-3 py-2"
           >
-            <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-text-bright">
+            <span className="flex items-center gap-2 text-[13px] font-semibold text-text-bright">
               <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: l.color }}
               />
               {l.label}
             </span>
-            <span className="font-mono text-[14px] text-text-bright">{l.value}</span>
+            <span className="font-mono text-[15px] tabular-nums text-text-bright">{l.value}</span>
           </li>
         ))}
       </ul>
@@ -639,13 +689,13 @@ function LibrarySummary({
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Link
           to="/lists"
-          className="rounded-[5px] border border-border-strong bg-background px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-text-bright hover:border-primary hover:text-primary"
+          className="rounded-[5px] border border-border-strong bg-background px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
         >
           View my library
         </Link>
         <Link
           to="/"
-          className="rounded-[5px] bg-primary px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+          className="rounded-[5px] bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
         >
           Back to the grid
         </Link>
@@ -657,12 +707,10 @@ function LibrarySummary({
 export function LibraryHeader() {
   return (
     <header className="flex h-12 items-center justify-between border-b border-border px-4">
-      <div className="font-mono text-[12px] uppercase tracking-[0.12em] text-text-bright">
-        Rate Titles
-      </div>
+      <div className="text-[17px] font-black tracking-[-0.02em] text-text-bright">Rate titles</div>
       <Link
         to="/"
-        className="inline-flex items-center gap-1 rounded-[4px] border border-border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+        className="inline-flex items-center gap-1 rounded-[4px] border border-border px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
       >
         <X className="h-3 w-3" />
         Exit

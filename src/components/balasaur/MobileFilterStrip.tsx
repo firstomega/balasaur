@@ -87,8 +87,9 @@ export function MobileFilterStrip({
     <>
       <div className="sticky top-12 z-20 -mx-4 mb-3 border-b border-border bg-background px-4 py-2 md:hidden">
         <div className="flex items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <span className="shrink-0 whitespace-nowrap font-mono text-[12px] uppercase tracking-wider text-text-muted">
-            <AnimatedCount value={total} className="text-text-bright" /> titles
+          <span className="shrink-0 whitespace-nowrap text-[13px] text-text-muted">
+            <AnimatedCount value={total} className="font-mono tabular-nums text-text-bright" />{" "}
+            titles
           </span>
           <StripChip active={typeLabel !== "All"} onClick={() => setOpen("type")}>
             {typeLabel === "All" ? "Type" : typeLabel}
@@ -108,7 +109,7 @@ export function MobileFilterStrip({
           <button
             type="button"
             onClick={onOpenAllFilters}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-[4px] border border-border-strong bg-panel px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-[4px] border border-border-strong bg-panel px-2.5 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright"
           >
             <SlidersHorizontal className="h-3 w-3" />
             All
@@ -124,7 +125,7 @@ export function MobileFilterStrip({
       <Sheet open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
         <SheetContent side="bottom" className="rounded-t-[10px] bg-background px-4 pb-4 pt-3">
           <SheetHeader>
-            <SheetTitle className="text-left font-mono text-[12px] uppercase tracking-wider">
+            <SheetTitle className="text-left text-[18px] font-black tracking-[-0.02em]">
               {open === "type" && "Type"}
               {open === "score" && "Balasaur Score"}
               {open === "genre" && "Genre"}
@@ -160,8 +161,8 @@ export function MobileFilterStrip({
             {open === "score" && (
               <div className="px-1">
                 <div className="mb-2 flex items-baseline justify-between">
-                  <span className="font-mono text-[12px] text-text-muted">Minimum score</span>
-                  <span className="font-mono text-[15px] text-text-bright">
+                  <span className="text-[13px] text-text-muted">Minimum score</span>
+                  <span className="font-mono text-[15px] tabular-nums text-text-bright">
                     {filters.balasaurRange[0]}
                   </span>
                 </div>
@@ -174,7 +175,7 @@ export function MobileFilterStrip({
                     setFilters((p) => ({ ...p, balasaurRange: [v, p.balasaurRange[1]] }))
                   }
                 />
-                <div className="mt-2 flex justify-between font-mono text-[11px] text-text-dim">
+                <div className="mt-2 flex justify-between font-mono text-[11px] tabular-nums text-text-dim">
                   <span>Any</span>
                   <span>95</span>
                 </div>
@@ -254,7 +255,7 @@ export function MobileFilterStrip({
                     balasaurRange: [BALASAUR_BOUNDS[0], p.balasaurRange[1]],
                   }))
                 }
-                className="cursor-pointer rounded-[5px] border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-text-muted"
+                className="cursor-pointer rounded-[5px] border border-border px-3 py-2 text-[13px] font-semibold text-text-muted"
               >
                 Clear
               </button>
@@ -287,7 +288,7 @@ function StripChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`shrink-0 cursor-pointer whitespace-nowrap rounded-[4px] border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+      className={`shrink-0 cursor-pointer whitespace-nowrap rounded-[4px] border px-2.5 py-1.5 text-[12px] font-semibold tracking-[-0.01em] transition-colors ${
         active
           ? "border-primary bg-primary/15 text-primary"
           : "border-border bg-panel text-text-muted"

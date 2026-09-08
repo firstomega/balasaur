@@ -32,11 +32,12 @@ function storedRegion(): string | null {
   }
 }
 
-function MicroLabel({ children }: { children: React.ReactNode }) {
+// Matches the panel headings on the detail page it sits inside.
+function PanelHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+    <h2 className="text-[15px] font-black leading-none tracking-[-0.02em] text-text-bright">
       {children}
-    </div>
+    </h2>
   );
 }
 
@@ -54,9 +55,7 @@ function Group({
   if (items.length === 0) return null;
   return (
     <div>
-      <div className="mb-1.5 font-mono text-[11px] uppercase tracking-wider text-text-dim">
-        {label}
-      </div>
+      <div className="mb-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-dim">{label}</div>
       <div className="flex flex-wrap gap-1.5">
         {items.map((p) => {
           const badge = (
@@ -140,7 +139,7 @@ export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
   return (
     <div className="rounded-[5px] border border-border bg-panel p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <MicroLabel>Where to watch</MicroLabel>
+        <PanelHeading>Where to watch</PanelHeading>
         <select
           value={region}
           onChange={(e) => choose(e.target.value)}
@@ -156,9 +155,7 @@ export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
       </div>
 
       {isEmpty ? (
-        <p className="font-mono text-[12px] text-text-dim">
-          No streaming options found for {region}.
-        </p>
+        <p className="text-[13px] text-text-dim">No streaming options found for {region}.</p>
       ) : (
         <div className="space-y-3">
           <Group label="Stream" items={current.stream} link={current.link} title={detail.title} />
@@ -172,15 +169,13 @@ export function WhereToWatch({ detail }: { detail: MediaDetailType }) {
           href={current.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 flex items-center gap-1 border-t border-border pt-2 font-mono text-[11px] uppercase tracking-wider text-text-dim hover:text-text-muted"
+          className="mt-3 flex items-center gap-1 border-t border-border pt-2 text-[13px] font-semibold text-text-dim hover:text-text-muted"
         >
           All watch options
           <ExternalLink className="h-2.5 w-2.5" />
         </a>
       ) : null}
-      <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
-        Streaming data by JustWatch.
-      </p>
+      <p className="mt-2 text-[12px] text-text-dim">Streaming data by JustWatch.</p>
     </div>
   );
 }

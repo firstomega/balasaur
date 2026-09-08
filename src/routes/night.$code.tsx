@@ -184,13 +184,15 @@ function NightRoomPage() {
     return (
       <Shell>
         <div className="py-16 text-center">
-          <h1 className="text-lg font-semibold text-text-bright">This room is gone</h1>
+          <h1 className="text-[24px] font-black tracking-[-0.02em] text-text-bright">
+            This room is gone
+          </h1>
           <p className="mt-2 text-[13px] text-text-muted">
             Rooms expire after 24 hours. Start a fresh one.
           </p>
           <Link
             to="/night"
-            className="mt-5 inline-block rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[12px] uppercase tracking-wider text-primary-foreground"
+            className="mt-5 inline-block rounded-[5px] border border-primary bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground"
           >
             New movie night
           </Link>
@@ -204,9 +206,7 @@ function NightRoomPage() {
   if (!tokenRead) {
     return (
       <Shell>
-        <p className="py-16 text-center font-mono text-[12px] uppercase tracking-wider text-text-muted">
-          Opening the room
-        </p>
+        <p className="py-16 text-center text-[14px] text-text-muted">Opening the room</p>
       </Shell>
     );
   }
@@ -231,9 +231,7 @@ function NightRoomPage() {
   if (!state) {
     return (
       <Shell>
-        <p className="py-16 text-center font-mono text-[12px] uppercase tracking-wider text-text-muted">
-          Opening the room
-        </p>
+        <p className="py-16 text-center text-[14px] text-text-muted">Opening the room</p>
       </Shell>
     );
   }
@@ -336,7 +334,7 @@ function JoinGate({
       <div className="mb-5 flex items-center gap-2.5">
         <DinoMark className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-[17px] font-semibold text-text-bright">
+          <h1 className="text-[22px] font-black leading-[1.1] tracking-[-0.02em] text-text-bright">
             {lost ? "Back in you go" : "You are invited"}
           </h1>
           <p className="text-[13px] text-text-muted">
@@ -360,7 +358,7 @@ function JoinGate({
         type="button"
         disabled={busy}
         onClick={() => void join()}
-        className="mt-3 w-full cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2.5 font-mono text-[12px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+        className="mt-3 w-full cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2.5 text-[15px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
       >
         {busy ? "One moment" : "Join the room"}
       </button>
@@ -405,7 +403,7 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <DinoMark className="h-5 w-5 text-primary" />
-          <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          <span className="text-[15px] font-black tracking-[-0.02em] text-text-bright">
             {room.mode === "solo" ? "Solo pick" : "Movie night"}
           </span>
           {room.mode === "group" && (
@@ -424,7 +422,7 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
           <button
             type="button"
             onClick={() => void share()}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border-strong bg-background px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-text-bright hover:border-primary hover:text-primary"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border-strong bg-background px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
           >
             <Share2 className="h-3.5 w-3.5" />
             Invite
@@ -541,7 +539,7 @@ function Lobby({
             <button
               type="button"
               onClick={() => void write(() => saveNightPrefs(token, { ready: !you.ready }))}
-              className={`cursor-pointer rounded-[5px] border px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+              className={`cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
                 you.ready
                   ? "border-[#9fe6a0] bg-[#9fe6a0]/10 text-[#9fe6a0]"
                   : "border-border-strong bg-background text-text-bright hover:border-primary"
@@ -555,7 +553,7 @@ function Lobby({
               type="button"
               disabled={starting}
               onClick={() => void start()}
-              className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[12px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
               {starting ? "Starting" : "Start the questions"}
             </button>
@@ -717,7 +715,7 @@ function Wizard({
           setStepIdx(0);
           setOpen(true);
         }}
-        className="mb-4 w-full cursor-pointer rounded-[6px] border border-border bg-panel px-3 py-2.5 text-left font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+        className="mb-4 w-full cursor-pointer rounded-[6px] border border-border bg-panel px-3 py-2.5 text-left text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
       >
         Adjust answers, then deal again
       </button>
@@ -725,7 +723,7 @@ function Wizard({
   }
 
   const chipBase =
-    "relative cursor-pointer rounded-[5px] border px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors";
+    "relative cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-semibold tracking-[-0.01em] transition-colors";
 
   const optionChip = (props: {
     id: string;
@@ -808,14 +806,14 @@ function Wizard({
   return (
     <div className="space-y-4 rounded-[6px] border border-border bg-panel p-4">
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+        <span className="font-mono text-[12px] tabular-nums text-text-dim">
           {stepIdx + 1} of {steps.length}
         </span>
         {stepIdx > 0 && (
           <button
             type="button"
             onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
-            className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text-bright"
+            className="cursor-pointer text-[13px] font-semibold text-text-muted hover:text-text-bright"
           >
             Back
           </button>
@@ -823,7 +821,9 @@ function Wizard({
       </div>
 
       <div>
-        <h2 className="text-[18px] font-semibold leading-tight text-text-bright">{step.q}</h2>
+        <h2 className="text-[20px] font-black leading-[1.15] tracking-[-0.02em] text-text-bright">
+          {step.q}
+        </h2>
         {step.hint && <p className="mt-1 text-[12.5px] text-text-dim">{step.hint}</p>}
       </div>
 
@@ -853,7 +853,7 @@ function Wizard({
               {yourAnswers.map((a) => (
                 <span
                   key={a}
-                  className="rounded-[4px] border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary"
+                  className="rounded-[4px] border border-primary/40 bg-primary/10 px-2 py-1 text-[12px] font-semibold text-primary"
                 >
                   {a}
                 </span>
@@ -870,7 +870,7 @@ function Wizard({
               <button
                 type="button"
                 onClick={() => setReady(!you.ready)}
-                className={`cursor-pointer rounded-[5px] border px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+                className={`cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
                   you.ready
                     ? "border-[#9fe6a0] bg-[#9fe6a0]/10 text-[#9fe6a0]"
                     : "border-border-strong bg-background text-text-bright hover:border-primary"
@@ -905,8 +905,11 @@ function Wizard({
       )}
 
       {preview && (
-        <p className="border-t border-border pt-3 font-mono text-[11px] uppercase tracking-wider text-text-muted">
-          <span className="text-text-bright">{preview.pool.toLocaleString("en-US")}</span> in play
+        <p className="border-t border-border pt-3 text-[13px] text-text-muted">
+          <span className="font-mono tabular-nums text-text-bright">
+            {preview.pool.toLocaleString("en-US")}
+          </span>{" "}
+          in play
           {preview.front && (
             <>
               {" "}
@@ -931,16 +934,14 @@ function HostControls({
 }) {
   const { room } = state;
   const chip = (active: boolean) =>
-    `cursor-pointer rounded-[5px] border px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider transition-colors ${
+    `cursor-pointer rounded-[5px] border px-2.5 py-1 text-[12px] font-semibold tracking-[-0.01em] transition-colors ${
       active
         ? "border-primary bg-primary/15 text-primary"
         : "border-border bg-background text-text-muted hover:border-border-strong"
     }`;
   return (
     <div className="space-y-3 border-t border-border pt-4">
-      <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-        Room settings (host)
-      </p>
+      <p className="text-[13px] font-bold tracking-[-0.01em] text-text-dim">Room settings (host)</p>
       <div className="flex flex-wrap gap-1.5">
         {(
           [
@@ -1044,7 +1045,7 @@ function RollButton({
       type="button"
       disabled={busy}
       onClick={() => void roll()}
-      className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 font-mono text-[12px] font-medium uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+      className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
     >
       {room.roll_seq > 0
         ? "Deal again"
@@ -1096,10 +1097,7 @@ function Calculating({ state, onDone }: { state: NightState; onDone: () => void 
   return (
     <div className="mb-4 rounded-[6px] border border-border bg-panel px-4 py-12 text-center">
       <DinoMark className="mx-auto h-10 w-10 animate-pulse text-primary" />
-      <p
-        role="status"
-        className="mt-4 font-mono text-[12px] uppercase tracking-wider text-text-muted"
-      >
+      <p role="status" className="mt-4 text-[14px] text-text-muted">
         {CALC_LINES[line]}
       </p>
     </div>
@@ -1209,7 +1207,7 @@ function Results({
           <button
             type="button"
             onClick={() => setAuthOpen(true)}
-            className="cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
           >
             Create an account
           </button>
@@ -1285,7 +1283,7 @@ function ResultCard({
             className="h-[138px] w-[92px] rounded-[4px] object-cover"
           />
         ) : (
-          <div className="flex h-[138px] w-[92px] items-center justify-center rounded-[4px] bg-background font-mono text-[11px] uppercase text-text-dim">
+          <div className="flex h-[138px] w-[92px] items-center justify-center rounded-[4px] bg-background text-[12px] font-semibold text-text-dim">
             No art
           </div>
         )}
@@ -1296,7 +1294,7 @@ function ResultCard({
             <h3 className="truncate text-[15px] font-semibold leading-tight text-text-bright hover:underline">
               {item.title}
             </h3>
-            <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+            <p className="mt-0.5 font-mono text-[12px] tabular-nums text-text-muted">
               {item.media_type === "tv" ? "TV" : "Movie"}
               {item.year ? ` · ${item.year}` : ""}
               {item.runtime ? ` · ${item.runtime}m` : ""}
@@ -1332,7 +1330,7 @@ function ResultCard({
             type="button"
             onClick={onPick}
             disabled={isWinner}
-            className="cursor-pointer rounded-[4px] border border-primary/70 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary hover:bg-primary/10 disabled:cursor-default disabled:opacity-50"
+            className="cursor-pointer rounded-[4px] border border-primary/70 px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-primary hover:bg-primary/10 disabled:cursor-default disabled:opacity-50"
           >
             {isWinner ? "Tonight's pick" : "Pick this"}
           </button>
@@ -1340,7 +1338,7 @@ function ResultCard({
             type="button"
             onClick={onSeen}
             disabled={seen}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-[4px] border border-border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright disabled:cursor-default disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-[4px] border border-border px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright disabled:cursor-default disabled:opacity-50"
           >
             <RotateCcw className="h-3 w-3" />
             {seen ? "Marked seen" : "Seen it"}

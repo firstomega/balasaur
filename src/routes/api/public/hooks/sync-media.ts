@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { syncCatalog, refreshStalest } from "@/lib/media.server";
+import {
+  syncCatalog,
+  refreshStalest,
+  backfillPosterColors,
+  syncEpisodeRatings,
+} from "@/lib/media.server";
 
 /**
  * Public hook that triggers a catalog refresh. Auth is the standard
@@ -51,17 +56,24 @@ export const Route = createFileRoute("/api/public/hooks/sync-media")({
 
         try {
           // `mode: "refresh"` walks the STALEST titles table-wide (the long tail);
-          // otherwise we grow + refresh whatever discovery surfaces this pass.
+          // `mode: "posterColors"` reads posters for the two colors the ambient
+          // glow paints with; `mode: "episodeRatings"` reads the seasons of the
+          // popular TV pool for per-episode ratings; otherwise we grow + refresh
+          // whatever discovery surfaces this pass.
           const result =
             mode === "refresh"
               ? await refreshStalest({ limit, timeBudgetMs })
-              : await syncCatalog({
-                  force,
-                  limit,
-                  timeBudgetMs,
-                  providerBucket,
-                  refreshExisting,
-                });
+              : mode === "posterColors"
+                ? await backfillPosterColors({ limit, timeBudgetMs })
+                : mode === "episodeRatings"
+                  ? await syncEpisodeRatings({ limit, timeBudgetMs })
+                  : await syncCatalog({
+                      force,
+                      limit,
+                      timeBudgetMs,
+                      providerBucket,
+                      refreshExisting,
+                    });
           return new Response(JSON.stringify({ ok: true, ...result }), {
             status: 200,
             headers: { "Content-Type": "application/json" },

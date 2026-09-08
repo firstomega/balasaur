@@ -7,6 +7,7 @@ import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
+import { EmptyState, EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
 import { isNotInterested, primaryOf, sentimentOf } from "@/lib/userStatus";
 import type { MediaItem, MediaType } from "@/types/media";
 
@@ -59,24 +60,31 @@ const BUCKET_META: Record<
 // Empty states that point somewhere: the grid for saving, the deck for rating.
 // `to` is a literal union of real route paths so a dead target fails typecheck
 // instead of falling through to the /$handle catch-all at runtime.
-const BUCKET_EMPTY: Record<Bucket, { text: string; cta: string; to: "/" | "/watched" }> = {
+const BUCKET_EMPTY: Record<
+  Bucket,
+  { line: string; hint: string; cta: string; to: "/" | "/watched" }
+> = {
   watchlist: {
-    text: "Nothing saved yet. Hover a poster in the grid and hit Save, or swipe left in the deck.",
+    line: "Nothing saved for later.",
+    hint: "Hit Save on any poster in the grid, or swipe left in the deck.",
     cta: "Browse the grid",
     to: "/",
   },
   favorites: {
-    text: "No favorites yet. Mark something Watched and tap “Liked it”, or swipe up in the deck.",
+    line: "Nothing marked Loved.",
+    hint: "Swipe up in the deck on a title you loved, or hit Liked it on its page.",
     cta: "Rate titles",
     to: "/watched",
   },
   history: {
-    text: "Nothing watched yet. The fastest way to build your history is a quick deck session.",
+    line: "No watch history.",
+    hint: "Swipe right in the deck on anything you have already seen.",
     cta: "Rate titles",
     to: "/watched",
   },
   notInterested: {
-    text: "Nothing hidden. Press X in the deck (or “Never show this” on a title page) to keep the junk out of your recommendations.",
+    line: "Nothing hidden.",
+    hint: "Press X in the deck on a title you never want to see again. It does not come back.",
     cta: "Rate titles",
     to: "/watched",
   },
@@ -148,7 +156,7 @@ function ListsPage() {
     <div className="min-h-screen bg-background text-foreground">
       <TopBar />
       <main id="main" className="mx-auto max-w-[1600px] px-4 py-6">
-        <h1 className="mb-4 font-mono text-[14px] uppercase tracking-[0.12em] text-text-bright">
+        <h1 className="mb-4 text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
           My lists
         </h1>
 
@@ -159,13 +167,13 @@ function ListsPage() {
             always render and this offers to make them permanent. */}
         {!loading && !user && (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[5px] border border-border bg-panel px-4 py-3">
-            <p className="font-mono text-[11px] text-text-muted">
+            <p className="text-[13px] leading-relaxed text-text-muted">
               These are saved on this device. An account keeps them when you switch browsers.
             </p>
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="shrink-0 cursor-pointer rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+              className="shrink-0 cursor-pointer rounded-[5px] bg-primary px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
             >
               Keep them
             </button>
@@ -191,7 +199,7 @@ function ListsPage() {
                   type="button"
                   onClick={() => setTab(b)}
                   className={
-                    "flex cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors " +
+                    "flex cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 text-[14px] font-bold tracking-[-0.01em] transition-colors " +
                     (selected
                       ? "border-primary text-text-bright"
                       : "border-transparent text-text-muted hover:text-text-bright")
@@ -199,7 +207,7 @@ function ListsPage() {
                 >
                   <meta.Icon className={`h-3.5 w-3.5 ${selected ? meta.iconClass : ""}`} />
                   {meta.label}
-                  <span className="font-mono text-[12px] text-text-dim">
+                  <span className="font-mono text-[12px] tabular-nums text-text-dim">
                     {showSkeleton ? "" : grouped[b].length}
                   </span>
                 </button>
@@ -207,24 +215,22 @@ function ListsPage() {
             })}
           </div>
 
-          <p className="mb-4 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          <p className="mb-4 text-[13px] text-text-dim">
             {active.hint} · newest first · open a title to change its status
           </p>
 
           {showSkeleton ? (
             <MediaGridSkeleton count={12} />
           ) : items.length === 0 ? (
-            <div className="rounded-[5px] border border-border bg-panel p-8 text-center">
-              <p className="mx-auto max-w-md font-mono text-[11px] leading-relaxed text-text-muted">
-                {BUCKET_EMPTY[tab].text}
-              </p>
-              <Link
-                to={BUCKET_EMPTY[tab].to}
-                className="mt-4 inline-block rounded-[5px] bg-primary px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
-              >
-                {BUCKET_EMPTY[tab].cta}
-              </Link>
-            </div>
+            <EmptyState
+              line={BUCKET_EMPTY[tab].line}
+              hint={BUCKET_EMPTY[tab].hint}
+              action={
+                <Link to={BUCKET_EMPTY[tab].to} className={EMPTY_ACTION_CLASS}>
+                  {BUCKET_EMPTY[tab].cta}
+                </Link>
+              }
+            />
           ) : (
             <MediaGrid items={items} />
           )}

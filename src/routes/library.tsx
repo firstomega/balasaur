@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
+import { EmptyState, EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useShelves } from "@/hooks/useShelves";
 import {
@@ -565,8 +566,10 @@ function LibraryPage() {
         <main id="main" className="relative z-10 mx-auto w-full max-w-[1080px] px-4 py-7 sm:px-5">
           <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-[26px] font-bold tracking-tight text-[#f7f2e7]">My Library</h1>
-              <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#bdb29c]">
+              <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-[#f7f2e7]">
+                My Library
+              </h1>
+              <p className="mt-0.5 font-mono text-[12px] tabular-nums text-[#bdb29c]">
                 {shelves.length} {shelves.length === 1 ? "shelf" : "shelves"} · {totalShelved}{" "}
                 shelved · {unshelved.length} unshelved
               </p>
@@ -574,24 +577,22 @@ function LibraryPage() {
             <div className="flex items-center gap-2">
               <Link
                 to="/lists"
-                className="font-mono text-[11px] uppercase tracking-wider text-[#8d8472] underline-offset-2 hover:text-[#f7f2e7] hover:underline"
+                className="text-[13px] font-semibold text-[#8d8472] underline-offset-2 hover:text-[#f7f2e7] hover:underline"
               >
                 Buckets view
               </Link>
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#8d8472]">
-                Lights
-              </span>
+              <span className="text-[12px] font-semibold text-[#8d8472]">Lights</span>
               <button
                 type="button"
                 onClick={() => toggleLight(false)}
-                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${!late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${!late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
               >
                 Evening
               </button>
               <button
                 type="button"
                 onClick={() => toggleLight(true)}
-                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
               >
                 Late
               </button>
@@ -601,26 +602,25 @@ function LibraryPage() {
           {!mounted || !statusReady || !shelvesReady ? (
             <div className="h-64 animate-pulse rounded-[8px] border border-[#2e261c] bg-[#1b1712]" />
           ) : empty ? (
-            <div className="rounded-[8px] border border-[#2e261c] bg-[#1b1712] p-10 text-center">
-              <p className="mx-auto max-w-md text-[14px] leading-relaxed text-[#bdb29c]">
-                The room is empty until it knows what you have watched. Mark a few titles seen, or
-                save some for later, and they arrive here ready to shelve.
-              </p>
-              <div className="mt-5 flex justify-center gap-3">
-                <Link
-                  to="/watched"
-                  className="rounded-[5px] bg-primary px-4 py-2 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  Rate titles
-                </Link>
-                <Link
-                  to="/"
-                  className="rounded-[5px] border border-[#3d3325] px-4 py-2 text-[13px] font-medium text-[#e2dccf] hover:border-primary"
-                >
-                  Browse the catalog
-                </Link>
-              </div>
-            </div>
+            <EmptyState
+              className="rounded-[8px]"
+              style={{ backgroundColor: "#1b1712", borderColor: "#2e261c" }}
+              line="The room stays empty until it knows what you have watched."
+              hint="Mark a few titles seen, or save some for later. They arrive here ready to shelve."
+              action={
+                <>
+                  <Link to="/watched" className={EMPTY_ACTION_CLASS}>
+                    Rate titles
+                  </Link>
+                  <Link
+                    to="/"
+                    className="inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-[#3d3325] px-4 py-2 text-[13px] font-semibold text-[#e2dccf] transition-colors hover:border-primary"
+                  >
+                    Browse the catalog
+                  </Link>
+                </>
+              }
+            />
           ) : (
             <>
               <div className="libcase">
@@ -634,7 +634,7 @@ function LibraryPage() {
                           {sh.name}
                         </div>
                         <div className="libtools">
-                          <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.1em] text-[#e4d8c0]/60">
+                          <span className="mr-1 font-mono text-[11px] tabular-nums text-[#e4d8c0]/60">
                             {sh.items.length} {sh.items.length === 1 ? "title" : "titles"}
                           </span>
                           <BayTool
@@ -740,9 +740,11 @@ function LibraryPage() {
               {unshelved.length > 0 && (
                 <section className="mt-9">
                   <div className="flex flex-wrap items-baseline gap-3">
-                    <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#8d8472]">
-                      Unshelved ·{" "}
-                      {q ? `${unshelvedShown.length} of ${unshelved.length}` : unshelved.length}
+                    <span className="text-[17px] font-black tracking-[-0.02em] text-[#e4d8c0]">
+                      Unshelved{" "}
+                      <span className="font-mono text-[13px] tabular-nums text-[#8d8472]">
+                        {q ? `${unshelvedShown.length} of ${unshelved.length}` : unshelved.length}
+                      </span>
                     </span>
                     <input
                       type="search"
@@ -785,9 +787,7 @@ function LibraryPage() {
               )}
             </>
           )}
-          <p className="mt-10 font-mono text-[10px] uppercase tracking-[0.1em] text-[#8d8472]">
-            Title data from TMDB and OMDb
-          </p>
+          <p className="mt-10 text-[12px] text-[#8d8472]">Title data from TMDB and OMDb</p>
         </main>
       </div>
 
@@ -1000,12 +1000,12 @@ function Plaque({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="h-6 w-6 cursor-pointer rounded-[5px] font-mono text-[13px] text-[#8d8472] hover:text-[#f7f2e7]"
+            className="h-6 w-6 cursor-pointer rounded-[5px] text-[15px] text-[#8d8472] hover:text-[#f7f2e7]"
           >
             ×
           </button>
         </div>
-        <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[#bdb29c]">
+        <p className="mt-0.5 font-mono text-[12px] tabular-nums text-[#bdb29c]">
           {it.mediaType === "tv" ? "TV · " : ""}
           {it.year}
         </p>
@@ -1056,7 +1056,7 @@ function Plaque({
         ) : (
           <>
             {shelf && idx >= 0 && (
-              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.06em] text-[#8d8472]">
+              <p className="mt-1 font-mono text-[11.5px] tabular-nums text-[#8d8472]">
                 Placed {idx + 1} of {shelf.items.length}
                 {others.length > 0 && (
                   <>
@@ -1106,7 +1106,7 @@ function Plaque({
               )}
               {targets.length > 0 && (
                 <>
-                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#8d8472]">
+                  <p className="mt-1 text-[12px] font-bold tracking-[-0.01em] text-[#8d8472]">
                     {onAShelf ? "Also place on" : "Place on"}
                   </p>
                   {targets.map((s) => (
@@ -1122,7 +1122,7 @@ function Plaque({
                         <button
                           type="button"
                           aria-label={`Slot ${it.title} into ${s.name}`}
-                          className={btn + " font-mono text-[11px]"}
+                          className={btn + " text-[12px]"}
                           onClick={() => onSlot(s.id)}
                         >
                           Slot it
@@ -1135,7 +1135,7 @@ function Plaque({
               <Link
                 to={detailTo}
                 params={{ id: detailId }}
-                className="mt-1 text-center font-mono text-[11px] uppercase tracking-wider text-primary hover:text-primary/80"
+                className="mt-1 text-center text-[13px] font-semibold text-primary hover:text-primary/80"
               >
                 Open title page
               </Link>
