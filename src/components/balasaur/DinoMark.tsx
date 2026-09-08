@@ -40,6 +40,13 @@ export const DINO_MARK_ORIGIN_Y = 1.3;
 // - It had no eye, and an animal without an eye is a shape. The eye is a solid
 //   dot on the outline mark and a hole punched through the body on the filled
 //   one, and it is the one detail carried at every size.
+//
+// The solid mark carries two values of the one colour, the way the arcade marks
+// do: the tail and the far leg sit at 0.55 and everything else is full. It is
+// the far side of the animal, so the drawing has a near side and a far side
+// instead of being one silhouette. Nothing else changes, so the mark is still
+// one path set in whatever colour the caller sets, and at 16px, where the mark
+// is an outline, there is only ever one value.
 /** Body, neck and head as one closed outline, jaw shut. */
 const BODY_CALM =
   "M5.4 12.6C5.6 10.9 7.4 9.7 9.7 9.7c1.5 0 2.9.4 3.9 1.1c.5-1.7 1.5-3.5 2.9-4.8c.9-.9 2-1.5 3.1-1.5c1.7 0 2.9 1.1 2.9 2.5c0 1.3-1.1 2.4-2.7 2.4c-.9 0-1.6-.2-2.2-.6c-.9 1.2-1.5 2.6-1.7 4.1c.7 1.1.9 2.5.7 3.8c-.4 2-2.5 3.4-5.2 3.4c-2.4 0-4.4-.9-5.3-2.4c-.7-1.2-.9-3.6-.7-5.1z";
@@ -61,6 +68,10 @@ const LEG_FRONT = "M13.2 19.2v2.7";
 
 /** Eye centre, used for the dot, the hole and the shut lid. */
 const EYE = { x: 19.6, y: 6.6, r: 0.85 };
+
+/** The second value, matching the arcade marks, whose receding parts sit at
+ *  0.45 to 0.55 of the same hue. */
+const SHADE = 0.55;
 
 /** A circle as path data, so the filled mark can punch the eye out of the body
  *  with `evenodd` instead of painting a dot in a background colour it cannot
@@ -84,18 +95,39 @@ export interface DinoPath {
 /**
  * The mark as path data, in the same shape the arcade marks use, so the canvas
  * that draws the taste card and this SVG draw the same animal. Everything is
- * one colour: the caller sets it, the mark never picks a hue.
+ * one colour: the caller sets it, the mark never picks a hue, and the second
+ * value is a fraction of that same colour.
+ *
+ * `depth` turns the two-value pass on. It follows `filled`, which is what a
+ * caller wants: the outline mark is small enough that a dimmed part reads as a
+ * mistake, and the solid one is big enough to carry it.
  */
-export function dinoPaths(mood: DinoMood, filled: boolean, weight: number): DinoPath[] {
+export function dinoPaths(
+  mood: DinoMood,
+  filled: boolean,
+  weight: number,
+  depth: boolean = filled,
+): DinoPath[] {
   const body = mood === "chomp" ? BODY_CHOMP : BODY_CALM;
   const eyeDot = circlePath(EYE.x, EYE.y, EYE.r);
+  const hole = (d: string) => (mood === "sleep" ? d : d + eyeDot);
 
   const out: DinoPath[] = [];
   if (filled) {
     // Body and eye in one path: evenodd turns the inner circle into daylight.
-    out.push({ d: mood === "sleep" ? body : body + eyeDot, fill: true, evenOdd: true });
-    out.push({ d: TAIL_FILL, fill: true });
-    out.push({ d: LEG_BACK, width: weight * 1.5 });
+    out.push({ d: hole(body), fill: true, evenOdd: true });
+    if (depth) {
+      // The far side of the animal at the second value: the tail, which passes
+      // behind the body, and the far leg. Both are drawn after the body, so
+      // where they lie under it they add nothing (half a colour over the whole
+      // of it is that colour) and only the part that clears the body dims. The
+      // near leg stays full, and that difference is the depth.
+      out.push({ d: TAIL_FILL, fill: true, ink: SHADE });
+      out.push({ d: LEG_BACK, width: weight * 1.5, ink: SHADE });
+    } else {
+      out.push({ d: TAIL_FILL, fill: true });
+      out.push({ d: LEG_BACK, width: weight * 1.5 });
+    }
     out.push({ d: LEG_FRONT, width: weight * 1.5 });
   } else {
     out.push({ d: body, width: weight });

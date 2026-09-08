@@ -15,7 +15,7 @@ import {
   type TasteProfile,
   type TitleFact,
 } from "@/lib/taste";
-import { SAMPLE_SIZE, sampleTasteProfile } from "@/lib/tasteSample";
+import { sampleTasteProfile } from "@/lib/tasteSample";
 import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
 
 // The page a shared card links back to, so most of the people who ever see it
@@ -57,7 +57,8 @@ function TastePage() {
           Taste Card
         </h1>
         <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-text-muted">
-          Eight rated titles name what you watch, and name the one you liked that critics did not.
+          The name your list earns, the four titles you scored highest, and the one you liked that
+          critics did not.
         </p>
 
         <CardSection />
@@ -170,8 +171,9 @@ function CardSection() {
 }
 
 /**
- * What the example card is, and what stands between the visitor and their own.
- * Every branch names a number they can check against their own list.
+ * One line under the example card: what stands between this visitor and their
+ * own, as a number they can check against their own list. The chip on the card
+ * already says the card is an example, so this line never says it again.
  */
 function exampleLine(
   statusesReady: boolean,
@@ -180,16 +182,12 @@ function exampleLine(
   factsFailed: boolean,
   profile: TasteProfile | null,
 ): string {
-  const shelf = `Drawn from a shelf of ${SAMPLE_SIZE} titles.`;
-  if (factsFailed) return `${shelf} The catalog did not answer for yours. Reload to draw it.`;
-  if (!statusesReady || (enough && !profile)) return `${shelf} Yours is on its way.`;
+  if (factsFailed) return "The catalog did not answer, so reload to draw yours.";
+  if (!statusesReady || (enough && !profile)) return "Yours is on its way.";
   if (!enough) {
     return needed === MIN_BASIS_TITLES
-      ? `${shelf} Yours draws at ${MIN_BASIS_TITLES} rated titles.`
-      : `${shelf} Yours draws at ${MIN_BASIS_TITLES} rated titles, and you are ${needed} short.`;
+      ? `Yours draws at ${MIN_BASIS_TITLES} rated titles.`
+      : `Yours draws at ${MIN_BASIS_TITLES} rated titles, and you are ${needed} short.`;
   }
-  if (profile) {
-    return `${shelf} ${profile.total} of your titles are in the catalog, and a name needs ${MIN_BASIS_TITLES}.`;
-  }
-  return shelf;
+  return `Yours draws at ${MIN_BASIS_TITLES} rated titles the catalog knows, and it has ${profile?.total ?? 0} of yours.`;
 }

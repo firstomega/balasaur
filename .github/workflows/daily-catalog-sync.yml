@@ -211,3 +211,56 @@ jobs:
             fi
             stuck=0; AFTER="$NEXT"; sleep 10
           done
+
+      # Poster colours: two hex values per title, read out of the poster's own
+      # JPEG block averages on the server, used for the ambient glow behind a
+      # detail page and for the tiles on a shared Taste Card. Without this the
+      # glow renders nothing at all, so it runs on every nightly pass.
+      #
+      # Drains oldest-unread first through the same apikey-gated endpoint the
+      # steps above use. Capped in wall clock rather than by row count, for the
+      # reason the backfill step documents: this is resumable, so a capped run
+      # simply continues tomorrow. 87,701 titles have a poster; the popular few
+      # thousand that carry real traffic fill in on the first couple of nights,
+      # because the endpoint claims rows by popularity.
+      - name: Poster colours
+        if: always()
+        env:
+          BASE_URL: https://balasaur.com
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
+        run: |
+          if [ -z "$APIKEY" ]; then
+            echo "::warning::Missing repo secret SYNC_HOOK_SECRET — skipping poster colours."
+            exit 0
+          fi
+          BUDGET_SECONDS=600
+          START=$(date +%s)
+          TOTAL_STORED=0
+          for i in $(seq 1 40); do
+            ELAPSED=$(( $(date +%s) - START ))
+            if [ "$ELAPSED" -ge "$BUDGET_SECONDS" ]; then
+              echo "::notice::Poster-colour budget (${BUDGET_SECONDS}s) reached after $((i-1)) passes — resumes next run."
+              break
+            fi
+            HTTP=$(curl -sS -o /tmp/pc.json -w "%{http_code}" \
+              -X POST "$BASE_URL/api/public/hooks/sync-media" \
+              -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+              --max-time 120 -d '{"mode":"posterColors","limit":400,"timeBudgetMs":60000}' || echo 000)
+            if [ "$HTTP" != "200" ]; then
+              echo "::warning::Poster-colour pass $i returned HTTP $HTTP — stopping (non-fatal, resumes next run)."
+              cat /tmp/pc.json 2>/dev/null; echo
+              break
+            fi
+            echo "$(jq -c '{scanned,stored,noColor,failed,remaining}' /tmp/pc.json 2>/dev/null || cat /tmp/pc.json)"
+            STORED=$(jq -r '.stored // 0' /tmp/pc.json 2>/dev/null || echo 0)
+            REMAINING=$(jq -r '.remaining // 0' /tmp/pc.json 2>/dev/null || echo 0)
+            TOTAL_STORED=$(( TOTAL_STORED + STORED ))
+            if [ "$REMAINING" = "0" ]; then echo "✅ Poster colours complete after pass $i."; break; fi
+            # A pass that stores nothing but still reports work left means every
+            # candidate failed to download; stop rather than spin.
+            if [ "$STORED" = "0" ]; then
+              echo "::warning::Pass $i stored nothing with $REMAINING left — stopping for tonight."; break
+            fi
+            sleep 5
+          done
+          echo "::notice::Poster colours: stored $TOTAL_STORED this run."

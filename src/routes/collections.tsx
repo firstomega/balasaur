@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { TopBar } from "@/components/balasaur/TopBar";
 import {
   EmptyState,
@@ -43,6 +43,14 @@ export const Route = createFileRoute("/collections")({
     }),
     links: [canonicalLink(`${SITE_ORIGIN}/collections`)],
   }),
+  // Three states, told apart. Rows in hand: the page. Rows still coming, on a
+  // connection slow enough to notice: the shelf outline, which says the click
+  // landed. Rows that will not come: the dead end, which says so and offers a
+  // way out. Without the first two a visitor waiting on the index was shown a
+  // frozen previous page, and a request that failed took the whole site chrome
+  // with it, search bar included.
+  pendingComponent: CollectionsPending,
+  errorComponent: CollectionsError,
   component: CollectionsPage,
 });
 
@@ -589,6 +597,92 @@ function DualIndexMatrix({
   );
 }
 
+/** The page's shell: heading and site chrome, shared by all three states so a
+ *  slow request and a failed one still leave the visitor somewhere to go. */
+function CollectionsShell({ aside, children }: { aside?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <TopBar />
+      <main id="main" className="mx-auto max-w-[1240px] px-5 py-7">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
+            Collections
+          </h1>
+          {aside}
+        </div>
+        {children}
+      </main>
+    </div>
+  );
+}
+
+/** Rows will not come. Said once, used by the failed request and by an index
+ *  that came back with nothing, which are the same thing from a chair. */
+function IndexDeadEnd() {
+  return (
+    <EmptyState
+      className="mt-9"
+      line="The collection index did not load."
+      hint="Try again, or start from the catalog."
+      action={
+        <>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className={EMPTY_ACTION_CLASS}
+          >
+            Try again
+          </button>
+          <Link to="/" className={EMPTY_ACTION_QUIET_CLASS}>
+            Browse the catalog
+          </Link>
+        </>
+      }
+    />
+  );
+}
+
+function CollectionsError({ error }: { error: Error }) {
+  console.error(error);
+  return (
+    <CollectionsShell>
+      <IndexDeadEnd />
+    </CollectionsShell>
+  );
+}
+
+/** Rows are still coming. The outline of what is arriving, in the sizes the
+ *  real cards use, so nothing jumps when they land. */
+function CollectionsPending() {
+  return (
+    <CollectionsShell>
+      {/* Same grid, same card sizes as the real tiers, so the rows land in the
+          boxes they were drawn in instead of shifting the page under a thumb. */}
+      <div className="mt-7 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-[186px] animate-pulse rounded-[8px] bg-panel" />
+        ))}
+      </div>
+      {[0, 1].map((r) => (
+        <div key={r} className="mt-11">
+          <div className="h-[19px] w-52 animate-pulse rounded bg-panel" />
+          <div className="mt-3.5 flex gap-2 overflow-hidden">
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="h-[190px] w-[196px] shrink-0 animate-pulse rounded-[7px] bg-panel"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="sr-only" role="status">
+        Loading collections
+      </p>
+    </CollectionsShell>
+  );
+}
+
 function CollectionsPage() {
   const { collections, month } = Route.useLoaderData();
   const [q, setQ] = useState("");
@@ -642,48 +736,22 @@ function CollectionsPage() {
   const none = collections.length === 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[1240px] px-5 py-7">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
-              Collections
-            </h1>
-          </div>
-          {!none && (
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Find a collection"
-              aria-label="Find a collection"
-              className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
-            />
-          )}
-        </div>
-
-        {none && (
-          <EmptyState
-            className="mt-9"
-            line="The collection index did not load."
-            hint="Try again, or start from the catalog."
-            action={
-              <>
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className={EMPTY_ACTION_CLASS}
-                >
-                  Try again
-                </button>
-                <Link to="/" className={EMPTY_ACTION_QUIET_CLASS}>
-                  Browse the catalog
-                </Link>
-              </>
-            }
+    <CollectionsShell
+      aside={
+        !none && (
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Find a collection"
+            aria-label="Find a collection"
+            className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
           />
-        )}
+        )
+      }
+    >
+      <>
+        {none && <IndexDeadEnd />}
 
         {matches && (
           <section className="mt-7">
@@ -835,7 +903,7 @@ function CollectionsPage() {
             </div>
           </section>
         </div>
-      </main>
-    </div>
+      </>
+    </CollectionsShell>
   );
 }

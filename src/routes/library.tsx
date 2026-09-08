@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
-import { EmptyState, EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
+import {
+  EmptyState,
+  EMPTY_ACTION_CLASS,
+  EMPTY_ACTION_QUIET_CLASS,
+} from "@/components/balasaur/EmptyState";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useShelves } from "@/hooks/useShelves";
 import {
@@ -58,20 +62,33 @@ const BOARDTEX =
 
 // The room's stylesheet. Scoped under .libroom so the rest of the site keeps
 // its terminal palette; the reading room is one warm island.
+//
+// The light is wired to the shelves. `.lit` is the room proper, warm wood and
+// lamp spill, and it only comes on once there is something on a shelf to light.
+// Before that (a first visit, and the served shell everyone gets) the ground is
+// the site's own black with one low pool over the top of the column: the same
+// wash over an empty page is a brown stain across half a screen, and it ended
+// in a hard horizontal edge where the content stopped. The room now runs to the
+// footer as well, so nothing terminates mid-page.
 const ROOM_CSS = `
 .libroom{position:relative; overflow:hidden;
+  background:
+    radial-gradient(620px 300px at 26% 120px, rgba(214,166,96,.10), transparent 70%),
+    #08090b;
+}
+.libroom.lit{
   background:
     radial-gradient(120% 70% at 50% -4%, rgba(214,166,96,.13), transparent 60%),
     radial-gradient(90% 55% at 50% 8%, rgba(190,142,80,.09), transparent 70%),
     #15100c;
 }
-.libroom.late{background:
+.libroom.lit.late{background:
     radial-gradient(120% 70% at 50% -4%, rgba(214,166,96,.07), transparent 60%),
     #0e0b08;}
 .libroom .vig{position:absolute; inset:0; pointer-events:none; z-index:30;
   background:radial-gradient(130% 90% at 50% 30%, transparent 55%, rgba(0,0,0,.5) 100%);}
 .libroom{--lampglow:.17}
-.libroom.late{--lampglow:.27}
+.libroom.lit.late{--lampglow:.27}
 .libcase{position:relative; border-radius:8px; padding:14px 14px 18px;
   background:
     linear-gradient(180deg, rgba(255,214,150,.10), rgba(0,0,0,.28) 30%, rgba(0,0,0,.45)),
@@ -561,14 +578,32 @@ function LibraryPage() {
   };
 
   const totalShelved = onShelf.size;
+  const ready = mounted && statusReady && shelvesReady;
   const empty = statusReady && pool.size === 0;
+  // Nothing filed yet means nothing to light, so the room stays dark and the
+  // lamp switch stays away with it.
+  const lit = ready && !empty;
+  const countParts = [
+    shelves.length > 0 && {
+      key: "shelves",
+      n: shelves.length,
+      label: shelves.length === 1 ? "shelf" : "shelves",
+    },
+    totalShelved > 0 && { key: "shelved", n: totalShelved, label: "on the shelves" },
+    unshelved.length > 0 && { key: "waiting", n: unshelved.length, label: "waiting" },
+  ].filter(Boolean) as { key: string; n: number; label: string }[];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // No min-h-screen here. The root layout already holds the footer at the
+    // bottom of a short page; a second full-viewport box inside it made the
+    // page exactly one footer taller than the window, so an empty room
+    // scrolled 141px into nothing. The room keeps `grow` so a lit one still
+    // runs the height of whatever the shelves need.
+    <div className="flex flex-col bg-background text-foreground">
       <TopBar />
       <style>{ROOM_CSS}</style>
-      <div className={"libroom" + (late ? " late" : "")}>
-        <div className="vig" aria-hidden="true" />
+      <div className={"libroom grow" + (lit ? " lit" : "") + (lit && late ? " late" : "")}>
+        {lit && <div className="vig" aria-hidden="true" />}
         <main id="main" className="relative z-10 mx-auto w-full max-w-[1080px] px-4 py-7 sm:px-5">
           <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -577,12 +612,17 @@ function LibraryPage() {
               </h1>
               {/* Three zeros over an empty room said nothing the empty state
                   below did not already say in a sentence, so the line waits
-                  until there is something to count. Numbers keep the mono
-                  face; the words around them do not. */}
-              {!empty && mounted && statusReady && shelvesReady && (
+                  until there is something to count, and each figure drops out
+                  once it is nothing. "0 waiting" is a number nobody wanted.
+                  Numbers keep the mono face; the words around them do not. */}
+              {lit && countParts.length > 0 && (
                 <p className="mt-0.5 text-[12.5px] text-[#bdb29c]">
-                  <Num>{shelves.length}</Num> {shelves.length === 1 ? "shelf" : "shelves"} ·{" "}
-                  <Num>{totalShelved}</Num> on the shelves · <Num>{unshelved.length}</Num> waiting
+                  {countParts.map((part, i) => (
+                    <span key={part.key}>
+                      {i > 0 && " · "}
+                      <Num>{part.n}</Num> {part.label}
+                    </span>
+                  ))}
                 </p>
               )}
             </div>
@@ -593,41 +633,45 @@ function LibraryPage() {
               >
                 My lists
               </Link>
-              <span className="text-[12px] font-semibold text-[#8d8472]">Lights</span>
-              <button
-                type="button"
-                onClick={() => toggleLight(false)}
-                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${!late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
-              >
-                Evening
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleLight(true)}
-                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
-              >
-                Late
-              </button>
+              {/* A light switch for a room with nothing in it is a control with
+                  nothing to act on, so it arrives with the shelves. */}
+              {lit && (
+                <>
+                  <span className="text-[12px] font-semibold text-[#8d8472]">Lights</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleLight(false)}
+                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${!late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                  >
+                    Evening
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleLight(true)}
+                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                  >
+                    Late
+                  </button>
+                </>
+              )}
             </div>
           </header>
 
-          {!mounted || !statusReady || !shelvesReady ? (
-            <div className="h-64 animate-pulse rounded-[8px] border border-[#2e261c] bg-[#1b1712]" />
+          {!ready ? (
+            <div className="h-64 animate-pulse rounded-[8px] border border-[#231d16] bg-[#12100d]" />
           ) : empty ? (
+            /* On the dark ground this is the same dead end the rest of the site
+               shows, on the column's own left edge. Given its own panel it was
+               a 480px box floating in a page a thousand pixels taller. */
             <EmptyState
-              className="rounded-[8px]"
-              style={{ backgroundColor: "#1b1712", borderColor: "#2e261c" }}
-              line="The room stays empty until it knows what you have watched."
-              hint="Mark a few titles seen, or save some for later. They arrive here ready to shelve."
+              line="Nothing on the shelves yet."
+              hint="Mark titles watched, or save them for later. They land here ready to arrange."
               action={
                 <>
                   <Link to="/watched" className={EMPTY_ACTION_CLASS}>
                     Rate titles
                   </Link>
-                  <Link
-                    to="/"
-                    className="inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-[#3d3325] px-4 py-2 text-[13px] font-semibold text-[#e2dccf] transition-colors hover:border-primary"
-                  >
+                  <Link to="/" className={EMPTY_ACTION_QUIET_CLASS}>
                     Browse the catalog
                   </Link>
                 </>
@@ -646,7 +690,10 @@ function LibraryPage() {
                           {sh.name}
                         </div>
                         <div className="libtools">
-                          <span className="mr-1 font-mono text-[11px] tabular-nums text-[#e4d8c0]/60">
+                          {/* On a phone the brass plate and this count ran into
+                              each other, and the count is the half you can get
+                              by looking at the shelf. */}
+                          <span className="mr-1 hidden font-mono text-[11px] tabular-nums text-[#e4d8c0]/60 sm:inline">
                             {sh.items.length} {sh.items.length === 1 ? "title" : "titles"}
                           </span>
                           <BayTool
@@ -796,7 +843,11 @@ function LibraryPage() {
               )}
             </>
           )}
-          <p className="mt-10 text-[12px] text-[#8d8472]">Title data from TMDB and OMDb</p>
+          {/* The room carries its own attribution only while it is lit, when
+              the warm ground hides the site footer's palette a screen below.
+              On the dark empty room the footer is right there, so this line
+              was the same credit twice with a void between them. */}
+          {lit && <p className="mt-10 text-[12px] text-[#8d8472]">Title data from TMDB and OMDb</p>}
         </main>
       </div>
 

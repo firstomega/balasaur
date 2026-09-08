@@ -54,12 +54,19 @@ export function DinoRun() {
   );
 
   return (
-    // z-20 puts the dino under every fixed control on the site: the cookie bar
-    // sits at z-50 and the top bar at z-30, so a joke can no longer cover a
-    // consent button. It ran at z-60 and drew straight across the banner. It is
-    // also pointer-events-none, so nothing under it can be blocked from a tap.
+    // The run sits in the band directly above the consent bar. The bar
+    // publishes its own height as --consent-h, which is 0px when it is not up,
+    // so one number puts the dino on the floor of the window for a returning
+    // visitor and just above the bar for a first-time one. Before this it ran
+    // at a fixed distance from the bottom and a 90px bar on a 390px phone hid
+    // the whole joke from exactly the person most likely to type it.
+    //
+    // z-20 keeps it under every fixed control (the bar is z-50, the top bar
+    // z-30) and pointer-events-none keeps it out of the way of a tap, so it
+    // cannot cover or block a control even while the two overlap.
     <div
-      className="pointer-events-none fixed bottom-3 left-0 z-20 w-full overflow-hidden"
+      className="pointer-events-none fixed left-0 z-20 w-full overflow-hidden"
+      style={{ bottom: "calc(var(--consent-h, 0px) + 12px)" }}
       aria-hidden="true"
     >
       {mode === "run" ? (

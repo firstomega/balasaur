@@ -120,8 +120,8 @@ export function TasteCardPreview({
           </div>
         )}
         {example && (
-          <span className="absolute right-3 top-3 rounded-full bg-background/85 px-3 py-1 font-mono text-[11px] tracking-[0.08em] text-text-muted">
-            EXAMPLE
+          <span className="absolute right-3 top-3 rounded-full bg-background/85 px-3 py-1 text-[11.5px] font-black tracking-[-0.01em] text-text-muted">
+            Example
           </span>
         )}
       </div>

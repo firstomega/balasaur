@@ -6,6 +6,7 @@ import {
   EMPTY_ACTION_CLASS,
   EMPTY_ACTION_QUIET_CLASS,
 } from "@/components/balasaur/EmptyState";
+import { DinoMark, type DinoMood } from "@/components/balasaur/DinoMark";
 import { EpisodeHeatmap } from "@/components/balasaur/EpisodeHeatmap";
 import { TasteCardPreview } from "@/components/balasaur/TasteCardPreview";
 import { ScoreBadge } from "@/components/balasaur/ScoreBadge";
@@ -23,9 +24,9 @@ import { noindexMeta } from "@/lib/seo";
 // Production builds 404 this route from the loader and it is not in the
 // sitemap. Posters are inline SVG data URIs so they draw offline.
 
-type Panel = "heatmap" | "taste" | "glow" | "empty";
+type Panel = "heatmap" | "taste" | "glow" | "empty" | "dino";
 
-const PANELS: Panel[] = ["heatmap", "taste", "glow", "empty"];
+const PANELS: Panel[] = ["heatmap", "taste", "glow", "empty", "dino"];
 
 export const Route = createFileRoute("/dev/refine")({
   validateSearch: (s: Record<string, unknown>): { panel: Panel } => ({
@@ -376,6 +377,7 @@ function DevRefinePage() {
         {panel === "taste" && <TastePanel />}
         {panel === "glow" && <GlowPanel />}
         {panel === "empty" && <EmptyPanel />}
+        {panel === "dino" && <DinoPanel />}
       </main>
     </div>
   );
@@ -399,16 +401,11 @@ function TastePanel() {
   if (!profile.archetype) {
     return <p className="text-[15px] text-text-muted">The seed did not reach an archetype.</p>;
   }
+  // The card prints the name and the sentence that proves it, so the panel does
+  // not print them again above it.
   return (
     <section>
-      <h1 className="text-[28px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
-        {profile.archetype.name}
-      </h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-text-muted">
-        {profile.archetype.evidence}
-      </p>
       <TasteCardPreview
-        className="mt-6"
         options={{
           name: profile.archetype.name,
           evidence: profile.archetype.evidence,
@@ -469,6 +466,67 @@ function GlowPanel() {
   );
 }
 
+// The mark at the sizes it actually ships at, on both grounds, so the depth
+// pass can be judged where it has to survive: 16px in the top bar, 96px in an
+// empty state.
+const DINO_SIZES = [16, 24, 40, 64, 96];
+const DINO_MOODS: DinoMood[] = ["calm", "chomp", "sleep"];
+
+function DinoLadder({ light }: { light?: boolean }) {
+  return (
+    <div
+      className={
+        "rounded-[5px] p-6 " + (light ? "bg-[#f4f3ef] text-[#1e59d6]" : "bg-[#08090B] text-primary")
+      }
+    >
+      <div className="flex flex-col gap-6">
+        {DINO_MOODS.map((mood) => (
+          <div key={mood} className="flex flex-wrap items-end gap-6">
+            {DINO_SIZES.map((size) => (
+              <div key={size} className="flex flex-col items-center gap-2">
+                <DinoMark mood={mood} size={size} />
+                <span
+                  className={
+                    "font-mono text-[11px] tabular-nums " +
+                    (light ? "text-[#6b6659]" : "text-text-dim")
+                  }
+                >
+                  {size}
+                </span>
+              </div>
+            ))}
+            {[16, 24, 40].map((size) => (
+              <div key={"solid" + size} className="flex flex-col items-center gap-2">
+                <DinoMark mood={mood} size={size} filled />
+                <span
+                  className={
+                    "font-mono text-[11px] tabular-nums " +
+                    (light ? "text-[#6b6659]" : "text-text-dim")
+                  }
+                >
+                  {size}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DinoPanel() {
+  return (
+    <section className="flex flex-col gap-6">
+      <h1 className="text-[24px] font-black tracking-[-0.02em] text-text-bright">
+        The mark at every size it ships at
+      </h1>
+      <DinoLadder />
+      <DinoLadder light />
+    </section>
+  );
+}
+
 function EmptyPanel() {
   return (
     <section className="flex flex-col gap-8">
@@ -483,19 +541,37 @@ function EmptyPanel() {
       />
       <EmptyState
         mood="chomp"
+        className="rounded-[8px]"
+        style={{ backgroundColor: "#1b1712" }}
         line="The room stays empty until it knows what you have watched."
         hint="Mark a few titles seen, or save some for later. They arrive here ready to shelve."
         action={
-          <div className="flex flex-wrap items-center justify-center gap-2">
+          <>
             <button type="button" className={EMPTY_ACTION_CLASS}>
               Rate titles
             </button>
             <button type="button" className={EMPTY_ACTION_QUIET_CLASS}>
               Browse the catalog
             </button>
-          </div>
+          </>
         }
       />
+      {/* The deck's dead end, in the narrow column the deck actually uses. It
+          is the worst case for the block: the mark keeps its size and the
+          claim has 320px to wrap in. */}
+      <div className="mx-auto flex w-full max-w-md items-center px-4">
+        <EmptyState
+          className="w-full"
+          mood="chomp"
+          line="You have sorted every title in the deck."
+          hint="New releases join it overnight. Until then, the grid holds the whole catalog."
+          action={
+            <button type="button" className={EMPTY_ACTION_QUIET_CLASS}>
+              My library
+            </button>
+          }
+        />
+      </div>
       <div className="rounded-[5px] border border-border bg-panel p-5">
         <p className="text-[13px] text-text-dim">Inline, inside a panel that already exists.</p>
         <EmptyState

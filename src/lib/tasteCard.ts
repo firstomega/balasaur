@@ -14,9 +14,10 @@
 // `tintAlpha` caps how strong each lamp may burn so white type keeps its
 // contrast whatever the posters happened to be.
 //
-// Nothing here blocks on a network. Posters are fetched with a timeout and a
-// failed one draws as a titled tile, so a slow CDN or a blocked image costs a
-// thumbnail and never the card.
+// Nothing here blocks on a network. Every tile is painted in its own title's
+// colour before its poster is drawn over it, so an image that is slow, blocked
+// or missing costs the artwork and never leaves a hole: the tile keeps its
+// colour and prints the title instead.
 //
 // The wrap and share helpers come from the arcade's share card so the two
 // images behave identically in the share sheet.
@@ -25,7 +26,15 @@ import { dinoPaths, dinoWeight, DINO_MARK_ORIGIN_Y } from "@/components/balasaur
 import { canShareFiles, wrapLines } from "@/lib/arcade/shareImage";
 import { posterColorsFromPixels } from "@/lib/posterColor";
 import { tmdbImage } from "@/lib/tmdbImage";
-import { cardTint, parseHex, tintAlpha, type CardPoster, type CardTint } from "@/lib/taste";
+import {
+  CARD_GROUND,
+  cardTint,
+  luminance,
+  parseHex,
+  tintAlpha,
+  type CardPoster,
+  type CardTint,
+} from "@/lib/taste";
 
 export const TASTE_CARD_W = 1080;
 export const TASTE_CARD_H = 1920;
@@ -250,15 +259,69 @@ function colorsFromImage(img: HTMLImageElement): { colorA: string; colorB: strin
 }
 
 /** Stored colours win; a poster without them supplies its own from its pixels. */
-function tintOf(posters: CardPoster[], images: (HTMLImageElement | null)[]): CardTint {
-  const filled = posters.map((p, i) => {
+function withColors(posters: CardPoster[], images: (HTMLImageElement | null)[]): CardPoster[] {
+  return posters.map((p, i) => {
     if (parseHex(p.colorA)) return p;
     const img = images[i];
     if (!img) return p;
     const found = colorsFromImage(img);
     return found ? { ...p, colorA: found.colorA, colorB: found.colorB } : p;
   });
-  return cardTint(filled);
+}
+
+type Rgb = [number, number, number];
+type RgbIn = readonly [number, number, number];
+
+function css([r, g, b]: RgbIn): string {
+  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+}
+
+function mixRgb(a: RgbIn, b: RgbIn, t: number): Rgb {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+/** A tile is dark enough for white type over it when its luminance is here or
+ *  under, which is 4.5:1 with room to spare. */
+const TILE_MAX_LUMINANCE = 0.12;
+
+/**
+ * The colour a tile is painted under its poster. A stored colour is used as it
+ * is until it would be too bright to print a title on, and then scaled down
+ * until it is not, so a poster whose colour is a bright yellow still gives a
+ * yellow tile rather than a white one.
+ */
+function tileRgb(hex: string | undefined, fallback: Rgb): Rgb {
+  const rgb = (parseHex(hex) as Rgb | null) ?? fallback;
+  let f = 1;
+  while (f > 0.24 && luminance([rgb[0] * f, rgb[1] * f, rgb[2] * f]) > TILE_MAX_LUMINANCE) {
+    f -= 0.04;
+  }
+  return [rgb[0] * f, rgb[1] * f, rgb[2] * f];
+}
+
+/**
+ * The biggest size at which a title fits a tile whole. Nothing is dropped: a
+ * size that would lose a word is rejected rather than printed short.
+ */
+function fitTitle(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines = 4,
+): { size: number; lines: string[] } {
+  const whole = text.split(/\s+/).filter(Boolean).join(" ");
+  const sizes = [46, 40, 35, 31, 27, 23, 19];
+  let last = { size: sizes[sizes.length - 1], lines: [text] };
+  for (const size of sizes) {
+    ctx.font = `900 ${size}px ${SANS}`;
+    const measure = (s: string) => ctx.measureText(s).width;
+    const lines = wrapLines(measure, text, maxWidth, maxLines);
+    last = { size, lines };
+    if (lines.join(" ") === whole && lines.every((l) => measure(l) <= maxWidth)) {
+      return { size, lines };
+    }
+  }
+  return last;
 }
 
 /**
@@ -321,7 +384,8 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
     ensureFonts(),
   ]);
 
-  const tint = tintOf(posters, images);
+  const coloured = withColors(posters, images);
+  const tint = cardTint(coloured);
   paintGround(ctx, tint);
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
@@ -385,7 +449,7 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
   ctx.font = `600 34px ${MONO}`;
   ctx.fillStyle = BRIGHT;
   ctx.fillText(o.url ?? "balasaur.com/taste", PAD, footerY - 40);
-  ctx.font = `400 22px ${MONO}`;
+  ctx.font = `500 24px ${SANS}`;
   ctx.fillStyle = DIM;
   ctx.fillText("Title data from TMDB and OMDb", PAD, footerY);
 
@@ -423,23 +487,56 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
   ctx.fillRect(0, bandTop - 1, TASTE_CARD_W, 1);
   ctx.fillRect(0, bandTop + bandH, TASTE_CARD_W, 1);
 
+  // A title with no stored colour and no readable poster takes the card's own
+  // light, stepped across the band, so four unknown titles are still four
+  // different tiles rather than four holes.
+  const lampA = (parseHex(tint.a) as Rgb | null) ?? [59, 130, 246];
+  const lampB = (parseHex(tint.b) as Rgb | null) ?? [159, 230, 160];
+  // Walked from one lamp to the other and sunk toward the ground, so a card of
+  // borrowed light stays quieter than a card lit by four real posters.
+  const rampAt = (i: number): Rgb =>
+    mixRgb(mixRgb(lampA, lampB, n > 1 ? i / (n - 1) : 0), CARD_GROUND, 0.42);
+
+  // Every title standing in for a missing poster is set at one size: the
+  // largest the longest of them can hold. Four tiles at four sizes read as an
+  // accident.
+  const unlit = posters.filter((_, i) => !images[i]);
+  const titleSize = unlit.length
+    ? Math.min(...unlit.map((p) => fitTitle(ctx, p.title, tileW - 44).size))
+    : 0;
+
   posters.forEach((p, i) => {
     const px = i * (tileW + gap);
+    const base = tileRgb(coloured[i]?.colorA, rampAt(i));
     ctx.save();
     ctx.beginPath();
     ctx.rect(px, bandTop, tileW, bandH);
     ctx.clip();
-    ctx.fillStyle = PANEL;
+
+    // The colour goes down first, every time. The poster is drawn over it, so a
+    // tile whose image never arrives is the same tile with its title showing.
+    const wash = ctx.createLinearGradient(px, bandTop, px, bandTop + bandH);
+    wash.addColorStop(0, css(base));
+    wash.addColorStop(1, css(mixRgb(base, CARD_GROUND, 0.68)));
+    ctx.fillStyle = wash;
     ctx.fillRect(px, bandTop, tileW, bandH);
+
     const img = images[i];
     if (img) {
       drawCover(ctx, img, px, bandTop, tileW, bandH);
     } else {
-      // No image: the title carries the tile instead of a hole.
-      ctx.fillStyle = SENTENCE;
-      ctx.font = `600 26px ${SANS}`;
-      const lines = wrapLines(measure, p.title, tileW - 36, 5);
-      lines.forEach((line, li) => ctx.fillText(line, px + 18, bandTop + 52 + li * 32));
+      // No artwork: the title is the tile.
+      const step = Math.round(titleSize * 1.1);
+      ctx.font = `900 ${titleSize}px ${SANS}`;
+      const lines = wrapLines(measure, p.title, tileW - 44, 4);
+      ctx.fillStyle = BRIGHT;
+      ctx.textAlign = "center";
+      let ty = bandTop + (bandH - lines.length * step) / 2 + titleSize * 0.82;
+      for (const line of lines) {
+        ctx.fillText(line, px + tileW / 2, ty);
+        ty += step;
+      }
+      ctx.textAlign = "left";
     }
     ctx.restore();
 

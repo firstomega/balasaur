@@ -129,7 +129,11 @@ function ListsPage() {
   const items = grouped[tab].map((e) => e.item);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // No min-h-screen here. The root layout already holds the footer at the
+    // bottom of a short page; a second full-viewport box inside it made the
+    // page exactly one footer taller than the window, so an empty list
+    // scrolled 141px into nothing.
+    <div className="bg-background text-foreground">
       <TopBar />
       <main id="main" className="mx-auto max-w-[1600px] px-4 py-6">
         <h1 className="mb-4 text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
