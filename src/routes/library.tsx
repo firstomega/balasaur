@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
+import {
+  EmptyState,
+  EMPTY_ACTION_CLASS,
+  EMPTY_ACTION_QUIET_CLASS,
+} from "@/components/balasaur/EmptyState";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useShelves } from "@/hooks/useShelves";
 import {
@@ -57,20 +62,33 @@ const BOARDTEX =
 
 // The room's stylesheet. Scoped under .libroom so the rest of the site keeps
 // its terminal palette; the reading room is one warm island.
+//
+// The light is wired to the shelves. `.lit` is the room proper, warm wood and
+// lamp spill, and it only comes on once there is something on a shelf to light.
+// Before that (a first visit, and the served shell everyone gets) the ground is
+// the site's own black with one low pool over the top of the column: the same
+// wash over an empty page is a brown stain across half a screen, and it ended
+// in a hard horizontal edge where the content stopped. The room now runs to the
+// footer as well, so nothing terminates mid-page.
 const ROOM_CSS = `
 .libroom{position:relative; overflow:hidden;
+  background:
+    radial-gradient(620px 300px at 26% 120px, rgba(214,166,96,.10), transparent 70%),
+    #08090b;
+}
+.libroom.lit{
   background:
     radial-gradient(120% 70% at 50% -4%, rgba(214,166,96,.13), transparent 60%),
     radial-gradient(90% 55% at 50% 8%, rgba(190,142,80,.09), transparent 70%),
     #15100c;
 }
-.libroom.late{background:
+.libroom.lit.late{background:
     radial-gradient(120% 70% at 50% -4%, rgba(214,166,96,.07), transparent 60%),
     #0e0b08;}
 .libroom .vig{position:absolute; inset:0; pointer-events:none; z-index:30;
   background:radial-gradient(130% 90% at 50% 30%, transparent 55%, rgba(0,0,0,.5) 100%);}
 .libroom{--lampglow:.17}
-.libroom.late{--lampglow:.27}
+.libroom.lit.late{--lampglow:.27}
 .libcase{position:relative; border-radius:8px; padding:14px 14px 18px;
   background:
     linear-gradient(180deg, rgba(255,214,150,.10), rgba(0,0,0,.28) 30%, rgba(0,0,0,.45)),
@@ -138,6 +156,12 @@ const ROOM_CSS = `
 .libghost img{width:100%; height:100%; object-fit:cover;}
 .libtools{position:absolute; top:9px; right:8px; z-index:5; display:flex; align-items:center; gap:3px;}
 `;
+
+/** A count inside a sentence. Mono is for the figure only: the words beside it
+ *  are prose and set in the body face like the rest of the page. */
+function Num({ children }: { children: React.ReactNode }) {
+  return <span className="font-mono tabular-nums text-[#e4d8c0]">{children}</span>;
+}
 
 function LibraryPage() {
   const { statuses, ready: statusReady } = useUserStatus();
@@ -554,73 +578,105 @@ function LibraryPage() {
   };
 
   const totalShelved = onShelf.size;
+  const ready = mounted && statusReady && shelvesReady;
   const empty = statusReady && pool.size === 0;
+  // Nothing filed yet means nothing to light, so the room stays dark and the
+  // lamp switch stays away with it.
+  const lit = ready && !empty;
+  const countParts = [
+    shelves.length > 0 && {
+      key: "shelves",
+      n: shelves.length,
+      label: shelves.length === 1 ? "shelf" : "shelves",
+    },
+    totalShelved > 0 && { key: "shelved", n: totalShelved, label: "on the shelves" },
+    unshelved.length > 0 && { key: "waiting", n: unshelved.length, label: "waiting" },
+  ].filter(Boolean) as { key: string; n: number; label: string }[];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // No min-h-screen here. The root layout already holds the footer at the
+    // bottom of a short page; a second full-viewport box inside it made the
+    // page exactly one footer taller than the window, so an empty room
+    // scrolled 141px into nothing. The room keeps `grow` so a lit one still
+    // runs the height of whatever the shelves need.
+    <div className="flex flex-col bg-background text-foreground">
       <TopBar />
       <style>{ROOM_CSS}</style>
-      <div className={"libroom" + (late ? " late" : "")}>
-        <div className="vig" aria-hidden="true" />
+      <div className={"libroom grow" + (lit ? " lit" : "") + (lit && late ? " late" : "")}>
+        {lit && <div className="vig" aria-hidden="true" />}
         <main id="main" className="relative z-10 mx-auto w-full max-w-[1080px] px-4 py-7 sm:px-5">
           <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-[26px] font-bold tracking-tight text-[#f7f2e7]">My Library</h1>
-              <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#bdb29c]">
-                {shelves.length} {shelves.length === 1 ? "shelf" : "shelves"} · {totalShelved}{" "}
-                shelved · {unshelved.length} unshelved
-              </p>
+              <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-[#f7f2e7]">
+                My Library
+              </h1>
+              {/* Three zeros over an empty room said nothing the empty state
+                  below did not already say in a sentence, so the line waits
+                  until there is something to count, and each figure drops out
+                  once it is nothing. "0 waiting" is a number nobody wanted.
+                  Numbers keep the mono face; the words around them do not. */}
+              {lit && countParts.length > 0 && (
+                <p className="mt-0.5 text-[12.5px] text-[#bdb29c]">
+                  {countParts.map((part, i) => (
+                    <span key={part.key}>
+                      {i > 0 && " · "}
+                      <Num>{part.n}</Num> {part.label}
+                    </span>
+                  ))}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Link
                 to="/lists"
-                className="font-mono text-[11px] uppercase tracking-wider text-[#8d8472] underline-offset-2 hover:text-[#f7f2e7] hover:underline"
+                className="text-[13px] font-semibold text-[#8d8472] underline-offset-2 hover:text-[#f7f2e7] hover:underline"
               >
-                Buckets view
+                My lists
               </Link>
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#8d8472]">
-                Lights
-              </span>
-              <button
-                type="button"
-                onClick={() => toggleLight(false)}
-                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${!late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
-              >
-                Evening
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleLight(true)}
-                className={`cursor-pointer rounded-[4px] border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
-              >
-                Late
-              </button>
+              {/* A light switch for a room with nothing in it is a control with
+                  nothing to act on, so it arrives with the shelves. */}
+              {lit && (
+                <>
+                  <span className="text-[12px] font-semibold text-[#8d8472]">Lights</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleLight(false)}
+                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${!late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                  >
+                    Evening
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleLight(true)}
+                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                  >
+                    Late
+                  </button>
+                </>
+              )}
             </div>
           </header>
 
-          {!mounted || !statusReady || !shelvesReady ? (
-            <div className="h-64 animate-pulse rounded-[8px] border border-[#2e261c] bg-[#1b1712]" />
+          {!ready ? (
+            <div className="h-64 animate-pulse rounded-[8px] border border-[#231d16] bg-[#12100d]" />
           ) : empty ? (
-            <div className="rounded-[8px] border border-[#2e261c] bg-[#1b1712] p-10 text-center">
-              <p className="mx-auto max-w-md text-[14px] leading-relaxed text-[#bdb29c]">
-                The room is empty until it knows what you have watched. Mark a few titles seen, or
-                save some for later, and they arrive here ready to shelve.
-              </p>
-              <div className="mt-5 flex justify-center gap-3">
-                <Link
-                  to="/watched"
-                  className="rounded-[5px] bg-primary px-4 py-2 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  Rate titles
-                </Link>
-                <Link
-                  to="/"
-                  className="rounded-[5px] border border-[#3d3325] px-4 py-2 text-[13px] font-medium text-[#e2dccf] hover:border-primary"
-                >
-                  Browse the catalog
-                </Link>
-              </div>
-            </div>
+            /* On the dark ground this is the same dead end the rest of the site
+               shows, on the column's own left edge. Given its own panel it was
+               a 480px box floating in a page a thousand pixels taller. */
+            <EmptyState
+              line="Nothing on the shelves yet."
+              hint="Mark titles watched, or save them for later. They land here ready to arrange."
+              action={
+                <>
+                  <Link to="/watched" className={EMPTY_ACTION_CLASS}>
+                    Rate titles
+                  </Link>
+                  <Link to="/" className={EMPTY_ACTION_QUIET_CLASS}>
+                    Browse the catalog
+                  </Link>
+                </>
+              }
+            />
           ) : (
             <>
               <div className="libcase">
@@ -634,7 +690,10 @@ function LibraryPage() {
                           {sh.name}
                         </div>
                         <div className="libtools">
-                          <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.1em] text-[#e4d8c0]/60">
+                          {/* On a phone the brass plate and this count ran into
+                              each other, and the count is the half you can get
+                              by looking at the shelf. */}
+                          <span className="mr-1 hidden font-mono text-[11px] tabular-nums text-[#e4d8c0]/60 sm:inline">
                             {sh.items.length} {sh.items.length === 1 ? "title" : "titles"}
                           </span>
                           <BayTool
@@ -740,23 +799,22 @@ function LibraryPage() {
               {unshelved.length > 0 && (
                 <section className="mt-9">
                   <div className="flex flex-wrap items-baseline gap-3">
-                    <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#8d8472]">
-                      Unshelved ·{" "}
-                      {q ? `${unshelvedShown.length} of ${unshelved.length}` : unshelved.length}
+                    <span className="text-[17px] font-black tracking-[-0.02em] text-[#e4d8c0]">
+                      Not on a shelf yet{" "}
+                      <span className="font-mono text-[13px] tabular-nums text-[#8d8472]">
+                        {q ? `${unshelvedShown.length} of ${unshelved.length}` : unshelved.length}
+                      </span>
                     </span>
                     <input
                       type="search"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Find a title"
-                      aria-label="Find an unshelved title"
+                      aria-label="Find a title that is not on a shelf"
                       className="ml-auto w-[190px] rounded-[5px] border border-[#3d3325] bg-[#1b1712] px-3 py-1.5 text-[13px] text-[#f7f2e7] placeholder:text-[#8d8472] focus:border-primary focus:outline-none"
                     />
                   </div>
-                  <p className="mb-2 mt-1 text-[12.5px] text-[#8d8472]">
-                    Everything you have seen or saved that is not on a shelf yet.
-                  </p>
-                  <div className="libwall border-b-2 border-dashed border-[#3d3325] pb-2">
+                  <div className="libwall mt-2 border-b-2 border-dashed border-[#3d3325] pb-2">
                     <div
                       className="librow"
                       data-container="unshelved"
@@ -776,7 +834,7 @@ function LibraryPage() {
                       ))}
                       {unshelvedShown.length === 0 && (
                         <div className="m-auto self-center text-[13px] text-[#8d8472]">
-                          No unshelved title matches.
+                          No title here matches.
                         </div>
                       )}
                     </div>
@@ -785,9 +843,11 @@ function LibraryPage() {
               )}
             </>
           )}
-          <p className="mt-10 font-mono text-[10px] uppercase tracking-[0.1em] text-[#8d8472]">
-            Title data from TMDB and OMDb
-          </p>
+          {/* The room carries its own attribution only while it is lit, when
+              the warm ground hides the site footer's palette a screen below.
+              On the dark empty room the footer is right there, so this line
+              was the same credit twice with a void between them. */}
+          {lit && <p className="mt-10 text-[12px] text-[#8d8472]">Title data from TMDB and OMDb</p>}
         </main>
       </div>
 
@@ -869,7 +929,7 @@ function ShelfItem({
       aria-label={
         item.title +
         (container === "unshelved"
-          ? ", unshelved"
+          ? ", not on a shelf"
           : `, position ${pos} of ${total} on ${shelfName}`)
       }
       onPointerDown={(e) => onPointerDown(e, item.id, container)}
@@ -1000,12 +1060,12 @@ function Plaque({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="h-6 w-6 cursor-pointer rounded-[5px] font-mono text-[13px] text-[#8d8472] hover:text-[#f7f2e7]"
+            className="h-6 w-6 cursor-pointer rounded-[5px] text-[15px] text-[#8d8472] hover:text-[#f7f2e7]"
           >
             ×
           </button>
         </div>
-        <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[#bdb29c]">
+        <p className="mt-0.5 font-mono text-[12px] tabular-nums text-[#bdb29c]">
           {it.mediaType === "tv" ? "TV · " : ""}
           {it.year}
         </p>
@@ -1056,7 +1116,7 @@ function Plaque({
         ) : (
           <>
             {shelf && idx >= 0 && (
-              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.06em] text-[#8d8472]">
+              <p className="mt-1 font-mono text-[11.5px] tabular-nums text-[#8d8472]">
                 Placed {idx + 1} of {shelf.items.length}
                 {others.length > 0 && (
                   <>
@@ -1106,7 +1166,7 @@ function Plaque({
               )}
               {targets.length > 0 && (
                 <>
-                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#8d8472]">
+                  <p className="mt-1 text-[12px] font-bold tracking-[-0.01em] text-[#8d8472]">
                     {onAShelf ? "Also place on" : "Place on"}
                   </p>
                   {targets.map((s) => (
@@ -1122,7 +1182,7 @@ function Plaque({
                         <button
                           type="button"
                           aria-label={`Slot ${it.title} into ${s.name}`}
-                          className={btn + " font-mono text-[11px]"}
+                          className={btn + " text-[12px]"}
                           onClick={() => onSlot(s.id)}
                         >
                           Slot it
@@ -1135,7 +1195,7 @@ function Plaque({
               <Link
                 to={detailTo}
                 params={{ id: detailId }}
-                className="mt-1 text-center font-mono text-[11px] uppercase tracking-wider text-primary hover:text-primary/80"
+                className="mt-1 text-center text-[13px] font-semibold text-primary hover:text-primary/80"
               >
                 Open title page
               </Link>

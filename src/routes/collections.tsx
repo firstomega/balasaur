@@ -1,6 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { TopBar } from "@/components/balasaur/TopBar";
+import {
+  EmptyState,
+  EMPTY_ACTION_CLASS,
+  EMPTY_ACTION_QUIET_CLASS,
+} from "@/components/balasaur/EmptyState";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
@@ -38,6 +43,14 @@ export const Route = createFileRoute("/collections")({
     }),
     links: [canonicalLink(`${SITE_ORIGIN}/collections`)],
   }),
+  // Three states, told apart. Rows in hand: the page. Rows still coming, on a
+  // connection slow enough to notice: the shelf outline, which says the click
+  // landed. Rows that will not come: the dead end, which says so and offers a
+  // way out. Without the first two a visitor waiting on the index was shown a
+  // frozen previous page, and a request that failed took the whole site chrome
+  // with it, search bar included.
+  pendingComponent: CollectionsPending,
+  errorComponent: CollectionsError,
   component: CollectionsPage,
 });
 
@@ -170,12 +183,14 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
           {c.top_titles.slice(0, 3).map((t, i) => (
             <span
               key={i}
-              className="flex items-baseline gap-2.5 border-b border-border/60 py-2 font-mono text-[12px] last:border-b-0"
+              className="flex items-baseline gap-2.5 border-b border-border/60 py-2 text-[13px] last:border-b-0"
             >
-              <span className="w-3 shrink-0 text-text-dim">{i + 1}</span>
+              <span className="w-3 shrink-0 font-mono tabular-nums text-text-dim">{i + 1}</span>
               <span className="truncate text-text">{t.title}</span>
               {typeof t.score === "number" && (
-                <span className="ml-auto shrink-0 pl-2 text-rating">{t.score}</span>
+                <span className="ml-auto shrink-0 pl-2 font-mono tabular-nums text-rating">
+                  {t.score}
+                </span>
               )}
             </span>
           ))}
@@ -184,7 +199,7 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
       <span className="mt-3.5 block text-[19px] font-semibold leading-tight tracking-tight text-text-bright group-hover:text-primary sm:text-[21px]">
         {chip && (
           <span
-            className={`mr-2 inline-grid h-5 place-items-center rounded-[4px] px-1.5 align-[2px] font-mono text-[11px] font-bold ${chip.className}`}
+            className={`mr-2 inline-grid h-5 place-items-center rounded-[4px] px-1.5 align-[2px] text-[11px] font-black tracking-[-0.01em] ${chip.className}`}
           >
             {chip.label}
           </span>
@@ -207,7 +222,7 @@ function ShelfCard({ c, progress }: { c: CollectionSummary; progress?: string | 
       <span className="relative block w-max">
         {chip && (
           <span
-            className={`absolute -left-1.5 -top-1.5 z-10 grid h-6 min-w-6 place-items-center rounded-[5px] px-1.5 font-mono text-[11px] font-bold shadow-[0_3px_10px_rgba(0,0,0,0.6)] ${chip.className}`}
+            className={`absolute -left-1.5 -top-1.5 z-10 grid h-6 min-w-6 place-items-center rounded-[5px] px-1.5 text-[11px] font-black tracking-[-0.01em] shadow-[0_3px_10px_rgba(0,0,0,0.6)] ${chip.className}`}
           >
             {chip.label}
           </span>
@@ -221,7 +236,7 @@ function ShelfCard({ c, progress }: { c: CollectionSummary; progress?: string | 
           size="w185"
         />
         {era && (
-          <span className="absolute bottom-2 left-2.5 z-10 font-mono text-[22px] font-bold tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.95)]">
+          <span className="absolute bottom-2 left-2.5 z-10 font-mono text-[22px] font-bold tabular-nums tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.95)]">
             {era}
           </span>
         )}
@@ -233,7 +248,7 @@ function ShelfCard({ c, progress }: { c: CollectionSummary; progress?: string | 
           before opening one. Quality is taken on trust; the old "top 92" was
           a verdict nobody asked for and, at a standard deviation of 4.1
           across 673 shelves, one that could not separate them anyway. */}
-      <span className="mt-0.5 block font-mono text-[11px] text-text-dim">
+      <span className="mt-0.5 block font-mono text-[11px] tabular-nums text-text-dim">
         {progress ?? collectionCountLine(c.item_count)}
       </span>
     </Link>
@@ -252,8 +267,8 @@ function Shelf({
   return (
     <section className="mt-11">
       <div className="flex items-baseline gap-3">
-        <h2 className="text-[17px] font-semibold tracking-tight text-text-bright">{title}</h2>
-        {meta && <span className="font-mono text-[12px] text-text-dim">{meta}</span>}
+        <h2 className="text-[19px] font-black tracking-[-0.02em] text-text-bright">{title}</h2>
+        {meta && <span className="font-mono text-[12px] tabular-nums text-text-dim">{meta}</span>}
       </div>
       <div className="mt-3.5">
         <ScrollRail className="gap-2">{children}</ScrollRail>
@@ -300,9 +315,7 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
   if (rows.length === 0) return null;
   return (
     <div className="mt-8">
-      <h3 className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
-        {label}
-      </h3>
+      <h3 className="mb-2.5 text-[18px] font-black tracking-[-0.02em] text-text-bright">{label}</h3>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] border-collapse">
           <thead>
@@ -311,7 +324,7 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
               {cols.map((col) => (
                 <th
                   key={col}
-                  className="px-1 pb-1.5 text-center font-mono text-[11px] font-normal uppercase tracking-wider text-text-dim"
+                  className="px-1 pb-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-text-dim"
                 >
                   {col}
                 </th>
@@ -368,13 +381,11 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
   const decades = [...byDecade.keys()].sort().reverse();
   return (
     <div className="mt-8">
-      <h3 className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
-        By year
-      </h3>
+      <h3 className="mb-2.5 text-[18px] font-black tracking-[-0.02em] text-text-bright">By year</h3>
       <div className="space-y-1">
         {decades.map((dec) => (
           <div key={dec} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-            <span className="w-14 shrink-0 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+            <span className="w-14 shrink-0 font-mono text-[11px] tabular-nums tracking-wider text-text-dim">
               {dec}
             </span>
             <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -391,7 +402,7 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
                     params={{ slug: c.slug }}
                     aria-label={c.title}
                     title={c.title}
-                    className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
+                    className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] tabular-nums text-text-muted transition-colors hover:bg-panel hover:text-primary"
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-[2px] ${c.media_type === "tv" ? "bg-media-tv" : "bg-media-movie"}`}
@@ -426,7 +437,7 @@ function PeopleIndex({ people }: { people: CollectionSummary[] }) {
     <div className="mt-3.5 space-y-1">
       {initials.map((letter) => (
         <div key={letter} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-          <span className="w-4 shrink-0 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          <span className="w-4 shrink-0 font-mono text-[12px] uppercase tracking-wider text-text-dim">
             {letter}
           </span>
           <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -435,10 +446,10 @@ function PeopleIndex({ people }: { people: CollectionSummary[] }) {
                 key={c.slug}
                 to="/best/$slug"
                 params={{ slug: c.slug }}
-                className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
+                className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[12px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
               >
                 {c.title.replace(/^The Best /, "")}
-                <span className="tabular-nums text-text-dim">{c.item_count}</span>
+                <span className="font-mono tabular-nums text-text-dim">{c.item_count}</span>
               </Link>
             ))}
           </div>
@@ -514,8 +525,8 @@ function DualIndexMatrix({
   return (
     <div className="mt-8">
       <div className="mb-2.5 flex items-center gap-4">
-        <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">{label}</h3>
-        <span className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+        <h3 className="text-[18px] font-black tracking-[-0.02em] text-text-bright">{label}</h3>
+        <span className="flex items-center gap-3 text-[12px] font-semibold text-text-dim">
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-[2px] bg-media-movie" /> Movies
           </span>
@@ -532,7 +543,7 @@ function DualIndexMatrix({
               {cols.map((col) => (
                 <th
                   key={col}
-                  className="px-1 pb-1.5 text-center font-mono text-[11px] font-normal uppercase tracking-wider text-text-dim"
+                  className="px-1 pb-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-text-dim"
                 >
                   {col}
                 </th>
@@ -586,6 +597,92 @@ function DualIndexMatrix({
   );
 }
 
+/** The page's shell: heading and site chrome, shared by all three states so a
+ *  slow request and a failed one still leave the visitor somewhere to go. */
+function CollectionsShell({ aside, children }: { aside?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <TopBar />
+      <main id="main" className="mx-auto max-w-[1240px] px-5 py-7">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
+            Collections
+          </h1>
+          {aside}
+        </div>
+        {children}
+      </main>
+    </div>
+  );
+}
+
+/** Rows will not come. Said once, used by the failed request and by an index
+ *  that came back with nothing, which are the same thing from a chair. */
+function IndexDeadEnd() {
+  return (
+    <EmptyState
+      className="mt-9"
+      line="The collection index did not load."
+      hint="Try again, or start from the catalog."
+      action={
+        <>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className={EMPTY_ACTION_CLASS}
+          >
+            Try again
+          </button>
+          <Link to="/" className={EMPTY_ACTION_QUIET_CLASS}>
+            Browse the catalog
+          </Link>
+        </>
+      }
+    />
+  );
+}
+
+function CollectionsError({ error }: { error: Error }) {
+  console.error(error);
+  return (
+    <CollectionsShell>
+      <IndexDeadEnd />
+    </CollectionsShell>
+  );
+}
+
+/** Rows are still coming. The outline of what is arriving, in the sizes the
+ *  real cards use, so nothing jumps when they land. */
+function CollectionsPending() {
+  return (
+    <CollectionsShell>
+      {/* Same grid, same card sizes as the real tiers, so the rows land in the
+          boxes they were drawn in instead of shifting the page under a thumb. */}
+      <div className="mt-7 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-[186px] animate-pulse rounded-[8px] bg-panel" />
+        ))}
+      </div>
+      {[0, 1].map((r) => (
+        <div key={r} className="mt-11">
+          <div className="h-[19px] w-52 animate-pulse rounded bg-panel" />
+          <div className="mt-3.5 flex gap-2 overflow-hidden">
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="h-[190px] w-[196px] shrink-0 animate-pulse rounded-[7px] bg-panel"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="sr-only" role="status">
+        Loading collections
+      </p>
+    </CollectionsShell>
+  );
+}
+
 function CollectionsPage() {
   const { collections, month } = Route.useLoaderData();
   const [q, setQ] = useState("");
@@ -631,32 +728,41 @@ function CollectionsPage() {
   );
   const originPairs = originGenrePairs(byKind("origin-genre"));
   const originCols = [...new Set(originPairs.map((p) => p.col))].sort();
+  // Every tier below is guarded on its own kind being non-empty, so a loader
+  // that returns nothing used to render the page chrome over a blank viewport
+  // with a lone "Every collection 0" in the middle of it. Nothing on the page
+  // is usable in that state, including the find box, so the whole body is
+  // replaced by the one dead end that has a way out of it.
+  const none = collections.length === 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[1240px] px-5 py-7">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[29px] font-bold leading-tight tracking-tight text-text-bright">
-              Collections
-            </h1>
-          </div>
+    <CollectionsShell
+      aside={
+        !none && (
           <input
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Find a collection"
             aria-label="Find a collection"
-            className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 font-mono text-[12px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
+            className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
           />
-        </div>
+        )
+      }
+    >
+      <>
+        {none && <IndexDeadEnd />}
 
         {matches && (
           <section className="mt-7">
-            <h2 className="text-[15px] font-semibold text-text-bright">
-              Matches <span className="font-mono text-[12px] text-text-dim">{matches.length}</span>
-            </h2>
+            {matches.length > 0 && (
+              <h2 className="text-[18px] font-black tracking-[-0.02em] text-text-bright">
+                Matches{" "}
+                <span className="font-mono text-[13px] tabular-nums text-text-dim">
+                  {matches.length}
+                </span>
+              </h2>
+            )}
             {matches.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {matches.map((c: CollectionSummary) => (
@@ -664,21 +770,32 @@ function CollectionsPage() {
                     key={c.slug}
                     to="/best/$slug"
                     params={{ slug: c.slug }}
-                    className="rounded-[4px] border border-border bg-panel px-2.5 py-1 font-mono text-[11px] text-text-muted transition-colors hover:border-primary hover:text-primary"
+                    className="rounded-[4px] border border-border bg-panel px-2.5 py-1 text-[13px] text-text-muted transition-colors hover:border-primary hover:text-primary"
                   >
                     {c.title}
                   </Link>
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-[13px] text-text-muted">
-                Nothing matches "{q.trim()}". Try a name, genre, service, decade, or year.
-              </p>
+              <EmptyState
+                variant="inline"
+                line={`Nothing matches "${q.trim()}".`}
+                hint="Collections are named by genre, service, decade, and year. Try one of those."
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setQ("")}
+                    className={EMPTY_ACTION_QUIET_CLASS}
+                  >
+                    Clear the search
+                  </button>
+                }
+              />
             )}
           </section>
         )}
 
-        <div className={matches ? "hidden" : undefined}>
+        <div className={matches || none ? "hidden" : undefined}>
           {/* Tier 1: featured */}
           <div className="mt-7 grid grid-cols-1 gap-5 lg:grid-cols-2">
             {featured.map((c) => (
@@ -736,10 +853,12 @@ function CollectionsPage() {
           {people.length > 0 && (
             <section className="mt-11">
               <div className="flex items-baseline gap-3">
-                <h2 className="text-[17px] font-semibold tracking-tight text-text-bright">
+                <h2 className="text-[19px] font-black tracking-[-0.02em] text-text-bright">
                   People
                 </h2>
-                <span className="font-mono text-[12px] text-text-dim">{people.length} lists</span>
+                <span className="font-mono text-[12px] tabular-nums text-text-dim">
+                  {people.length} lists
+                </span>
               </div>
               <PeopleIndex people={people} />
             </section>
@@ -747,8 +866,13 @@ function CollectionsPage() {
 
           {/* Tier 3: the full index */}
           <section className="mt-13 border-t border-border pt-7">
-            <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted">
-              Every collection · {collections.length}
+            <div className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
+              Every collection
+              {collections.length > 0 && (
+                <span className="ml-2 font-mono text-[14px] tabular-nums text-text-dim">
+                  {collections.length}
+                </span>
+              )}
             </div>
 
             <div className="lg:grid lg:grid-cols-2 lg:gap-x-10">
@@ -771,15 +895,15 @@ function CollectionsPage() {
             <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 pb-2">
               <Link
                 to="/methodology"
-                className="font-mono text-[12px] text-text-muted hover:text-primary"
+                className="text-[13px] font-semibold text-text-muted hover:text-primary"
               >
                 How we rank →
               </Link>
-              <span className="font-mono text-[12px] text-text-dim">Data: TMDB &amp; OMDb</span>
+              <span className="text-[13px] text-text-dim">Data: TMDB &amp; OMDb</span>
             </div>
           </section>
         </div>
-      </main>
-    </div>
+      </>
+    </CollectionsShell>
   );
 }

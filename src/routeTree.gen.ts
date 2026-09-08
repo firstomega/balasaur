@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WatchedRouteImport } from './routes/watched'
 import { Route as TriageRouteImport } from './routes/triage'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TasteRouteImport } from './routes/taste'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SitemapTitlesDotxmlRouteImport } from './routes/sitemap-titles[.]xml'
 import { Route as SitemapPeopleDotxmlRouteImport } from './routes/sitemap-people[.]xml'
@@ -49,6 +50,7 @@ import { Route as PlayBalasaurdleRouteImport } from './routes/play.balasaurdle'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as NightCodeRouteImport } from './routes/night.$code'
 import { Route as MovieIdRouteImport } from './routes/movie.$id'
+import { Route as DevRefineRouteImport } from './routes/dev.refine'
 import { Route as DevArcadeRouteImport } from './routes/dev.arcade'
 import { Route as BestSlugRouteImport } from './routes/best.$slug'
 import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
@@ -68,6 +70,11 @@ const TriageRoute = TriageRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasteRoute = TasteRouteImport.update({
+  id: '/taste',
+  path: '/taste',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -256,6 +263,11 @@ const MovieIdRoute = MovieIdRouteImport.update({
   path: '/movie/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevRefineRoute = DevRefineRouteImport.update({
+  id: '/dev/refine',
+  path: '/dev/refine',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevArcadeRoute = DevArcadeRouteImport.update({
   id: '/dev/arcade',
   path: '/dev/arcade',
@@ -303,11 +315,13 @@ export interface FileRoutesByFullPath {
   '/sitemap-people.xml': typeof SitemapPeopleDotxmlRoute
   '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/taste': typeof TasteRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
   '/dev/arcade': typeof DevArcadeRoute
+  '/dev/refine': typeof DevRefineRoute
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -350,11 +364,13 @@ export interface FileRoutesByTo {
   '/sitemap-people.xml': typeof SitemapPeopleDotxmlRoute
   '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/taste': typeof TasteRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
   '/dev/arcade': typeof DevArcadeRoute
+  '/dev/refine': typeof DevRefineRoute
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -398,11 +414,13 @@ export interface FileRoutesById {
   '/sitemap-people.xml': typeof SitemapPeopleDotxmlRoute
   '/sitemap-titles.xml': typeof SitemapTitlesDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/taste': typeof TasteRoute
   '/terms': typeof TermsRoute
   '/triage': typeof TriageRoute
   '/watched': typeof WatchedRoute
   '/best/$slug': typeof BestSlugRoute
   '/dev/arcade': typeof DevArcadeRoute
+  '/dev/refine': typeof DevRefineRoute
   '/movie/$id': typeof MovieIdRoute
   '/night/$code': typeof NightCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -447,11 +465,13 @@ export interface FileRouteTypes {
     | '/sitemap-people.xml'
     | '/sitemap-titles.xml'
     | '/sitemap.xml'
+    | '/taste'
     | '/terms'
     | '/triage'
     | '/watched'
     | '/best/$slug'
     | '/dev/arcade'
+    | '/dev/refine'
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
@@ -494,11 +514,13 @@ export interface FileRouteTypes {
     | '/sitemap-people.xml'
     | '/sitemap-titles.xml'
     | '/sitemap.xml'
+    | '/taste'
     | '/terms'
     | '/triage'
     | '/watched'
     | '/best/$slug'
     | '/dev/arcade'
+    | '/dev/refine'
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
@@ -541,11 +563,13 @@ export interface FileRouteTypes {
     | '/sitemap-people.xml'
     | '/sitemap-titles.xml'
     | '/sitemap.xml'
+    | '/taste'
     | '/terms'
     | '/triage'
     | '/watched'
     | '/best/$slug'
     | '/dev/arcade'
+    | '/dev/refine'
     | '/movie/$id'
     | '/night/$code'
     | '/person/$id'
@@ -589,11 +613,13 @@ export interface RootRouteChildren {
   SitemapPeopleDotxmlRoute: typeof SitemapPeopleDotxmlRoute
   SitemapTitlesDotxmlRoute: typeof SitemapTitlesDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TasteRoute: typeof TasteRoute
   TermsRoute: typeof TermsRoute
   TriageRoute: typeof TriageRoute
   WatchedRoute: typeof WatchedRoute
   BestSlugRoute: typeof BestSlugRoute
   DevArcadeRoute: typeof DevArcadeRoute
+  DevRefineRoute: typeof DevRefineRoute
   MovieIdRoute: typeof MovieIdRoute
   NightCodeRoute: typeof NightCodeRoute
   PersonIdRoute: typeof PersonIdRoute
@@ -638,6 +664,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taste': {
+      id: '/taste'
+      path: '/taste'
+      fullPath: '/taste'
+      preLoaderRoute: typeof TasteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -899,6 +932,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MovieIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/refine': {
+      id: '/dev/refine'
+      path: '/dev/refine'
+      fullPath: '/dev/refine'
+      preLoaderRoute: typeof DevRefineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/arcade': {
       id: '/dev/arcade'
       path: '/dev/arcade'
@@ -958,11 +998,13 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapPeopleDotxmlRoute: SitemapPeopleDotxmlRoute,
   SitemapTitlesDotxmlRoute: SitemapTitlesDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TasteRoute: TasteRoute,
   TermsRoute: TermsRoute,
   TriageRoute: TriageRoute,
   WatchedRoute: WatchedRoute,
   BestSlugRoute: BestSlugRoute,
   DevArcadeRoute: DevArcadeRoute,
+  DevRefineRoute: DevRefineRoute,
   MovieIdRoute: MovieIdRoute,
   NightCodeRoute: NightCodeRoute,
   PersonIdRoute: PersonIdRoute,

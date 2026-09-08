@@ -1,0 +1,92 @@
+name: Episode ratings
+
+# Fills public.episode_ratings from TMDB for the popular TV pool (shows with
+# vote_count >= 2000: 236 shows, 1,371 seasons, ~28,300 episodes). One request
+# per season, so a full sweep is ~1,400 requests, which is why this runs weekly
+# rather than nightly. Each pass claims shows never read first, then the stalest,
+# so a run that stops halfway resumes on the next one.
+#
+# Same apikey-gated endpoint the daily catalog sync calls, with mode
+# "episodeRatings". Requires the repo secret SYNC_HOOK_SECRET (Settings →
+# Secrets and variables → Actions) and TMDB_API_KEY in the DEPLOYMENT
+# environment, not here: the fetch happens on the server, and a missing key
+# fails this run with that message in the response body.
+#
+# Run it by hand from the Actions tab (Episode ratings → Run workflow) to fill
+# the table the first time.
+
+on:
+  schedule:
+    # 12:00 UTC Mondays. Cron is UTC.
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: episode-ratings
+  cancel-in-progress: false
+
+jobs:
+  episodes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Fetch episode ratings
+        env:
+          BASE_URL: https://balasaur.com
+          APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
+        run: |
+          if [ -z "$APIKEY" ]; then
+            echo "::error::Missing repo secret SYNC_HOOK_SECRET"
+            exit 1
+          fi
+          # Short passes, like the catalog sync: one long call would be killed by
+          # the host and the whole batch lost. 40 shows a pass, ~230 season
+          # requests, ~2 minutes of server time.
+          BUDGET_SECONDS=2400
+          START=$(date +%s)
+          written=0
+          for i in $(seq 1 12); do
+            ELAPSED=$(( $(date +%s) - START ))
+            if [ "$ELAPSED" -ge "$BUDGET_SECONDS" ]; then
+              echo "::warning::Time budget (${BUDGET_SECONDS}s) reached after $((i-1)) passes. Resumes next run."
+              break
+            fi
+            echo "──────── episode pass $i (elapsed=${ELAPSED}s) ────────"
+            HTTP=000
+            for attempt in 1 2 3 4; do
+              HTTP=$(curl -sS -o /tmp/ep.json -w "%{http_code}" \
+                -X POST "$BASE_URL/api/public/hooks/sync-media" \
+                -H "apikey: $APIKEY" -H "Content-Type: application/json" \
+                --max-time 300 -d '{"mode":"episodeRatings","limit":40}' || echo 000)
+              [ "$HTTP" = "200" ] && break
+              echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/ep.json 2>/dev/null; echo
+              case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
+              backoff=$((attempt * attempt * 5)); echo "retrying in ${backoff}s…"; sleep "$backoff"
+            done
+            echo "HTTP $HTTP"; echo "Response:"; cat /tmp/ep.json; echo
+            if [ "$HTTP" != "200" ]; then
+              if grep -q "TMDB_API_KEY" /tmp/ep.json 2>/dev/null; then
+                echo "::error::The server has no TMDB_API_KEY, so no episode was fetched. Set TMDB_API_KEY in the deployment environment (the same place APP_SUPABASE_* live) and re-run this workflow."
+                exit 1
+              fi
+              echo "::error::Episode pass $i failed with HTTP $HTTP (after retries)"
+              exit 1
+            fi
+            echo "$(jq -c '{shows,seasons,episodes,unrated,failedSeasons,stamped,remaining,budgetHit,durationMs}' /tmp/ep.json 2>/dev/null || cat /tmp/ep.json)"
+            rows=$(jq -r '.episodes // 0' /tmp/ep.json 2>/dev/null || echo 0)
+            case "$rows" in '' | *[!0-9]*) rows=0 ;; esac
+            written=$((written + rows))
+            claimed=$(jq -r '.shows // 0' /tmp/ep.json 2>/dev/null || echo 0)
+            case "$claimed" in '' | *[!0-9]*) claimed=0 ;; esac
+            if [ "$claimed" -eq 0 ]; then
+              echo "No shows left to claim."; break
+            fi
+            remaining=$(jq -r '.remaining // 0' /tmp/ep.json 2>/dev/null || echo 0)
+            echo "pass $i: $rows rows written (cumulative=$written), $remaining shows never read"
+            sleep 5
+          done
+          echo "Episode ratings run complete. Rows written: $written"
+          if [ "$written" -eq 0 ]; then
+            echo "::error::No episode rows were written. The pool query, the TMDB fetch or the write is broken; read the pass output above."
+            exit 1
+          fi

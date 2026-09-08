@@ -17,10 +17,13 @@ import { ShareButton } from "./ShareButton";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import type { MediaDetail as MediaDetailType } from "@/types/media";
+import type { EpisodeRating } from "@/lib/episodes";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
+import { EpisodeHeatmap } from "./EpisodeHeatmap";
 import { ScoreBadge } from "./ScoreBadge";
+import { AmbientGlow } from "./AmbientGlow";
 import { ScrollRail } from "./ScrollRail";
 import { computeBalasaurScore } from "@/lib/score";
 import { displayYear } from "@/lib/mediaFormat";
@@ -104,18 +107,29 @@ function FacetLink({
     <Link
       to="/"
       search={search}
-      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-text-muted transition-colors hover:border-primary hover:text-primary"
+      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 text-[12px] font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
     >
       {children}
     </Link>
   );
 }
 
-function MicroLabel({ children }: { children: React.ReactNode }) {
+// Section headings carry the weight instead of shouting in 11px uppercase
+// monospace. Monospace is reserved for numbers and machine facts below.
+function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+    <h2 className="mb-2.5 text-[18px] font-black leading-none tracking-[-0.02em] text-text-bright">
       {children}
-    </div>
+    </h2>
+  );
+}
+
+// The same voice one step down, for the 300px sidebar panels.
+function PanelHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-2 text-[15px] font-black leading-none tracking-[-0.02em] text-text-bright">
+      {children}
+    </h2>
   );
 }
 
@@ -154,7 +168,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
         onClick={() => setPrimary(key)}
         aria-pressed={active}
         className={
-          "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors " +
+          "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors " +
           (active
             ? "border-border-strong bg-background text-text-bright"
             : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
@@ -169,7 +183,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
 
   return (
     <div className="rounded-[5px] border border-border bg-panel p-3">
-      <MicroLabel>Your status</MicroLabel>
+      <PanelHeading>Your status</PanelHeading>
       <div className="grid grid-cols-2 gap-1.5">
         {primaryBtn("want", <Bookmark className="h-3.5 w-3.5" />)}
         {primaryBtn("watched", <Check className="h-3.5 w-3.5" />)}
@@ -177,7 +191,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
 
       {primary === "watched" && (
         <div className="mt-2">
-          <div className="mb-1 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          <div className="mb-1 text-[13px] font-semibold tracking-[-0.01em] text-text-dim">
             How was it?
           </div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -190,7 +204,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
                   onClick={() => setSentiment(s)}
                   aria-pressed={active}
                   className={
-                    "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors " +
+                    "flex items-center justify-center gap-1.5 rounded-[4px] border px-2 py-1.5 text-[13px] font-bold tracking-[-0.01em] transition-colors " +
                     (active
                       ? "bg-background text-text-bright"
                       : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
@@ -218,7 +232,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
           onClick={toggleNotInterested}
           aria-pressed={rejected}
           className={
-            "cursor-pointer font-mono text-[11px] uppercase tracking-wider transition-colors " +
+            "cursor-pointer text-[12px] font-semibold tracking-[-0.01em] transition-colors " +
             (rejected ? "text-[#c75d6e]" : "text-text-dim hover:text-text-muted")
           }
         >
@@ -228,7 +242,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
           <button
             type="button"
             onClick={() => recordStatus(detail.id, null)}
-            className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-dim hover:text-text-muted"
+            className="cursor-pointer text-[12px] font-semibold tracking-[-0.01em] text-text-dim hover:text-text-muted"
           >
             Clear
           </button>
@@ -238,7 +252,17 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
   );
 }
 
-function DetailInner({ detail }: { detail: MediaDetailType }) {
+function DetailInner({
+  detail,
+  episodeRatings,
+  colorA,
+  colorB,
+}: {
+  detail: MediaDetailType;
+  episodeRatings?: EpisodeRating[];
+  colorA?: string | null;
+  colorB?: string | null;
+}) {
   const { ratings, facts, external } = detail;
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -307,7 +331,19 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/30" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-[1100px] px-4 pt-[168px] md:pt-[260px]">
+        <div className="relative isolate z-10 mx-auto max-w-[1100px] px-4 pt-[168px] md:pt-[260px]">
+          {/* The poster's own light, thrown across the top of the page. It is
+              mounted inside this z-10 column rather than under the backdrop
+              block, because the backdrop is opaque: a glow behind it would be
+              invisible for 440px and then appear all at once at its bottom
+              edge, which is the horizontal seam the first version drew. The box
+              is pushed down to start at the poster, so the light is behind the
+              poster, title and score instead of over the banner. */}
+          <AmbientGlow
+            colorA={colorA}
+            colorB={colorB}
+            className="bottom-0 top-[120px] h-auto md:top-[190px]"
+          />
           <div className="flex flex-col gap-5 md:flex-row md:items-end">
             <div className="w-[160px] shrink-0 overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)] md:w-[220px]">
               <div className="aspect-[2/3] w-full">
@@ -327,7 +363,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center font-mono text-[11px] uppercase text-text-dim">
+                  <div className="flex h-full w-full items-center justify-center text-[12px] font-semibold text-text-dim">
                     No art
                   </div>
                 )}
@@ -335,7 +371,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
-                <h1 className="text-[28px] font-semibold leading-tight text-text-bright md:text-[40px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
+                <h1 className="text-[30px] font-black leading-[1.08] tracking-[-0.02em] text-text-bright md:text-[44px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
                   {detail.title}
                 </h1>
                 <div className="mt-1 shrink-0">
@@ -343,7 +379,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                 </div>
               </div>
               {meta.length > 0 && (
-                <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                <p className="mt-2 font-mono text-[12px] tabular-nums tracking-wider text-text-muted">
                   {meta.join(" · ")}
                 </p>
               )}
@@ -365,7 +401,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                 <button
                   type="button"
                   onClick={() => setTrailerOpen(true)}
-                  className="mt-4 inline-flex items-center gap-2 rounded-[5px] border border-border-strong bg-panel px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-text-bright transition-colors hover:bg-background"
+                  className="mt-4 inline-flex items-center gap-2 rounded-[5px] border border-border-strong bg-panel px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright transition-colors hover:bg-background"
                 >
                   <Play className="h-3.5 w-3.5" />
                   Watch trailer
@@ -390,20 +426,20 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               can print. */}
           {prose && (
             <section>
-              <MicroLabel>The read</MicroLabel>
+              <SectionHeading>The read</SectionHeading>
               <p className="text-[15px] leading-relaxed text-text-bright">{prose}</p>
             </section>
           )}
 
           {detail.overview && (
             <section>
-              <MicroLabel>Synopsis</MicroLabel>
+              <SectionHeading>Synopsis</SectionHeading>
               <p className="text-[15px] leading-relaxed text-text">{detail.overview}</p>
             </section>
           )}
 
           <section>
-            <MicroLabel>Ratings</MicroLabel>
+            <SectionHeading>Ratings</SectionHeading>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(() => {
                 // The unified blend, same as the card badges (per-source tiles
@@ -458,7 +494,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                       align="start"
                       className="w-72 border-border bg-panel p-3 text-foreground"
                     >
-                      <p className="font-mono text-[11px] uppercase tracking-wider text-text-bright">
+                      <p className="text-[14px] font-black tracking-[-0.02em] text-text-bright">
                         How this score works
                       </p>
                       <p className="mt-1.5 text-[12px] leading-relaxed text-text-muted">
@@ -469,7 +505,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                         {sources.map((s) => (
                           <li
                             key={s.label}
-                            className="flex items-center justify-between font-mono text-[11px]"
+                            className="flex items-center justify-between font-mono text-[11px] tabular-nums"
                           >
                             <span className={s.value ? "text-text-bright" : "text-text-dim"}>
                               {s.label}
@@ -507,26 +543,22 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                         style={{ width: `${Math.max(2, Math.min(100, src.pct))}%` }}
                       />
                     </span>
-                    <span className="w-[68px] shrink-0 text-right font-mono text-[11px] text-text-bright">
+                    <span className="w-[68px] shrink-0 text-right font-mono text-[11px] tabular-nums text-text-bright">
                       {src.shown}
                     </span>
                   </div>
                 ))}
                 {divergence && (
-                  <p className="pt-1.5 font-mono text-[11px] leading-relaxed text-text-muted">
-                    {divergence}
-                  </p>
+                  <p className="pt-1.5 text-[13px] leading-relaxed text-text-muted">{divergence}</p>
                 )}
                 {typeof detail.voteCount === "number" && detail.voteCount > 0 && (
-                  <p className="font-mono text-[12px] text-text-dim">
+                  <p className="font-mono text-[12px] tabular-nums text-text-dim">
                     {detail.voteCount.toLocaleString("en-US")} audience votes
                   </p>
                 )}
               </div>
             ) : (
-              <div className="mt-3 font-mono text-[11px] text-text-dim">
-                No ratings available yet.
-              </div>
+              <div className="mt-3 text-[13px] text-text-dim">No ratings available yet.</div>
             )}
           </section>
 
@@ -534,7 +566,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               is TV and this was previously not rendered at all. */}
           {detail.mediaType === "tv" && (detail.seasons?.length ?? 0) > 0 && (
             <section>
-              <MicroLabel>Seasons</MicroLabel>
+              <SectionHeading>Seasons</SectionHeading>
               <div className="overflow-hidden rounded-[5px] border border-border">
                 <table className="w-full border-collapse">
                   <tbody>
@@ -545,13 +577,13 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                           key={sn.seasonNumber}
                           className="border-b border-border last:border-b-0"
                         >
-                          <td className="px-3 py-2 font-mono text-[11px] text-text-dim">
+                          <td className="px-3 py-2 font-mono text-[12px] tabular-nums text-text-dim">
                             {sn.seasonNumber}
                           </td>
                           <td className="min-w-0 px-1 py-2 text-[13px] text-text-bright">
                             <span className="block truncate">{sn.name}</span>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-[11px] text-text-muted">
+                          <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-[11px] tabular-nums text-text-muted">
                             {sn.episodeCount > 0 && `${sn.episodeCount} ep`}
                             {sn.airDate && (
                               <span className="ml-2 text-text-dim">{sn.airDate.slice(0, 4)}</span>
@@ -567,14 +599,12 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 
           {detail.crew.length > 0 && (
             <section>
-              <MicroLabel>Key crew</MicroLabel>
+              <SectionHeading>Key crew</SectionHeading>
               <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
                 {detail.crew.map((p, i) => (
                   <li key={`${p.name}-${p.role}-${i}`} className="flex justify-between text-[13px]">
                     <PersonName name={p.name} personId={p.personId} />
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-                      {p.role}
-                    </span>
+                    <span className="text-[12px] text-text-dim">{p.role}</span>
                   </li>
                 ))}
               </ul>
@@ -583,21 +613,25 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 
           {detail.cast.length > 0 && (
             <section>
-              <MicroLabel>Cast</MicroLabel>
+              <SectionHeading>Cast</SectionHeading>
               <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
                 {detail.cast.map((p, i) => (
                   <li key={`${p.name}-${i}`} className="flex justify-between gap-3 text-[13px]">
                     <PersonName name={p.name} personId={p.personId} />
-                    <span className="truncate font-mono text-[11px] text-text-muted">{p.role}</span>
+                    <span className="truncate text-[12px] text-text-muted">{p.role}</span>
                   </li>
                 ))}
               </ul>
             </section>
           )}
 
+          {episodeRatings && episodeRatings.length > 0 && (
+            <EpisodeHeatmap rows={episodeRatings} seasons={detail.seasons ?? []} />
+          )}
+
           {detail.images && detail.images.length > 0 && (
             <section>
-              <MicroLabel>Stills</MicroLabel>
+              <SectionHeading>Stills</SectionHeading>
               <ScrollRail className="snap-x snap-mandatory gap-2">
                 {detail.images.map((src, i) => (
                   <button
@@ -622,9 +656,9 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 
           {detail.related && detail.related.length > 0 && (
             <section>
-              <MicroLabel>
+              <SectionHeading>
                 {detail.mediaType === "tv" ? "Shows" : "Movies"} like {detail.title}
-              </MicroLabel>
+              </SectionHeading>
               <ScrollRail className="gap-3">
                 {detail.related.map((it) => (
                   <div key={it.id} className="w-[118px] shrink-0 md:w-[132px]">
@@ -637,9 +671,9 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 
           {detail.relatedCross && detail.relatedCross.length > 0 && (
             <section>
-              <MicroLabel>
+              <SectionHeading>
                 {detail.mediaType === "tv" ? "Movies" : "Shows"} like {detail.title}
-              </MicroLabel>
+              </SectionHeading>
               <ScrollRail className="gap-3">
                 {detail.relatedCross.map((it) => (
                   <div key={it.id} className="w-[118px] shrink-0 md:w-[132px]">
@@ -652,7 +686,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 
           {detail.keywords && detail.keywords.length > 0 && (
             <section>
-              <MicroLabel>Themes</MicroLabel>
+              <SectionHeading>Themes</SectionHeading>
               <div className="flex flex-wrap gap-1.5">
                 {detail.keywords.map((k) => {
                   const theme = themeForKeyword(k);
@@ -665,7 +699,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
                   ) : (
                     <span
                       key={k}
-                      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-text-dim"
+                      className="rounded-[4px] border border-border bg-panel px-2 py-0.5 text-[12px] font-semibold tracking-[-0.01em] text-text-dim"
                     >
                       {k}
                     </span>
@@ -683,16 +717,18 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
           <WhereToWatch detail={detail} />
 
           <div className="rounded-[5px] border border-border bg-panel p-3">
-            <MicroLabel>Facts</MicroLabel>
-            <dl className="space-y-1.5 font-mono text-[11px]">
-              {fmtMoney(facts.budget) && <FactRow k="Budget" v={fmtMoney(facts.budget)!} />}
-              {fmtMoney(facts.revenue) && <FactRow k="Box office" v={fmtMoney(facts.revenue)!} />}
+            <PanelHeading>Facts</PanelHeading>
+            <dl className="space-y-1.5 text-[12px]">
+              {fmtMoney(facts.budget) && <FactRow k="Budget" v={fmtMoney(facts.budget)!} mono />}
+              {fmtMoney(facts.revenue) && (
+                <FactRow k="Box office" v={fmtMoney(facts.revenue)!} mono />
+              )}
               {facts.originalLanguage && (
                 <FactRow k="Language" v={languageName(facts.originalLanguage)} />
               )}
               {origin && (
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="uppercase tracking-wider text-text-dim">Origin</dt>
+                  <dt className="text-text-dim">Origin</dt>
                   <dd>
                     <FacetLink search={{ origins: origin }}>{origin}</FacetLink>
                   </dd>
@@ -704,7 +740,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
               {facts.status && facts.status !== "Released" && facts.status !== "Ended" && (
                 <FactRow k="Status" v={facts.status} />
               )}
-              {facts.releaseDate && <FactRow k="Released" v={facts.releaseDate} />}
+              {facts.releaseDate && <FactRow k="Released" v={facts.releaseDate} mono />}
             </dl>
           </div>
 
@@ -712,7 +748,7 @@ function DetailInner({ detail }: { detail: MediaDetailType }) {
 
           {(external.imdbId || external.homepage) && (
             <div className="rounded-[5px] border border-border bg-panel p-3">
-              <MicroLabel>Links</MicroLabel>
+              <PanelHeading>Links</PanelHeading>
               <ul className="space-y-1.5">
                 {external.imdbId && (
                   <LinkRow href={`https://www.imdb.com/title/${external.imdbId}/`} label="IMDb" />
@@ -772,17 +808,19 @@ function AppearsIn({ mediaId }: { mediaId: string }) {
   if (!data || data.length === 0) return null;
   return (
     <div className="rounded-[5px] border border-border bg-panel p-3">
-      <MicroLabel>Appears in</MicroLabel>
+      <PanelHeading>Appears in</PanelHeading>
       <ul className="space-y-1.5">
         {data.map((c) => (
           <li key={c.slug}>
             <Link
               to="/best/$slug"
               params={{ slug: c.slug }}
-              className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-text-muted hover:text-primary"
+              className="flex items-baseline justify-between gap-3 text-[13px] text-text-muted hover:text-primary"
             >
               <span className="truncate">{c.title}</span>
-              <span className="shrink-0 text-text-dim">#{c.rank}</span>
+              <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-dim">
+                #{c.rank}
+              </span>
             </Link>
           </li>
         ))}
@@ -791,11 +829,19 @@ function AppearsIn({ mediaId }: { mediaId: string }) {
   );
 }
 
-function FactRow({ k, v }: { k: string; v: string }) {
+// `mono` marks a value that is a number, a sum of money, or a date. Words
+// (language, status) render in Archivo like everything else a person reads.
+function FactRow({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="uppercase tracking-wider text-text-dim">{k}</dt>
-      <dd className="truncate text-text-bright">{v}</dd>
+      <dt className="text-text-dim">{k}</dt>
+      <dd
+        className={
+          "truncate text-text-bright" + (mono ? " font-mono text-[11px] tabular-nums" : "")
+        }
+      >
+        {v}
+      </dd>
     </div>
   );
 }
@@ -807,7 +853,7 @@ function LinkRow({ href, label }: { href: string; label: string }) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-between rounded-[4px] border border-border px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:border-border-strong hover:text-text-bright"
+        className="flex items-center justify-between rounded-[4px] border border-border px-2 py-1 text-[13px] font-semibold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
       >
         <span>{label}</span>
         <ExternalLink className="h-3 w-3" />
@@ -826,9 +872,23 @@ function DetailLoader() {
   );
 }
 
-function DetailFetcher({ type, id }: { type: "movie" | "tv"; id: string }) {
+function DetailFetcher({
+  type,
+  id,
+  episodeRatings,
+  colorA,
+  colorB,
+}: {
+  type: "movie" | "tv";
+  id: string;
+  episodeRatings?: EpisodeRating[];
+  colorA?: string | null;
+  colorB?: string | null;
+}) {
   const { data } = useMediaDetail(type, id);
-  return <DetailInner detail={data} />;
+  return (
+    <DetailInner detail={data} episodeRatings={episodeRatings} colorA={colorA} colorB={colorB} />
+  );
 }
 
 function BackBar() {
@@ -852,7 +912,7 @@ function BackBar() {
         <button
           type="button"
           onClick={goBack}
-          className="pointer-events-auto inline-flex items-center gap-1.5 rounded-[5px] border border-white/20 bg-background/60 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-bright backdrop-blur-md transition-colors hover:border-primary hover:text-primary"
+          className="pointer-events-auto inline-flex items-center gap-1.5 rounded-[5px] border border-white/20 bg-background/60 px-2.5 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright backdrop-blur-md transition-colors hover:border-primary hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to browse
@@ -862,13 +922,34 @@ function BackBar() {
   );
 }
 
-export function MediaDetail({ mediaType, id }: { mediaType: "movie" | "tv"; id: string }) {
+export function MediaDetail({
+  mediaType,
+  id,
+  episodeRatings,
+  colorA,
+  colorB,
+}: {
+  mediaType: "movie" | "tv";
+  id: string;
+  /** TV only: stored per-episode ratings, loaded by the /tv/$id route. */
+  episodeRatings?: EpisodeRating[];
+  /** The title's stored poster colors (media.color_a / color_b), read by the
+   *  route loader so the glow is in the server-rendered HTML. */
+  colorA?: string | null;
+  colorB?: string | null;
+}) {
   return (
     <div className="relative min-h-screen bg-background">
       <TopBar />
       <BackBar />
       <Suspense fallback={<DetailLoader />}>
-        <DetailFetcher type={mediaType} id={id} />
+        <DetailFetcher
+          type={mediaType}
+          id={id}
+          episodeRatings={episodeRatings}
+          colorA={colorA}
+          colorB={colorB}
+        />
       </Suspense>
     </div>
   );

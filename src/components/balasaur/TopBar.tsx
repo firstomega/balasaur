@@ -47,7 +47,7 @@ export function TopBar() {
             aria-describedby={undefined}
             className="w-[260px] border-border bg-background p-0"
           >
-            <SheetTitle className="px-4 pb-1 pt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-text-dim">
+            <SheetTitle className="px-4 pb-1 pt-4 text-[15px] font-black tracking-[-0.02em] text-text-dim">
               Menu
             </SheetTitle>
             <nav aria-label="Primary" className="flex flex-col">
@@ -111,7 +111,7 @@ export function TopBar() {
           <Link
             to="/watched"
             title="Swipe through titles to rate them and build your library fast"
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-[5px] border border-border bg-panel px-2.5 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-bright hover:border-primary hover:text-primary"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-[5px] border border-border bg-panel px-2.5 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
           >
             <Zap className="h-3.5 w-3.5" />
             Rate
@@ -119,7 +119,7 @@ export function TopBar() {
           <Link
             to="/library"
             aria-label="My lists"
-            className="hidden items-center gap-1.5 rounded-[5px] px-2 py-1.5 font-mono text-[12px] uppercase tracking-wide text-text-muted hover:text-text-bright sm:px-2.5 md:inline-flex"
+            className="hidden items-center gap-1.5 rounded-[5px] px-2 py-1.5 text-[13px] font-semibold tracking-[-0.01em] text-text-muted hover:text-text-bright sm:px-2.5 md:inline-flex"
           >
             <Library className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">My Library</span>
@@ -129,7 +129,7 @@ export function TopBar() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex max-w-[200px] items-center gap-2 rounded-[5px] border border-border bg-panel px-2 py-1 font-mono text-[12px] text-text-bright hover:border-border-strong"
+                  className="inline-flex max-w-[200px] items-center gap-2 rounded-[5px] border border-border bg-panel px-2 py-1 text-[13px] font-semibold text-text-bright hover:border-border-strong"
                 >
                   {profile ? (
                     <Avatar
@@ -151,7 +151,7 @@ export function TopBar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="min-w-[210px] border-border bg-panel font-mono text-[12px] text-text-bright"
+                className="min-w-[210px] border-border bg-panel text-[13px] text-text-bright"
               >
                 {profile ? (
                   <>
@@ -190,7 +190,7 @@ export function TopBar() {
                   </>
                 ) : (
                   <>
-                    <DropdownMenuLabel className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                    <DropdownMenuLabel className="text-[12px] font-semibold text-text-dim">
                       Signed in
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-border" />
@@ -216,7 +216,7 @@ export function TopBar() {
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="whitespace-nowrap rounded-[5px] bg-primary px-3 py-1.5 font-mono text-[12px] font-medium uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
+              className="whitespace-nowrap rounded-[5px] bg-primary px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Sign in
             </button>
@@ -243,7 +243,7 @@ function NavPlace({ to, label, exact = false }: { to: string; label: string; exa
       activeOptions={{ exact }}
       activeProps={{ className: "text-text-bright border-primary" }}
       inactiveProps={{ className: "text-text-muted border-transparent hover:text-text-bright" }}
-      className="whitespace-nowrap border-b-2 px-2 py-1 font-mono text-[12px] uppercase tracking-wide transition-colors"
+      className="whitespace-nowrap border-b-2 px-2 py-1 text-[13px] font-semibold tracking-[-0.01em] transition-colors"
     >
       {label}
     </Link>
@@ -271,7 +271,7 @@ function MenuLink({
       activeOptions={{ exact }}
       activeProps={{ className: "border-primary bg-panel text-text-bright" }}
       inactiveProps={{ className: "border-transparent text-text-muted hover:text-text-bright" }}
-      className="flex items-center gap-2 border-l-2 px-4 py-2.5 font-mono text-[13px] uppercase tracking-wide transition-colors"
+      className="flex items-center gap-2 border-l-2 px-4 py-2.5 text-[15px] font-bold tracking-[-0.01em] transition-colors"
     >
       {icon}
       {label}
