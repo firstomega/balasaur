@@ -14,7 +14,6 @@ describe("deriveSensitive", () => {
 
   it("flags a production marker on a single hit", () => {
     expect(deriveSensitive(withKeywords(["softcore"]))).toBe(true);
-    expect(deriveSensitive(withKeywords(["ecchi", "comedy"]))).toBe(true);
     expect(deriveSensitive(withKeywords(["pinku eiga"]))).toBe(true);
     expect(deriveSensitive(withKeywords(["soft porn"]))).toBe(true);
   });
@@ -59,7 +58,15 @@ describe("deriveSuggestive", () => {
   it("is a superset of sensitive", () => {
     expect(deriveSuggestive({ adult: true })).toBe(true);
     expect(deriveSuggestive(withKeywords(["softcore"]))).toBe(true);
-    expect(deriveSuggestive(withKeywords(["ecchi"]))).toBe(true);
+  });
+
+  it("puts ecchi in the fan-service tier, not the adult tier", () => {
+    // Ecchi names a tone. It had been flagging licensed anime as hard-adult,
+    // which took My Dress-Up Darling, Food Wars and Fairy Tail out of the
+    // index entirely. Suggestive keeps them out of what the site recommends;
+    // it does not hide them.
+    expect(deriveSensitive(withKeywords(["ecchi", "comedy"]))).toBe(false);
+    expect(deriveSuggestive(withKeywords(["ecchi", "comedy"]))).toBe(true);
   });
 
   it("flags unambiguous fan-service keywords on a single hit", () => {

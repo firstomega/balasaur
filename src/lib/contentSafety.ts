@@ -60,7 +60,6 @@ const PRODUCTION_TERMS = [
   "gay pornography",
   "erotic movie",
   "smut",
-  "ecchi",
   "gravure",
 ];
 
@@ -97,7 +96,7 @@ export function deriveSensitive(rawTmdb: unknown): boolean {
 // remain fully browsable and searchable: this flag only gates the surfaces
 // where the SITE is doing the recommending.
 //
-// Two rules, each learned by getting it wrong on live data:
+// Three rules, each learned by getting it wrong on live data:
 //
 //   1. "harem" only means the anime subgenre inside Animation, and only
 //      exactly. On live action it is a romance structure, and it was
@@ -107,12 +106,21 @@ export function deriveSensitive(rawTmdb: unknown): boolean {
 //      structure, which took out Ooku: The Inner Chambers.
 //   2. "sexual fantasy" is not a fan-service marker. As a single hit it
 //      excluded American Beauty, Barbarella, and Cashback.
+//   3. "ecchi" names a tone, not a product. It sat in PRODUCTION_TERMS and
+//      flagged 304 licensed anime as hard-adult, which by this file's own
+//      rule is flagging a title for what it is ABOUT. The excluded list read
+//      My Dress-Up Darling, Food Wars, Kill la Kill, No Game No Life, Fairy
+//      Tail, Mushoku Tensei and The Seven Deadly Sins: mainstream shows on
+//      Crunchyroll and Netflix, every one of them noindex. Ecchi is the
+//      titillation tier exactly, so it belongs here: the site still never
+//      recommends these, and their pages are reachable and indexable again.
 //
-// In today's catalog every suggestive-only row comes from the Animation rule;
-// the markers below are already covered upstream by PRODUCTION_TERMS or do not
-// appear as TMDB keywords yet, and are kept so the tier still fires if they do.
+// Suggestive-only rows come from the Animation rule and from "ecchi" (rule 3
+// above). The remaining markers are either covered upstream by
+// PRODUCTION_TERMS or do not appear as TMDB keywords yet, and are kept so the
+// tier still fires if they do.
 
-const SUGGESTIVE_TERMS = ["fan service", "fanservice", "seduction comedy"];
+const SUGGESTIVE_TERMS = ["fan service", "fanservice", "seduction comedy", "ecchi"];
 
 /** Only inside Animation, where it names the subgenre rather than a plot shape. */
 const ANIMATION_ONLY_TERMS = ["harem"];

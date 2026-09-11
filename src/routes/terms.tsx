@@ -112,8 +112,8 @@ function TermsPage() {
 
           <Section title="10. Governing law">
             <p>
-              These Terms are governed by the laws of [YOUR STATE/COUNTRY], without regard to
-              conflict-of-laws rules.
+              These Terms are governed by the laws of the State of New Jersey, United States,
+              without regard to conflict-of-laws rules.
             </p>
           </Section>
 
