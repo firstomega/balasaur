@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TopBar } from "@/components/balasaur/TopBar";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
 
-const CONTACT_EMAIL = "balasaur@ranklist.com";
+const CONTACT_EMAIL = "baladan@sentire-labs.com";
 
 export const Route = createFileRoute("/contact")({
   loader: async () => {
