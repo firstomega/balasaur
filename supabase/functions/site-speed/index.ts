@@ -35,8 +35,7 @@ async function probe(url: string): Promise<Record<string, unknown>> {
       redirect: "manual",
       headers: {
         // Ask as Googlebot does, so any UA-specific path is exercised.
-        "user-agent":
-          "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        "user-agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
         accept: "text/html",
       },
     });
@@ -69,10 +68,7 @@ Deno.serve(async (req) => {
   const urls = requested.map(ownOrigin).filter((u): u is string => u !== null);
   const rejected = requested.length - urls.length;
   if (urls.length === 0) {
-    return Response.json(
-      { ok: false, error: `no target on ${ORIGIN}`, rejected },
-      { status: 400 },
-    );
+    return Response.json({ ok: false, error: `no target on ${ORIGIN}`, rejected }, { status: 400 });
   }
   const passes = Math.min(Number(params.passes ?? 2), 3);
   const out: Record<string, unknown>[] = [];
