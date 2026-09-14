@@ -52,9 +52,10 @@ function ContactPage() {
             <h2 className="text-[18px] font-semibold text-text-bright">Worth writing about</h2>
             <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
-                A wrong or stale fact. Scores and streaming availability sync nightly, so when an
-                upstream source has already corrected itself the fix lands here within a day. When
-                it has not, say what is wrong and on which page, and it gets fixed at the source.
+                A wrong or stale fact. Scores and streaming availability refresh on a rolling
+                nightly cycle that works through the catalog oldest first, so a correction made
+                upstream reaches the page on its own. When the source is still wrong, say what is
+                wrong and on which page, and it gets fixed at the source.
               </p>
               <p>Licensing, data, and press inquiries.</p>
               <p>Anything broken. A page that scrolls sideways, a ranking that makes no sense.</p>

@@ -884,6 +884,10 @@ function GridWithControls({
                 savedIds={wantIds}
                 watchedIds={seenIds}
                 rejectedIds={rejectedIds}
+                // Top rated orders by a vote-confidence-shrunk score, so the
+                // number on the card does not explain the order on its own.
+                // The rating count does. Same reason /best/$slug prints it.
+                showVotes={filters.sort === "topRated"}
               />
               {ci < arr.length - 1 && (
                 <BrowseBreak

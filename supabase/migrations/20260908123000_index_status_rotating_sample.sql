@@ -82,8 +82,9 @@ $$;
 
 -- The edge function inspects at most 25 URLs per request, so the snapshot
 -- sends the sample in chunks. pg_net posts are asynchronous; each chunk is
--- its own request. The bearer token is the project's public anon key, the
--- same one the previous version of this function carried.
+-- its own request. The bearer token and the shared secret both come from
+-- Vault: the bearer only satisfies the function's JWT check, and the secret
+-- in x-gsc-sync-secret is what the function checks before doing any work.
 create or replace function public.index_status_snapshot()
 returns void
 language plpgsql security definer
@@ -94,13 +95,24 @@ declare
   total int := coalesce(array_length(public.index_status_sample(), 1), 0);
   i int := 1;
   req bigint;
+  anon_key text;
+  sync_secret text;
 begin
+  select decrypted_secret into anon_key
+    from vault.decrypted_secrets where name = 'supabase_anon_key';
+  select decrypted_secret into sync_secret
+    from vault.decrypted_secrets where name = 'gsc_sync_secret';
+  if anon_key is null or sync_secret is null then
+    raise exception 'vault secrets supabase_anon_key and gsc_sync_secret must both be set';
+  end if;
+
   while i <= total loop
     select net.http_post(
       url := 'https://rqghkusdnfcydgfygvsr.supabase.co/functions/v1/gsc-sync',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxZ2hrdXNkbmZjeWRnZnlndnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwOTUyMzUsImV4cCI6MjA5ODY3MTIzNX0.XKOkgRnN4HBhb74bpegbh6jrJS7R53saiv_JVDNj51M'
+        'Authorization', 'Bearer ' || anon_key,
+        'x-gsc-sync-secret', sync_secret
       ),
       body := jsonb_build_object('action', 'inspect', 'store', true, 'urls', to_jsonb(urls[i:i+24])),
       timeout_milliseconds := 180000

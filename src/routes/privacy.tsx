@@ -58,6 +58,12 @@ function PrivacyPage() {
                 stored locally in your browser until you sign up.
               </li>
               <li>
+                Profile information: a display name, a handle, and an optional bio and favorite
+                genres. While your profile is set to public, that information and your watch
+                activity appear on a page anyone on the web can open and search engines can index.
+                You can turn your public profile off in your profile settings.
+              </li>
+              <li>
                 Technical data: IP address, approximate region, device and browser type, and usage
                 data, collected automatically. We may use approximate location to show streaming
                 availability relevant to your region.
@@ -89,10 +95,11 @@ function PrivacyPage() {
                 processes data per its own policies.
               </li>
               <li>
-                PostHog records anonymous session replays: the pages visited and where on them you
-                clicked or scrolled. Anything you type is masked and never recorded, and replays are
-                not linked to your account. Recording happens only with your consent and stops the
-                moment you withdraw it.
+                PostHog records session replays: the pages as they appeared on your screen,
+                including the text on them, and where you clicked or scrolled. Anything you type
+                into a field is masked and never recorded, your email address is masked wherever the
+                Service shows it, and replays are not linked to your account. Recording happens only
+                with your consent and stops the moment you withdraw it.
               </li>
             </ul>
           </Section>
@@ -111,6 +118,13 @@ function PrivacyPage() {
             <p>
               We do not sell your personal information. We share it only with service providers
               acting on our behalf, when required by law, or in connection with a business transfer.
+            </p>
+            <p>
+              A public profile is separate from that. While yours is set to public, your display
+              name, handle, and watch activity are published on balasaur.com, where anyone can read
+              them and search engines can index them. You can turn your public profile off in your
+              profile settings, after which your watch activity no longer appears there and the page
+              is no longer indexed.
             </p>
           </Section>
 

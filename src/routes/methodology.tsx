@@ -114,9 +114,10 @@ function MethodologyPage() {
             <h2 className="text-[18px] font-semibold text-text-bright">Freshness</h2>
             <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
               <p>
-                The catalog syncs from TMDB and OMDb nightly. Every collection is rebuilt nightly to
-                ensure rankings reflect the latest data. Each collection page displays its own
-                rebuild date.
+                Titles refresh from TMDB and OMDb on a nightly sync that works through the catalog
+                oldest first, so every title is re-checked on a rolling cycle. Every collection is
+                rebuilt nightly to ensure rankings reflect the latest data. Each collection page
+                displays its own rebuild date.
               </p>
             </div>
           </section>

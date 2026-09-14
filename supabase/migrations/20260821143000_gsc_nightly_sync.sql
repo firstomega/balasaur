@@ -30,14 +30,29 @@ set search_path = public
 as $$
 declare
   req bigint;
+  anon_key text;
+  sync_secret text;
 begin
+  -- Both values come from Vault, never from this file. The anon key only gets
+  -- the request past the function's JWT check and is public by design, but it
+  -- does not belong in a public repo either. The shared secret is what the
+  -- function actually checks.
+  select decrypted_secret into anon_key
+    from vault.decrypted_secrets where name = 'supabase_anon_key';
+  select decrypted_secret into sync_secret
+    from vault.decrypted_secrets where name = 'gsc_sync_secret';
+  if anon_key is null or sync_secret is null then
+    insert into public.gsc_sync_log (ok, detail)
+      values (false, 'vault secrets supabase_anon_key and gsc_sync_secret must both be set');
+    return;
+  end if;
+
   select net.http_post(
     url := 'https://rqghkusdnfcydgfygvsr.supabase.co/functions/v1/gsc-sync',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      -- The anon key is public by design (it ships in the browser bundle);
-      -- it only gets the request past the function's JWT check.
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxZ2hrdXNkbmZjeWRnZnlndnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwOTUyMzUsImV4cCI6MjA5ODY3MTIzNX0.XKOkgRnN4HBhb74bpegbh6jrJS7R53saiv_JVDNj51M'
+      'Authorization', 'Bearer ' || anon_key,
+      'x-gsc-sync-secret', sync_secret
     ),
     body := '{"action":"sync","days":30}'::jsonb,
     timeout_milliseconds := 120000

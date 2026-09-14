@@ -161,9 +161,11 @@ export function PersonDetail({ id }: { id: string }) {
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
-      <Suspense fallback={<PersonLoader />}>
-        <PersonFetcher id={id} />
-      </Suspense>
+      <main id="main">
+        <Suspense fallback={<PersonLoader />}>
+          <PersonFetcher id={id} />
+        </Suspense>
+      </main>
     </div>
   );
 }

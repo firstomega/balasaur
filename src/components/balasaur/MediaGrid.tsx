@@ -8,6 +8,7 @@ export function MediaGrid({
   savedIds,
   watchedIds,
   rejectedIds,
+  showVotes,
 }: {
   items: MediaItem[];
   onQuickAction?: (item: MediaItem, action: QuickAction) => void;
@@ -15,6 +16,10 @@ export function MediaGrid({
   savedIds?: Set<string>;
   watchedIds?: Set<string>;
   rejectedIds?: Set<string>;
+  /** Print each card's rating count under its score. Set this whenever the grid
+   *  is ordered by something the score alone does not explain, so the order can
+   *  be reconstructed from what is on screen. */
+  showVotes?: boolean;
 }) {
   // One column fewer at each desktop breakpoint than the original firehose
   // (posters ~20% larger on a 13" laptop) with slightly wider gutters — dense
@@ -32,6 +37,7 @@ export function MediaGrid({
           saved={savedIds?.has(item.id)}
           watched={watchedIds?.has(item.id)}
           rejected={rejectedIds?.has(item.id)}
+          showVotes={showVotes}
         />
       ))}
     </div>

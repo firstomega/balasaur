@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { PersonDetail } from "@/components/balasaur/PersonDetail";
 import { personDetailQueryOptions } from "@/hooks/usePersonDetail";
 import { TopBar } from "@/components/balasaur/TopBar";
@@ -17,7 +17,24 @@ export const Route = createFileRoute("/person/$id")({
   loader: async ({ context, params }) => {
     // Six-hour CDN cache on the SSR'd HTML (person pages are user-agnostic).
     await cacheSsrResponse();
-    return context.queryClient.ensureQueryData(personDetailQueryOptions(params.id));
+    // A segment that is not a person id can never resolve. Without this the
+    // server function's validator throws and the route answers 500, the same
+    // way /movie/$id did before its guard. A bad URL is a 404. The test
+    // matches the validator in media.functions.ts, so every id that reaches
+    // the fetch is one the fetch accepts.
+    if (!/^[1-9]\d{0,9}$/.test(params.id)) throw notFound();
+    // A numeric id TMDB does not know threw straight out of the loader, and
+    // the route answered 500. Google reads a 500 as "this site is unwell" and
+    // slows its crawl of the whole domain, which is the exact resource this
+    // site is short of. A missing person is a 404. Anything else, including a
+    // real TMDB outage, still raises: turning an outage into 404s would invite
+    // Google to drop pages that do exist.
+    try {
+      return await context.queryClient.ensureQueryData(personDetailQueryOptions(params.id));
+    } catch (e) {
+      if (/\b404\b/.test(e instanceof Error ? e.message : String(e))) throw notFound();
+      throw e;
+    }
   },
   head: ({ loaderData, params }) => {
     const d = loaderData;
@@ -28,7 +45,16 @@ export const Route = createFileRoute("/person/$id")({
     // Half a million people are reachable through credits links, most with a
     // couple of rows to their name. Only a real filmography earns an index
     // slot; the rest stay crawlable with noindex, mirroring the title gate.
-    const workCount = d ? d.groups.reduce((n, g) => n + g.items.length, 0) : 0;
+    //
+    // Count titles this site carries, not TMDB credits. groups comes from
+    // combined_credits with no catalog lookup, so someone with fifty credits
+    // for titles the catalog does not hold cleared a gate meant to keep them
+    // out, and the page it let through has nothing on it. stats.titles is the
+    // person_stats count over the catalog, and 8 is the same threshold the
+    // people sitemap applies to person_index, so the two gates now agree on
+    // which people are worth an index slot. stats is absent below 3 titles,
+    // which falls on the noindex side of the same test.
+    const workCount = d?.stats?.titles ?? 0;
     return {
       meta: [
         ...buildMeta({ title, description, url, image: d?.profileUrl, type: "profile" }),
