@@ -32,7 +32,7 @@ function TermsPage() {
             Terms &amp; Conditions
           </h1>
           <p className="mt-2 font-mono text-[12px] tabular-nums text-text-dim">
-            Effective date: [EFFECTIVE DATE]
+            Effective date: 14 September 2026
           </p>
         </header>
 
@@ -118,7 +118,7 @@ function TermsPage() {
           </Section>
 
           <Section title="11. Contact">
-            <p>Questions: [CONTACT EMAIL].</p>
+            <p>Questions: baladan@sentire-labs.com.</p>
           </Section>
         </article>
       </main>

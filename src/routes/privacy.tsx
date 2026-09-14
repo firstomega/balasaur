@@ -32,7 +32,7 @@ function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="mt-2 font-mono text-[12px] tabular-nums text-text-dim">
-            Effective date: [EFFECTIVE DATE]
+            Effective date: 14 September 2026
           </p>
         </header>
 
@@ -126,8 +126,8 @@ function PrivacyPage() {
             <p>
               Depending on your location, you may have the right to access, correct, delete, or
               export your personal data, and to object to or restrict certain processing. To
-              exercise these rights, contact us at [CONTACT EMAIL] or use the account controls in
-              the Service.
+              exercise these rights, contact us at baladan@sentire-labs.com or use the account
+              controls in the Service.
             </p>
           </Section>
 
@@ -167,7 +167,7 @@ function PrivacyPage() {
               and Balasaur is one of them. Sentire Labs is the data controller for the information
               described in this Policy.
             </p>
-            <p>Questions: [CONTACT EMAIL].</p>
+            <p>Questions: baladan@sentire-labs.com.</p>
           </Section>
         </article>
       </main>
