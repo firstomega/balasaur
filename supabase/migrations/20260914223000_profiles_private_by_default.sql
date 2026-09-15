@@ -1,0 +1,19 @@
+-- Public profiles stop being the default.
+--
+-- profiles.is_public defaulted to true, and getMyProfile creates the row lazily
+-- on a user's first signed-in page load without passing the column, so every
+-- account got a public profile before its owner had seen any setting. That page
+-- is crawlable and canonical and carries the person's real Google display name
+-- alongside up to 60 watched and 60 liked titles. Publishing a named watch
+-- history by default is the pattern GDPR Art. 25(2) describes, and the privacy
+-- policy did not disclose it at all.
+--
+-- The insert path passes only (id, username, display_name), so the column
+-- default is the whole mechanism: flipping it is the complete fix for every
+-- account created from here on.
+--
+-- Existing rows are deliberately NOT touched. Both belong to the owner, and
+-- changing someone's own visibility setting is theirs to do, not a migration's.
+--
+-- Applied live first (house rule), then mirrored here.
+alter table public.profiles alter column is_public set default false;

@@ -192,7 +192,17 @@ export function composeTitle(head: string, optional: string[]): string {
  * own data-prose, which no competitor holds, and only falls back to the
  * synopsis when there is not enough data to say anything at all.
  */
-export function detailMeta(d: TitleProseInput & { overview?: string }): {
+export function detailMeta(
+  d: TitleProseInput & {
+    overview?: string;
+    /** Detail payloads nest catalog standing here; the component unwraps it the
+     *  same way. Read both so a payload of either shape keeps the sentence. */
+    context?: {
+      cohort?: TitleProseInput["cohort"];
+      franchise?: TitleProseInput["franchise"];
+    };
+  },
+): {
   title: string;
   description: string;
 } {
@@ -207,9 +217,12 @@ export function detailMeta(d: TitleProseInput & { overview?: string }): {
   if (typeof score === "number") optional.push(` rating ${score}/100`);
   if (hasStreaming) optional.push(optional.length ? `, where to watch` : ` where to watch`);
 
-  const prose = titleProse(
-    typeof score === "number" ? { ...d, ratings: { ...d.ratings, balasaur: score } } : d,
-  );
+  const prose = titleProse({
+    ...d,
+    ratings: typeof score === "number" ? { ...d.ratings, balasaur: score } : d.ratings,
+    cohort: d.cohort ?? d.context?.cohort,
+    franchise: d.franchise ?? d.context?.franchise,
+  });
   const fallback =
     (typeof score === "number" ? `Balasaur Score ${score}/100. ` : "") + (d.overview ?? "");
 

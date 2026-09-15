@@ -57,9 +57,11 @@ function AboutPage() {
             <h2 className="text-[18px] font-semibold text-text-bright">The catalog</h2>
             <div className="mt-3 space-y-4 text-[14.5px] leading-relaxed text-text">
               <p>
-                More than {CATALOG_FLOOR_LABEL} movies and TV shows, synced from TMDB and OMDb every
-                night. Rankings rebuild nightly too, so a list like Best on Netflix reflects what is
-                on Netflix now, not what was there when the page was first written.
+                More than {CATALOG_FLOOR_LABEL} movies and TV shows from TMDB and OMDb. The sync
+                runs every night and works through the catalog oldest first, so every title comes
+                back around for a re-check. Rankings rebuild nightly too, so a list like Best on
+                Netflix reflects what is on Netflix now, not what was there when the page was first
+                written.
               </p>
             </div>
           </section>

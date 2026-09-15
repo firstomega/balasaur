@@ -45,7 +45,7 @@ function WatchedPage() {
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
       <LibraryHeader />
-      <div className="min-h-0 flex-1">
+      <main id="main" className="min-h-0 flex-1">
         <Suspense
           fallback={
             <div className="p-6">
@@ -55,7 +55,7 @@ function WatchedPage() {
         >
           <Deck />
         </Suspense>
-      </div>
+      </main>
     </div>
   );
 }

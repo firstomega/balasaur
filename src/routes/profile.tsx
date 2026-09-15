@@ -341,7 +341,7 @@ function ProfileEditor() {
                 Public profile
                 <span className="ml-2 font-normal text-text-dim">
                   {isPublic
-                    ? "Anyone with the link can see your profile."
+                    ? "Anyone can open your profile page, and search engines can index it."
                     : "Hidden. Only you can see it."}
                 </span>
               </span>

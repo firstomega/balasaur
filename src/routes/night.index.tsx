@@ -100,7 +100,7 @@ function NightEntry() {
               "radial-gradient(120% 80% at 50% 26%, transparent 52%, rgba(0,0,0,.5) 100%)",
           }}
         />
-        <main className="relative mx-auto w-full max-w-[560px] px-4 pb-16 pt-10 sm:pt-14">
+        <main id="main" className="relative mx-auto w-full max-w-[560px] px-4 pb-16 pt-10 sm:pt-14">
           <h1 className="text-[32px] font-black leading-[1.03] tracking-[-0.02em] text-text-bright sm:text-[38px]">
             Movie Night
           </h1>

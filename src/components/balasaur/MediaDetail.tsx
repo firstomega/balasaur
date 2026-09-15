@@ -942,15 +942,17 @@ export function MediaDetail({
     <div className="relative min-h-screen bg-background">
       <TopBar />
       <BackBar />
-      <Suspense fallback={<DetailLoader />}>
-        <DetailFetcher
-          type={mediaType}
-          id={id}
-          episodeRatings={episodeRatings}
-          colorA={colorA}
-          colorB={colorB}
-        />
-      </Suspense>
+      <main id="main">
+        <Suspense fallback={<DetailLoader />}>
+          <DetailFetcher
+            type={mediaType}
+            id={id}
+            episodeRatings={episodeRatings}
+            colorA={colorA}
+            colorB={colorB}
+          />
+        </Suspense>
+      </main>
     </div>
   );
 }

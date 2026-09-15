@@ -140,11 +140,11 @@ export function TopBar() {
                       className="text-[12px]"
                     />
                   ) : (
-                    <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-primary text-[11px] uppercase text-primary-foreground">
+                    <span className="ph-no-capture inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-primary text-[11px] uppercase text-primary-foreground">
                       {user.email?.[0] ?? "?"}
                     </span>
                   )}
-                  <span className="hidden truncate sm:inline">
+                  <span className="ph-no-capture hidden truncate sm:inline">
                     {profile ? profile.displayName || `@${profile.username}` : user.email}
                   </span>
                 </button>

@@ -85,7 +85,10 @@ function AccountPage() {
             Account
           </h1>
           <p className="mt-2 text-[14px] text-text-dim">
-            Signed in as <span className="font-mono text-[13px] text-text-muted">{user.email}</span>
+            Signed in as{" "}
+            <span className="ph-no-capture font-mono text-[13px] text-text-muted">
+              {user.email}
+            </span>
           </p>
           <p className="mt-2 text-[14px] leading-relaxed text-text-dim">
             Private settings. Only you can see this.{" "}
@@ -602,7 +605,9 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
             </DialogDescription>
           </DialogHeader>
           <ul className="list-disc space-y-1 pl-5 text-[13px] text-text-muted marker:text-text-dim">
-            <li>Your account ({email})</li>
+            <li>
+              Your account (<span className="ph-no-capture">{email}</span>)
+            </li>
             <li>Your library (favorites, watchlist & watch history)</li>
             <li>Any lists tied to your account</li>
           </ul>

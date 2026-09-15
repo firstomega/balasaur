@@ -11,6 +11,11 @@
 // session can ask "what is ranking, and did last month's change help" in SQL,
 // and the history outlives Google's window.
 //
+// Callers must send the shared secret GSC_SYNC_SECRET in the x-gsc-sync-secret
+// header. The function's own JWT check accepts the project anon key, which
+// ships in the browser bundle and is therefore not a gate. The two schedulers
+// that call this read the same value from Vault.
+//
 // Actions:
 //   {"action":"sites"}   list properties this service account can read
 //   {"action":"sync","days":N}  pull the last N days of performance rows
@@ -32,6 +37,24 @@ function b64url(input: ArrayBuffer | Uint8Array): string {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * Compare the presented secret against the expected one in constant time.
+ * Digesting both first keeps the loop length independent of either value, so
+ * neither the secret's length nor its first differing byte leaks.
+ */
+async function secretMatches(presented: string, expected: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(presented)),
+    crypto.subtle.digest("SHA-256", enc.encode(expected)),
+  ]);
+  const x = new Uint8Array(a);
+  const y = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
 }
 
 /** PEM (PKCS#8) to the raw DER bytes WebCrypto wants. */
@@ -120,6 +143,18 @@ async function resolveSite(token: string, explicit?: string): Promise<string> {
 
 Deno.serve(async (req) => {
   try {
+    // Before anything else, including reading the service-account key: the
+    // JWT check in front of this function accepts the public anon key, so the
+    // shared secret is the only thing separating the schedulers from the
+    // open internet.
+    const expected = Deno.env.get("GSC_SYNC_SECRET");
+    if (!expected) {
+      return Response.json({ ok: false, error: "GSC_SYNC_SECRET is not set" }, { status: 500 });
+    }
+    if (!(await secretMatches(req.headers.get("x-gsc-sync-secret") ?? "", expected))) {
+      return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+    }
+
     const raw = Deno.env.get("GSC_SERVICE_ACCOUNT_JSON");
     if (!raw) throw new Error("GSC_SERVICE_ACCOUNT_JSON is not set");
     const sa = JSON.parse(raw) as ServiceAccount;
