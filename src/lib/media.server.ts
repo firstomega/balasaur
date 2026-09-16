@@ -1887,7 +1887,9 @@ export async function refreshStalest(opts?: {
       if (error) console.error("[refresh] gone-title stamp failed:", error.message);
       else tombstoned += chunk.length;
     }
-    console.log(`[refresh] stamped ${tombstoned} title(s) missing at TMDB (404) to unblock the queue`);
+    console.log(
+      `[refresh] stamped ${tombstoned} title(s) missing at TMDB (404) to unblock the queue`,
+    );
   }
   if (!budgetHit) {
     await colorFreshlySynced(
