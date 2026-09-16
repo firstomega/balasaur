@@ -1276,7 +1276,7 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
   let failedChunks = 0;
   let firstError: string | null = null;
   for (let i = 0; i < rows.length; i += CHUNK) {
-    const { error } = await supabaseAdmin
+    const { error } = await loose(supabaseAdmin)
       .from("media")
       .upsert(rows.slice(i, i + CHUNK), { onConflict: "media_id" });
     if (error) {
