@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from "react";
+import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flame } from "lucide-react";
 import { ArcadeTile } from "@/components/arcade/ArcadeTile";
@@ -60,8 +61,7 @@ export const Route = createFileRoute("/play/")({
     return {
       meta: buildMeta({
         title: "Movie Games: Eleven Daily Games, New at Midnight",
-        description:
-          "Eleven movie games drawn from 76,000 titles and the Balasaur Score. Same board for everyone, new at midnight. No sign-up.",
+        description: `Eleven movie games drawn from ${CATALOG_FLOOR_LABEL} titles and the Balasaur Score. Same board for everyone, new at midnight. No sign-up.`,
         url,
         image: `${SITE_ORIGIN}/og-play.jpg`,
       }),
