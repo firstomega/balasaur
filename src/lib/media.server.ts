@@ -1826,6 +1826,11 @@ export async function refreshStalest(opts?: {
   let omdbCalls = 0;
   let budgetHit = false;
   const rows: MediaRow[] = [];
+  // Titles TMDB no longer has (deleted or merged upstream). They can never be
+  // re-ingested, so without a timestamp bump they sit at the head of the
+  // stalest-first queue every run and eat the per-run limit, which stops the
+  // rest of the catalog from ever refreshing.
+  const goneIds: string[] = [];
 
   await mapWithLimit(stale, 6, async (r) => {
     if (Date.now() - start > timeBudgetMs) {
