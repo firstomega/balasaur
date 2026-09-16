@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { ArcadeTile } from "@/components/arcade/ArcadeTile";
@@ -2469,7 +2468,6 @@ function DevArcadePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <TopBar />
       <main
         id="main"
         className={cn(

@@ -1,9 +1,9 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { hueVars } from "@/lib/arcade/games";
 import type { GameDef } from "@/lib/arcade/types";
 import type { ArcadeGameApi } from "@/lib/arcade/useArcadeGame";
+import { cue, resumeSound, setSoundEnabled, soundEnabled } from "@/lib/feedback";
 import { cn } from "@/lib/utils";
-import { ArcadeMotion } from "./arcadeMotion";
 import { CometBurstProvider } from "./CometBurst";
 import { ArcadeCometTarget, CometChip } from "./CometChip";
 import { EndScreen, type EndScreenContent } from "./EndScreen";
@@ -20,6 +20,11 @@ import { ScoreStrip } from "./ScoreStrip";
 // block, the hook, one Play pill, the rule, and a collapsible how-to that
 // exists only here. Playing: the score strip and the board; the timer lives
 // in the board next to what it times. Ended: the EndScreen. Phases cross-fade.
+//
+// The shell also owns the two cues that belong to no board, because it is the
+// only place that sees the engine for every game: the countdown in its last
+// three seconds, and the payout when the run ends. The switch that allows any
+// of it sits on the ready panel and starts off.
 
 const ENTER = "animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-200";
 
@@ -61,6 +66,34 @@ export function GameShell({
   children: ReactNode;
 }) {
   const cometTargetRef = useRef<HTMLElement | null>(null);
+  // A stored preference is personal state, so it renders after mount and the
+  // server and the first client paint agree on off.
+  const [sound, setSound] = useState(false);
+  useEffect(() => setSound(soundEnabled()), []);
+
+  const phase = api.phase;
+  // The countdown pushes React state once per whole second, which is exactly
+  // the cadence a tick wants.
+  const secondsLeft = api.timer ? Math.ceil(api.timer.remaining) : null;
+  useEffect(() => {
+    if (phase === "playing" && secondsLeft !== null && secondsLeft > 0 && secondsLeft <= 3) {
+      cue("tick");
+    }
+  }, [phase, secondsLeft]);
+
+  useEffect(() => {
+    if (phase === "ended") cue("payout");
+  }, [phase]);
+
+  const toggleSound = () => {
+    // The AudioContext has to be built inside this handler. Anywhere else the
+    // browser hands back a suspended one and nothing ever plays.
+    const on = setSoundEnabled(!sound);
+    setSound(on);
+    // Hear the thing you just agreed to, before a round starts.
+    if (on) cue("right", 0);
+  };
+
   const dayChip = dayNumber !== undefined ? `No. ${dayNumber}` : null;
   const roundChip = !game.daily && api.phase !== "ready" ? `Round ${api.round}` : null;
   const chip = dayChip ?? roundChip;
@@ -75,8 +108,6 @@ export function GameShell({
           style={hueVars(game.slug)}
           className={cn("mx-auto w-full", narrow ? "max-w-[600px]" : "lg:max-w-[880px]")}
         >
-          <ArcadeMotion />
-
           <header
             className={cn(
               "flex items-center justify-between gap-3 rounded-[6px] border px-3 py-2.5 sm:px-4",
@@ -133,7 +164,12 @@ export function GameShell({
               <p className="mt-3 max-w-[34ch] text-[16px] leading-snug text-text">{game.hook}</p>
               <button
                 type="button"
-                onClick={api.start}
+                onClick={() => {
+                  // A tab that was opened with sound already on has had no
+                  // gesture yet. This is the first one.
+                  resumeSound();
+                  api.start();
+                }}
                 autoFocus
                 className="arcade-focus mt-5 inline-flex min-w-[160px] items-center justify-center rounded-full bg-[var(--game,var(--primary))] px-8 py-3 text-[16px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.03] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
               >
@@ -141,6 +177,30 @@ export function GameShell({
               </button>
               <p className="mt-4 text-[12.5px] text-text-muted">{game.rule}</p>
               <p className="mt-1 text-[12px] text-text-dim">{game.payoutRule}</p>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={sound}
+                onClick={toggleSound}
+                className="arcade-focus mt-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-dim hover:border-[color-mix(in_oklab,var(--game,var(--primary))_45%,var(--color-border))] hover:text-text-bright"
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "relative h-3.5 w-6 shrink-0 rounded-full transition-colors duration-150 motion-reduce:transition-none",
+                    sound ? "bg-[var(--game,var(--primary))]" : "bg-border",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-[3px] h-2.5 w-2.5 rounded-full bg-panel transition-[left] duration-150 motion-reduce:transition-none",
+                      sound ? "left-[13px]" : "left-[3px]",
+                    )}
+                  />
+                </span>
+                Sound
+              </button>
 
               {howTo && howTo.length > 0 && (
                 <details className="group/howto mt-4 w-full max-w-[44ch] text-left">

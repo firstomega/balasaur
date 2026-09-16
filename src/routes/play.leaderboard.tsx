@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { CometChip } from "@/components/arcade/CometChip";
 import { WeeklyBoardList } from "@/components/arcade/WeeklyBoard";
 import { arcadeWeeklyBoard, type ArcadeWeeklyBoard } from "@/lib/arcade";
@@ -78,7 +77,6 @@ function LeaderboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <TopBar />
       <main id="main" className="mx-auto w-full max-w-[560px] flex-1 px-5 py-8">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

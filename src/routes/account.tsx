@@ -3,7 +3,6 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { openCookieSettings } from "@/lib/consent";
 import { exportMyData, clearMyActivity, deleteMyAccount } from "@/lib/account.functions";
 import {
@@ -68,8 +67,7 @@ function AccountPage() {
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <TopBar />
-        <main id="main" className="mx-auto max-w-[860px] px-5 py-12">
+        <main id="main" className="mx-auto max-w-article px-5 py-12">
           <p className="text-[14px] text-text-dim">Loading…</p>
         </main>
       </div>
@@ -78,8 +76,7 @@ function AccountPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[860px] px-5 py-10">
+      <main id="main" className="mx-auto max-w-article px-5 py-10">
         <header className="mb-8 border-b border-border pb-5">
           <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
             Account

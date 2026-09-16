@@ -1,5 +1,4 @@
 import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaCard } from "@/components/balasaur/MediaCard";
 import { useEffect, useState } from "react";
 import {
@@ -160,8 +159,7 @@ function CollectionPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[1160px] px-4 py-6">
+      <main id="main" className="mx-auto max-w-content px-4 py-6">
         <nav aria-label="Breadcrumb" className="mb-3 text-[13px] font-semibold text-text-dim">
           <Link to="/collections" className="hover:text-primary">
             Collections
@@ -332,7 +330,6 @@ function MetaChip({ children }: { children: React.ReactNode }) {
 function CollectionNotFound() {
   return (
     <div className="min-h-screen bg-background">
-      <TopBar />
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-xl font-semibold text-text-bright">Collection not found</h1>
         <p className="mt-2 text-sm text-text-muted">

@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
 
 export const Route = createFileRoute("/methodology")({
@@ -23,8 +22,7 @@ export const Route = createFileRoute("/methodology")({
 function MethodologyPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[760px] flex-1 px-4 py-12">
+      <main id="main" className="mx-auto w-full max-w-article flex-1 px-4 py-12">
         <h1 className="text-[28px] font-bold tracking-tight text-text-bright">Methodology</h1>
         <p className="mt-2 text-[15px] text-text-muted">
           How we score, rank, and refresh our catalog.

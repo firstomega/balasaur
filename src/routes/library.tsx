@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import {
   EmptyState,
   EMPTY_ACTION_CLASS,
@@ -600,11 +599,10 @@ function LibraryPage() {
     // scrolled 141px into nothing. The room keeps `grow` so a lit one still
     // runs the height of whatever the shelves need.
     <div className="flex flex-col bg-background text-foreground">
-      <TopBar />
       <style>{ROOM_CSS}</style>
       <div className={"libroom grow" + (lit ? " lit" : "") + (lit && late ? " late" : "")}>
         {lit && <div className="vig" aria-hidden="true" />}
-        <main id="main" className="relative z-10 mx-auto w-full max-w-[1080px] px-4 py-7 sm:px-5">
+        <main id="main" className="relative z-10 mx-auto w-full max-w-content px-4 py-7 sm:px-5">
           <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-[#f7f2e7]">

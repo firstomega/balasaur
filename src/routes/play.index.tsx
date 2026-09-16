@@ -1,7 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flame } from "lucide-react";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { ArcadeTile } from "@/components/arcade/ArcadeTile";
 import { CometChip } from "@/components/arcade/CometChip";
 import { GameMark } from "@/components/arcade/GameMark";
@@ -167,8 +166,7 @@ function ArcadeHub() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[1100px] flex-1 px-5 pb-20 pt-5">
+      <main id="main" className="mx-auto w-full max-w-content flex-1 px-5 pb-20 pt-5">
         <Hero mounted={mounted} best={personal.best} />
 
         {HUB_SECTIONS.map((section, i) => {

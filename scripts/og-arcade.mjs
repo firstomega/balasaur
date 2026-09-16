@@ -3,16 +3,21 @@
 // template. Each card is the game's face: hue ground, the mark, the name in
 // the display weight, the hook, and the URL. Run once per registry change:
 //
-//   node scripts/og-arcade.mjs
+//   bun scripts/og-arcade.mjs
 //
-// Reads the mark paths, names, hooks and hues straight out of the TypeScript
-// sources (as text, so the script needs no TS loader) and the self-hosted
-// fonts from src/fonts, so a card can never disagree with the site.
+// Reads the game marks, names, hooks and hues straight out of the TypeScript
+// sources and the self-hosted fonts from src/fonts, so a card can never
+// disagree with the site. The dinosaur comes in as real path data from
+// scripts/brand-assets.ts, which imports it from the component that draws it;
+// it used to be a hand-copy that sat here claiming to be the same dinosaur
+// long after the mark had been redrawn, and twelve cards shipped with the
+// previous animal on them.
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "/opt/node22/lib/node_modules/playwright/index.mjs";
+import { dinoSvg } from "./brand-assets.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = resolve(ROOT, "public");
@@ -71,9 +76,12 @@ function mark(slug, size, color) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:${color};display:block">${paths}</svg>`;
 }
 
-// The same dino as src/components/balasaur/DinoMark.tsx.
-function dino(size, color) {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color:${color};display:block"><path d="M4 17c0-3 2-5 5-5h2c2 0 3-1 3-3 0-2 2-3 4-3 1.5 0 3 1 3 3v2c0 4-3 7-7 7H6c-1 0-2-.5-2-1z"/><path d="M4 17l-2 2"/><path d="M8 17v3M12 17v3"/><circle cx="18" cy="9" r="0.6" fill="currentColor" stroke="none"/></svg>`;
+// The wordmark's dinosaur, solid and in one value: the card is read at roughly
+// half these pixels in a Discord or Slack preview, where an outline at 30px
+// closes up. The 44px hub chip keeps the outline, because it sits in a row of
+// outlined game marks and has to match them.
+function lockupDino(size, color) {
+  return dinoSvg(size, color, { filled: true, depth: false });
 }
 
 const BASE_CSS = `
@@ -102,7 +110,7 @@ function gameCard(game) {
     .pill { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: ${hue}; color: ${ink}; font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
     .hook { margin-top: 26px; font-size: 38px; line-height: 1.22; color: rgba(255,255,255,0.86); max-width: 640px; }
   </style></head><body><div class="card"><div class="dots"></div>
-    <div class="brand">${dino(30, "#fff")}<span>balasaur</span></div>
+    <div class="brand">${lockupDino(30, "#fff")}<span>balasaur</span></div>
     <div class="text">
       <div class="pill mono">Daily <span style="opacity:.55">/</span> ${esc(game.minutes)}</div>
       <div class="name" style="font-size:${nameSize}px;margin-top:22px">${esc(game.name)}</div>
@@ -137,8 +145,8 @@ function hubCard() {
     .h1 { font-size: 86px; }
     .sub { margin-top: 26px; font-size: 34px; color: rgba(255,255,255,0.72); }
   </style></head><body><div class="card"><div class="grid"></div>
-    <div class="brand">${dino(30, "#fff")}<span>balasaur</span></div>
-    <div class="row"><span class="chip">${dino(44, HUE_HEX.blue)}</span>${cluster}</div>
+    <div class="brand">${lockupDino(30, "#fff")}<span>balasaur</span></div>
+    <div class="row"><span class="chip">${dinoSvg(44, HUE_HEX.blue)}</span>${cluster}</div>
     <div class="text">
       <div class="h1 name">Eleven movie games.<br>New at midnight.</div>
       <div class="sub">Same board for everyone. Share it without spoiling it.</div>

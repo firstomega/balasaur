@@ -1,3 +1,5 @@
+import { SITE_PROOF, SITE_TAGLINE } from "@/lib/seo";
+
 interface Props {
   onBrowse: () => void;
 }
@@ -8,17 +10,17 @@ interface Props {
 // The v0 tag, the eyebrow, and the hero sign-in button are gone; the
 // wordmark and sign-in already live in the TopBar 48px above.
 //
-// The h1 leads with the job (ending the what-do-we-watch scroll), not the
-// score: the owner's positioning is discovery, not ratings. The score is the
-// proof and lives in the subhead. No catalog count anywhere in the hero, on
-// purpose: the grid's own counter renders on this same screen, and any
-// second figure would contradict it.
+// The h1 is the site's one tagline, held in src/lib/seo.ts. It replaces "Stop
+// scrolling. Start watching.", which any streaming guide could print, and it
+// is now the same sentence the footer, the share card and the meta description
+// carry. No catalog count anywhere in the hero, on purpose: the grid's own
+// counter renders on this same screen, and any second figure would contradict
+// it.
 //
-// The subhead names the disagreement, not the pipeline. Listing IMDb, Rotten
-// Tomatoes, Metacritic and TMDB described how the number is made, which is a
-// sentence four other sites could print. The four sources are already on
-// every title page and in the footer; what none of them can say is that the
-// argument between critics and everyone else has one answer here.
+// The subhead says what the number is and how current it is, and nothing about
+// how it is assembled. The 0 to 100 scale is not a claim the visitor has to
+// take on faith: the score badges on the trending row directly below print
+// numbers on that scale before the first scroll.
 export function LandingHero({ onBrowse }: Props) {
   return (
     <section
@@ -39,11 +41,10 @@ export function LandingHero({ onBrowse }: Props) {
         <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-[24px] font-semibold leading-tight text-text-bright sm:text-[28px]">
-              Stop scrolling. Start watching.
+              {SITE_TAGLINE}.
             </h1>
             <p className="mt-1.5 max-w-xl text-[15px] leading-relaxed text-text-muted">
-              Critics and audiences disagree about most things. Every title here carries one score
-              that settles it.
+              {SITE_PROOF}
             </p>
           </div>
 

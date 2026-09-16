@@ -5,6 +5,12 @@
 // tints with the name centered; the countdown is a bar right under the
 // cards and shows nothing but the clock. It stays mounted, dimmed, through
 // the reveal so the board's height never changes mid-round.
+// A finger down on a card scales it a touch and rims it in the game hue, so
+// the tap is answered before the verdict is. The verdict here is local and
+// lands in the same frame as the tap, so there is no waiting state to draw.
+// When the clock takes the round instead of a pick, the four cards desaturate
+// together and a stamp lands on the prompt, so an expired round never reads
+// like watching someone else answer correctly.
 // On reveal the odd one fills with the game hue and the three real actors
 // show the part they played. Controlled: reveal state comes in as a prop,
 // the pick goes out as a callback, the clock belongs to the game route.
@@ -13,6 +19,7 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import type { ArcadeTimer } from "@/lib/arcade/useArcadeGame";
+import { PRESS_CLASS, usePress } from "@/lib/arcade/usePress";
 import { TimerBar } from "./TimerBar";
 
 export interface OddOneOutChoice {
@@ -82,6 +89,7 @@ export function OddOneOut({
   onPick,
 }: OddOneOutProps) {
   const open = !disabled && !reveal;
+  const press = usePress<number>(open);
   // The route drops the clock once a pick lands; the board keeps drawing
   // the last one it saw, dimmed, until the next round hands it a fresh one.
   const lastTimer = useRef<ArcadeTimer | null>(timer ?? null);
@@ -113,6 +121,8 @@ export function OddOneOut({
   const rightPick = reveal !== null && reveal.pickedIndex === reveal.correctIndex;
   const wrongPick =
     reveal !== null && reveal.pickedIndex !== null && reveal.pickedIndex !== reveal.correctIndex;
+  // The clock took the round: the answer is in and nobody chose it.
+  const timedOut = reveal !== null && reveal.pickedIndex === null;
 
   const count =
     round !== undefined && rounds !== undefined ? { round, rounds } : parseRound(roundLabel);
@@ -159,7 +169,7 @@ export function OddOneOut({
       {/* The prompt: a hue stage across the width, the poster as the anchor,
           the title in display type. */}
       <div
-        className="flex items-center gap-4 rounded-[6px] p-3 sm:gap-6 sm:p-5"
+        className="relative flex items-center gap-4 rounded-[6px] p-3 sm:gap-6 sm:p-5"
         style={{
           background:
             "linear-gradient(160deg, color-mix(in oklch, var(--game) 70%, #0b0d10), color-mix(in oklch, var(--game) 30%, #0b0d10))",
@@ -195,17 +205,34 @@ export function OddOneOut({
             <p className="mt-1 font-mono text-[12px] text-white/70 sm:text-[13px]">{year}</p>
           ) : null}
         </div>
+        {timedOut && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <span
+              className="arcade-stamp rounded-[6px] border-[3px] border-warn bg-black/55 px-3 py-1 text-[28px] font-black uppercase leading-none tracking-[0.08em] text-warn sm:text-[36px]"
+              style={{ animationDuration: "200ms" }}
+            >
+              Time up
+            </span>
+          </span>
+        )}
       </div>
 
       {/* Four answers, four tints, the name centered. */}
       <div
         role="group"
         aria-label="Actors"
-        className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-5 sm:gap-3"
+        className={cn(
+          "mt-4 grid grid-cols-2 gap-2.5 transition-[filter] duration-500 motion-reduce:transition-none sm:mt-5 sm:gap-3",
+          timedOut && "saturate-[0.35]",
+        )}
       >
         {choices.map((c, i) => {
           const isCorrect = reveal !== null && i === reveal.correctIndex;
           const isWrongPick = wrongPick && i === reveal?.pickedIndex;
+          const isDown = press.isPressed(i);
           const tint = TINTS[i % TINTS.length];
           return (
             <button
@@ -213,6 +240,7 @@ export function OddOneOut({
               type="button"
               disabled={!open}
               onClick={() => onPick(i)}
+              {...press.bind(i)}
               style={
                 isCorrect || isWrongPick
                   ? undefined
@@ -223,8 +251,8 @@ export function OddOneOut({
                     } as CSSProperties)
               }
               className={cn(
-                "relative flex min-h-[76px] flex-col items-center justify-center rounded-[6px] border px-3 py-3 text-center transition-[transform,background-color,border-color,color] duration-150 motion-reduce:transition-none motion-reduce:transform-none sm:min-h-[92px] sm:px-4",
-                open && "hover:-translate-y-0.5",
+                "relative flex min-h-[76px] flex-col items-center justify-center rounded-[6px] border px-3 py-3 text-center transition-[transform,background-color,border-color,color,box-shadow] duration-150 motion-reduce:transition-none motion-reduce:transform-none sm:min-h-[92px] sm:px-4",
+                open && !isDown && "hover:-translate-y-0.5",
                 isCorrect &&
                   "border-[var(--game)] bg-[var(--game)] text-[var(--game-ink)] [box-shadow:0_0_24px_color-mix(in_oklab,var(--game)_45%,transparent)]",
                 isCorrect && rightPick && "arcade-pop",
@@ -232,6 +260,7 @@ export function OddOneOut({
                 !isCorrect && !isWrongPick && "text-text-bright",
                 reveal !== null && !isCorrect && !isWrongPick && "opacity-70",
                 reveal === null && disabled && "opacity-50",
+                isDown && PRESS_CLASS,
               )}
             >
               <span className="text-[17px] font-black leading-tight tracking-[-0.02em] sm:text-[20px]">

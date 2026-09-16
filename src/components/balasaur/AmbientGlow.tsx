@@ -1,81 +1,8 @@
 import { cn } from "@/lib/utils";
-
-const HEX = /^#[0-9a-f]{6}$/i;
-
-function safeHex(value: string | null | undefined): string | null {
-  return value && HEX.test(value) ? value : null;
-}
-
-/**
- * A poster color as it is stored is a color to paint a poster on, not a color
- * to light a room with. Half the catalog stores something dark and desaturated,
- * and a dark desaturated color spread over 700px of near-black reads as dirt.
- *
- * So every stored color is pushed through two floors before it is used: hue is
- * kept exactly, saturation is floored so a muddy extraction still emits a
- * recognisable color, and lightness is pulled into the band where a color can
- * act as a light source without washing to white.
- *
- * A color with no hue at all is the one case the floors cannot rescue. Black,
- * white and grey all carry hue 0, so flooring their saturation would paint a
- * red room behind a black-and-white poster. Those return null and the page
- * keeps its flat ground, which is the honest answer.
- */
-const SATURATION_FLOOR = 0.45;
-const LIGHTNESS_MIN = 0.46;
-const LIGHTNESS_MAX = 0.64;
-/** Below this the stored color is grey, and its hue is rounding noise. */
-const ACHROMATIC = 0.08;
-
-function toLightSource(hex: string): [number, number, number] | null {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const l0 = (max + min) / 2;
-  const d = max - min;
-
-  let h = 0;
-  if (d !== 0) {
-    if (max === r) h = ((g - b) / d) % 6;
-    else if (max === g) h = (b - r) / d + 2;
-    else h = (r - g) / d + 4;
-    h *= 60;
-    if (h < 0) h += 360;
-  }
-  const s0 = d === 0 ? 0 : d / (1 - Math.abs(2 * l0 - 1));
-  if (s0 < ACHROMATIC) return null;
-
-  const s = Math.max(s0, SATURATION_FLOOR);
-  const l = Math.min(Math.max(l0, LIGHTNESS_MIN), LIGHTNESS_MAX);
-
-  // Back to rgb.
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-  const [r1, g1, b1] =
-    h < 60
-      ? [c, x, 0]
-      : h < 120
-        ? [x, c, 0]
-        : h < 180
-          ? [0, c, x]
-          : h < 240
-            ? [0, x, c]
-            : h < 300
-              ? [x, 0, c]
-              : [c, 0, x];
-  return [Math.round((r1 + m) * 255), Math.round((g1 + m) * 255), Math.round((b1 + m) * 255)];
-}
+import { posterLightPair, rgba } from "@/lib/posterLight";
 
 const GLOW_MASK =
   "radial-gradient(78% 108% at 50% 16%, #000 0%, #000 36%, rgba(0,0,0,0.42) 70%, rgba(0,0,0,0) 100%)";
-
-function rgba([r, g, b]: [number, number, number], alpha: number): string {
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 /**
  * The light a title's own poster throws into the room behind it.
@@ -85,6 +12,9 @@ function rgba([r, g, b]: [number, number, number], alpha: number): string {
  * it is in the first byte of HTML rather than appearing after the poster loads.
  * A title with no stored colors renders nothing at all and the page keeps its
  * flat ground.
+ *
+ * The colors are floored and clamped by `posterLight`, which is also what a
+ * poster-lit card hover reads, so one poster lights every surface the same way.
  *
  * Mount it as the first child of a `relative isolate` container that wraps the
  * content it should sit behind. Two things matter about that container:
@@ -103,24 +33,15 @@ export function AmbientGlow({
 }: {
   /** Dominant poster color as #rrggbb (media.color_a). */
   colorA?: string | null;
-  /** Secondary poster color as #rrggbb (media.color_b). */
+  /** Secondary poster color as #rrggbb (media.color_b). Falls back to colorA,
+   *  so a surface with one color is lit by one color from both poles. */
   colorB?: string | null;
   /** Override the default box (the full height of the container). */
   className?: string;
 }) {
-  // These values go straight into a CSS gradient, so anything that is not a
-  // plain hex is dropped rather than trusted.
-  const a = safeHex(colorA);
-  const b = safeHex(colorB) ?? a;
-  if (!a || !b) return null;
-
-  // One grey color borrows the other's hue rather than turning the room red.
-  // Two grey colors mean the poster has no light in it, and nothing renders.
-  const liftedA = toLightSource(a);
-  const liftedB = toLightSource(b);
-  const lightA = liftedA ?? liftedB;
-  const lightB = liftedB ?? liftedA;
-  if (!lightA || !lightB) return null;
+  const pair = posterLightPair(colorA, colorB);
+  if (!pair) return null;
+  const [lightA, lightB] = pair;
 
   return (
     // Two elements, because the order CSS applies them in is the whole trick.
@@ -141,7 +62,8 @@ export function AmbientGlow({
       style={{
         // Enough blur to dissolve the eight-bit banding a gradient this large
         // shows on an OLED-dark ground, not so much that the two lamps merge
-        // into one wash.
+        // into one wash. This is the expensive one, and it is why a card uses
+        // a box-shadow instead: one of these per page, never one per card.
         filter: "blur(70px)",
       }}
     >

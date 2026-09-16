@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Bookmark, Check, EyeOff, MoreHorizontal, Trophy } from "lucide-react";
 import type { MediaItem, MediaType } from "@/types/media";
@@ -6,6 +7,7 @@ import { displayYear } from "@/lib/mediaFormat";
 import { mediaSlug } from "@/lib/slug";
 import { ScoreBadge } from "./ScoreBadge";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
+import { posterLightVars, safeHex } from "@/lib/posterLight";
 
 const TYPE_LABEL: Record<MediaType, string> = {
   movie: "MOVIE",
@@ -114,10 +116,10 @@ export function MediaCard({
               aria-pressed={saved}
               title={saved ? "On your watchlist" : "Want to Watch"}
               className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] backdrop-blur-sm transition-all",
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] transition-opacity duration-base",
                 saved
-                  ? "border-[#e8b84b]/70 bg-[#e8b84b]/25 text-[#e8b84b] opacity-100"
-                  : "border-white/30 bg-black/70 text-white opacity-0 hover:border-[#e8b84b] hover:bg-[#e8b84b] hover:text-black group-hover:opacity-100",
+                  ? "border-[#e8b84b]/70 bg-[#40351b] text-[#e8b84b] opacity-100"
+                  : "border-white/30 bg-background text-white opacity-0 hover:border-[#e8b84b] hover:bg-[#e8b84b] hover:text-black group-hover:opacity-100",
               )}
             >
               <Bookmark className="h-3 w-3" />
@@ -134,10 +136,10 @@ export function MediaCard({
               aria-pressed={watched}
               title={watched ? "Watched" : "Mark as watched"}
               className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] backdrop-blur-sm transition-all",
+                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] transition-opacity duration-base",
                 watched
-                  ? "border-rating/60 bg-rating/25 text-rating opacity-100"
-                  : "border-white/30 bg-black/70 text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
+                  ? "border-rating/60 bg-[#2e4030] text-rating opacity-100"
+                  : "border-white/30 bg-background text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
               )}
             >
               <Check className="h-3 w-3" />
@@ -154,10 +156,10 @@ export function MediaCard({
               aria-pressed={rejected}
               title={rejected ? "Never show this (click to undo)" : "Never show this"}
               className={cn(
-                "flex items-center rounded-[5px] border p-1 backdrop-blur-sm transition-all",
+                "flex items-center rounded-[5px] border p-1 transition-opacity duration-base",
                 rejected
-                  ? "border-[#c75d6e]/70 bg-[#c75d6e]/25 text-[#c75d6e] opacity-100"
-                  : "border-white/30 bg-black/70 text-white opacity-0 hover:border-[#c75d6e] hover:bg-[#c75d6e] hover:text-white group-hover:opacity-100",
+                  ? "border-[#c75d6e]/70 bg-[#381e24] text-[#c75d6e] opacity-100"
+                  : "border-white/30 bg-background text-white opacity-0 hover:border-[#c75d6e] hover:bg-[#c75d6e] hover:text-white group-hover:opacity-100",
               )}
             >
               <EyeOff className="h-3 w-3" />
@@ -216,8 +218,6 @@ export function MediaCard({
   );
 }
 
-const HEX = /^#[0-9a-f]{6}$/i;
-
 function CardArt({
   item,
   posterOverlay,
@@ -237,9 +237,39 @@ function CardArt({
   // for callers that fetched it separately. Anything that is not a plain hex is
   // dropped, because it lands in a style attribute.
   const raw = tint ?? (item as { colorA?: string | null }).colorA ?? null;
-  const placeholder = raw && HEX.test(raw) ? raw : null;
+  const placeholder = safeHex(raw);
+  // The same stored color, floored into something that can act as a light
+  // rather than a ground, then handed to the hover shadow below. Null for a
+  // black-and-white poster, and that card keeps the plain shadow.
+  const light = posterLightVars(placeholder);
+  // A lazy poster fades up out of its stored color instead of cutting to the
+  // photograph. Eager cards start visible: they are the largest thing painted
+  // above the fold, and hiding them until React hydrates would push that paint
+  // back by however long the bundle takes.
+  const [revealed, setRevealed] = useState(eager);
+  // A cached poster finishes loading before React attaches onLoad, so that
+  // event never fires. Reading `complete` when the node mounts catches it, in
+  // the same commit, so a re-visit never blinks from zero.
+  const catchCached = useCallback((node: HTMLImageElement | null) => {
+    if (node?.complete) setRevealed(true);
+  }, []);
   return (
-    <div className="specular-top relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
+    // One duration for the whole hover gesture: the lift, the border, the
+    // shadow and the poster zoom below all run at --transition-duration-base.
+    // The lift used to run at 150 and the zoom at 200, which read as one
+    // gesture at two speeds.
+    //
+    // The shadow is the card's own poster color. Two layers, both plain
+    // box-shadows so the compositor draws them: a drop shadow under the card
+    // and a small spread around it. The color arrives as two custom properties
+    // set below, and each falls back to what the card looked like before, so a
+    // card with no usable color keeps the black shadow and a grey one is not
+    // painted a color its poster does not have. `group-hover` compiles inside
+    // `@media (hover: hover)`, so none of this exists on a touch device.
+    <div
+      className="specular-top relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-[transform,border-color,box-shadow] duration-base group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_var(--poster-light,rgba(0,0,0,0.8)),0_0_20px_3px_var(--poster-halo,transparent)]"
+      style={(light ?? undefined) as React.CSSProperties | undefined}
+    >
       <div
         className="aspect-[2/3] w-full"
         style={placeholder ? { backgroundColor: placeholder } : undefined}
@@ -262,9 +292,17 @@ function CardArt({
             loading={eager ? "eager" : "lazy"}
             fetchPriority={eager ? "high" : undefined}
             decoding="async"
-            // Subtle inner zoom on hover (the container clips it) — signals
+            ref={catchCached}
+            onLoad={() => setRevealed(true)}
+            // A poster that fails to load still shows: otherwise the alt text
+            // would sit at opacity 0 forever.
+            onError={() => setRevealed(true)}
+            // Subtle inner zoom on hover (the container clips it): signals
             // interactivity without the layout shift a card-scale would cause.
-            className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.045] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            className={cn(
+              "h-full w-full object-cover transition-[opacity,transform] duration-base ease-out group-hover:scale-[1.045] motion-reduce:transition-none motion-reduce:group-hover:scale-100",
+              revealed ? "opacity-100" : "opacity-0",
+            )}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-accent text-text-dim">
@@ -272,7 +310,7 @@ function CardArt({
           </div>
         )}
       </div>
-      <div className="absolute left-1.5 top-1.5 flex h-[18px] items-center gap-1 rounded-[4px] bg-background/85 px-1.5 backdrop-blur-sm">
+      <div className="absolute left-1.5 top-1.5 flex h-[18px] items-center gap-1 rounded-[4px] bg-background px-1.5">
         <span
           className={`inline-block h-1.5 w-1.5 rounded-full bg-current ${TYPE_COLOR_CLASS[item.mediaType]}`}
           aria-hidden="true"
@@ -290,7 +328,7 @@ function CardArt({
         <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
           <ScoreBadge score={item.ratings.balasaur} />
           {showVotes && item.voteCount != null && (
-            <span className="rounded-[4px] bg-background/85 px-1 py-0.5 font-mono text-[11px] tabular-nums text-text-muted backdrop-blur-sm">
+            <span className="rounded-[4px] bg-background px-1 py-0.5 font-mono text-[11px] tabular-nums text-text-muted">
               {Intl.NumberFormat("en-US", { notation: "compact" }).format(item.voteCount)} ratings
             </span>
           )}
@@ -300,7 +338,7 @@ function CardArt({
       {item.awardWinner && (
         <span
           title="Major award winner"
-          className="absolute bottom-1.5 right-1.5 rounded-[4px] bg-background/85 p-1 backdrop-blur-sm"
+          className="absolute bottom-1.5 right-1.5 rounded-[4px] bg-background p-1"
         >
           <Trophy className="h-3 w-3 text-rating" aria-label="Award winner" />
         </span>

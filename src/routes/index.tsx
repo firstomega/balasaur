@@ -2,7 +2,6 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { FilterRail } from "@/components/balasaur/FilterRail";
@@ -275,11 +274,9 @@ function HomePage() {
   // Card quick actions (desktop hover): Save-to-watchlist (primary while
   // browsing) and Watched. Each toggles its own state; Watched preserves any
   // sentiment already on the record.
+  // No sign-in gate here. Saving works signed out: useUserStatus keeps an
+  // anonymous pick in localStorage and moves it into the account on sign-in.
   const handleQuickAction = (item: MediaItem, action: QuickAction) => {
-    if (!user) {
-      setAuthOpen(true);
-      return;
-    }
     const rec = statuses[item.id];
     if (action === "notInterested") {
       if (isNotInterested(rec)) {
@@ -343,8 +340,7 @@ function HomePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <div className="mx-auto flex max-w-[1600px] gap-5 px-4 py-5">
+      <div className="mx-auto flex max-w-grid gap-5 px-4 py-5">
         {/* Desktop rail (collapsible) */}
         {!railCollapsed ? (
           <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden">
@@ -963,8 +959,7 @@ function HomeError({ error }: { error: Error }) {
   console.error(error);
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[1600px] px-4 py-10">
+      <main id="main" className="mx-auto max-w-grid px-4 py-10">
         <div className="rounded-[5px] border border-border bg-panel p-6">
           <h2 className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
             Couldn't load the firehose

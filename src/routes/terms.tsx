@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -25,8 +24,7 @@ export const Route = createFileRoute("/terms")({
 function TermsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[720px] px-5 py-12">
+      <main id="main" className="mx-auto max-w-article px-5 py-12">
         <header className="mb-10 border-b border-border pb-6">
           <h1 className="font-sans text-3xl font-semibold tracking-tight text-text-bright">
             Terms &amp; Conditions

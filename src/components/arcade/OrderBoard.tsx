@@ -12,9 +12,14 @@
 // with its year shown so the order explains itself. The board is safe to
 // leave mounted under the end panel: with `reveal` set it renders only the
 // judged strip.
+//
+// A card reaching a slot makes a sound, by drag or by arrow, and locking the
+// order makes a different one. The grip buzzes when a drag takes hold, which
+// is the same thing the lift is saying in pixels.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, GripHorizontal, GripVertical } from "lucide-react";
+import { cue, haptic, reducedMotion } from "@/lib/feedback";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import { TimerBar } from "./TimerBar";
@@ -66,14 +71,6 @@ const ORDER_CSS = `
 
 const NUDGE_BTN =
   "flex h-7 w-7 items-center justify-center rounded-[4px] border border-border text-text-muted hover:border-[var(--game,var(--primary))] hover:text-text-bright disabled:opacity-30 disabled:hover:border-border disabled:hover:text-text-muted lg:h-8 lg:w-8";
-
-function reducedMotion(): boolean {
-  try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return true;
-  }
-}
 
 export function OrderBoard({
   cards,
@@ -155,11 +152,7 @@ export function OrderBoard({
       if (!d.reduced) setDragView({ id: d.id, offset: 0, spring: false });
       d.blockTouch = (ev: TouchEvent) => ev.preventDefault();
       document.addEventListener("touchmove", d.blockTouch, { passive: false });
-      try {
-        if (navigator.vibrate) navigator.vibrate(10);
-      } catch {
-        /* ignore */
-      }
+      haptic(10);
     };
     activateRef.current = activate;
 
@@ -209,7 +202,9 @@ export function OrderBoard({
       const id = d.id;
       const reduced = d.reduced;
       clearDrag();
-      if (!wasActive || reduced) return;
+      if (!wasActive) return;
+      cue("land");
+      if (reduced) return;
       // The order is already with the parent; only the row's residual offset
       // is left, and it springs into the slot.
       setDragView({ id, offset: 0, spring: true });
@@ -320,6 +315,7 @@ export function OrderBoard({
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
     onReorder(ids);
+    cue("land");
     const moved = byId.get(ids[j]);
     if (moved) setLive(`${moved.title} is now ${j + 1} of ${ids.length}.`);
   };
@@ -487,7 +483,10 @@ export function OrderBoard({
         <button
           type="button"
           disabled={disabled}
-          onClick={onSubmit}
+          onClick={() => {
+            cue("commit");
+            onSubmit();
+          }}
           className="mt-4 w-full rounded-full bg-[var(--game,var(--primary))] py-3 text-[15px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 motion-reduce:transform-none"
         >
           {submitLabel}

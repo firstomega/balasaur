@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
 import { TasteCardPreview } from "@/components/balasaur/TasteCardPreview";
 import { useUserStatus } from "@/hooks/useUserStatus";
@@ -51,8 +50,7 @@ export const Route = createFileRoute("/taste")({
 function TastePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[760px] px-5 py-10">
+      <main id="main" className="mx-auto w-full max-w-article px-5 py-10">
         <h1 className="text-[32px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright sm:text-[40px]">
           Taste Card
         </h1>

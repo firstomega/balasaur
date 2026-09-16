@@ -12,7 +12,6 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TopBar } from "./TopBar";
 import { ShareButton } from "./ShareButton";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
 import { useUserStatus } from "@/hooks/useUserStatus";
@@ -22,7 +21,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
 import { EpisodeHeatmap } from "./EpisodeHeatmap";
-import { ScoreBadge } from "./ScoreBadge";
+import { ScoreBadge, tierName } from "./ScoreBadge";
 import { AmbientGlow } from "./AmbientGlow";
 import { ScrollRail } from "./ScrollRail";
 import { computeBalasaurScore } from "@/lib/score";
@@ -306,6 +305,8 @@ function DetailInner({
   });
   const sourceBars = normalizedSources(ratings);
   const divergence = divergenceNote(ratings);
+  // One blend, read twice: the hero lockup and the Ratings section below it.
+  const balasaur = ratings.balasaur ?? computeBalasaurScore(ratings);
 
   return (
     <article>
@@ -371,9 +372,32 @@ function DetailInner({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
-                <h1 className="text-[30px] font-black leading-[1.08] tracking-[-0.02em] text-text-bright md:text-[44px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
-                  {detail.title}
-                </h1>
+                {/* Title and score are one lockup. The score used to sit eight
+                    blocks down the page, which on a phone is the third screen:
+                    the one thing here that no other site has was the last thing
+                    a visitor saw. Below md the h1 owns the whole line and the
+                    score drops under it; above md they share a line and the
+                    title absorbs whatever width the score leaves. */}
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-3">
+                  <h1 className="basis-full text-[30px] font-black leading-[1.08] tracking-[-0.02em] text-text-bright md:basis-auto md:text-[44px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
+                    {detail.title}
+                  </h1>
+                  {/* No score, no lockup. A title with nothing to blend says so
+                      once, in Ratings, rather than twice. */}
+                  {balasaur !== undefined && (
+                    <div className="flex shrink-0 items-center gap-2.5">
+                      <ScoreBadge score={balasaur} size="lg" />
+                      <div>
+                        <div className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                          Balasaur Score
+                        </div>
+                        <div className="mt-0.5 text-[15px] font-black leading-none tracking-[-0.02em] text-text-bright md:text-[17px]">
+                          {tierName(balasaur)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="mt-1 shrink-0">
                   <ShareButton title={detail.title} />
                 </div>
@@ -392,11 +416,6 @@ function DetailInner({
                   ))}
                 </div>
               )}
-              {detail.tagline && (
-                <p className="mt-3 max-w-2xl text-[14px] italic text-text-muted">
-                  "{detail.tagline}"
-                </p>
-              )}
               {detail.trailer && (
                 <button
                   type="button"
@@ -412,13 +431,17 @@ function DetailInner({
         </div>
       </header>
 
-      {/* Body. On mobile the aside comes FIRST: someone who arrived from a
-          "where to watch X" search needs the answer and the save button on the
-          first screen, not below eight editorial sections. On md and up it
-          returns to a right sidebar. */}
+      {/* Body. Someone who arrived from a "where to watch X" search needs the
+          answer on the first screen, not below eight editorial sections, so on
+          mobile that one panel is lifted above the main column. The rest of the
+          sidebar (status, facts, links) has no claim on the first screen and now
+          follows the page instead of burying it. The aside is display:contents
+          below md, which makes its panels direct flex children here so a single
+          one of them can be ordered without rendering it twice. On md and up it
+          is a plain right sidebar again, in source order. */}
       <div className="mx-auto mt-8 flex max-w-[1100px] flex-col gap-6 px-4 pb-16 md:grid md:grid-cols-[1fr_300px]">
         {/* MAIN */}
-        <div className="order-2 min-w-0 space-y-6 md:order-1">
+        <div className="min-w-0 space-y-6">
           {/* Our read first, the distributor's synopsis second. The prose is
               composed from this database (score provenance, source
               disagreement, vote weight, shape, availability), so the page
@@ -446,7 +469,6 @@ function DetailInner({
                 // follow). Click for the breakdown — the score earns trust by
                 // showing its math, and it explains why our 0–100 sits next to
                 // IMDb's 0–10 and RT's %.
-                const balasaur = ratings.balasaur ?? computeBalasaurScore(ratings);
                 if (balasaur === undefined) return null;
                 const sources: { label: string; value?: string; weight: string }[] = [
                   {
@@ -711,10 +733,14 @@ function DetailInner({
         </div>
 
         {/* SIDE */}
-        <aside className="order-1 space-y-4 md:order-2">
+        <aside className="contents md:block md:space-y-4">
           <StatusControls detail={detail} />
 
-          <WhereToWatch detail={detail} />
+          {/* empty:hidden so a title with no provider data (WhereToWatch renders
+              nothing) does not leave a gap at the top of a phone screen. */}
+          <div className="order-first empty:hidden">
+            <WhereToWatch detail={detail} />
+          </div>
 
           <div className="rounded-[5px] border border-border bg-panel p-3">
             <PanelHeading>Facts</PanelHeading>
@@ -940,7 +966,6 @@ export function MediaDetail({
 }) {
   return (
     <div className="relative min-h-screen bg-background">
-      <TopBar />
       <BackBar />
       <main id="main">
         <Suspense fallback={<DetailLoader />}>

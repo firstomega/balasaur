@@ -9,7 +9,6 @@ import {
 import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { useComets } from "@/lib/arcade/useComets";
 import { cn } from "@/lib/utils";
-import { ArcadeMotion } from "./arcadeMotion";
 
 // The comet balance chip. Arcade-scoped by design: it renders in GameShell
 // headers and the hub header only, never in the global TopBar. Personal
@@ -78,11 +77,10 @@ export function CometChip({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[12px] tabular-nums text-text-bright",
         "border-[color-mix(in_oklab,var(--game,var(--primary))_40%,var(--color-border))] bg-[color-mix(in_oklab,var(--game,var(--primary))_12%,var(--color-panel))]",
-        entering && "arc-pop",
+        entering && "arcade-pop-in",
         className,
       )}
     >
-      <ArcadeMotion />
       <CometMark className="h-4 w-4 text-[var(--game,var(--primary))]" />
       <AnimatedCount value={shownTotal} />
     </span>
