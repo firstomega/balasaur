@@ -65,7 +65,7 @@ export function CookieBanner() {
         <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-text-muted md:text-[13px]">
           Cookies keep you signed in. With consent they also count page visits.{" "}
           <Link to="/privacy" className="text-text-bright underline-offset-2 hover:underline">
-            Learn more
+            Read our privacy policy
           </Link>
           .
         </p>
