@@ -7,6 +7,10 @@
 // throttled background tab cannot stretch a round; if the tab hides past the
 // deadline, the round expires the moment it returns.
 //
+// The deadline can move forward mid-round (extendTimer), so the frame loop
+// reads it from a ref every frame and is kept alive by a run token rather
+// than by the deadline value.
+//
 // The frame loop runs at display rate but React state only moves when the
 // printed numeral changes, about once a second. The smooth part of the
 // countdown reaches the screen through useArcadeTimerPaint below, which writes
@@ -21,7 +25,8 @@ import type { ArcadePhase, PayoutLine } from "./types";
 export interface ArcadeTimer {
   /** Seconds left, fractional, clamped at 0. */
   remaining: number;
-  /** Seconds the countdown started from. */
+  /** Seconds the remaining figure is drawn against: the longest this
+   *  countdown has been, so remaining over total is never above 1. */
   total: number;
 }
 
@@ -109,6 +114,9 @@ export interface ArcadeGameApi {
   /** Null when no countdown is running. */
   timer: ArcadeTimer | null;
   startTimer(seconds: number, onExpire: () => void): void;
+  /** Move the deadline out by these seconds. The remaining figure jumps and
+   *  the bar widens with it. Ignored when no countdown is running. */
+  extendTimer(seconds: number): void;
   stopTimer(): void;
   /** Set by finish(). */
   comets: { earned: number; breakdown: PayoutLine[] };
@@ -128,6 +136,11 @@ export function useArcadeGame(): ArcadeGameApi {
 
   const startedAtRef = useRef<number | null>(null);
   const deadlineRef = useRef<number | null>(null);
+  const totalRef = useRef(0);
+  /** Bumped by startTimer and stopTimer. A frame loop carries the token it
+   *  was born with and stops the moment it stops matching. The deadline
+   *  cannot do this job any more: it moves while the same countdown runs. */
+  const runIdRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const onExpireRef = useRef<(() => void) | null>(null);
   /** Whole seconds last pushed into React state, so the frame loop can skip
@@ -143,6 +156,7 @@ export function useArcadeGame(): ArcadeGameApi {
 
   const stopTimer = useCallback(() => {
     cancelFrame();
+    runIdRef.current += 1;
     deadlineRef.current = null;
     onExpireRef.current = null;
     shownRef.current = -1;
@@ -155,17 +169,20 @@ export function useArcadeGame(): ArcadeGameApi {
   const startTimer = useCallback(
     (seconds: number, onExpire: () => void) => {
       cancelFrame();
-      const total = seconds;
-      const deadline = Date.now() + seconds * 1000;
-      deadlineRef.current = deadline;
+      const runId = (runIdRef.current += 1);
+      deadlineRef.current = Date.now() + seconds * 1000;
+      totalRef.current = seconds;
       onExpireRef.current = onExpire;
-      shownRef.current = Math.ceil(total);
+      shownRef.current = Math.ceil(seconds);
       publishFrac(1);
-      setTimer({ remaining: total, total });
+      setTimer({ remaining: seconds, total: seconds });
 
       const tick = () => {
         // A newer timer (or stopTimer) supersedes this loop.
-        if (deadlineRef.current !== deadline) return;
+        if (runIdRef.current !== runId) return;
+        const deadline = deadlineRef.current;
+        if (deadline === null) return;
+        const total = totalRef.current;
         const remaining = Math.max(0, (deadline - Date.now()) / 1000);
         // Every frame, outside React: this is what the bar and the ring draw.
         publishFrac(total > 0 ? remaining / total : 0);
@@ -189,6 +206,27 @@ export function useArcadeGame(): ArcadeGameApi {
     },
     [cancelFrame],
   );
+
+  const extendTimer = useCallback((seconds: number) => {
+    const deadline = deadlineRef.current;
+    // Nothing counting down, or the clock already reached zero: an extension
+    // here would restart a round that is over.
+    if (deadline === null || seconds <= 0) return;
+    const moved = deadline + seconds * 1000;
+    deadlineRef.current = moved;
+    const remaining = Math.max(0, (moved - Date.now()) / 1000);
+    // The scale is the longest this clock has been, so the fraction cannot
+    // pass 1, and it only moves when the gain actually outruns the old
+    // scale. Growing the scale with every gain instead would cancel most of
+    // the gain: two seconds added to both sides of 55 over 60 widens the bar
+    // by a fifth of a point, which is under a pixel at phone width.
+    const total = (totalRef.current = Math.max(totalRef.current, remaining));
+    // The running loop picks both up on its next frame. Publishing here too
+    // puts the wider bar in the same frame as the answer that bought it.
+    publishFrac(total > 0 ? remaining / total : 0);
+    shownRef.current = Math.ceil(remaining);
+    setTimer({ remaining, total });
+  }, []);
 
   // Kill the display loop on unmount; nothing else holds a handle to it.
   useEffect(() => cancelFrame, [cancelFrame]);
@@ -236,6 +274,7 @@ export function useArcadeGame(): ArcadeGameApi {
       nextRound,
       timer,
       startTimer,
+      extendTimer,
       stopTimer,
       comets: { earned, breakdown },
       durationMs,
@@ -253,6 +292,7 @@ export function useArcadeGame(): ArcadeGameApi {
       nextRound,
       timer,
       startTimer,
+      extendTimer,
       stopTimer,
       earned,
       breakdown,

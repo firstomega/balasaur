@@ -38,6 +38,7 @@ export function GameShell({
   readyExtra,
   startLabel = "Play",
   showScoreStrip = true,
+  comboPays,
   narrow = false,
   children,
 }: {
@@ -59,6 +60,9 @@ export function GameShell({
   startLabel?: string;
   /** Games with no running score (Link Up) turn the strip off. */
   showScoreStrip?: boolean;
+  /** Games where the streak buys something pass what x5 and x10 hand over,
+   *  e.g. ["+2s", "+3s"], and the strip floats it off the chip. */
+  comboPays?: readonly [string, string];
   /** Text boards (Balasaurdle, Poster Reveal, Emoji) are 600px wide at
    *  every width. Set this so the band and the end screen share that
    *  column and the page has one left edge. */
@@ -223,7 +227,9 @@ export function GameShell({
 
           {api.phase === "playing" && (
             <div key="playing" className={cn(ENTER, "mt-5")}>
-              {showScoreStrip && <ScoreStrip score={api.score} combo={api.combo} />}
+              {showScoreStrip && (
+                <ScoreStrip score={api.score} combo={api.combo} comboPays={comboPays} />
+              )}
               <div className={showScoreStrip ? "mt-3" : undefined}>{children}</div>
             </div>
           )}

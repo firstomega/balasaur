@@ -212,14 +212,39 @@ export const getCollection = createServerFn({ method: "GET" })
     return { row: row as CollectionRow, items };
   });
 
+/** One slot on a shelf: the rank and the card that holds it. */
+export interface ShelfSlot {
+  rank: number;
+  item: MediaItem;
+}
+
 export interface AppearsIn {
   slug: string;
   title: string;
   rank: number;
   item_count: number;
+  /** The run of ranks around this title on the shelf, this title included and
+   *  in rank order. Empty when the neighbour read fails; the caller renders
+   *  nothing rather than a rail with no numerals to explain its order. */
+  neighbors: ShelfSlot[];
 }
 
-/** Collections a title ranks in — the detail-page interlinking module. */
+/** How many slots of the shelf the detail page shows. */
+const SHELF_WINDOW = 10;
+
+/** The run of ranks to show around `rank`, clamped to the ends of the shelf so
+ *  a title at either end still gets a full window. */
+function shelfWindow(rank: number, size: number): { lo: number; hi: number } {
+  const lo = Math.max(1, rank - Math.floor((SHELF_WINDOW - 1) / 2));
+  const hi = lo + SHELF_WINDOW - 1;
+  if (hi <= size) return { lo, hi };
+  return { lo: Math.max(1, size - SHELF_WINDOW + 1), hi: size };
+}
+
+/** The shelf a title ranks best on, plus its neighbours on that shelf.
+ *
+ *  One placement, not three: the detail page closes with a single rail, and a
+ *  list of shelf names it does not render is payload that rots. */
 export const getAppearsIn = createServerFn({ method: "GET" })
   .inputValidator((p: { mediaId: string }) => p)
   .handler(async ({ data: p }): Promise<AppearsIn[]> => {
@@ -229,24 +254,40 @@ export const getAppearsIn = createServerFn({ method: "GET" })
       .select("rank, collections:slug ( slug, title, item_count )")
       .eq("media_id", p.mediaId);
     if (error || !data) return [];
-    return (
-      (
-        data as unknown as {
-          rank: number;
-          collections: { slug: string; title: string; item_count: number } | null;
-        }[]
-      )
-        .filter((r) => r.collections)
-        .map((r) => ({
-          slug: r.collections!.slug,
-          title: r.collections!.title,
-          rank: r.rank,
-          item_count: r.collections!.item_count,
-        }))
-        // Best placements first: high rank in a big shelf beats #1 of a tiny one.
-        .sort((a, b) => a.rank - b.rank || b.item_count - a.item_count)
-        .slice(0, 3)
-    );
+    const best = (
+      data as unknown as {
+        rank: number;
+        collections: { slug: string; title: string; item_count: number } | null;
+      }[]
+    )
+      .filter((r) => r.collections)
+      .map((r) => ({
+        slug: r.collections!.slug,
+        title: r.collections!.title,
+        rank: r.rank,
+        item_count: r.collections!.item_count,
+      }))
+      // Best placement first: high rank in a big shelf beats #1 of a tiny one.
+      .sort((a, b) => a.rank - b.rank || b.item_count - a.item_count)[0];
+    if (!best) return [];
+
+    const size = Math.max(best.item_count || 0, best.rank);
+    const { lo, hi } = shelfWindow(best.rank, size);
+    const { data: nearby, error: nearbyErr } = await supabaseAdmin
+      .from("collection_items")
+      .select(`rank, media:media_id ( ${CARD_COLS} )`)
+      .eq("slug", best.slug)
+      .gte("rank", lo)
+      .lte("rank", hi)
+      .order("rank", { ascending: true });
+    if (nearbyErr) {
+      console.error("[collections] shelf neighbours failed:", nearbyErr.message);
+      return [{ ...best, neighbors: [] }];
+    }
+    const neighbors = ((nearby ?? []) as unknown as { rank: number; media: CardRow | null }[])
+      .filter((r) => r.media)
+      .map((r) => ({ rank: r.rank, item: rowToCardItem(r.media as CardRow) }));
+    return [{ ...best, neighbors }];
   });
 
 export interface RelatedCollection {

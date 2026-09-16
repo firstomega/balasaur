@@ -140,10 +140,22 @@ export function rowToCardItem(r: CardRow): MediaItem {
 function buildBase() {
   return supabaseAdmin.from("media").select(CARD_COLS);
 }
-// Exact-counted variant — used only by the local-first stitch, which needs true set
-// sizes for its pagination seam (it falls back to the plain path if this is slow).
+// Exact-counted variant — used only for the LOCAL half of the local-first stitch,
+// whose count decides where the global set resumes. That one number must be true or
+// the seam duplicates or skips rows.
 function buildCounted() {
   return supabaseAdmin.from("media").select(CARD_COLS, { count: "exact" });
+}
+// Estimated-count variant, for the GLOBAL half of that stitch. Measured against the
+// live catalog: an exact count of the complement set costs 827ms, because
+// `NOT (origins && ...)` is a negation no index can serve, so Postgres sequentially
+// scans all 89,246 visible rows. The overlap side is 150ms on idx_media_origins. That
+// single count was most of the homepage's ~795ms time to first byte, and it was buying
+// precision nothing needs: the global count feeds only the displayed total and the
+// has-next-page check, never the seam. Same trade buildCountHead() already makes for
+// the plain path.
+function buildCountedEstimate() {
+  return supabaseAdmin.from("media").select(CARD_COLS, { count: "estimated" });
 }
 // Head-only "estimated" count for the results total: exact while the set is small,
 // planner-estimate when large — fast either way, never drags the rows down.
@@ -427,10 +439,11 @@ async function queryLocalFirst(
   p: CatalogQueryParams,
   buckets: string[],
 ): Promise<{ items: MediaItem[]; total: number } | null> {
-  // buildCounted (exact counts): the seam math below needs true set sizes. On a cold or
-  // struggling DB the counts are the slow part — then this whole path errors, returns
-  // null, and the caller serves the plain rows-first view instead. Self-healing: the
-  // boost turns back on as soon as counts are fast again.
+  // The seam below needs ONE true set size, the local one, because it decides where the
+  // global set resumes. The global count is estimated: it only feeds the displayed total.
+  // On a cold or struggling DB a count is still the slow part, and then this whole path
+  // errors, returns null, and the caller serves the plain rows-first view instead.
+  // Self-healing: the boost turns back on as soon as counts are fast again.
   const literal = arrayLiteral(buckets);
   // Same blended rank as applyOrder's default — this path only runs on the
   // default "popular" view, and the two must agree or the boosted and plain
@@ -439,7 +452,7 @@ async function queryLocalFirst(
     .overlaps("origins", buckets)
     .order("rank_score", DESC)
     .order("popularity", DESC);
-  const globalQ = applyCatalogFilters(buildCounted() as MediaQuery, p)
+  const globalQ = applyCatalogFilters(buildCountedEstimate() as MediaQuery, p)
     .not("origins", "ov", literal)
     .order("rank_score", DESC)
     .order("popularity", DESC);
@@ -468,6 +481,8 @@ async function queryLocalFirst(
   const globalRows = needGlobal > 0 ? ((globalRes.data ?? []) as unknown as CardRow[]) : [];
 
   const items = [...localRows, ...globalRows].map(rowToCardItem);
+  // localCount is exact, globalCount is a planner estimate, so the total is approximate
+  // above the estimator's threshold. That matches what the plain path already reports.
   return { items, total: localCount + globalCount };
 }
 

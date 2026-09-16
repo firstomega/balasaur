@@ -770,8 +770,6 @@ function DetailInner({
             </dl>
           </div>
 
-          <AppearsIn mediaId={detail.id} />
-
           {(external.imdbId || external.homepage) && (
             <div className="rounded-[5px] border border-border bg-panel p-3">
               <PanelHeading>Links</PanelHeading>
@@ -785,6 +783,8 @@ function DetailInner({
           )}
         </aside>
       </div>
+
+      <ShelfRail mediaId={detail.id} title={detail.title} />
 
       {/* Trailer dialog: iframe only mounted on open */}
       {detail.trailer && (
@@ -826,32 +826,58 @@ function DetailInner({
   );
 }
 
-// Collections this title ranks in — links the detail page into the /best/*
-// shelf network. Fail-soft: nothing renders while loading, on error, or when
-// the title hasn't earned a shelf spot.
-function AppearsIn({ mediaId }: { mediaId: string }) {
+// The page closes on the shelf this title ranks in: the collection, the place
+// it holds, and the titles either side of it carrying their rank numerals, so
+// the order on screen is explained by what is on screen. Replaces the "Appears
+// in" sidebar list — a reader who has decided no now has somewhere to go.
+//
+// Fail-soft: nothing renders while loading, on error, or for a title that has
+// not earned a shelf spot. Those titles end the page where it ended before.
+function ShelfRail({ mediaId, title }: { mediaId: string; title: string }) {
   const { data } = useQuery(appearsInQueryOptions(mediaId));
-  if (!data || data.length === 0) return null;
+  const shelf = data?.[0];
+  // Two slots is not a shelf, and a rail of one card is a worse ending than
+  // no rail at all.
+  if (!shelf || shelf.neighbors.length < 3) return null;
   return (
-    <div className="rounded-[5px] border border-border bg-panel p-3">
-      <PanelHeading>Appears in</PanelHeading>
-      <ul className="space-y-1.5">
-        {data.map((c) => (
-          <li key={c.slug}>
-            <Link
-              to="/best/$slug"
-              params={{ slug: c.slug }}
-              className="flex items-baseline justify-between gap-3 text-[13px] text-text-muted hover:text-primary"
-            >
-              <span className="truncate">{c.title}</span>
-              <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-dim">
-                #{c.rank}
-              </span>
-            </Link>
-          </li>
+    <section className="mx-auto max-w-content px-4 pb-16">
+      <SectionHeading>
+        <Link
+          to="/best/$slug"
+          params={{ slug: shelf.slug }}
+          className="transition-colors hover:text-primary"
+        >
+          {shelf.title}
+        </Link>
+      </SectionHeading>
+      <p className="mb-3 text-base text-text-muted">
+        {title} is{" "}
+        <span className="font-mono tabular-nums text-text-bright">
+          #{shelf.rank} of {shelf.item_count}
+        </span>
+      </p>
+      <ScrollRail className="gap-3">
+        {shelf.neighbors.map((slot) => (
+          <div key={slot.item.id} className="w-[118px] shrink-0 md:w-[132px]">
+            <MediaCard
+              item={slot.item}
+              imgSizes="(min-width: 768px) 132px, 118px"
+              posterOverlay={
+                <span
+                  aria-hidden="true"
+                  className={
+                    "font-mono text-2xl font-bold tabular-nums leading-none [text-shadow:0_2px_10px_rgba(0,0,0,0.95)] " +
+                    (slot.rank === shelf.rank ? "text-primary" : "text-white/95")
+                  }
+                >
+                  {slot.rank}
+                </span>
+              }
+            />
+          </div>
         ))}
-      </ul>
-    </div>
+      </ScrollRail>
+    </section>
   );
 }
 

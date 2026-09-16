@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
@@ -30,7 +30,6 @@ import { CollectionRail } from "@/components/balasaur/CollectionRail";
 import { WatchlistNudge } from "@/components/balasaur/WatchlistNudge";
 import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
-import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -53,7 +52,7 @@ import { rescueCandidates } from "@/lib/filterRescue";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import type { MediaItem } from "@/types/media";
 import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { SITE_ORIGIN, canonicalLink, jsonLdScript } from "@/lib/seo";
 import { websiteJsonLd } from "@/lib/jsonld";
@@ -135,9 +134,8 @@ export const Route = createFileRoute("/")({
     // preloaded as the LCP element. The rail is gone (it ran the grid's exact
     // query), and the grid's own first card is rendered from data the loader
     // does not hold, so there is nothing to preload here any more.
-    return { lcpPoster: null };
   },
-  head: ({ loaderData, match }) => ({
+  head: ({ match }) => ({
     meta: [
       { title: pageTitle(match?.search as FilterSearch | undefined) },
       {
@@ -157,9 +155,6 @@ export const Route = createFileRoute("/")({
       // Page 2 and beyond self-canonicalise: each is a distinct slice of the
       // catalog, not a duplicate of the homepage, and pointing them all at "/"
       // would tell Google to ignore the very links the trail exists to offer.
-      // Page 2 and beyond self-canonicalise: each is a distinct slice of the
-      // catalog, not a duplicate of the homepage, and pointing them all at "/"
-      // would tell Google to ignore the very links the trail exists to offer.
       //
       // A FILTERED view is the opposite case and used to be handled wrong.
       // /?genre=Horror&page=3 canonicalised to /?page=3, which is a different
@@ -168,27 +163,6 @@ export const Route = createFileRoute("/")({
       // them is the canonical home for anything, so they all consolidate to "/"
       // and the crawl budget goes to the 61,673 title pages instead.
       canonicalLink(SITE_ORIGIN + canonicalPath(match?.search as FilterSearch | undefined)),
-      // The first rail poster is the LCP element on mobile. Without this the
-      // browser only discovers it after parsing the document, which measured
-      // as ~2.9s of "resource load delay" on slow 4G. srcset and sizes mirror
-      // MediaCard exactly, so this preloads the same candidate the img picks
-      // rather than causing a second download.
-      ...(loaderData?.lcpPoster
-        ? [
-            {
-              rel: "preload",
-              as: "image",
-              href: tmdbImage(loaderData.lcpPoster, "w342"),
-              imageSrcSet: tmdbSrcSet(loaderData.lcpPoster, [
-                { w: 185, size: "w185" },
-                { w: 342, size: "w342" },
-                { w: 500, size: "w500" },
-              ]),
-              imageSizes: "(max-width: 640px) 148px, 170px",
-              fetchPriority: "high" as const,
-            },
-          ]
-        : []),
     ],
     scripts: [jsonLdScript(websiteJsonLd())],
   }),
