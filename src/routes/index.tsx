@@ -353,6 +353,10 @@ function HomePage() {
         )}
 
         <main id="main" className="min-w-0 flex-1">
+          {/* Signed out, the hero carries the page heading. Signed in the hero is
+              gone and the grid speaks for itself, so the heading is for screen
+              readers and crawlers only. Exactly one either way. */}
+          {user && <h1 className="sr-only">Movies and TV ranked by the Balasaur Score</h1>}
           {!user && (
             // The hero panel is opaque, so the light has to be bigger than it
             // is: the box reaches past the panel on every side and the panel

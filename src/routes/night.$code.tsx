@@ -403,9 +403,9 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <DinoMark className="h-5 w-5 text-primary" />
-          <span className="text-[15px] font-black tracking-[-0.02em] text-text-bright">
+          <h1 className="text-[15px] font-black tracking-[-0.02em] text-text-bright">
             {room.mode === "solo" ? "Solo pick" : "Movie night"}
-          </span>
+          </h1>
           {room.mode === "group" && (
             <button
               type="button"
