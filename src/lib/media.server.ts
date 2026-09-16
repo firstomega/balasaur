@@ -1,5 +1,5 @@
-import type {
 import { loose } from "@/lib/supabaseLoose";
+import type {
   MediaDetail,
   MediaItem,
   MediaPerson,
