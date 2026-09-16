@@ -1866,12 +1866,29 @@ export async function refreshStalest(opts?: {
       refreshed++;
     } catch (e) {
       failed++;
+      if (e instanceof Error && /failed: 404$/.test(e.message)) goneIds.push(r.media_id as string);
       console.error(`[refresh] failed for ${r.media_id}:`, e);
     }
   });
 
   // Throws on any failed/unpersisted write — see upsertMediaRowsStrict.
   await upsertMediaRowsStrict(rows, "refresh");
+
+  // Stamp the gone titles so the queue advances past them. Their stored data is
+  // left as-is: it was fetched successfully once, and a 404 gives us nothing better.
+  let tombstoned = 0;
+  if (goneIds.length > 0) {
+    for (let i = 0; i < goneIds.length; i += 200) {
+      const chunk = goneIds.slice(i, i + 200);
+      const { error } = await supabaseAdmin
+        .from("media")
+        .update({ fetched_at: new Date().toISOString() })
+        .in("media_id", chunk);
+      if (error) console.error("[refresh] gone-title stamp failed:", error.message);
+      else tombstoned += chunk.length;
+    }
+    console.log(`[refresh] stamped ${tombstoned} title(s) missing at TMDB (404) to unblock the queue`);
+  }
   if (!budgetHit) {
     await colorFreshlySynced(
       rows.map((r) => r.media_id),
