@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { loose } from "@/lib/supabaseLoose";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { primaryOf } from "@/lib/userStatus";
@@ -44,7 +45,7 @@ export function useCollectionOverlap(): {
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase.rpc("collections_library_overlap", {
+      const { data, error } = await loose(supabase).rpc("collections_library_overlap", {
         p_seen_ids: seenIds,
         p_want_ids: wantIds,
       });

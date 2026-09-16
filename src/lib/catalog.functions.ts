@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { loose } from "@/lib/supabaseLoose";
 import { getRequest } from "@tanstack/react-start/server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
@@ -144,7 +145,7 @@ function buildBase() {
 // whose count decides where the global set resumes. That one number must be true or
 // the seam duplicates or skips rows.
 function buildCounted() {
-  return supabaseAdmin.from("media").select(CARD_COLS, { count: "exact" });
+  return loose(supabaseAdmin).from("media").select(CARD_COLS, { count: "exact" });
 }
 // Estimated-count variant, for the GLOBAL half of that stitch. Measured against the
 // live catalog: an exact count of the complement set costs 827ms, because
@@ -155,12 +156,12 @@ function buildCounted() {
 // has-next-page check, never the seam. Same trade buildCountHead() already makes for
 // the plain path.
 function buildCountedEstimate() {
-  return supabaseAdmin.from("media").select(CARD_COLS, { count: "estimated" });
+  return loose(supabaseAdmin).from("media").select(CARD_COLS, { count: "estimated" });
 }
 // Head-only "estimated" count for the results total: exact while the set is small,
 // planner-estimate when large — fast either way, never drags the rows down.
 function buildCountHead() {
-  return supabaseAdmin.from("media").select("media_id", { count: "estimated", head: true });
+  return loose(supabaseAdmin).from("media").select("media_id", { count: "estimated", head: true });
 }
 type MediaQuery = ReturnType<typeof buildBase>;
 
@@ -559,7 +560,7 @@ export const getCatalogFacets = createServerFn({ method: "GET" })
     // is the same answer for every visitor and measured 1,687ms per call, so
     // it is computed once by the nightly job and read from a table (3ms).
     // Every filtered combination still computes live.
-    const { data, error } = await supabaseAdmin.rpc("catalog_facets_cached", {
+    const { data, error } = await loose(supabaseAdmin).rpc("catalog_facets_cached", {
       p: {
         types: p.types,
         genres: p.genres,
@@ -617,7 +618,7 @@ export const searchCast = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<string[]> => {
     const q = (data.query ?? "").trim();
     if (!q) return [];
-    const { data: rows, error } = await supabaseAdmin.rpc("search_cast", {
+    const { data: rows, error } = await loose(supabaseAdmin).rpc("search_cast", {
       p_q: q,
       p_exclude: data.exclude ?? [],
     });
@@ -639,7 +640,7 @@ export const searchPersons = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<PersonHit[]> => {
     const q = (data.query ?? "").trim();
     if (q.length < 2) return [];
-    const { data: rows, error } = await supabaseAdmin.rpc("search_persons", { p_q: q });
+    const { data: rows, error } = await loose(supabaseAdmin).rpc("search_persons", { p_q: q });
     if (error) {
       // Fail-soft: title results still render if the person search hiccups.
       console.error("[search] person query failed:", error.message);
@@ -757,7 +758,7 @@ export const searchTitles = createServerFn({ method: "GET" })
     const q = (data.query ?? "").trim();
     if (q.length < 1) return [];
 
-    const rpc = await supabaseAdmin.rpc("search_titles", { p_q: q });
+    const rpc = await loose(supabaseAdmin).rpc("search_titles", { p_q: q });
     if (!rpc.error) return ((rpc.data ?? []) as SearchRow[]).map(searchRowToHit);
     console.error("[search] search_titles RPC failed, using ilike fallback:", rpc.error.message);
 
