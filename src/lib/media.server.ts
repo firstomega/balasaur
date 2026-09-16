@@ -1,4 +1,5 @@
 import type {
+import { loose } from "@/lib/supabaseLoose";
   MediaDetail,
   MediaItem,
   MediaPerson,
@@ -528,7 +529,7 @@ export async function listSitemapEntries(
     updated_at: string | null;
   }[] = [];
   for (let offset = 0; offset < limit; offset += PAGE) {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("indexable_media")
       .select("media_id, media_type, title, updated_at")
       // Ordered by RATING COUNT. This was briefly reverted to popularity on the
@@ -1046,7 +1047,7 @@ export async function backfillFromRaw(opts?: {
         );
         continue;
       }
-      const { data: step, error: stepErr } = await supabaseAdmin
+      const { data: step, error: stepErr } = await loose(supabaseAdmin)
         .from("media")
         .select("media_id")
         .gt("media_id", cursor)
@@ -1169,7 +1170,7 @@ export async function backfillFromRaw(opts?: {
         // future scans; otherwise just skip (classic full-scan behavior).
         if (!changed) {
           if (useMissingFilter) {
-            const { error: stampErr } = await supabaseAdmin
+            const { error: stampErr } = await loose(supabaseAdmin)
               .from("media")
               .update({ facets_derived_at: new Date().toISOString() })
               .eq("media_id", row.media_id);
@@ -1183,7 +1184,7 @@ export async function backfillFromRaw(opts?: {
           continue;
         }
 
-        const { error: updErr } = await supabaseAdmin
+        const { error: updErr } = await loose(supabaseAdmin)
           .from("media")
           .update({
             genres: newGenres,
@@ -2410,7 +2411,7 @@ async function fetchRelatedRail(
   anchorId: string,
   targetType: "movie" | "tv",
 ): Promise<MediaItem[] | undefined> {
-  const { data, error } = await supabaseAdmin.rpc("related_titles", {
+  const { data, error } = await loose(supabaseAdmin).rpc("related_titles", {
     p_media_id: anchorId,
     p_target_type: targetType,
   });
@@ -2435,7 +2436,7 @@ async function attachRelatedRails(detail: MediaDetail): Promise<void> {
   const [own, cross, ctx] = await Promise.all([
     fetchRelatedRail(detail.id, detail.mediaType),
     fetchRelatedRail(detail.id, other),
-    supabaseAdmin.rpc("title_context", { p_media_id: detail.id }).then(
+    loose(supabaseAdmin).rpc("title_context", { p_media_id: detail.id }).then(
       (r) => (r.error ? null : (r.data?.[0] ?? null)),
       () => null,
     ),
@@ -2520,7 +2521,7 @@ export async function fetchMediaDetail(
           const needsSources = sourceCount(cached.ratings) < 2;
           if (needsVotes || needsScore || needsStreaming || needsSources) {
             try {
-              const { data: row } = await supabaseAdmin
+              const { data: row } = await loose(supabaseAdmin)
                 .from("media")
                 .select(
                   "vote_count, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
@@ -2823,7 +2824,7 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
  *  catalog instead of the cached payload's age. */
 async function attachPersonStats(detail: PersonDetail): Promise<void> {
   try {
-    const { data, error } = await supabaseAdmin.rpc("person_stats", { p_name: detail.name });
+    const { data, error } = await loose(supabaseAdmin).rpc("person_stats", { p_name: detail.name });
     const s = data?.[0];
     if (error || !s || (s.titles ?? 0) < 3) return;
     detail.stats = {

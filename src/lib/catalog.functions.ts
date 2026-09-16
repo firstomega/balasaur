@@ -139,7 +139,7 @@ export function rowToCardItem(r: CardRow): MediaItem {
 // and because both rode one request, a slow count blanked the whole grid. Rows and counts
 // are now separate requests with separate fates.
 function buildBase() {
-  return supabaseAdmin.from("media").select(CARD_COLS);
+  return loose(supabaseAdmin).from("media").select(CARD_COLS);
 }
 // Exact-counted variant — used only for the LOCAL half of the local-first stitch,
 // whose count decides where the global set resumes. That one number must be true or
@@ -412,7 +412,7 @@ export const queryDeck = createServerFn({ method: "GET" })
   .inputValidator((p: { limit: number; region?: string; boostCountry?: string }) => p)
   .handler(async ({ data: p }): Promise<MediaItem[]> => {
     const params = { ...defaultCatalogParams(p.region), excludeSuggestive: true };
-    let q = supabaseAdmin.from("media").select(CARD_COLS + ",overview") as unknown as MediaQuery;
+    let q = loose(supabaseAdmin).from("media").select(CARD_COLS + ",overview") as unknown as MediaQuery;
     q = applyCatalogFilters(q, params);
     const buckets = originsForCountry(p.boostCountry);
     if (buckets.length > 0) {

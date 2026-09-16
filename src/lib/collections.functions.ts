@@ -197,7 +197,7 @@ export const getCollection = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error || !row) return null;
 
-    const { data: itemRows, error: itemsErr } = await supabaseAdmin
+    const { data: itemRows, error: itemsErr } = await loose(supabaseAdmin)
       .from("collection_items")
       .select(`rank, media:media_id ( ${CARD_COLS} )`)
       .eq("slug", slug)
@@ -250,7 +250,7 @@ export const getAppearsIn = createServerFn({ method: "GET" })
   .inputValidator((p: { mediaId: string }) => p)
   .handler(async ({ data: p }): Promise<AppearsIn[]> => {
     if (!/^(movie|tv)-\d{1,10}$/.test(p.mediaId ?? "")) return [];
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collection_items")
       .select("rank, collections:slug ( slug, title, item_count )")
       .eq("media_id", p.mediaId);
@@ -274,7 +274,7 @@ export const getAppearsIn = createServerFn({ method: "GET" })
 
     const size = Math.max(best.item_count || 0, best.rank);
     const { lo, hi } = shelfWindow(best.rank, size);
-    const { data: nearby, error: nearbyErr } = await supabaseAdmin
+    const { data: nearby, error: nearbyErr } = await loose(supabaseAdmin)
       .from("collection_items")
       .select(`rank, media:media_id ( ${CARD_COLS} )`)
       .eq("slug", best.slug)
