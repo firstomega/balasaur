@@ -21,7 +21,17 @@ import { tmdbImage } from "./tmdbImage";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
-type MediaRow = TablesInsert<"media">;
+// The generated types come from the platform-managed project; the live project
+// also carries the ranking, quality and content-safety columns below. See
+// src/lib/supabaseLoose.ts.
+type MediaRow = TablesInsert<"media"> & {
+  vote_count?: number | null;
+  rank_score?: number | null;
+  quality_score?: number | null;
+  sensitive?: boolean | null;
+  suggestive?: boolean | null;
+  tmdb_collection_id?: number | null;
+};
 
 /**
  * How many title URLs the sitemap asks Google to index. Deliberately small.
