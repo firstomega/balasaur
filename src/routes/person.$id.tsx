@@ -1,7 +1,6 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { PersonDetail } from "@/components/balasaur/PersonDetail";
 import { personDetailQueryOptions } from "@/hooks/usePersonDetail";
-import { TopBar } from "@/components/balasaur/TopBar";
 import {
   buildMeta,
   canonicalLink,
@@ -78,7 +77,6 @@ function PersonError({ reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   return (
     <div className="min-h-screen bg-background">
-      <TopBar />
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-xl font-semibold text-text-bright">Couldn't load this person</h1>
         <p className="mt-2 text-sm text-text-muted">
@@ -109,7 +107,6 @@ function PersonError({ reset }: { error: Error; reset: () => void }) {
 function PersonNotFound() {
   return (
     <div className="min-h-screen bg-background">
-      <TopBar />
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-xl font-semibold text-text-bright">Couldn't find this person</h1>
         <p className="mt-2 text-sm text-text-muted">

@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { episodeRatingsQueryOptions } from "@/lib/episodes.functions";
 import { appearsInQueryOptions, mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
-import { TopBar } from "@/components/balasaur/TopBar";
 import {
   buildMeta,
   canonicalLink,
@@ -124,7 +123,6 @@ function DetailError({ reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   return (
     <div className="min-h-screen bg-background">
-      <TopBar />
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-xl font-semibold text-text-bright">Couldn't load this title</h1>
         <p className="mt-2 text-sm text-text-muted">
@@ -155,7 +153,6 @@ function DetailError({ reset }: { error: Error; reset: () => void }) {
 function DetailNotFound() {
   return (
     <div className="min-h-screen bg-background">
-      <TopBar />
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="text-xl font-semibold text-text-bright">Couldn't find this title</h1>
         <p className="mt-2 text-sm text-text-muted">

@@ -3,6 +3,7 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useMatches,
   useRouter,
   HeadContent,
   Scripts,
@@ -15,12 +16,25 @@ import monoFontUrl from "../fonts/jetbrains-mono-latin-var.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Footer } from "@/components/balasaur/Footer";
+import { TopBar } from "@/components/balasaur/TopBar";
 import { CookieBanner } from "@/components/balasaur/CookieBanner";
 import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
 import { Toaster } from "@/components/ui/sonner";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { DinoRun } from "@/components/balasaur/DinoRun";
 import { SITE_ORIGIN, SITE_NAME, SITE_TAGLINE, DEFAULT_OG_IMAGE, jsonLdScript } from "@/lib/seo";
+
+// The top bar belongs to the shell, not to each page. One route refuses it:
+// /watched is a full-viewport rating deck that draws its own header with an
+// Exit control, and a second nav row above it would put two ways out on the
+// same screen. A route that supplies its own header says so here rather than
+// the shell keeping a list of paths. The footer is not affected: it carries
+// the TMDB and OMDb attribution, which every page owes.
+declare module "@tanstack/react-router" {
+  interface StaticDataRouteOption {
+    ownsHeader?: boolean;
+  }
+}
 
 function NotFoundComponent() {
   return (
@@ -194,6 +208,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const ownsHeader = useMatches({
+    select: (matches) => matches.some((m) => m.staticData.ownsHeader === true),
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -201,6 +218,7 @@ function RootComponent() {
         <AnalyticsManager />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <div className="flex min-h-screen flex-col">
+          {!ownsHeader && <TopBar />}
           <div className="flex-1">
             <Outlet />
           </div>

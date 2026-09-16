@@ -1,5 +1,4 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { AmbientGlow } from "@/components/balasaur/AmbientGlow";
 import {
   EmptyState,
@@ -354,8 +353,7 @@ function DevRefinePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <nav className="mx-auto flex w-full max-w-[1100px] flex-wrap gap-2 px-5 pt-5">
+      <nav className="mx-auto flex w-full max-w-content flex-wrap gap-2 px-5 pt-5">
         {PANELS.map((p) => (
           <Link
             key={p}
@@ -372,7 +370,7 @@ function DevRefinePage() {
           </Link>
         ))}
       </nav>
-      <main id="main" className="mx-auto w-full max-w-[1100px] px-5 py-8">
+      <main id="main" className="mx-auto w-full max-w-content px-5 py-8">
         {panel === "heatmap" && <HeatmapPanel />}
         {panel === "taste" && <TastePanel />}
         {panel === "glow" && <GlowPanel />}

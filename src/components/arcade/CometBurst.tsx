@@ -68,11 +68,11 @@ function glyphCount(count: number): number {
 
 function bump(el: HTMLElement | null) {
   if (!el) return;
-  el.classList.remove("arc-bump");
+  el.classList.remove("arcade-bump");
   // Reflow so a second bump restarts the animation.
   void el.offsetWidth;
-  el.classList.add("arc-bump");
-  setTimeout(() => el.classList.remove("arc-bump"), 400);
+  el.classList.add("arcade-bump");
+  setTimeout(() => el.classList.remove("arcade-bump"), 400);
 }
 
 /** Owns the overlay and hands out fire(). GameShell wraps the page in one. */

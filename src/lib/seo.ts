@@ -15,7 +15,19 @@ const RAW_ORIGIN = (import.meta.env.VITE_SITE_URL as string | undefined) ?? "htt
 export const SITE_ORIGIN = RAW_ORIGIN.replace(/\/+$/, "");
 
 export const SITE_NAME = "Balasaur";
-export const SITE_TAGLINE = "Your personal entertainment database";
+// One tagline, used by the footer, the signed-out hero, the share card and the
+// default meta description. Four different ones shipped at once, and the one
+// that carried a claim only this catalog can make was on the about page, the
+// page with the least traffic. "Your personal entertainment database" was the
+// default description of the whole catalog and is a sentence any of a dozen
+// competitors could print, which is the thin-derivative signal that gets a
+// database site demoted.
+export const SITE_TAGLINE = "A movie and TV database built around one number";
+// The second beat, wherever the tagline gets a line of backing: what the number
+// is and how current it is. Lives here rather than in each surface so the hero
+// and the share card cannot drift apart. scripts/brand-assets.ts reads both of
+// these straight out of this file when it renders public/og-default.png.
+export const SITE_PROOF = "Every title carries a Balasaur Score from 0 to 100, refreshed nightly.";
 // Fallback share image: the branded card in public/og-default.png. Pages with
 // real art (posters, backdrops) pass their own image; this covers the rest.
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-default.png`;

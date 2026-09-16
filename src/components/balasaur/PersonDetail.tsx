@@ -1,6 +1,5 @@
 import { Suspense, useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { TopBar } from "./TopBar";
 import { MediaCard } from "./MediaCard";
 import { usePersonDetail } from "@/hooks/usePersonDetail";
 import type { PersonDetail as PersonDetailType } from "@/types/media";
@@ -160,7 +159,6 @@ function PersonFetcher({ id }: { id: string }) {
 export function PersonDetail({ id }: { id: string }) {
   return (
     <div className="min-h-screen bg-background">
-      <TopBar />
       <main id="main">
         <Suspense fallback={<PersonLoader />}>
           <PersonFetcher id={id} />

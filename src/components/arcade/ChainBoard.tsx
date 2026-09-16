@@ -8,10 +8,19 @@
 // be picked twice. The run has one number, picks, stated once when the
 // chain closes. Controlled: the parent owns the chain, the choices, the
 // tried set, and the verdicts; the board renders and reports taps.
+//
+// A pick moves through three states and they never share a look: PRESSED
+// while the finger is on the poster, COMMITTED once the pick is sent and the
+// answer is still out (the poster holds a rim in the game hue, the other
+// three step back, and the poster itself pulses if the answer is slow),
+// JUDGED when the hop lands on the path or dead-ends off it. The waiting is
+// drawn on the poster and nowhere else: a page that explains its own latency
+// is a page apologising for it.
 
 import { Check } from "lucide-react";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
+import { PRESS_CLASS, WAIT_CSS, useCommitWait, usePress } from "@/lib/arcade/usePress";
 
 export interface ChainStep {
   kind: "movie" | "actor";
@@ -45,6 +54,9 @@ export interface ChainBoardProps {
   choices: ChainChoice[];
   /** Option ids already dead-ended at the open step: disabled, tagged. */
   tried?: string[];
+  /** The option id whose verdict is still out. The board locks and the
+   *  poster carries the wait; the parent decides when it clears. */
+  pending?: string | null;
   /** The last hop leads nowhere; only stepping back remains. */
   deadEnd?: boolean;
   /** The chain reached the target; the board locks. */
@@ -108,6 +120,7 @@ export function ChainBoard({
   chain,
   choices,
   tried = [],
+  pending = null,
   deadEnd = false,
   complete = false,
   picks,
@@ -116,6 +129,9 @@ export function ChainBoard({
   onStepBack,
 }: ChainBoardProps) {
   const open = !disabled && !complete && !deadEnd;
+  const waiting = open ? pending : null;
+  const slowWait = useCommitWait(waiting !== null);
+  const press = usePress<string>(open && waiting === null);
   const lastActor = [...chain].reverse().find((s) => s.kind === "actor")?.label ?? start;
   const triedSet = new Set(tried);
 
@@ -177,6 +193,7 @@ export function ChainBoard({
 
   return (
     <div>
+      <style>{WAIT_CSS}</style>
       <p className="text-[15px] leading-snug text-text">
         Get from <span className="font-semibold text-text-bright">{start}</span> to{" "}
         <span className="font-semibold text-text-bright">{target}</span>.{" "}
@@ -262,18 +279,30 @@ export function ChainBoard({
             >
               {choices.map((c) => {
                 const dead = triedSet.has(c.id);
+                const isDown = press.isPressed(c.id);
+                const sent = waiting === c.id;
+                const held = waiting !== null && !sent;
                 return (
                   <button
                     key={c.id}
                     type="button"
-                    disabled={dead}
+                    disabled={dead || waiting !== null}
                     aria-label={dead ? `${c.label}, dead end` : c.label}
                     onClick={() => onChoose(c.id)}
+                    {...press.bind(c.id)}
                     className={cn(
-                      "group min-w-0 rounded-[6px] border p-1 text-left transition-transform sm:p-1.5",
+                      "group min-w-0 rounded-[6px] border p-1 text-left transition-[transform,box-shadow,border-color,opacity] duration-150 motion-reduce:transition-none sm:p-1.5",
                       dead
                         ? "cursor-not-allowed border-warn/40 bg-warn/5 opacity-70"
-                        : "border-border bg-panel hover:-translate-y-0.5 hover:border-[var(--game,var(--primary))] motion-reduce:transform-none",
+                        : "border-border bg-panel motion-reduce:transform-none",
+                      !dead &&
+                        waiting === null &&
+                        !isDown &&
+                        "hover:-translate-y-0.5 hover:border-[var(--game,var(--primary))]",
+                      isDown && PRESS_CLASS,
+                      sent && "ring-2 ring-[var(--game,var(--primary))]",
+                      sent && slowWait && "arcade-wait",
+                      held && "opacity-50",
                     )}
                   >
                     <span className="relative block aspect-[2/3] w-full overflow-hidden rounded-[4px] bg-panel">

@@ -14,6 +14,9 @@ import { LibraryDeck, LibraryHeader } from "@/components/balasaur/LibraryDeck";
 import { SITE_ORIGIN, canonicalLink } from "@/lib/seo";
 
 export const Route = createFileRoute("/watched")({
+  // The deck fills the viewport and draws its own header with an Exit, so the
+  // site top bar stays off this one screen. See __root.
+  staticData: { ownsHeader: true },
   head: () => ({
     meta: [
       { title: "Rate Titles | Balasaur" },

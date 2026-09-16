@@ -262,6 +262,9 @@ Run through this before saying a change is done.
    never opened because the included list looked fine._
 7. **Gates.** `bunx prettier --write` on changed files, `bun test src`,
    `bunx tsc --noEmit`, and CI green before merge.
+8. **Style ratchet.** No count in `src/lib/styleLint.baseline.json` went up. If
+   this change removed arbitrary values, `bun run style:baseline` ran inside it,
+   so the lower count is the one defended from here on.
 
 ---
 

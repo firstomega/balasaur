@@ -25,7 +25,7 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
+      <div className="mx-auto flex h-12 max-w-grid items-center gap-4 px-4">
         {/* Mobile and tablet menu — below 1024px the bar can't fit five nav
             links beside search, so places live in a drawer and the search row
             breathes. */}
@@ -78,14 +78,14 @@ export function TopBar() {
         </Sheet>
 
         {/* Wordmark */}
-        <a href="/" className="flex shrink-0 items-center gap-2 text-text-bright">
+        <Link to="/" className="flex shrink-0 items-center gap-2 text-text-bright">
           <DinoMark className="h-5 w-5 text-primary" />
           {/* On very narrow phones the glyph carries the brand alone, so the
               bar never outgrows the screen. */}
           <span className="font-mono text-[15px] font-medium lowercase tracking-tight max-[399px]:hidden">
             balasaur
           </span>
-        </a>
+        </Link>
 
         {/* Primary nav — places (content spaces). Personal actions stay right.
             Hidden below 1024px: five places plus wordmark, search, and actions
@@ -175,10 +175,10 @@ export function TopBar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem asChild className="cursor-pointer focus:bg-background">
-                      <a href={`/@${profile.username}`}>
+                      <Link to="/$handle" params={{ handle: `@${profile.username}` }}>
                         <User className="mr-2 h-3.5 w-3.5" />
                         View profile
-                      </a>
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="cursor-pointer focus:bg-background">
                       <Link to="/profile">
@@ -226,7 +226,7 @@ export function TopBar() {
 
       {/* Mobile second row: search alone, full width. The places moved into
           the drawer, which is what lets search breathe on a phone. */}
-      <div className="mx-auto max-w-[1600px] px-4 pb-2 md:hidden">
+      <div className="mx-auto max-w-grid px-4 pb-2 md:hidden">
         <TopBarSearch />
       </div>
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />

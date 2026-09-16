@@ -119,9 +119,8 @@ export function useCatalogFacets(filters: FilterState, region = "US") {
   return useQuery(catalogFacetsOptions(filtersToParams(filters, region)));
 }
 
-/** Curated homepage rails (Trending / New & Noteworthy / Coming Soon / Hidden
- *  Gems). Cached per boost country — rails are geo-scoped (home-country titles
- *  plus proven global crossovers) but not filter-dependent. */
+/** The homepage collection rail. One cache entry for everyone: the query takes
+ *  no region or boost country, so this output is identical for every visitor. */
 export function homeCollectionsOptions() {
   return queryOptions({
     queryKey: ["home-collections"] as const,

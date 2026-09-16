@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bookmark, Check, EyeOff, Heart } from "lucide-react";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { useUserStatus } from "@/hooks/useUserStatus";
@@ -134,8 +133,7 @@ function ListsPage() {
     // page exactly one footer taller than the window, so an empty list
     // scrolled 141px into nothing.
     <div className="bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[1600px] px-4 py-6">
+      <main id="main" className="mx-auto max-w-grid px-4 py-6">
         <h1 className="mb-4 text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
           My lists
         </h1>

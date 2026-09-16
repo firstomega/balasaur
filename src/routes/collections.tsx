@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
-import { TopBar } from "@/components/balasaur/TopBar";
 import {
   EmptyState,
   EMPTY_ACTION_CLASS,
@@ -602,8 +601,7 @@ function DualIndexMatrix({
 function CollectionsShell({ aside, children }: { aside?: ReactNode; children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[1240px] px-5 py-7">
+      <main id="main" className="mx-auto max-w-content px-5 py-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
             Collections

@@ -8,6 +8,11 @@
 // in, and the poster it left stays in its slot as a 25% ghost. Three states,
 // three colors that never collide with the game hue: matched is the hue
 // border plus a rating-green check, a wrong tap flashes in --warn and shakes.
+// A tap is answered in three beats that never share a look: PRESSED while the
+// finger is down (a small scale, a rim in the hue), ARMED once the side is
+// locked and its partner is still to come, JUDGED when the pair lands or
+// shakes. Both sides take the press, because on a phone a poster and a line
+// of text are the same gesture.
 // Controlled: the parent
 // owns the matched list and judges every attempt via onPair; the board knows
 // nothing about scoring, combos, or where rounds come from.
@@ -16,6 +21,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
+import { PRESS_CLASS, usePress } from "@/lib/arcade/usePress";
 
 export interface MatchPrompt {
   id: string;
@@ -71,6 +77,9 @@ export function MatchBoard({
   onPair,
 }: MatchBoardProps) {
   const [armed, setArmed] = useState<Armed>(null);
+  // One press for both sides, keyed the way `shaking` is, so a poster and a
+  // prompt can never be down at the same time.
+  const press = usePress<string>(!disabled);
   // Keyed by kind so a wrong pair only ever shakes the two cards that were
   // tapped: "prompt:<id>" and "title:<id>". A bare id would also hit the
   // prompt's own poster and the poster's own prompt, which gives the answer
@@ -209,6 +218,7 @@ export function MatchBoard({
           const inFlight = pair !== undefined && !spent;
           const isArmed = armed?.kind === "title" && armed.id === t.id;
           const shake = shaking.has(`title:${t.id}`);
+          const down = press.isPressed(`title:${t.id}`);
           return (
             <div key={t.id} className="min-w-0">
               <div className="relative aspect-[2/3] w-full">
@@ -222,16 +232,23 @@ export function MatchBoard({
                   aria-pressed={isArmed}
                   aria-label={titleLabel(t)}
                   onClick={() => tap("title", t.id)}
+                  {...press.bind(`title:${t.id}`)}
                   className={cn(
                     "absolute inset-0 overflow-hidden rounded-[6px] border bg-panel transition-[transform,box-shadow,border-color] duration-200 motion-reduce:transition-none motion-reduce:transform-none",
                     spent && "pointer-events-none opacity-25",
                     inFlight && "pointer-events-none border-[var(--game)]",
-                    !pair && !disabled && "hover:-translate-y-0.5",
+                    !pair && !disabled && !down && "hover:-translate-y-0.5",
                     isArmed
                       ? "-translate-y-1 border-[var(--game)] [box-shadow:0_0_0_2px_var(--game),0_10px_28px_color-mix(in_oklab,var(--game)_45%,transparent)]"
                       : "border-border",
                     shake && "arcade-shake border-warn",
                     disabled && !pair && "opacity-50",
+                    // An armed card already carries a hue ring; the press is
+                    // the scale alone so two box-shadows never argue.
+                    down &&
+                      (isArmed
+                        ? "scale-[0.97] duration-75 motion-reduce:transform-none"
+                        : PRESS_CLASS),
                   )}
                 >
                   {t.posterUrl ? (
@@ -283,6 +300,7 @@ export function MatchBoard({
           const title = pair ? titleById.get(pair.titleId) : undefined;
           const isArmed = armed?.kind === "prompt" && armed.id === p.id;
           const shake = shaking.has(`prompt:${p.id}`);
+          const down = press.isPressed(`prompt:${p.id}`);
           const glow = fresh === p.id;
           return (
             <div
@@ -357,8 +375,9 @@ export function MatchBoard({
                   disabled={disabled || pair !== undefined}
                   aria-pressed={isArmed}
                   onClick={() => tap("prompt", p.id)}
+                  {...press.bind(`prompt:${p.id}`)}
                   className={cn(
-                    "relative min-h-[52px] min-w-0 flex-1 rounded-[5px] border px-3.5 py-3 text-left text-[14px] leading-snug transition-[transform,background-color,border-color,color] duration-150 motion-reduce:transition-none motion-reduce:transform-none sm:text-[15px]",
+                    "relative min-h-[52px] min-w-0 flex-1 rounded-[5px] border px-3.5 py-3 text-left text-[14px] leading-snug transition-[transform,background-color,border-color,color,box-shadow] duration-150 motion-reduce:transition-none motion-reduce:transform-none sm:text-[15px]",
                     isArmed
                       ? "border-[var(--game)] bg-[var(--game)] font-semibold text-[var(--game-ink)] [box-shadow:0_8px_24px_color-mix(in_oklab,var(--game)_40%,transparent)]"
                       : inFlight
@@ -366,6 +385,10 @@ export function MatchBoard({
                         : "border-border bg-panel text-text hover:border-[var(--game)]",
                     shake && "arcade-shake border-warn bg-warn/15 text-warn",
                     disabled && !pair && "opacity-50",
+                    down &&
+                      (isArmed
+                        ? "scale-[0.97] duration-75 motion-reduce:transform-none"
+                        : PRESS_CLASS),
                   )}
                 >
                   {p.text}

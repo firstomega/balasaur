@@ -5,7 +5,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import { supabase } from "@/integrations/supabase/client";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { useUserStatus } from "@/hooks/useUserStatus";
@@ -172,8 +171,7 @@ function ProfileEditor() {
   if (loading || !user || isLoading || !profile) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <TopBar />
-        <main id="main" className="mx-auto max-w-[760px] px-5 py-12">
+        <main id="main" className="mx-auto max-w-article px-5 py-12">
           <p className="text-[14px] text-text-dim">Loading…</p>
         </main>
       </div>
@@ -189,8 +187,7 @@ function ProfileEditor() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[760px] px-5 py-10">
+      <main id="main" className="mx-auto max-w-article px-5 py-10">
         <header className="mb-7 border-b border-border pb-5">
           <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
             Edit profile

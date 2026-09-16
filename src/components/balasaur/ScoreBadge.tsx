@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils";
 // text, color is a *supplementary* cue, and the two extremes get a dinosaur-themed
 // icon (a non-color second cue) — an asteroid below 60, a bite mark at 85+.
 
-/** Named tiers make the score quotable. The names travel in tooltips and
- *  aria-labels, so a screen reader hears "92, Apex" and a hover explains
- *  what the color already implies. */
+/** Named tiers make the score quotable. The title page prints the tier next to
+ *  the number at size "lg"; at the smaller sizes it rides in the tooltip and the
+ *  aria-label, so a screen reader hears "92, Apex" where a sighted reader has
+ *  the color. */
 export function tierName(score: number): string {
   if (score >= 90) return "Apex";
   if (score >= 85) return "Balasaur Approved";
@@ -49,19 +50,39 @@ export function ScoreBadge({
   className,
 }: {
   score: number;
-  size?: "sm" | "md";
+  /** "lg" is the title-page hero, where the tier is printed beside the badge. */
+  size?: "sm" | "md" | "lg";
   className?: string;
 }) {
   const t = tierClasses(score);
   const dino = score >= 85 ? "bite" : score < 60 ? "asteroid" : null;
-  const iconCls = size === "sm" ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
+  const iconCls =
+    size === "sm" ? "h-2.5 w-2.5" : size === "md" ? "h-3.5 w-3.5" : "h-5 w-5 md:h-6 md:w-6";
   return (
     <span
-      aria-label={`Balasaur Score ${score} out of 100. ${tierName(score)}${score >= 90 ? ". Balasaur Approved" : ""}`}
-      title={`${score}/100 · ${tierName(score)}${score >= 90 ? " · Balasaur Approved" : ""}. IMDb, Rotten Tomatoes, Metacritic, and TMDB blended into one number.`}
+      // At "lg" the score name and its tier are printed next to the badge, so
+      // the badge is just the number and everyone gets the same words in the
+      // same order. At the smaller sizes there is nowhere to print them, so the
+      // label and the tooltip carry them.
+      aria-label={
+        size === "lg"
+          ? undefined
+          : `Balasaur Score ${score} out of 100. ${tierName(score)}${score >= 90 ? ". Balasaur Approved" : ""}`
+      }
+      title={
+        size === "lg"
+          ? undefined
+          : `${score}/100 · ${tierName(score)}${score >= 90 ? " · Balasaur Approved" : ""}`
+      }
       className={cn(
         "inline-flex items-center gap-1 rounded-[4px] bg-background/90 font-mono font-semibold tabular-nums ring-1 backdrop-blur-sm",
-        size === "sm" ? "h-[20px] px-1.5 text-[11px]" : "px-2 py-1 text-[14px]",
+        size === "sm" && "h-[20px] px-1.5 text-[11px]",
+        size === "md" && "px-2 py-1 text-[14px]",
+        // leading-none keeps the box height a function of the font size and the
+        // padding alone, so the hero row does not change height when the
+        // webfont swaps in.
+        size === "lg" &&
+          "gap-2 rounded-[6px] px-2.5 py-1.5 text-[30px] leading-none md:text-[38px]",
         t.text,
         t.ring,
         className,

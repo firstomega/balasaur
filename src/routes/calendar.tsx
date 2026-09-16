@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { MediaCard } from "@/components/balasaur/MediaCard";
 import { useEffect, useState } from "react";
 import {
@@ -90,8 +89,7 @@ function CalendarPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto w-full max-w-[1240px] flex-1 px-5 py-8">
+      <main id="main" className="mx-auto w-full max-w-grid flex-1 px-5 py-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">

@@ -13,7 +13,6 @@ import { mediaSlug } from "@/lib/slug";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import { ArcadeTile } from "./ArcadeTile";
-import { ArcadeMotion } from "./arcadeMotion";
 import { CometBurst } from "./CometBurst";
 import { CometMark } from "./CometChip";
 import { LeaderboardSnippet, type SnippetRow } from "./LeaderboardSnippet";
@@ -215,8 +214,6 @@ export function EndScreen({
 
   return (
     <div className="mt-6">
-      <ArcadeMotion />
-
       {tier && shown(STEP.tier) && (
         <p
           className={cn(

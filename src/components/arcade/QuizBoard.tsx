@@ -1,6 +1,13 @@
 // QuizBoard: one question on a hue stage, the countdown as a bar under it,
 // four large answer cards in four tints with the text centered, and a row
 // of pips that fills in as the night goes. Built for The 8PM Screening.
+// Three states a tap moves through, never collapsed into one: PRESSED while
+// the finger is down (a small scale and a rim in the hue), COMMITTED once
+// `picked` is set and the verdict is still out (the card holds the hue, and
+// starts to pulse if the answer is slow), JUDGED when `reveal` lands. When
+// the clock takes the round instead, the four cards desaturate together and
+// a stamp lands on the stage, so time running out never looks like someone
+// else answering correctly.
 // `picked` holds the card pressed while the answer is being judged; `reveal`
 // lands when the right choice is known and colors the board: the right card
 // fills with the hue and pops, a wrong pick flashes --warn and shakes (never
@@ -12,6 +19,7 @@ import type { CSSProperties } from "react";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import type { ArcadeTimer } from "@/lib/arcade/useArcadeGame";
+import { PRESS_CLASS, WAIT_CSS, useCommitWait, usePress } from "@/lib/arcade/usePress";
 import { TimerBar } from "./TimerBar";
 
 /** Four tints, one per answer position, the same set Casting Call uses so
@@ -66,6 +74,12 @@ export function QuizBoard({
 }: QuizBoardProps) {
   const locked = disabled || picked !== null || reveal !== null;
   const rightPick = reveal !== null && picked === reveal.correctIndex;
+  // The clock took the round: nothing was picked and the answer is in.
+  const timedOut = reveal !== null && picked === null;
+  const press = usePress<number>(!locked);
+  // A commit that has been open long enough to look stuck says so on the
+  // card itself, which is the only place that cannot become a banner.
+  const slowCommit = useCommitWait(picked !== null && reveal === null);
 
   const pipTone = (i: number): "right" | "wrong" | "now" | "todo" => {
     const known = results?.[i];
@@ -81,6 +95,7 @@ export function QuizBoard({
 
   return (
     <div className="w-full">
+      <style>{WAIT_CSS}</style>
       {/* Ten pips: the night at a glance. */}
       <div
         className="flex items-center gap-1"
@@ -106,7 +121,7 @@ export function QuizBoard({
 
       {/* The stage. */}
       <div
-        className="mt-3 flex items-stretch gap-4 rounded-[6px] p-4 sm:mt-4 sm:gap-6 sm:p-6"
+        className="relative mt-3 flex items-stretch gap-4 rounded-[6px] p-4 sm:mt-4 sm:gap-6 sm:p-6"
         style={{
           background:
             "linear-gradient(160deg, color-mix(in oklch, var(--game) 70%, #0b0d10), color-mix(in oklch, var(--game) 30%, #0b0d10))",
@@ -144,6 +159,19 @@ export function QuizBoard({
               ))}
           </div>
         )}
+        {timedOut && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <span
+              className="arcade-stamp rounded-[6px] border-[3px] border-warn bg-black/55 px-3 py-1 text-[28px] font-black uppercase leading-none tracking-[0.08em] text-warn sm:text-[36px]"
+              style={{ animationDuration: "200ms" }}
+            >
+              Time up
+            </span>
+          </span>
+        )}
       </div>
 
       {/* The clock, right under the question. Height reserved between questions. */}
@@ -157,12 +185,16 @@ export function QuizBoard({
       <div
         role="group"
         aria-label="Answers"
-        className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3"
+        className={cn(
+          "mt-3 grid grid-cols-1 gap-2.5 transition-[filter] duration-500 motion-reduce:transition-none sm:grid-cols-2 sm:gap-3",
+          timedOut && "saturate-[0.35]",
+        )}
       >
         {choices.map((choice, i) => {
           const isCorrect = reveal !== null && i === reveal.correctIndex;
           const isWrongPick = reveal !== null && i === picked && i !== reveal.correctIndex;
           const isPending = reveal === null && i === picked;
+          const isDown = press.isPressed(i);
           const tinted = !isCorrect && !isWrongPick && !isPending;
           return (
             <button
@@ -171,6 +203,7 @@ export function QuizBoard({
               disabled={locked}
               aria-pressed={i === picked}
               onClick={() => onPick(i)}
+              {...press.bind(i)}
               style={
                 tinted
                   ? ({
@@ -181,8 +214,8 @@ export function QuizBoard({
                   : undefined
               }
               className={cn(
-                "relative flex min-h-[60px] items-center justify-center rounded-[6px] border px-3.5 py-3 text-center text-[16px] font-bold leading-snug tracking-[-0.01em] transition-[transform,background-color,border-color,color] duration-150 motion-reduce:transition-none motion-reduce:transform-none sm:min-h-[76px] sm:px-4 sm:text-[18px]",
-                !locked && "hover:-translate-y-0.5",
+                "relative flex min-h-[60px] items-center justify-center rounded-[6px] border px-3.5 py-3 text-center text-[16px] font-bold leading-snug tracking-[-0.01em] transition-[transform,background-color,border-color,color,box-shadow] duration-150 motion-reduce:transition-none motion-reduce:transform-none sm:min-h-[76px] sm:px-4 sm:text-[18px]",
+                !locked && !isDown && "hover:-translate-y-0.5",
                 isCorrect
                   ? "border-[var(--game)] bg-[var(--game)] text-[var(--game-ink)] [box-shadow:0_0_24px_color-mix(in_oklab,var(--game)_45%,transparent)]"
                   : isWrongPick
@@ -192,6 +225,8 @@ export function QuizBoard({
                       : "text-text-bright",
                 tinted && locked && "opacity-60",
                 isCorrect && rightPick && "arcade-pop",
+                isPending && slowCommit && "arcade-wait",
+                isDown && PRESS_CLASS,
               )}
             >
               <span className="min-w-0">{choice}</span>
@@ -211,7 +246,9 @@ export function QuizBoard({
             : ""
           : rightPick
             ? "Right."
-            : `Wrong. The answer was ${choices[reveal.correctIndex] ?? ""}.`}
+            : `${timedOut ? "Time ran out" : "Wrong"}. The answer was ${
+                choices[reveal.correctIndex] ?? ""
+              }.`}
       </p>
     </div>
   );

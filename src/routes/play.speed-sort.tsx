@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { ArcadeTile } from "@/components/arcade/ArcadeTile";
@@ -32,13 +31,25 @@ import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
 // UTC day. Swipe or tap each title into its bin; a wrong sort shows the bin
 // it belonged in before the next card lands, and every miss is kept so the
 // end screen can list it with its right bin.
+//
+// The clock is the only thing a streak is worth. Five in a row buys two
+// seconds, ten buys three more, and the bar grows where it stands because
+// the engine raises the total by the same amount. The chip turning colour,
+// the amount rising off it and the bar widening are one event, which is the
+// whole point: a run that says "on fire" and pays nothing teaches the player
+// to stop reading the feedback.
 
 const GAME = GAMES["speed-sort"];
 const TIMER_SECONDS = 60;
+/** Seconds bought by reaching x5 and by reaching x10, once per streak. The
+ *  same two numbers feed the chip's floater, so the clock can never grow by
+ *  an amount the screen did not name. */
+const COMBO_SECONDS = [2, 3] as const;
+const COMBO_PAYS = [`+${COMBO_SECONDS[0]}s`, `+${COMBO_SECONDS[1]}s`] as const;
 const HOW_TO = [
   "One title at a time. Swipe it toward its bin, tap the bin, or use the arrow keys.",
   "A wrong sort shows the bin it belonged in, then the next card lands.",
-  "Sixty seconds. A right sort pays 1 comet, a clean minute pays 5 more.",
+  `Sixty seconds on the clock. Five in a row adds ${COMBO_SECONDS[0]} seconds, ten adds ${COMBO_SECONDS[1]}.`,
 ];
 const LOST_HINT = "A right sort pays 1 comet. A clean minute pays 5 more.";
 
@@ -192,6 +203,8 @@ function SpeedSortPage() {
   const indexRef = useRef(0);
   const sortedRef = useRef(0);
   const missesRef = useRef<Miss[]>([]);
+  // The streak as of this tap. api.combo is a render behind it.
+  const streakRef = useRef(0);
   const endedRef = useRef(false);
   const startedAtRef = useRef(0);
   const submittedRef = useRef(false);
@@ -261,6 +274,7 @@ function SpeedSortPage() {
       setIndex(0);
       sortedRef.current = 0;
       missesRef.current = [];
+      streakRef.current = 0;
       endedRef.current = false;
       submittedRef.current = false;
       startedAtRef.current = Date.now();
@@ -278,8 +292,14 @@ function SpeedSortPage() {
       sortedRef.current += 1;
       api.addScore(1);
       api.hitCombo();
+      const streak = (streakRef.current += 1);
+      // Only on the two crossings, so a streak of thirty pays the same as a
+      // streak of ten and the chip's colour is the whole rule.
+      if (streak === 5) api.extendTimer(COMBO_SECONDS[0]);
+      else if (streak === 10) api.extendTimer(COMBO_SECONDS[1]);
     } else {
       missesRef.current.push({ title: card, bin: card.bin === "a" ? round.bins.a : round.bins.b });
+      streakRef.current = 0;
       api.breakCombo();
     }
     const next = indexRef.current + 1;
@@ -333,7 +353,6 @@ function SpeedSortPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <TopBar />
       <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 lg:max-w-[880px]">
         {round && bins ? (
           <>
@@ -343,6 +362,7 @@ function SpeedSortPage() {
               comets={comets}
               dayNumber={round.dayKey}
               howTo={HOW_TO}
+              comboPays={COMBO_PAYS}
               readyExtra={
                 <p className="text-center text-[13.5px] text-text-muted">
                   Today's bins:{" "}

@@ -6,7 +6,6 @@ import {
   type PublicArcadeBest,
   type PublicMediaItem,
 } from "@/lib/profile.functions";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { Avatar } from "@/components/balasaur/Avatar";
 import { EmptyState, EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
 import { CometMark } from "@/components/arcade/CometChip";
@@ -62,8 +61,7 @@ export const Route = createFileRoute("/$handle")({
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <TopBar />
-      <main id="main" className="mx-auto max-w-[1100px] px-5 py-8">
+      <main id="main" className="mx-auto max-w-content px-5 py-8">
         {children}
       </main>
     </div>

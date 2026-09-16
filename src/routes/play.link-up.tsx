@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { ArcadeTile } from "@/components/arcade/ArcadeTile";
 import { ChainBoard, type ChainStep } from "@/components/arcade/ChainBoard";
 import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
+import { COMMIT_FLOOR_MS } from "@/lib/arcade/usePress";
 import { useComets } from "@/lib/arcade/useComets";
 import { linkUpPayout, totalComets } from "@/lib/arcade/comets";
 import { shareLinkUp } from "@/lib/arcade/share";
@@ -36,6 +36,12 @@ import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
 // miss teaches, the option stays marked, and stepping back is the only way
 // on. The run has one number, picks, stated once on the end screen. The
 // closed chain stays on screen under the end panel.
+//
+// The judge is on the server and stays there, but it is out of the input
+// loop: the tapped poster commits on screen the moment it is tapped, and the
+// verdict is held back to a floor of COMMIT_FLOOR_MS so a fast answer cannot
+// snap past the eye. A slow one is carried by the poster, which starts to
+// pulse; nothing on the page ever mentions the wait.
 
 const GAME = GAMES["link-up"];
 const HOW_TO = [
@@ -161,12 +167,30 @@ function LinkUpPage() {
    *  passed on a right pick. */
   const [tried, setTried] = useState<Record<number, string[]>>({});
   const [wrong, setWrong] = useState(0);
+  /** The poster whose verdict is still out. Set before the request goes. */
+  const [pending, setPending] = useState<string | null>(null);
   const [stats, setStats] = useState<GameStats | null>(null);
   const [firstComets, setFirstComets] = useState(false);
   const judgingRef = useRef(false);
+  const aliveRef = useRef(true);
   const wrongRef = useRef(0);
   const startedAtRef = useRef(0);
   const submittedRef = useRef(false);
+
+  useEffect(
+    () => () => {
+      aliveRef.current = false;
+    },
+    [],
+  );
+
+  /** Hold the verdict until the commit has had its floor on screen. */
+  const floor = (sentAt: number) =>
+    new Promise<void>((done) => {
+      const left = COMMIT_FLOOR_MS - (Date.now() - sentAt);
+      if (left <= 0) done();
+      else window.setTimeout(done, left);
+    });
 
   const submitRun = (o: { score: number; won: boolean; earned: number }) => {
     if (!round || submittedRef.current) return;
@@ -221,6 +245,7 @@ function LinkUpPage() {
       setComplete(false);
       setTried({});
       setWrong(0);
+      setPending(null);
       wrongRef.current = 0;
       judgingRef.current = false;
       submittedRef.current = false;
@@ -236,6 +261,9 @@ function LinkUpPage() {
     const opt = step.options.find((o) => o.id === id);
     if (!opt || tried[stepIdx]?.includes(id)) return;
     judgingRef.current = true;
+    // The pick lands on screen first; the network happens behind it.
+    setPending(id);
+    const sentAt = Date.now();
     let verdict: Awaited<ReturnType<typeof judgeLinkPick>> = null;
     try {
       verdict = await judgeLinkPick({
@@ -244,7 +272,10 @@ function LinkUpPage() {
     } catch (e) {
       console.error("[link-up] judge unreachable:", e);
     }
+    await floor(sentAt);
+    if (!aliveRef.current) return;
     judgingRef.current = false;
+    setPending(null);
     if (!verdict) return;
 
     if (verdict.correct) {
@@ -325,6 +356,7 @@ function LinkUpPage() {
           : []
       }
       tried={tried[stepIdx] ?? []}
+      pending={pending}
       deadEnd={deadEnd}
       complete={complete}
       disabled={api.phase !== "playing"}
@@ -335,7 +367,6 @@ function LinkUpPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <TopBar />
       <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 lg:max-w-[880px]">
         {round ? (
           <>

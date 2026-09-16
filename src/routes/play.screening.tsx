@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { ArcadeTile } from "@/components/arcade/ArcadeTile";
@@ -8,6 +7,7 @@ import { QuizBoard, type QuizMedia } from "@/components/arcade/QuizBoard";
 import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import type { SnippetRow } from "@/components/arcade/LeaderboardSnippet";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
+import { COMMIT_FLOOR_MS } from "@/lib/arcade/usePress";
 import { useComets } from "@/lib/arcade/useComets";
 import { screeningPayout, totalComets } from "@/lib/arcade/comets";
 import { shareScreening } from "@/lib/arcade/share";
@@ -33,6 +33,12 @@ import { arcadeBreadcrumbJsonLd } from "@/lib/jsonld";
 // page carries no answers: every pick is judged on the server, because the
 // night's board ranks people and a board anyone can top with a console is
 // worth nothing.
+//
+// The server judge stays, but it is out of the input loop: the card locks the
+// instant it is tapped, and the verdict is held back to a floor of
+// COMMIT_FLOOR_MS so a fast answer cannot land before the eye has followed the
+// finger. A slow one is carried by the locked card, which starts to pulse; the
+// page never says a word about waiting.
 //
 // One number per run: right answers out of ten. The board is submitted in
 // the server's units (a hundred a question) and mapped back to the same
@@ -149,13 +155,23 @@ function ScreeningPage() {
   const startedAtRef = useRef(0);
   const submittedRef = useRef(false);
   const beatRef = useRef<number | null>(null);
+  const aliveRef = useRef(true);
 
   useEffect(
     () => () => {
+      aliveRef.current = false;
       if (beatRef.current) window.clearTimeout(beatRef.current);
     },
     [],
   );
+
+  /** Hold the verdict until the locked card has had its floor on screen. */
+  const floor = (sentAt: number) =>
+    new Promise<void>((done) => {
+      const left = COMMIT_FLOOR_MS - (Date.now() - sentAt);
+      if (left <= 0) done();
+      else window.setTimeout(done, left);
+    });
 
   const submitRun = (o: { score: number; won: boolean; earned: number }) => {
     if (!set || submittedRef.current) return;
@@ -215,6 +231,7 @@ function ScreeningPage() {
     api.stopTimer();
     const item = set.items[i];
     if (choice !== null) setPicked(choice);
+    const sentAt = Date.now();
 
     let v: Awaited<ReturnType<typeof judgeScreeningPick>> = null;
     try {
@@ -222,6 +239,8 @@ function ScreeningPage() {
     } catch (e) {
       console.error("[screening] judge unreachable:", e);
     }
+    await floor(sentAt);
+    if (!aliveRef.current) return;
     const correct = v?.correct ?? false;
     setVerdict({
       correctIndex: v ? v.answer : -1,
@@ -323,7 +342,6 @@ function ScreeningPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <TopBar />
       <main id="main" className="mx-auto w-full max-w-[600px] flex-1 px-5 py-8 lg:max-w-[880px]">
         {set ? (
           <GameShell

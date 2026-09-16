@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { TopBar } from "@/components/balasaur/TopBar";
 import { buildMeta, canonicalLink, absoluteUrl, noindexMeta } from "@/lib/seo";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyProfile } from "@/hooks/useMyProfile";
@@ -78,7 +77,6 @@ function NightEntry() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <TopBar />
       {/* The room, not a form on a void. Movie Night and My Library are the
           site's two personal spaces, so they share one warm treatment: a lit
           pool on a dim wall. The catalog stays a terminal; these two rooms do

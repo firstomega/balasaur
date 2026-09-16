@@ -19,13 +19,63 @@
  */
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /* Radius. Three shapes ship on this site: a chip, a card, a pill. The old
+     scale was calc() off a 5px base, so rounded-sm computed to 1px and
+     rounded-md to 3px. Nobody can see a 1px corner, which is why 287 places
+     hand-type rounded-[Npx] and why a popover opened with sharper corners than
+     the card under it. The namespace is cleared so the steps nobody can reach
+     cannot come back; rounded-full covers pills on its own. */
+  --radius-*: initial;
+  --radius-sm: 4px; /* chips, badges, inputs, small buttons */
+  --radius-md: 6px; /* cards, posters, panels, dialogs, popovers */
+
+  /* Type. Eight steps measured off what ships: 31 distinct arbitrary sizes in
+     src, of which 11, 12 and 13 carry 489 of the ~900 uses. The half-pixel
+     tier rounds to the nearest step: 14.5 to lg, 13.5 to base, 12.5 and 11.5
+     to sm, 10.5 and 9.5 to xs. Steps above 4xl are removed; a one-off display
+     numeral keeps its own value. */
+  --text-xs: 11px;
+  --text-xs--line-height: 1.45;
+  --text-sm: 12px;
+  --text-sm--line-height: 1.45;
+  --text-base: 13px;
+  --text-base--line-height: 1.5;
+  --text-lg: 15px;
+  --text-lg--line-height: 1.5;
+  --text-xl: 18px;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 22px;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 28px;
+  --text-3xl--line-height: 1.15;
+  --text-4xl: 40px;
+  --text-4xl--line-height: 1.05;
+  --text-5xl: initial;
+  --text-6xl: initial;
+  --text-7xl: initial;
+  --text-8xl: initial;
+  --text-9xl: initial;
+
+  /* Motion. Four durations, named for what is moving. 17 durations shipped
+     before this. */
+  --transition-duration-fast: 120ms; /* a control reacting under the pointer */
+  --transition-duration-base: 200ms; /* a thing changing state in place */
+  --transition-duration-slow: 300ms; /* a thing entering, leaving, refused */
+  --transition-duration-slower: 700ms; /* a thing crossing the board */
+
+  /* Three easings. 13 shipped before this, seven of them near-identical
+     cubic-beziers reaching for the same overshoot. The two curves here are
+     BinSort's, which are the ones that were actually tuned against a finger. */
+  --ease-snap: cubic-bezier(0.2, 0.8, 0.3, 1); /* arrives and stays */
+  --ease-overshoot: cubic-bezier(0.2, 0.9, 0.3, 1.1); /* arrives, settles back */
+  --ease-shake: cubic-bezier(0.36, 0.07, 0.19, 0.97); /* refuses */
+
+  /* Page measures. 24 distinct container widths shipped; these are the three
+     the layouts actually mean. */
+  --container-article: 760px; /* one column of running text */
+  --container-content: 1100px; /* a main column with a rail beside it */
+  --container-grid: 1600px; /* the full card grid and the chrome above it */
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -61,6 +111,11 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-panel: var(--panel);
   --color-border-strong: var(--border-strong);
+  /* The base reading colour, completing the text-* family. It was missing, so
+     28 elements written as `text-text` emitted no rule at all and silently
+     inherited body's colour. This makes that intent explicit and renders
+     identically: body already sets `color: var(--color-foreground)`. */
+  --color-text: var(--foreground);
   --color-text-bright: var(--text-bright);
   --color-text-muted: var(--text-muted);
   --color-text-dim: var(--text-dim);
@@ -76,7 +131,6 @@
 
 :root {
   /* Balasaur — utilitarian dark (single theme). */
-  --radius: 0.3125rem; /* 5px */
   /* OLED ground. On a phone this is pixels that are off, and every panel above
      it reads as a raised surface instead of a slightly different gray. */
   --background: #08090b;
@@ -184,14 +238,19 @@
   }
 
   /* Accessibility: honor the OS "reduce motion" setting by neutralizing
-     animations, transitions, and smooth-scroll for users who request it. */
+     animations, transitions, and smooth-scroll for users who request it. The
+     delays go to zero alongside the durations: a staggered reveal that keeps
+     its delays still waits them out, so the elements arrive one at a time with
+     no motion, which reads worse than either instant or animated. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-delay: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      transition-delay: 0.01ms !important;
       scroll-behavior: auto !important;
     }
   }
@@ -291,10 +350,16 @@ body[data-scroll-locked] {
 }
 
 /* Arcade motion. One shared vocabulary so eleven boards move the same way:
-   a wrong pick shakes, a right pick pops, a new card flips in, a "+1" rises
-   and fades, a verdict stamps. Apply the class on the element; re-key the
-   element to replay. Under prefers-reduced-motion every one is off and the
-   element sits in its rest state (the floater stays hidden). */
+   a wrong pick shakes, a right pick pops, a chip pops in, a payout lands, a
+   new card flips in, a "+1" rises and fades, a verdict stamps. Apply the class
+   on the element; re-key the element to replay. Under prefers-reduced-motion
+   every one is off and the element sits in its rest state (the floater stays
+   hidden).
+
+   This is the only set. A second one lived in arcadeMotion.tsx as arc-* at
+   different durations. A wrong pick fired both at the same instant, the board
+   shaking on one and the score line on the other, and one finished 100ms after
+   the other. Seven animations now run on three durations and three easings. */
 @layer components {
   @keyframes arcade-shake {
     0%,
@@ -323,6 +388,37 @@ body[data-scroll-locked] {
     }
     100% {
       transform: scale(1);
+    }
+  }
+  /* An element that was not there a frame ago. arcade-pop is for one that was. */
+  @keyframes arcade-pop-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  /* Something landed on this element: it takes the hit and lights up in the
+     game's hue. */
+  @keyframes arcade-bump {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 transparent;
+    }
+    40% {
+      transform: scale(1.15);
+      box-shadow: 0 0 18px 2px var(--game, var(--primary));
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 transparent;
     }
   }
   @keyframes arcade-flip-in {
@@ -361,31 +457,40 @@ body[data-scroll-locked] {
   }
 
   .arcade-shake {
-    animation: arcade-shake 400ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    animation: arcade-shake var(--transition-duration-slow) var(--ease-shake) both;
   }
   .arcade-pop {
-    animation: arcade-pop 260ms ease-out both;
+    animation: arcade-pop var(--transition-duration-base) var(--ease-out) both;
+  }
+  .arcade-pop-in {
+    animation: arcade-pop-in var(--transition-duration-slow) var(--ease-overshoot) both;
+  }
+  .arcade-bump {
+    animation: arcade-bump var(--transition-duration-slow) var(--ease-out) both;
   }
   .arcade-flip-in {
-    animation: arcade-flip-in 300ms ease-out both;
+    animation: arcade-flip-in var(--transition-duration-slow) var(--ease-snap) both;
     backface-visibility: hidden;
   }
   .arcade-rise-fade {
-    animation: arcade-rise-fade 700ms ease-out both;
+    animation: arcade-rise-fade var(--transition-duration-slower) var(--ease-out) both;
     pointer-events: none;
   }
   .arcade-stamp {
-    animation: arcade-stamp 320ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    animation: arcade-stamp var(--transition-duration-slow) var(--ease-overshoot) both;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .arcade-shake,
     .arcade-pop,
+    .arcade-pop-in,
+    .arcade-bump,
     .arcade-flip-in,
     .arcade-stamp {
       animation: none;
       transform: none;
       opacity: 1;
+      box-shadow: none;
     }
     .arcade-rise-fade {
       animation: none;

@@ -1,0 +1,437 @@
+{
+  "totals": {
+    "fontSize": 882,
+    "radius": 329,
+    "duration": 4,
+    "easing": 8,
+    "hex": 382,
+    "containerWidth": 76
+  },
+  "files": {
+    "src/components/arcade/ArcadeTile.tsx": {
+      "fontSize": 9,
+      "radius": 2,
+      "hex": 5
+    },
+    "src/components/arcade/BinSort.tsx": {
+      "fontSize": 11,
+      "radius": 11,
+      "easing": 3,
+      "containerWidth": 1
+    },
+    "src/components/arcade/ChainBoard.tsx": {
+      "fontSize": 15,
+      "radius": 5
+    },
+    "src/components/arcade/CometBurst.tsx": {
+      "easing": 1
+    },
+    "src/components/arcade/CometChip.tsx": {
+      "fontSize": 1
+    },
+    "src/components/arcade/EmojiStage.tsx": {
+      "fontSize": 4,
+      "radius": 3,
+      "easing": 1,
+      "hex": 2
+    },
+    "src/components/arcade/EndScreen.tsx": {
+      "fontSize": 22,
+      "radius": 2
+    },
+    "src/components/arcade/GameShell.tsx": {
+      "fontSize": 12,
+      "radius": 2,
+      "containerWidth": 4
+    },
+    "src/components/arcade/GuessBox.tsx": {
+      "fontSize": 3,
+      "radius": 2
+    },
+    "src/components/arcade/LeaderboardSnippet.tsx": {
+      "fontSize": 5
+    },
+    "src/components/arcade/MatchBoard.tsx": {
+      "fontSize": 9,
+      "radius": 4,
+      "easing": 1,
+      "hex": 4,
+      "containerWidth": 1
+    },
+    "src/components/arcade/OddOneOut.tsx": {
+      "fontSize": 14,
+      "radius": 4,
+      "duration": 1,
+      "hex": 3
+    },
+    "src/components/arcade/OrderBoard.tsx": {
+      "fontSize": 7,
+      "radius": 6,
+      "easing": 1,
+      "containerWidth": 2
+    },
+    "src/components/arcade/PosterBoard.tsx": {
+      "fontSize": 1,
+      "radius": 2,
+      "containerWidth": 1
+    },
+    "src/components/arcade/QuizBoard.tsx": {
+      "fontSize": 9,
+      "radius": 4,
+      "duration": 1,
+      "hex": 3
+    },
+    "src/components/arcade/ResultGrid.tsx": {
+      "fontSize": 1,
+      "radius": 1
+    },
+    "src/components/arcade/ScoreStrip.tsx": {
+      "fontSize": 5
+    },
+    "src/components/arcade/StatsBlock.tsx": {
+      "fontSize": 5,
+      "radius": 1
+    },
+    "src/components/arcade/TimerBar.tsx": {
+      "fontSize": 3,
+      "hex": 1
+    },
+    "src/components/arcade/TimerRing.tsx": {
+      "fontSize": 1,
+      "hex": 1
+    },
+    "src/components/arcade/WeeklyBoard.tsx": {
+      "fontSize": 5
+    },
+    "src/components/balasaur/ActiveFilters.tsx": {
+      "fontSize": 2,
+      "radius": 1
+    },
+    "src/components/balasaur/AmbientGlow.tsx": {
+      "hex": 2
+    },
+    "src/components/balasaur/AuthDialog.tsx": {
+      "fontSize": 11,
+      "radius": 4,
+      "containerWidth": 1
+    },
+    "src/components/balasaur/Avatar.tsx": {
+      "fontSize": 1
+    },
+    "src/components/balasaur/ChompMask.tsx": {
+      "easing": 1
+    },
+    "src/components/balasaur/CollectionRail.tsx": {
+      "fontSize": 5,
+      "radius": 5
+    },
+    "src/components/balasaur/CookieBanner.tsx": {
+      "fontSize": 4,
+      "radius": 2,
+      "containerWidth": 1
+    },
+    "src/components/balasaur/DinoRun.tsx": {
+      "fontSize": 1
+    },
+    "src/components/balasaur/EmptyState.tsx": {
+      "fontSize": 8,
+      "radius": 2,
+      "containerWidth": 2
+    },
+    "src/components/balasaur/EpisodeHeatmap.tsx": {
+      "fontSize": 10,
+      "radius": 3,
+      "hex": 10,
+      "containerWidth": 3
+    },
+    "src/components/balasaur/FilterRail.tsx": {
+      "fontSize": 28,
+      "radius": 11
+    },
+    "src/components/balasaur/Footer.tsx": {
+      "fontSize": 2,
+      "containerWidth": 1
+    },
+    "src/components/balasaur/LandingHero.tsx": {
+      "fontSize": 4,
+      "radius": 2
+    },
+    "src/components/balasaur/LibraryDeck.tsx": {
+      "fontSize": 30,
+      "radius": 16,
+      "hex": 6,
+      "containerWidth": 4
+    },
+    "src/components/balasaur/MediaCard.tsx": {
+      "fontSize": 9,
+      "radius": 8,
+      "hex": 11
+    },
+    "src/components/balasaur/MediaCardSkeleton.tsx": {
+      "radius": 1
+    },
+    "src/components/balasaur/MediaDetail.tsx": {
+      "fontSize": 41,
+      "radius": 17,
+      "hex": 1,
+      "containerWidth": 6
+    },
+    "src/components/balasaur/MediaTypeSwitch.tsx": {
+      "fontSize": 1,
+      "radius": 2
+    },
+    "src/components/balasaur/MobileFilterStrip.tsx": {
+      "fontSize": 11,
+      "radius": 7
+    },
+    "src/components/balasaur/PersonDetail.tsx": {
+      "fontSize": 11,
+      "radius": 3,
+      "containerWidth": 2
+    },
+    "src/components/balasaur/ProviderIcon.tsx": {
+      "fontSize": 2,
+      "radius": 2,
+      "hex": 19
+    },
+    "src/components/balasaur/ScoreBadge.tsx": {
+      "fontSize": 4,
+      "radius": 2
+    },
+    "src/components/balasaur/ScrollRail.tsx": {
+      "hex": 4
+    },
+    "src/components/balasaur/ShareButton.tsx": {
+      "fontSize": 1,
+      "radius": 1
+    },
+    "src/components/balasaur/SortControl.tsx": {
+      "fontSize": 2,
+      "radius": 1
+    },
+    "src/components/balasaur/TasteCardPreview.tsx": {
+      "fontSize": 6,
+      "radius": 1,
+      "containerWidth": 2
+    },
+    "src/components/balasaur/TopBar.tsx": {
+      "fontSize": 15,
+      "radius": 5,
+      "containerWidth": 1
+    },
+    "src/components/balasaur/TopBarSearch.tsx": {
+      "fontSize": 8,
+      "radius": 3
+    },
+    "src/components/balasaur/WatchlistNudge.tsx": {
+      "fontSize": 2,
+      "radius": 1,
+      "hex": 5
+    },
+    "src/components/balasaur/WhereToWatch.tsx": {
+      "fontSize": 6,
+      "radius": 3
+    },
+    "src/hooks/useAuth.tsx": {
+      "hex": 1
+    },
+    "src/lib/arcade/games.ts": {
+      "hex": 22
+    },
+    "src/lib/arcade/shareImage.ts": {
+      "hex": 29
+    },
+    "src/lib/arcade/useArcadeGame.ts": {
+      "hex": 1
+    },
+    "src/lib/avatar.ts": {
+      "hex": 8
+    },
+    "src/lib/error-page.ts": {
+      "hex": 8
+    },
+    "src/lib/night.ts": {
+      "hex": 8
+    },
+    "src/lib/taste.ts": {
+      "hex": 2
+    },
+    "src/lib/tasteCard.ts": {
+      "hex": 9
+    },
+    "src/lib/userStatus.ts": {
+      "hex": 5
+    },
+    "src/router.tsx": {
+      "hex": 1
+    },
+    "src/routes/$handle.tsx": {
+      "fontSize": 22,
+      "radius": 7
+    },
+    "src/routes/__root.tsx": {
+      "fontSize": 10,
+      "radius": 6
+    },
+    "src/routes/about.tsx": {
+      "fontSize": 10
+    },
+    "src/routes/account.tsx": {
+      "fontSize": 30,
+      "radius": 8,
+      "containerWidth": 2
+    },
+    "src/routes/best.$slug.tsx": {
+      "fontSize": 16,
+      "radius": 8,
+      "containerWidth": 3
+    },
+    "src/routes/calendar.tsx": {
+      "fontSize": 8,
+      "radius": 3
+    },
+    "src/routes/collections.tsx": {
+      "fontSize": 33,
+      "radius": 20,
+      "hex": 12
+    },
+    "src/routes/contact.tsx": {
+      "fontSize": 7
+    },
+    "src/routes/dev.arcade.tsx": {
+      "fontSize": 33,
+      "radius": 11,
+      "duration": 1,
+      "hex": 35,
+      "containerWidth": 7
+    },
+    "src/routes/dev.refine.tsx": {
+      "fontSize": 14,
+      "radius": 8,
+      "hex": 38
+    },
+    "src/routes/index.tsx": {
+      "fontSize": 22,
+      "radius": 11,
+      "hex": 1
+    },
+    "src/routes/library.tsx": {
+      "fontSize": 33,
+      "radius": 14,
+      "hex": 105,
+      "containerWidth": 2
+    },
+    "src/routes/lists.tsx": {
+      "fontSize": 6,
+      "radius": 1,
+      "hex": 2
+    },
+    "src/routes/methodology.tsx": {
+      "fontSize": 14,
+      "containerWidth": 1
+    },
+    "src/routes/movie.$id.tsx": {
+      "fontSize": 3,
+      "radius": 3
+    },
+    "src/routes/night.$code.tsx": {
+      "fontSize": 49,
+      "radius": 30,
+      "hex": 16
+    },
+    "src/routes/night.index.tsx": {
+      "fontSize": 13,
+      "radius": 6,
+      "hex": 1,
+      "containerWidth": 1
+    },
+    "src/routes/person.$id.tsx": {
+      "fontSize": 3,
+      "radius": 3
+    },
+    "src/routes/play.balasaurdle.tsx": {
+      "fontSize": 19,
+      "radius": 7,
+      "duration": 1,
+      "containerWidth": 1
+    },
+    "src/routes/play.casting-call.tsx": {
+      "fontSize": 8,
+      "radius": 1,
+      "containerWidth": 2
+    },
+    "src/routes/play.emoji.tsx": {
+      "fontSize": 15,
+      "radius": 3,
+      "containerWidth": 1
+    },
+    "src/routes/play.index.tsx": {
+      "fontSize": 10,
+      "radius": 2,
+      "hex": 1,
+      "containerWidth": 3
+    },
+    "src/routes/play.leaderboard.tsx": {
+      "fontSize": 9,
+      "radius": 5,
+      "containerWidth": 1
+    },
+    "src/routes/play.link-up.tsx": {
+      "fontSize": 11,
+      "radius": 1,
+      "containerWidth": 3
+    },
+    "src/routes/play.poster-reveal.tsx": {
+      "fontSize": 15,
+      "radius": 3,
+      "containerWidth": 3
+    },
+    "src/routes/play.quote-match.tsx": {
+      "fontSize": 9,
+      "radius": 1,
+      "containerWidth": 2
+    },
+    "src/routes/play.screening.tsx": {
+      "fontSize": 9,
+      "radius": 1,
+      "containerWidth": 2
+    },
+    "src/routes/play.sequel-or-fake.tsx": {
+      "fontSize": 11,
+      "radius": 1,
+      "containerWidth": 2
+    },
+    "src/routes/play.speed-sort.tsx": {
+      "fontSize": 12,
+      "radius": 3,
+      "containerWidth": 3
+    },
+    "src/routes/play.taglines.tsx": {
+      "fontSize": 9,
+      "radius": 1,
+      "containerWidth": 2
+    },
+    "src/routes/play.timeline.tsx": {
+      "fontSize": 11,
+      "radius": 1,
+      "containerWidth": 3
+    },
+    "src/routes/privacy.tsx": {
+      "fontSize": 3
+    },
+    "src/routes/profile.tsx": {
+      "fontSize": 24,
+      "radius": 5
+    },
+    "src/routes/taste.tsx": {
+      "fontSize": 8
+    },
+    "src/routes/terms.tsx": {
+      "fontSize": 3
+    },
+    "src/routes/tv.$id.tsx": {
+      "fontSize": 3,
+      "radius": 3
+    }
+  }
+}

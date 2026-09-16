@@ -8,9 +8,14 @@
 // or 2.5s; any input during the hold dismisses it rather than sorting the
 // next card blind. Controlled: the parent owns the deck and judges every
 // choice via onChoose; combos and scoring are the engine's job.
+//
+// A miss sounds here because this is where the verdict is known. A hit does
+// not: the score strip above already plays the streak note when the point
+// lands, and two cues on one answer would be a smear.
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { cue, reducedMotion } from "@/lib/feedback";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
 import { TimerBar } from "./TimerBar";
@@ -107,14 +112,6 @@ export function faceGradient(seed: string): string {
 
 function tilt(dx: number): number {
   return Math.max(-10, Math.min(10, dx * 0.06));
-}
-
-function reducedMotion(): boolean {
-  try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return true;
-  }
 }
 
 function Face({ c, dim = false }: { c: BinCard; dim?: boolean }) {
@@ -372,6 +369,9 @@ export function BinSort({
     }
     const chosen = card;
     const correct = onChoose(dir);
+    // A right sort is the score moving, and the strip above says that with the
+    // streak's own note. Only the miss is this board's to say.
+    if (!correct) cue("wrong");
     const correctDir: 0 | 1 = correct ? dir : dir === 0 ? 1 : 0;
     const correctLabel = bins[correctDir].label;
     setLive(
