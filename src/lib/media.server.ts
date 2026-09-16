@@ -1030,7 +1030,7 @@ export async function backfillFromRaw(opts?: {
   let pageSize = MAX_PAGE;
   let cursor = opts?.after ?? "";
   while (true) {
-    let query = supabaseAdmin
+    let query = loose(supabaseAdmin)
       .from("media")
       .select(
         "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, popularity, release_date, rating_balasaur, vote_count, rank_score, quality_score, sensitive, suggestive, tmdb_collection_id, raw_tmdb, raw_omdb",
