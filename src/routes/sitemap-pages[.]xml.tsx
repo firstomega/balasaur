@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { loose } from "@/lib/supabaseLoose";
 import { SITE_ORIGIN } from "@/lib/seo";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
           // day drop shelves out of the sitemap with no error to notice.
           const PAGE = 1000;
           for (let offset = 0; offset < 10000; offset += PAGE) {
-            const { data: shelves, error } = await supabaseAdmin
+            const { data: shelves, error } = await loose(supabaseAdmin)
               .from("collections")
               .select("slug, updated_at")
               .order("slug", { ascending: true })

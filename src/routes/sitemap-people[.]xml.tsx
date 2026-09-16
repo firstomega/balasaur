@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { loose } from "@/lib/supabaseLoose";
 import { SITE_ORIGIN } from "@/lib/seo";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/sitemap-people.xml")({
           // once silently truncated the title sitemap. Cap 5,000 for safety.
           const PAGE = 1000;
           for (let offset = 0; offset < 5000; offset += PAGE) {
-            const { data, error } = await supabaseAdmin
+            const { data, error } = await loose(supabaseAdmin)
               .from("person_index")
               .select("person_id")
               .gte("titles", SITEMAP_MIN_TITLES)

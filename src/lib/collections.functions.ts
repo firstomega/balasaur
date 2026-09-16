@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
@@ -39,7 +40,7 @@ async function postersByIds(ids: string[]): Promise<Map<string, string>> {
   const CHUNK = 400;
   for (let i = 0; i < ids.length; i += CHUNK) {
     const slice = ids.slice(i, i + CHUNK);
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("media")
       .select("media_id, poster_url")
       .in("media_id", slice)
@@ -57,7 +58,7 @@ async function postersByIds(ids: string[]): Promise<Map<string, string>> {
 
 export const listCollections = createServerFn({ method: "GET" }).handler(
   async (): Promise<CollectionSummary[]> => {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collections")
       .select(
         "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids, top_titles, season_months, media_type",
@@ -109,7 +110,7 @@ const HOME_RAIL_SIZE = 14;
  */
 export const listHomeCollections = createServerFn({ method: "GET" }).handler(
   async (): Promise<HomeCollection[]> => {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collections")
       .select("slug, title, item_count, kind, poster_ids, season_months, media_type")
       .in("kind", ["occasion", "discovery", "service"])
@@ -167,7 +168,7 @@ export const getCollectionRedirect = createServerFn({ method: "GET" })
   .handler(async ({ data: p }): Promise<string | null> => {
     const slug = (p.slug ?? "").toLowerCase();
     if (!/^[a-z0-9-]{3,80}$/.test(slug)) return null;
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collection_redirects")
       .select("to_slug")
       .eq("from_slug", slug)
@@ -187,7 +188,7 @@ export const getCollection = createServerFn({ method: "GET" })
     const slug = (p.slug ?? "").toLowerCase();
     if (!/^[a-z0-9-]{3,80}$/.test(slug)) return null;
 
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await loose(supabaseAdmin)
       .from("collections")
       .select(
         "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, updated_at",
@@ -196,7 +197,7 @@ export const getCollection = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error || !row) return null;
 
-    const { data: itemRows, error: itemsErr } = await supabaseAdmin
+    const { data: itemRows, error: itemsErr } = await loose(supabaseAdmin)
       .from("collection_items")
       .select(`rank, media:media_id ( ${CARD_COLS} )`)
       .eq("slug", slug)
@@ -249,7 +250,7 @@ export const getAppearsIn = createServerFn({ method: "GET" })
   .inputValidator((p: { mediaId: string }) => p)
   .handler(async ({ data: p }): Promise<AppearsIn[]> => {
     if (!/^(movie|tv)-\d{1,10}$/.test(p.mediaId ?? "")) return [];
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collection_items")
       .select("rank, collections:slug ( slug, title, item_count )")
       .eq("media_id", p.mediaId);
@@ -273,7 +274,7 @@ export const getAppearsIn = createServerFn({ method: "GET" })
 
     const size = Math.max(best.item_count || 0, best.rank);
     const { lo, hi } = shelfWindow(best.rank, size);
-    const { data: nearby, error: nearbyErr } = await supabaseAdmin
+    const { data: nearby, error: nearbyErr } = await loose(supabaseAdmin)
       .from("collection_items")
       .select(`rank, media:media_id ( ${CARD_COLS} )`)
       .eq("slug", best.slug)
@@ -303,7 +304,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
     let res: RelatedCollection[] = [];
 
     const fetchSlugs = async (slugs: string[]) => {
-      const { data } = await supabaseAdmin
+      const { data } = await loose(supabaseAdmin)
         .from("collections")
         .select("slug, title, item_count")
         .in("slug", slugs)
@@ -317,7 +318,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
         const [, genre, service] = match;
         const [parents, siblings] = await Promise.all([
           fetchSlugs([`best-on-${service}`, `best-${genre}`]),
-          supabaseAdmin
+          loose(supabaseAdmin)
             .from("collections")
             .select("slug, title, item_count")
             .eq("kind", "genre-service")
@@ -356,7 +357,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
       if (match) {
         const genre = match[1];
         const [services, decades] = await Promise.all([
-          supabaseAdmin
+          loose(supabaseAdmin)
             .from("collections")
             .select("slug, title, item_count")
             .eq("kind", "genre-service")
@@ -364,7 +365,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
             .neq("slug", slug)
             .order("item_count", { ascending: false })
             .limit(3),
-          supabaseAdmin
+          loose(supabaseAdmin)
             .from("collections")
             .select("slug, title, item_count")
             .eq("kind", "genre-decade")
@@ -379,7 +380,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
         ];
       }
     } else {
-      const { data } = await supabaseAdmin
+      const { data } = await loose(supabaseAdmin)
         .from("collections")
         .select("slug, title, item_count")
         .eq("kind", kind)

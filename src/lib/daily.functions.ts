@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dayNumber, dailyIndex, redactTitle, leaksTitle } from "@/lib/daily";
 import type { MediaPerson } from "@/types/media";
@@ -40,14 +41,14 @@ const CHALLENGE_COLS =
 
 /** The pinned pick for a day, computing and pinning it on first request. */
 async function pinnedMediaId(day: number): Promise<string | null> {
-  const { data: pinned } = await supabaseAdmin
+  const { data: pinned } = await loose(supabaseAdmin)
     .from("daily_challenges")
     .select("media_id")
     .eq("day", day)
     .maybeSingle();
   if (pinned?.media_id) return pinned.media_id;
 
-  const { count, error: countErr } = await supabaseAdmin
+  const { count, error: countErr } = await loose(supabaseAdmin)
     .from("media")
     .select("media_id", { count: "exact", head: true })
     // suggestive covers the whole fan-service tier (superset of sensitive);
@@ -62,7 +63,7 @@ async function pinnedMediaId(day: number): Promise<string | null> {
     return null;
   }
   const idx = dailyIndex(day, count);
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await loose(supabaseAdmin)
     .from("media")
     .select("media_id")
     .eq("suggestive", false)
@@ -78,8 +79,8 @@ async function pinnedMediaId(day: number): Promise<string | null> {
   const mediaId = (data[0] as { media_id: string }).media_id;
   // Two racing first-requests both insert; the loser's row is dropped and a
   // re-read returns the winner, so every player gets one answer.
-  await supabaseAdmin.from("daily_challenges").insert({ day, media_id: mediaId });
-  const { data: confirmed } = await supabaseAdmin
+  await loose(supabaseAdmin).from("daily_challenges").insert({ day, media_id: mediaId });
+  const { data: confirmed } = await loose(supabaseAdmin)
     .from("daily_challenges")
     .select("media_id")
     .eq("day", day)
