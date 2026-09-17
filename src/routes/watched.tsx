@@ -49,6 +49,9 @@ function WatchedPage() {
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
       <LibraryHeader />
       <main id="main" className="min-h-0 flex-1">
+        {/* The deck fills the viewport and carries its own title in the card, so the
+            page heading is for screen readers and crawlers rather than the layout. */}
+        <h1 className="sr-only">Rate the titles you have watched</h1>
         <Suspense
           fallback={
             <div className="p-6">

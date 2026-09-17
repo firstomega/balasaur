@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { SITE_ORIGIN } from "@/lib/seo";
 import { mediaSlug } from "@/lib/slug";
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/api/public/v1/score")({
           return json({ error: "Pass ?id=<movie|tv>-<tmdbId>, e.g. ?id=movie-27205" }, 400, false);
         }
 
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await loose(supabaseAdmin)
           .from("media")
           .select("media_id, media_type, title, year, rating_balasaur, quality_score, sensitive")
           .eq("media_id", id)

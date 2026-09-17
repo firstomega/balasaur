@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "@/lib/catalog.functions";
 import type { MediaItem } from "@/types/media";
@@ -52,7 +53,7 @@ export const getReleaseCalendar = createServerFn({ method: "GET" })
   .handler(async ({ data: p }): Promise<CalendarMonth> => {
     const start = `${p.month}-01`;
     const end = `${nextMonth(p.month, 1)}-01`;
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("media")
       .select(CARD_COLS)
       // The calendar is the site presenting premieres unprompted, so the whole

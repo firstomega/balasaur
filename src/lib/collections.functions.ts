@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
+import { buildOriginCollection, listOriginCollections } from "./originCollections";
 import type { MediaItem } from "@/types/media";
 
 // Server reads for the programmatic collections layer. The heavy lifting
@@ -39,7 +41,7 @@ async function postersByIds(ids: string[]): Promise<Map<string, string>> {
   const CHUNK = 400;
   for (let i = 0; i < ids.length; i += CHUNK) {
     const slice = ids.slice(i, i + CHUNK);
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("media")
       .select("media_id, poster_url")
       .in("media_id", slice)
@@ -57,7 +59,7 @@ async function postersByIds(ids: string[]): Promise<Map<string, string>> {
 
 export const listCollections = createServerFn({ method: "GET" }).handler(
   async (): Promise<CollectionSummary[]> => {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collections")
       .select(
         "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids, top_titles, season_months, media_type",
@@ -78,11 +80,19 @@ export const listCollections = createServerFn({ method: "GET" }).handler(
     const ids = [...new Set(rows.flatMap((r) => r.poster_ids ?? []))];
     const posterById = await postersByIds(ids);
 
-    return rows.map((r) => ({
+    const materialized = rows.map((r) => ({
       ...r,
       posters: (r.poster_ids ?? []).map((id) => posterById.get(id)).filter(Boolean) as string[],
       top_titles: Array.isArray(r.top_titles) ? r.top_titles : [],
     }));
+
+    // Country shelves are computed at request time (see originCollections.ts)
+    // and join the hub here. A materialized row with the same slug would win,
+    // so anything already in the table is skipped.
+    const have = new Set(materialized.map((r) => r.slug));
+    const origins = (await listOriginCollections()).filter((o) => !have.has(o.slug));
+
+    return [...materialized, ...origins].sort((a, b) => b.item_count - a.item_count);
   },
 );
 
@@ -109,7 +119,7 @@ const HOME_RAIL_SIZE = 14;
  */
 export const listHomeCollections = createServerFn({ method: "GET" }).handler(
   async (): Promise<HomeCollection[]> => {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collections")
       .select("slug, title, item_count, kind, poster_ids, season_months, media_type")
       .in("kind", ["occasion", "discovery", "service"])
@@ -167,7 +177,7 @@ export const getCollectionRedirect = createServerFn({ method: "GET" })
   .handler(async ({ data: p }): Promise<string | null> => {
     const slug = (p.slug ?? "").toLowerCase();
     if (!/^[a-z0-9-]{3,80}$/.test(slug)) return null;
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collection_redirects")
       .select("to_slug")
       .eq("from_slug", slug)
@@ -187,16 +197,22 @@ export const getCollection = createServerFn({ method: "GET" })
     const slug = (p.slug ?? "").toLowerCase();
     if (!/^[a-z0-9-]{3,80}$/.test(slug)) return null;
 
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await loose(supabaseAdmin)
       .from("collections")
       .select(
         "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, updated_at",
       )
       .eq("slug", slug)
       .maybeSingle();
-    if (error || !row) return null;
+    if (error) return null;
+    if (!row) {
+      // Not in the materialized matrix: try the request-time country shelves
+      // (best-japanese-movies and kin). Returns null, and the route 404s,
+      // when the slug is not a country shelf or the quality gate refuses it.
+      return buildOriginCollection(slug);
+    }
 
-    const { data: itemRows, error: itemsErr } = await supabaseAdmin
+    const { data: itemRows, error: itemsErr } = await loose(supabaseAdmin)
       .from("collection_items")
       .select(`rank, media:media_id ( ${CARD_COLS} )`)
       .eq("slug", slug)
@@ -249,7 +265,7 @@ export const getAppearsIn = createServerFn({ method: "GET" })
   .inputValidator((p: { mediaId: string }) => p)
   .handler(async ({ data: p }): Promise<AppearsIn[]> => {
     if (!/^(movie|tv)-\d{1,10}$/.test(p.mediaId ?? "")) return [];
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("collection_items")
       .select("rank, collections:slug ( slug, title, item_count )")
       .eq("media_id", p.mediaId);
@@ -273,7 +289,7 @@ export const getAppearsIn = createServerFn({ method: "GET" })
 
     const size = Math.max(best.item_count || 0, best.rank);
     const { lo, hi } = shelfWindow(best.rank, size);
-    const { data: nearby, error: nearbyErr } = await supabaseAdmin
+    const { data: nearby, error: nearbyErr } = await loose(supabaseAdmin)
       .from("collection_items")
       .select(`rank, media:media_id ( ${CARD_COLS} )`)
       .eq("slug", best.slug)
@@ -303,7 +319,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
     let res: RelatedCollection[] = [];
 
     const fetchSlugs = async (slugs: string[]) => {
-      const { data } = await supabaseAdmin
+      const { data } = await loose(supabaseAdmin)
         .from("collections")
         .select("slug, title, item_count")
         .in("slug", slugs)
@@ -317,7 +333,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
         const [, genre, service] = match;
         const [parents, siblings] = await Promise.all([
           fetchSlugs([`best-on-${service}`, `best-${genre}`]),
-          supabaseAdmin
+          loose(supabaseAdmin)
             .from("collections")
             .select("slug, title, item_count")
             .eq("kind", "genre-service")
@@ -356,7 +372,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
       if (match) {
         const genre = match[1];
         const [services, decades] = await Promise.all([
-          supabaseAdmin
+          loose(supabaseAdmin)
             .from("collections")
             .select("slug, title, item_count")
             .eq("kind", "genre-service")
@@ -364,7 +380,7 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
             .neq("slug", slug)
             .order("item_count", { ascending: false })
             .limit(3),
-          supabaseAdmin
+          loose(supabaseAdmin)
             .from("collections")
             .select("slug, title, item_count")
             .eq("kind", "genre-decade")
@@ -378,8 +394,43 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
           ...((decades.data || []) as RelatedCollection[]),
         ];
       }
+    } else if (kind === "origin") {
+      // Country shelves are request-time, so their kin live in two places:
+      // the materialized origin x genre matrix below them (Japanese horror
+      // under Japanese movies), and the same country's other-format shelf,
+      // which is request-time like this one.
+      const match = slug.match(/^best-([a-z]+)-(movies|shows)$/);
+      if (match) {
+        const [, originPart, suffix] = match;
+        const { data: children } = await loose(supabaseAdmin)
+          .from("collections")
+          .select("slug, title, item_count")
+          .eq("kind", "origin-genre")
+          .like("slug", `best-${originPart}-%-${suffix}`)
+          .order("item_count", { ascending: false })
+          .limit(5);
+        res = [...((children || []) as RelatedCollection[])];
+        // The Korean drama cross is materialized under its real name, which
+        // the pattern above cannot match.
+        if (originPart === "korean" && suffix === "shows") {
+          res = [...(await fetchSlugs(["best-k-dramas"])), ...res];
+        }
+        const sibling = await buildOriginCollection(
+          `best-${originPart}-${suffix === "movies" ? "shows" : "movies"}`,
+        );
+        if (sibling) {
+          res = [
+            ...res,
+            {
+              slug: sibling.row.slug,
+              title: sibling.row.title,
+              item_count: sibling.row.item_count,
+            },
+          ];
+        }
+      }
     } else {
-      const { data } = await supabaseAdmin
+      const { data } = await loose(supabaseAdmin)
         .from("collections")
         .select("slug, title, item_count")
         .eq("kind", kind)

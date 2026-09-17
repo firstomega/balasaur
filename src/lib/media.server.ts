@@ -1,3 +1,4 @@
+import { loose } from "@/lib/supabaseLoose";
 import type {
   MediaDetail,
   MediaItem,
@@ -20,7 +21,17 @@ import { tmdbImage } from "./tmdbImage";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
-type MediaRow = TablesInsert<"media">;
+// The generated types come from the platform-managed project; the live project
+// also carries the ranking, quality and content-safety columns below. See
+// src/lib/supabaseLoose.ts.
+type MediaRow = TablesInsert<"media"> & {
+  vote_count?: number | null;
+  rank_score?: number | null;
+  quality_score?: number | null;
+  sensitive?: boolean | null;
+  suggestive?: boolean | null;
+  tmdb_collection_id?: number | null;
+};
 
 /**
  * How many title URLs the sitemap asks Google to index. Deliberately small.
@@ -528,7 +539,7 @@ export async function listSitemapEntries(
     updated_at: string | null;
   }[] = [];
   for (let offset = 0; offset < limit; offset += PAGE) {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("indexable_media")
       .select("media_id, media_type, title, updated_at")
       // Ordered by RATING COUNT. This was briefly reverted to popularity on the
@@ -1019,7 +1030,7 @@ export async function backfillFromRaw(opts?: {
   let pageSize = MAX_PAGE;
   let cursor = opts?.after ?? "";
   while (true) {
-    let query = supabaseAdmin
+    let query = loose(supabaseAdmin)
       .from("media")
       .select(
         "media_id, media_type, genres, origins, streaming, streaming_regions, sub_genres, themes, audience, film_length_minutes, completion_status, award_winner, award_nominee, award_wins, award_nominations, awards_won, awards_nominated, popularity, release_date, rating_balasaur, vote_count, rank_score, quality_score, sensitive, suggestive, tmdb_collection_id, raw_tmdb, raw_omdb",
@@ -1046,7 +1057,7 @@ export async function backfillFromRaw(opts?: {
         );
         continue;
       }
-      const { data: step, error: stepErr } = await supabaseAdmin
+      const { data: step, error: stepErr } = await loose(supabaseAdmin)
         .from("media")
         .select("media_id")
         .gt("media_id", cursor)
@@ -1169,7 +1180,7 @@ export async function backfillFromRaw(opts?: {
         // future scans; otherwise just skip (classic full-scan behavior).
         if (!changed) {
           if (useMissingFilter) {
-            const { error: stampErr } = await supabaseAdmin
+            const { error: stampErr } = await loose(supabaseAdmin)
               .from("media")
               .update({ facets_derived_at: new Date().toISOString() })
               .eq("media_id", row.media_id);
@@ -1183,7 +1194,7 @@ export async function backfillFromRaw(opts?: {
           continue;
         }
 
-        const { error: updErr } = await supabaseAdmin
+        const { error: updErr } = await loose(supabaseAdmin)
           .from("media")
           .update({
             genres: newGenres,
@@ -1265,7 +1276,7 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
   let failedChunks = 0;
   let firstError: string | null = null;
   for (let i = 0; i < rows.length; i += CHUNK) {
-    const { error } = await supabaseAdmin
+    const { error } = await loose(supabaseAdmin)
       .from("media")
       .upsert(rows.slice(i, i + CHUNK), { onConflict: "media_id" });
     if (error) {
@@ -1826,6 +1837,11 @@ export async function refreshStalest(opts?: {
   let omdbCalls = 0;
   let budgetHit = false;
   const rows: MediaRow[] = [];
+  // Titles TMDB no longer has (deleted or merged upstream). They can never be
+  // re-ingested, so without a timestamp bump they sit at the head of the
+  // stalest-first queue every run and eat the per-run limit, which stops the
+  // rest of the catalog from ever refreshing.
+  const goneIds: string[] = [];
 
   await mapWithLimit(stale, 6, async (r) => {
     if (Date.now() - start > timeBudgetMs) {
@@ -1861,12 +1877,31 @@ export async function refreshStalest(opts?: {
       refreshed++;
     } catch (e) {
       failed++;
+      if (e instanceof Error && /failed: 404$/.test(e.message)) goneIds.push(r.media_id as string);
       console.error(`[refresh] failed for ${r.media_id}:`, e);
     }
   });
 
   // Throws on any failed/unpersisted write — see upsertMediaRowsStrict.
   await upsertMediaRowsStrict(rows, "refresh");
+
+  // Stamp the gone titles so the queue advances past them. Their stored data is
+  // left as-is: it was fetched successfully once, and a 404 gives us nothing better.
+  let tombstoned = 0;
+  if (goneIds.length > 0) {
+    for (let i = 0; i < goneIds.length; i += 200) {
+      const chunk = goneIds.slice(i, i + 200);
+      const { error } = await supabaseAdmin
+        .from("media")
+        .update({ fetched_at: new Date().toISOString() })
+        .in("media_id", chunk);
+      if (error) console.error("[refresh] gone-title stamp failed:", error.message);
+      else tombstoned += chunk.length;
+    }
+    console.log(
+      `[refresh] stamped ${tombstoned} title(s) missing at TMDB (404) to unblock the queue`,
+    );
+  }
   if (!budgetHit) {
     await colorFreshlySynced(
       rows.map((r) => r.media_id),
@@ -2386,7 +2421,7 @@ async function fetchRelatedRail(
   anchorId: string,
   targetType: "movie" | "tv",
 ): Promise<MediaItem[] | undefined> {
-  const { data, error } = await supabaseAdmin.rpc("related_titles", {
+  const { data, error } = await loose(supabaseAdmin).rpc("related_titles", {
     p_media_id: anchorId,
     p_target_type: targetType,
   });
@@ -2411,7 +2446,7 @@ async function attachRelatedRails(detail: MediaDetail): Promise<void> {
   const [own, cross, ctx] = await Promise.all([
     fetchRelatedRail(detail.id, detail.mediaType),
     fetchRelatedRail(detail.id, other),
-    supabaseAdmin.rpc("title_context", { p_media_id: detail.id }).then(
+    loose(supabaseAdmin).rpc("title_context", { p_media_id: detail.id }).then(
       (r) => (r.error ? null : (r.data?.[0] ?? null)),
       () => null,
     ),
@@ -2496,7 +2531,7 @@ export async function fetchMediaDetail(
           const needsSources = sourceCount(cached.ratings) < 2;
           if (needsVotes || needsScore || needsStreaming || needsSources) {
             try {
-              const { data: row } = await supabaseAdmin
+              const { data: row } = await loose(supabaseAdmin)
                 .from("media")
                 .select(
                   "vote_count, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
@@ -2799,7 +2834,7 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
  *  catalog instead of the cached payload's age. */
 async function attachPersonStats(detail: PersonDetail): Promise<void> {
   try {
-    const { data, error } = await supabaseAdmin.rpc("person_stats", { p_name: detail.name });
+    const { data, error } = await loose(supabaseAdmin).rpc("person_stats", { p_name: detail.name });
     const s = data?.[0];
     if (error || !s || (s.titles ?? 0) < 3) return;
     detail.stats = {

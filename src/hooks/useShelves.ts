@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { loose } from "@/lib/supabaseLoose";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { type Shelf, readShelves, writeShelves, sanitize } from "@/lib/shelves";
@@ -64,7 +65,7 @@ export function useShelves() {
             items: s.items,
             updated_at: new Date(s.ts || Date.now()).toISOString(),
           }));
-          const { error } = await supabase
+          const { error } = await loose(supabase)
             .from("user_shelves")
             .upsert(rows, { onConflict: "user_id,shelf_id", ignoreDuplicates: true });
           if (error) {
@@ -83,7 +84,7 @@ export function useShelves() {
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await loose(supabase)
         .from("user_shelves")
         .select("shelf_id, name, position, items, updated_at")
         .eq("user_id", user.id)
@@ -115,7 +116,7 @@ export function useShelves() {
       (async () => {
         const gone = prev.filter((p) => !next.some((n) => n.id === p.id));
         for (const g of gone) {
-          const { error } = await supabase
+          const { error } = await loose(supabase)
             .from("user_shelves")
             .delete()
             .eq("user_id", user.id)
@@ -131,7 +132,7 @@ export function useShelves() {
             items: s.items,
             updated_at: new Date(s.ts || Date.now()).toISOString(),
           }));
-          const { error } = await supabase
+          const { error } = await loose(supabase)
             .from("user_shelves")
             .upsert(rows, { onConflict: "user_id,shelf_id" });
           if (error) {
