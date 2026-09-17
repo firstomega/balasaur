@@ -412,7 +412,9 @@ export const queryDeck = createServerFn({ method: "GET" })
   .inputValidator((p: { limit: number; region?: string; boostCountry?: string }) => p)
   .handler(async ({ data: p }): Promise<MediaItem[]> => {
     const params = { ...defaultCatalogParams(p.region), excludeSuggestive: true };
-    let q = loose(supabaseAdmin).from("media").select(CARD_COLS + ",overview") as unknown as MediaQuery;
+    let q = loose(supabaseAdmin)
+      .from("media")
+      .select(CARD_COLS + ",overview") as unknown as MediaQuery;
     q = applyCatalogFilters(q, params);
     const buckets = originsForCountry(p.boostCountry);
     if (buckets.length > 0) {

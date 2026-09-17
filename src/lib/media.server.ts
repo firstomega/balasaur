@@ -2446,10 +2446,12 @@ async function attachRelatedRails(detail: MediaDetail): Promise<void> {
   const [own, cross, ctx] = await Promise.all([
     fetchRelatedRail(detail.id, detail.mediaType),
     fetchRelatedRail(detail.id, other),
-    loose(supabaseAdmin).rpc("title_context", { p_media_id: detail.id }).then(
-      (r) => (r.error ? null : (r.data?.[0] ?? null)),
-      () => null,
-    ),
+    loose(supabaseAdmin)
+      .rpc("title_context", { p_media_id: detail.id })
+      .then(
+        (r) => (r.error ? null : (r.data?.[0] ?? null)),
+        () => null,
+      ),
   ]);
   // No weak rail: fewer than 6 real matches means no rail at all. This also
   // drops TMDB's raw recommendation list, which had no content filters.

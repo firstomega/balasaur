@@ -38,8 +38,7 @@ function AboutPage() {
                 IMDb, Rotten Tomatoes, Metacritic, and TMDB. The same film can sit at 7.1 on IMDb,
                 93% on Rotten Tomatoes, and 74 on Metacritic. Those are different scales measuring
                 different things, and deciding what to watch tonight should not require reconciling
-                them yourself. The score does the reconciling. When critics and audiences genuinely
-                split on a title, its page says so and names the gap.
+                them yourself. The score does the reconciling.
               </p>
               <p>
                 The exact weights and rules are public, on the{" "}

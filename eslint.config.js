@@ -7,7 +7,20 @@ import tseslint from "typescript-eslint";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  {
+    ignores: [
+      "dist",
+      ".output",
+      ".vinxi",
+      // Platform-generated and rewritten wholesale on every regeneration, the
+      // same reason routeTree.gen.ts ships its own eslint-disable. Linting them
+      // means the next regeneration turns CI red on code nobody wrote and
+      // nobody may edit: previewAuthStorage.ts says "do not edit it directly"
+      // in its first line, so a fix applied here is reverted by the platform.
+      "src/integrations/supabase/types.ts",
+      "src/integrations/supabase/previewAuthStorage.ts",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

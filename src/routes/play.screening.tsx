@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
@@ -73,8 +74,7 @@ export const Route = createFileRoute("/play/screening")({
     return {
       meta: buildMeta({
         title: "The 8PM Screening: Ten Movie Trivia Questions a Day",
-        description:
-          "Ten questions a day drawn from 76,000 movies and shows: box office, Oscars, casts, years. Same ten for everyone, one shared board, new at midnight.",
+        description: `Ten questions a day drawn from ${CATALOG_FLOOR_LABEL} movies and shows: box office, Oscars, casts, years. Same ten for everyone, one shared board, new at midnight.`,
         url,
         image: `${SITE_ORIGIN}/og-play-${GAME.slug}.jpg`,
       }),
