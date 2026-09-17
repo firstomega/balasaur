@@ -712,6 +712,7 @@ function CollectionsPage() {
   const everyday = occasions.filter((c: CollectionSummary) => !c.season_months?.includes(month));
   const services = byKind("service");
   const genres = byKind("genre");
+  const origins = byKind("origin");
   const decades = byKind("decade").sort((a: CollectionSummary, b: CollectionSummary) =>
     b.slug.localeCompare(a.slug),
   );
@@ -827,6 +828,13 @@ function CollectionsPage() {
           {genres.length > 0 && (
             <Shelf title="By genre" meta={`${genres.length} lists`}>
               {genres.map((c: CollectionSummary) => (
+                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
+              ))}
+            </Shelf>
+          )}
+          {origins.length > 0 && (
+            <Shelf title="By country" meta={`${origins.length} lists`}>
+              {origins.map((c: CollectionSummary) => (
                 <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
               ))}
             </Shelf>

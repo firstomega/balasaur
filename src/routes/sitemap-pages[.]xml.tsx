@@ -3,6 +3,7 @@ import { loose } from "@/lib/supabaseLoose";
 import { SITE_ORIGIN } from "@/lib/seo";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
+import { listOriginCollections } from "@/lib/originCollections";
 import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
 
 // Served at /sitemap-pages.xml — static pages plus every ranked collection.
@@ -53,6 +54,16 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
               });
             }
             if (!shelves || shelves.length < PAGE) break;
+          }
+
+          // Country shelves are request-time, not materialized (see
+          // originCollections.ts), so the loop above never sees them. Only
+          // gate-passing shelves come back, which keeps 404s out of the
+          // sitemap; anything already in the table is skipped as a duplicate.
+          const submitted = new Set(urls.map((u) => u.loc));
+          for (const o of await listOriginCollections()) {
+            const loc = `${SITE_ORIGIN}/best/${o.slug}`;
+            if (!submitted.has(loc)) urls.push({ loc });
           }
         } catch (err) {
           // A DB hiccup shouldn't 500 the sitemap — ship the static section.
