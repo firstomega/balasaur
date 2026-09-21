@@ -10,6 +10,7 @@ describe("personProse", () => {
       bestDecade: "1990s",
       bestDecadeMedian: 78,
       bestDecadeTitles: 14,
+      top: [],
       collaborators: [
         { name: "Tim Allen", together: 13 },
         { name: "Joan Cusack", together: 8 },
@@ -34,12 +35,15 @@ describe("personProse", () => {
       bestDecade: "2000s",
       bestDecadeMedian: 70,
       bestDecadeTitles: 5,
+      top: [],
       collaborators: [],
     });
     expect(out).toBe("10 titles in this catalog with a median Balasaur Score of 70.");
   });
 
   it("stays quiet on a thin filmography", () => {
-    expect(personProse("X", { titles: 2, scored: 2, medianScore: 50, collaborators: [] })).toBe("");
+    expect(
+      personProse("X", { titles: 2, scored: 2, medianScore: 50, top: [], collaborators: [] }),
+    ).toBe("");
   });
 });

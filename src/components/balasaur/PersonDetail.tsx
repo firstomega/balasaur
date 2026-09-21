@@ -97,10 +97,11 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
       </header>
 
       {/* Catalog statistics: claims only this database can make about the
-          filmography rendered below. */}
-      {detail.stats && personProse(detail.name, detail.stats) && (
+          filmography rendered below, every figure derived from the same rows
+          the cards are drawn from. */}
+      {detail.catalog && personProse(detail.name, detail.catalog) && (
         <p className="mt-6 max-w-3xl text-[14px] leading-relaxed text-text">
-          {personProse(detail.name, detail.stats)}
+          {personProse(detail.name, detail.catalog)}
         </p>
       )}
 
@@ -110,7 +111,41 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
         </div>
       )}
 
-      {/* Works grouped by role */}
+      {/* The ranked opener. Ordered by the Balasaur Score printed on each
+          poster, so a stranger can check the order against the page. The
+          server returns nothing here when too few of the person's titles are
+          scored for an order to carry a claim, and then the page simply opens
+          on the filmography instead. */}
+      {detail.catalog && detail.catalog.top.length > 0 && (
+        <section className="mt-10">
+          <SectionHeading>
+            Highest rated{" "}
+            <span className="font-mono text-base tabular-nums text-text-dim">
+              {detail.catalog.top.length}
+            </span>
+          </SectionHeading>
+          <div className="grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-3 md:grid-cols-6">
+            {detail.catalog.top.map((it, i) => (
+              <MediaCard
+                key={it.id}
+                item={it}
+                eager={i < 6}
+                posterOverlay={
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-3xl font-bold tabular-nums leading-none text-white/95 [text-shadow:0_2px_10px_rgba(0,0,0,0.95)]"
+                  >
+                    {i + 1}
+                  </span>
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Works grouped by role, newest first: the order someone looking up a
+          filmography expects to find it in. */}
       <div className="mt-10 space-y-8">
         {detail.groups.map((g) => (
           <section key={g.department}>

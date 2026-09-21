@@ -251,17 +251,23 @@ export function personMeta(d: {
   name: string;
   biography?: string;
   knownForDepartment?: string;
-  stats?: Parameters<typeof personProse>[1];
+  catalog?: Parameters<typeof personProse>[1];
 }): { title: string; description: string } {
-  const titles = d.stats?.titles;
+  const titles = d.catalog?.titles;
   const optional: string[] = [];
-  if (typeof titles === "number" && titles >= 3) {
+  // "ranked" is a promise the result makes in the search listing, so it is
+  // only made when the page actually opens with a ranked set. Below the
+  // ranking gate the page is a filmography in date order, and saying
+  // otherwise earns a click that bounces.
+  if (d.catalog && d.catalog.top.length > 0 && typeof titles === "number") {
     optional.push(`: ${titles} movies and TV shows, ranked`);
+  } else if (typeof titles === "number" && titles >= 3) {
+    optional.push(`: ${titles} movies and TV shows`);
   } else {
     optional.push(`: movies and TV shows`);
   }
 
-  const prose = d.stats ? personProse(d.name, d.stats) : "";
+  const prose = d.catalog ? personProse(d.name, d.catalog) : "";
   return {
     title: composeTitle(d.name, optional),
     description: clampDescription(
