@@ -73,8 +73,10 @@ describe("breadcrumbJsonLd", () => {
     const trail = breadcrumbJsonLd(base, url) as {
       itemListElement: { position: number; name: string; item: string }[];
     };
-    expect(trail.itemListElement.map((i) => i.item)).toEqual(["https://balasaur.com", url]);
-    expect(trail.itemListElement.map((i) => i.position)).toEqual([1, 2]);
+    expect(JSON.stringify(trail.itemListElement.map((i) => i.item))).toBe(
+      JSON.stringify(["https://balasaur.com", url]),
+    );
+    expect(trail.itemListElement.map((i) => i.position).join(",")).toBe("1,2");
     for (const i of trail.itemListElement) expect(i.item).not.toContain("?");
   });
 });
