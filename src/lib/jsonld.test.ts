@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { movieJsonLd, tvJsonLd } from "./jsonld";
+import { breadcrumbJsonLd, movieJsonLd, tvJsonLd } from "./jsonld";
 import type { MediaDetail } from "@/types/media";
 
 /** Inception's real row, trimmed to what the builders read. */
@@ -61,5 +61,22 @@ describe("aggregateRating", () => {
 
   it("says nothing when there are no ratings at all", () => {
     expect(rating({ ...base, ratings: {} } as MediaDetail)).toBeUndefined();
+  });
+});
+
+describe("breadcrumbJsonLd", () => {
+  it("names only pages that are their own canonical", () => {
+    // A crumb pointing at /?type=movie handed Google a filtered homepage view
+    // that canonicalises to "/", which Search Console files as an alternate
+    // page on every title. Every item must be a URL with no query string.
+    const url = "https://balasaur.com/movie/inception-27205";
+    const trail = breadcrumbJsonLd(base, url) as {
+      itemListElement: { position: number; name: string; item: string }[];
+    };
+    expect(JSON.stringify(trail.itemListElement.map((i) => i.item))).toBe(
+      JSON.stringify(["https://balasaur.com", url]),
+    );
+    expect(trail.itemListElement.map((i) => i.position).join(",")).toBe("1,2");
+    for (const i of trail.itemListElement) expect(i.item).not.toContain("?");
   });
 });

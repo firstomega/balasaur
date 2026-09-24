@@ -55,17 +55,22 @@ function aggregateRating(d: MediaDetail) {
   };
 }
 
-/** Home → Movies/TV → Title trail for detail pages. */
+/** Home → Title trail for detail pages.
+ *
+ *  There used to be a "Movies" or "TV Shows" step between them, pointing at
+ *  /?type=movie or /?type=tv. Those are filtered homepage views, and a
+ *  filtered view canonicalises to "/", so every one of 61,673 title pages
+ *  handed Google a URL that declares itself a copy of another page. Search
+ *  Console filed them under "Alternate page with proper canonical tag", and
+ *  a validation there can never pass, because the canonical is correct. A
+ *  crumb may only name a page that stands on its own. */
 export function breadcrumbJsonLd(d: MediaDetail, url: string): Record<string, unknown> {
-  const section = d.mediaType === "tv" ? "TV Shows" : "Movies";
-  const sectionUrl = `${SITE_ORIGIN}/?type=${d.mediaType}`;
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_ORIGIN },
-      { "@type": "ListItem", position: 2, name: section, item: sectionUrl },
-      { "@type": "ListItem", position: 3, name: d.title, item: url },
+      { "@type": "ListItem", position: 2, name: d.title, item: url },
     ],
   };
 }
