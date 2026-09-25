@@ -4,6 +4,7 @@ import type {
   MediaItem,
   MediaPerson,
   MediaSeason,
+  PersonCatalog,
   PersonCreditGroup,
   PersonDetail,
   WatchProvidersAllRegions,
@@ -15,6 +16,13 @@ import { computeBalasaurScore } from "./score";
 import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
+import {
+  bestDecadeOf,
+  collaboratorsOf,
+  median,
+  pickTopCredits,
+  type PersonCreditFacts,
+} from "./personRanking";
 import type { EpisodeRating } from "./episodes";
 import { posterColorsFromJpeg, type PosterColors } from "./posterColor";
 import { tmdbImage } from "./tmdbImage";
@@ -2830,28 +2838,110 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
   };
 }
 
-/** Catalog statistics for the person page's data-prose line. Additive and
- *  fail-soft: the page renders without them. Attached on every read (the
- *  person_stats scan rides the people GIN index) so they track the nightly
- *  catalog instead of the cached payload's age. */
+/** Leading/directing credit count, for the index gate in the route's head().
+ *  Never rendered. person_stats matches on name across `media.people`, which
+ *  holds only the top six cast and the directors, so this under-counts anyone
+ *  billed seventh or lower. That is tolerable for a gate whose job is "is
+ *  there a filmography here at all" and wrong for anything the page prints,
+ *  which is why the printed numbers come from attachCatalogFacts instead. */
 async function attachPersonStats(detail: PersonDetail): Promise<void> {
   try {
     const { data, error } = await loose(supabaseAdmin).rpc("person_stats", { p_name: detail.name });
     const s = data?.[0];
     if (error || !s || (s.titles ?? 0) < 3) return;
-    detail.stats = {
-      titles: s.titles,
-      scored: s.scored,
-      medianScore: s.median_score ?? undefined,
-      bestDecade: s.best_decade ?? undefined,
-      bestDecadeMedian: s.best_decade_median ?? undefined,
-      bestDecadeTitles: s.best_decade_titles ?? undefined,
-      collaborators: Array.isArray(s.collaborators)
-        ? (s.collaborators as { name: string; together: number }[])
-        : [],
-    };
+    detail.stats = { titles: s.titles };
   } catch {
-    // stats are additive; the page stands without them
+    // additive; the page stands without it
+  }
+}
+
+// ---------- Person credits joined against the catalog ----------
+//
+// TMDB's combined_credits is the only source for WHICH titles a person worked
+// on, so it stays. What it cannot supply is the Balasaur Score, which exists
+// only here. Before this join every poster on every person page rendered bare,
+// which meant the site's one differentiated asset was missing from the page
+// type that ranks best for it, and the filmography was TMDB's own list in
+// TMDB's own order: the same thing a dozen other sites ship.
+
+/** Columns crossRowToItem reads, plus the generated score and the fields the
+ *  catalog facts are computed from. */
+const PERSON_CREDIT_COLUMNS =
+  "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb," +
+  "rating_rotten_tomatoes,rating_metacritic,rating_tmdb,rating_balasaur,genres,seasons," +
+  "people,award_winner,award_nominee";
+
+/** PostgREST builds the `in` filter into the URL, so ids go in batches. */
+const PERSON_CREDIT_CHUNK = 200;
+
+interface PersonCreditRow extends CrossRow, PersonCreditFacts {
+  rating_balasaur: number | null;
+}
+
+/** Fetch every credited title this catalog holds, in batches. */
+async function fetchPersonCreditRows(ids: string[]): Promise<PersonCreditRow[]> {
+  const out: PersonCreditRow[] = [];
+  for (let i = 0; i < ids.length; i += PERSON_CREDIT_CHUNK) {
+    const { data, error } = await supabaseAdmin
+      .from("media")
+      .select(PERSON_CREDIT_COLUMNS)
+      .in("media_id", ids.slice(i, i + PERSON_CREDIT_CHUNK));
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as unknown as PersonCreditRow[]));
+  }
+  return out;
+}
+
+/**
+ * Replace every credit the catalog knows with its catalog row, so the card
+ * carries a Balasaur Score, and derive the page's printed numbers from the
+ * same rows. Credits the catalog does not hold keep their TMDB payload and
+ * simply render without a badge, which is honest: there is no score for them.
+ *
+ * Additive and fail-soft, like the stats call beside it. If this throws, the
+ * page renders exactly as it did before.
+ */
+async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
+  try {
+    const ids = [...new Set(detail.groups.flatMap((g) => g.items.map((i) => i.id)))];
+    if (ids.length === 0) return;
+
+    const rows = await fetchPersonCreditRows(ids);
+    if (rows.length === 0) return;
+
+    const byId = new Map<string, PersonCreditRow>();
+    for (const r of rows) byId.set(r.media_id, r);
+
+    const toItem = (r: PersonCreditRow): MediaItem => {
+      const item = crossRowToItem(r);
+      // rating_balasaur is DB-generated and canonical when present; the
+      // recomputed value in crossRowToItem is the fallback for rows the
+      // generator has not reached.
+      if (typeof r.rating_balasaur === "number") item.ratings.balasaur = r.rating_balasaur;
+      return item;
+    };
+
+    for (const group of detail.groups) {
+      group.items = group.items.map((item) => {
+        const row = byId.get(item.id);
+        return row ? toItem(row) : item;
+      });
+    }
+
+    const scores = rows
+      .map((r) => r.rating_balasaur)
+      .filter((v): v is number => typeof v === "number");
+
+    detail.catalog = {
+      titles: rows.length,
+      scored: scores.length,
+      medianScore: median(scores),
+      ...bestDecadeOf(rows),
+      top: pickTopCredits(rows, detail.name).map(toItem),
+      collaborators: collaboratorsOf(rows, detail.name),
+    };
+  } catch (e) {
+    console.error("[person] catalog join failed:", e instanceof Error ? e.message : e);
   }
 }
 
@@ -2872,7 +2962,7 @@ export async function fetchPersonDetail(
         const age = Date.now() - new Date(data.fetched_at).getTime();
         if (age < PERSON_TTL_MS) {
           const cached = data.payload as unknown as PersonDetail;
-          await attachPersonStats(cached);
+          await Promise.all([attachPersonStats(cached), attachCatalogFacts(cached)]);
           return cached;
         }
       }
@@ -2889,8 +2979,10 @@ export async function fetchPersonDetail(
     language: "en-US",
   });
   const detail = buildPersonFromRaw(raw);
-  await attachPersonStats(detail);
 
+  // Cache what TMDB gave us, before the catalog join mutates it. Scores and
+  // catalog facts are re-derived on every read, so storing a copy of them here
+  // would only mean a fatter row that goes stale between nightly refreshes.
   try {
     if (Number.isFinite(personIdNum)) {
       await supabaseAdmin.from("person_cache").upsert(
@@ -2908,6 +3000,7 @@ export async function fetchPersonDetail(
     console.error("[cache] person_cache write failed:", e);
   }
 
+  await Promise.all([attachPersonStats(detail), attachCatalogFacts(detail)]);
   return detail;
 }
 

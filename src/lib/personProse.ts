@@ -2,10 +2,14 @@
 // sentences from catalog statistics, every number reconstructable from the
 // filmography rendered below it. Sentences are omitted when the fact is
 // missing or too thin to mean anything.
+//
+// The numbers come from PersonCatalog, which is derived by joining this
+// person's credits against the catalog, so the grid underneath the paragraph
+// is the working for every figure in it.
 
-import type { PersonDetail } from "@/types/media";
+import type { PersonCatalog } from "@/types/media";
 
-export function personProse(name: string, stats: NonNullable<PersonDetail["stats"]>): string {
+export function personProse(name: string, stats: PersonCatalog): string {
   const parts: string[] = [];
 
   if (stats.titles >= 3) {

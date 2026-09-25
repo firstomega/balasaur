@@ -145,15 +145,33 @@ export interface PersonDetail {
   profileUrl?: string;
   imdbId?: string;
   groups: PersonCreditGroup[];
-  /** Catalog statistics from person_stats(): counts, median, best decade,
-   *  frequent collaborators. Attached at read time, never cached stale. */
+  /** Leading and directing credits, from person_stats(). Never rendered: this
+   *  is the index gate only, and it counts a person only where they are
+   *  top-billed or directing, which is the wrong number to print. The numbers
+   *  the page prints come from `catalog` below. */
   stats?: {
     titles: number;
-    scored: number;
-    medianScore?: number;
-    bestDecade?: string;
-    bestDecadeMedian?: number;
-    bestDecadeTitles?: number;
-    collaborators: { name: string; together: number }[];
   };
+  /** Facts derived by joining every credit above against the catalog. Attached
+   *  at read time, so they track the nightly refresh rather than the cached
+   *  payload's age. Every number here is reconstructable from the cards the
+   *  page renders, which is the whole point of computing it this way: the old
+   *  numbers came from a name match against top-billed credits only, so the
+   *  grid could not confirm a single one of them. */
+  catalog?: PersonCatalog;
+}
+
+export interface PersonCatalog {
+  /** Credits this catalog holds, across every department, deduped by title. */
+  titles: number;
+  /** How many of those carry a Balasaur Score. */
+  scored: number;
+  medianScore?: number;
+  bestDecade?: string;
+  bestDecadeMedian?: number;
+  bestDecadeTitles?: number;
+  /** Highest-scoring credits, best first. Empty when there are too few scored
+   *  titles for an order to mean anything. */
+  top: MediaItem[];
+  collaborators: { name: string; together: number }[];
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { clampDescription, composeTitle, detailMeta, personMeta } from "./seo";
+import type { PersonCatalog } from "@/types/media";
 
 describe("composeTitle", () => {
   it("keeps every tail that fits and adds the brand when it is free", () => {
@@ -103,24 +104,38 @@ describe("detailMeta", () => {
 });
 
 describe("personMeta", () => {
-  const stats = {
+  const ranked = [{ id: "movie-1" }] as unknown as PersonCatalog["top"];
+  const catalog: PersonCatalog = {
     titles: 80,
     scored: 78,
     medianScore: 73,
     bestDecade: "1990s",
     bestDecadeMedian: 78,
     bestDecadeTitles: 14,
+    top: ranked,
     collaborators: [{ name: "Tim Allen", together: 13 }],
   };
 
   it("counts the filmography in the title", () => {
-    expect(personMeta({ name: "Tom Hanks", stats }).title).toBe(
+    expect(personMeta({ name: "Tom Hanks", catalog }).title).toBe(
       "Tom Hanks: 80 movies and TV shows, ranked | Balasaur",
     );
   });
 
+  it("does not promise a ranking the page does not show", () => {
+    // Below the ranking gate the server returns no ranked set, so the search
+    // listing must not advertise one.
+    const out = personMeta({ name: "Tom Hanks", catalog: { ...catalog, top: [] } });
+    expect(out.title).toBe("Tom Hanks: 80 movies and TV shows | Balasaur");
+    expect(out.title).not.toContain("ranked");
+  });
+
   it("describes the person with catalog stats, not the shared TMDB biography", () => {
-    const out = personMeta({ name: "Tom Hanks", biography: "Born in Concord, California.", stats });
+    const out = personMeta({
+      name: "Tom Hanks",
+      biography: "Born in Concord, California.",
+      catalog,
+    });
     expect(out.description).toContain("median Balasaur Score of 73");
     expect(out.description).not.toContain("Concord");
   });
@@ -129,7 +144,7 @@ describe("personMeta", () => {
     const out = personMeta({
       name: "Nobody",
       biography: "Born in Concord, California.",
-      stats: { titles: 1, scored: 0, collaborators: [] },
+      catalog: { titles: 1, scored: 0, top: [], collaborators: [] },
     });
     expect(out.title).toBe("Nobody: movies and TV shows | Balasaur");
     expect(out.description).toBe("Born in Concord, California.");
