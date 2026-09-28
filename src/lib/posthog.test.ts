@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createPostHogPlaceholder } from "./posthog";
 
 // The module injects a CDN script and talks to window, so the behaviour worth
 // guarding is not "does it call PostHog" (it cannot, headless) but the promises
@@ -46,5 +47,36 @@ describe("posthog wiring", () => {
 
   it("does not double-report the same path", () => {
     expect(src).toContain("if (path === lastTrackedPath) return;");
+  });
+});
+
+// PostHog's loader only takes over a placeholder it recognises. When the site
+// built a plain object instead, the loader left it in place and the site's own
+// replay pushed every call back onto the queue it was iterating: an endless
+// loop that froze the tab and grew memory until a phone's browser killed it.
+describe("createPostHogPlaceholder", () => {
+  it("is the array PostHog's loader recognises, marked __SV", () => {
+    const ph = createPostHogPlaceholder();
+    expect(Array.isArray(ph)).toBe(true);
+    expect(ph.__SV).toBe(1);
+    expect(Array.isArray(ph._i)).toBe(true);
+  });
+
+  it("holds init calls in _i for the loader to initialise from", () => {
+    const ph = createPostHogPlaceholder();
+    ph.init("phc_test", { api_host: "https://example.test" });
+    const pending = ph._i as unknown[][];
+    expect(pending.length).toBe(1);
+    expect(pending[0][0]).toBe("phc_test");
+    expect(ph.length).toBe(0); // init is not an ordinary queued call
+  });
+
+  it("queues other calls on itself, for the loader to replay", () => {
+    const ph = createPostHogPlaceholder();
+    ph.capture("$pageview", { path: "/" });
+    ph.opt_out_capturing();
+    expect(ph.length).toBe(2);
+    expect((ph[0] as unknown[])[0]).toBe("capture");
+    expect((ph[1] as unknown[])[0]).toBe("opt_out_capturing");
   });
 });
