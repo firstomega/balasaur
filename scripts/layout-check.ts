@@ -17,7 +17,7 @@
 //
 // Run: bun scripts/layout-check.ts   (needs `bun add --no-save playwright`)
 
-import { chromium } from "playwright";
+import { chromium, type Page } from "playwright";
 import { mkdir, rm } from "node:fs/promises";
 
 const WIDTHS = [
@@ -157,6 +157,31 @@ function measure(): Measurement {
   };
 }
 
+/**
+ * Navigate, surviving the one interruption a cold dev server causes by design.
+ *
+ * On its first page load Vite discovers the dependencies it has not bundled
+ * yet, bundles them, and force-reloads the page. A navigation in flight at that
+ * moment is cancelled and Playwright reports net::ERR_ABORTED. That is not a
+ * page failing to load, it is the server settling, so it is retried; every
+ * other error is real and is thrown. From 24 Sep this race was lost on every
+ * CI run, killing the check on its first navigation before it measured a page.
+ */
+async function gotoSettled(page: Page, target: string): Promise<void> {
+  const ATTEMPTS = 3;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await page.goto(target, { waitUntil: "load", timeout: 60_000 });
+      return;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (attempt >= ATTEMPTS || !message.includes("ERR_ABORTED")) throw e;
+      console.log(`      ${target}: navigation cancelled by a dev-server reload, retrying`);
+      await page.waitForTimeout(2_000);
+    }
+  }
+}
+
 async function main() {
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
@@ -180,7 +205,7 @@ async function main() {
     // rather than pinning ids that go stale.
     const scout = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const firstHref = async (from: string, prefix: string): Promise<string | null> => {
-      await scout.goto(`${url}${from}`, { waitUntil: "load", timeout: 60_000 });
+      await gotoSettled(scout, `${url}${from}`);
       // Budgeted loaders stream the shell first and fill in data client-side,
       // and a cold dev server compiles on demand, so a link can legitimately
       // take a while to exist. Wait for it rather than for a fixed pause.
@@ -239,7 +264,7 @@ async function main() {
           deviceScaleFactor: 1,
         });
         try {
-          await page.goto(`${url}${route}`, { waitUntil: "load", timeout: 60_000 });
+          await gotoSettled(page, `${url}${route}`);
           await page.evaluate(() => document.fonts.ready).catch(() => {});
           await page.waitForTimeout(2500);
 
