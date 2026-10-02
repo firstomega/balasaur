@@ -15,6 +15,7 @@ import { computeBalasaurScore } from "./score";
 import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
+import { upsertInChunks } from "./chunkedUpsert";
 import type { EpisodeRating } from "./episodes";
 import { posterColorsFromJpeg, type PosterColors } from "./posterColor";
 import { tmdbImage } from "./tmdbImage";
@@ -1271,19 +1272,16 @@ export async function backfillFromRaw(opts?: {
  */
 async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<void> {
   if (rows.length === 0) return;
-  const CHUNK = 25;
-  const totalChunks = Math.ceil(rows.length / CHUNK);
-  let failedChunks = 0;
-  let firstError: string | null = null;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const { error } = await loose(supabaseAdmin)
-      .from("media")
-      .upsert(rows.slice(i, i + CHUNK), { onConflict: "media_id" });
-    if (error) {
-      failedChunks++;
-      firstError ??= error.message;
-      console.error(`[${tag}] upsert chunk failed:`, error.message);
-    }
+  const { totalChunks, failedChunks, firstError, recoveredChunks } = await upsertInChunks(
+    rows,
+    async (chunk) =>
+      await loose(supabaseAdmin).from("media").upsert(chunk, { onConflict: "media_id" }),
+    { onError: (message) => console.error(`[${tag}] upsert chunk failed:`, message) },
+  );
+  if (recoveredChunks > 0) {
+    console.warn(
+      `[${tag}] ${recoveredChunks}/${totalChunks} upsert chunks timed out and landed on retry`,
+    );
   }
   if (failedChunks > 0) {
     throw new Error(
