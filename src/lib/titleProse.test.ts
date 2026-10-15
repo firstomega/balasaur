@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { titleProse, divergenceNote, normalizedSources, type TitleProseInput } from "./titleProse";
+import { titleProse, normalizedSources, runtimeLabel, type TitleProseInput } from "./titleProse";
 
 const movie: TitleProseInput = {
   mediaType: "movie",
@@ -25,22 +25,19 @@ describe("normalizedSources", () => {
     expect(normalizedSources({ imdb: 8.1, tmdb: 7.9 }).length).toBe(1);
     expect(normalizedSources({ tmdb: 7.9 })[0].label).toBe("TMDB");
   });
+
+  it("prints ten-point scores with one decimal, the way IMDb does", () => {
+    // Birds of Prey sits at a flat 6 on IMDb, which IMDb itself prints as 6.0.
+    expect(normalizedSources({ imdb: 6 })[0].shown).toBe("6.0/10");
+    expect(normalizedSources({ tmdb: 8 })[0].shown).toBe("8.0/10");
+  });
 });
 
-describe("divergenceNote", () => {
-  it("names the split only when it clears the noise band", () => {
-    expect(divergenceNote({ imdb: 8.1, metacritic: 74 })).toBe(null);
-    expect(divergenceNote({ imdb: 8.5, metacritic: 48 })).toBe(
-      "Audiences rate it 37 points higher than critics do.",
-    );
-    expect(divergenceNote({ imdb: 5.0, metacritic: 88 })).toBe(
-      "Critics rate it 38 points higher than audiences do.",
-    );
-  });
-
-  it("returns null when either side is missing", () => {
-    expect(divergenceNote({ imdb: 8.1 })).toBe(null);
-    expect(divergenceNote({ metacritic: 74 })).toBe(null);
+describe("runtimeLabel", () => {
+  it("drops the minutes on the hour and the hours under one", () => {
+    expect(runtimeLabel(148)).toBe("2h 28m");
+    expect(runtimeLabel(120)).toBe("2h");
+    expect(runtimeLabel(48)).toBe("48m");
   });
 });
 
@@ -63,8 +60,7 @@ describe("titleProse", () => {
   });
 
   it("says the sources agree only when they are genuinely tight", () => {
-    // 81, 96, 74 spans 22 points. Not agreement, and not a big enough
-    // critic/audience split to be a disagreement either. So: nothing.
+    // 81, 96, 74 spans 22 points. Not agreement, so: nothing.
     expect(titleProse(movie)).not.toContain("Every source");
 
     const tight = titleProse({
@@ -147,7 +143,7 @@ describe("titleProse", () => {
       runtime: 168,
       streaming: ["Netflix", "Hulu"],
       ratings: { balasaur: 78, imdb: 7.8, rottenTomatoes: 80, metacritic: 75 },
-      cohort: { label: "2010s thriller movies", size: 900, percentile: 92 },
+      franchise: { size: 4, rank: 2 },
     });
     expect(loaded.split(". ").length).toBeLessThanOrEqual(5);
     expect(loaded).toContain("Streaming on Netflix and Hulu.");
@@ -158,68 +154,48 @@ describe("titleProse", () => {
   });
 });
 
-describe("titleProse cohort and franchise claims", () => {
+describe("titleProse never sets critics against audiences", () => {
+  it("says nothing about a gap between the critic and audience numbers", () => {
+    // Inception: IMDb 8.8 against Metacritic 74 used to print "Audiences rate
+    // it 14 points higher than critics do." The numbers are on the page; the
+    // sentence manufactured a tension nobody came to read about.
+    const inception = titleProse({
+      ...movie,
+      ratings: { balasaur: 84, imdb: 8.8, rottenTomatoes: 86, metacritic: 74 },
+    });
+    const wide = titleProse({ ...movie, ratings: { balasaur: 60, imdb: 8.5, metacritic: 48 } });
+    for (const out of [inception, wide]) {
+      expect(/\bcritics?\b|\baudiences\b|points higher/i.test(out)).toBe(false);
+    }
+  });
+});
+
+describe("titleProse catalog and franchise claims", () => {
   const base = {
     mediaType: "movie",
     title: "X",
     ratings: { balasaur: 84, imdb: 8.4, rottenTomatoes: 90 },
   };
 
-  it("prints the percentile claim only for big-enough cohorts and notable positions", () => {
-    const high = titleProse({
+  it("never ranks a title against a slice of the catalog", () => {
+    // "Scores higher than 99% of the 2,072 2010s action movies in this
+    // catalog" measured against a shelf nobody holds in their head. The
+    // payload still carries the cohort, and the prose ignores it.
+    const withCohort = {
       ...base,
       cohort: { label: "2010s action movies", size: 2072, percentile: 99 },
-    });
-    expect(high).toContain(
-      "Scores higher than 99% of the 2,072 2010s action movies in this catalog.",
-    );
-
-    const mid = titleProse({
-      ...base,
-      cohort: { label: "2010s action movies", size: 2072, percentile: 55 },
-    });
-    expect(mid).not.toContain("in this catalog");
-
-    const tiny = titleProse({
-      ...base,
-      cohort: { label: "1960s family shows", size: 30, percentile: 99 },
-    });
-    expect(tiny).not.toContain("in this catalog");
+    } as TitleProseInput;
+    const out = titleProse(withCohort);
+    expect(out).not.toContain("in this catalog");
+    expect(/higher than \d+%/.test(out)).toBe(false);
   });
 
-  it("will not rank a title against a shelf on the strength of one source", () => {
-    const single = titleProse({
-      mediaType: "movie",
-      title: "X",
-      ratings: { balasaur: 83, tmdb: 8.3 },
-      cohort: { label: "2020s action movies", size: 2035, percentile: 96 },
-    });
-    expect(single).not.toContain("in this catalog");
-  });
-
-  it("states the low end flatly", () => {
-    const low = titleProse({
-      ...base,
-      ratings: { balasaur: 40, imdb: 4.2, rottenTomatoes: 38 },
-      cohort: { label: "1990s comedy movies", size: 800, percentile: 12 },
-    });
-    expect(low).toContain("Most of the 800 1990s comedy movies in this catalog score higher.");
-  });
-
-  it("names franchise standing, and prefers it over the genre shelf", () => {
+  it("names franchise standing", () => {
     const first = titleProse({ ...base, franchise: { size: 3, rank: 1 } });
     expect(first).toContain("The highest scoring of the 3 titles in its series.");
     const second = titleProse({ ...base, franchise: { size: 6, rank: 3 } });
     expect(second).toContain("Number 3 of 6 in its series by score.");
     const solo = titleProse({ ...base, franchise: { size: 1, rank: 1 } });
     expect(solo).not.toContain("its series");
-
-    const both = titleProse({
-      ...base,
-      franchise: { size: 7, rank: 5 },
-      cohort: { label: "2010s action movies", size: 2072, percentile: 99 },
-    });
-    expect(both).toContain("Number 5 of 7 in its series by score.");
-    expect(both).not.toContain("in this catalog");
   });
 });

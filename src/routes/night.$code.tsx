@@ -6,6 +6,7 @@ import { DinoMark } from "@/components/balasaur/DinoMark";
 import { ScoreBadge } from "@/components/balasaur/ScoreBadge";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
 import { buildMeta, absoluteUrl, noindexMeta } from "@/lib/seo";
+import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { mediaSlug } from "@/lib/slug";
 import { UNIFIED_GENRES } from "@/lib/genres";
@@ -1064,7 +1065,7 @@ function RollButton({
 // ---------------------------------------------------------------------------
 
 const CALC_LINES = [
-  "Reading 74,000 titles",
+  `Reading ${CATALOG_FLOOR_LABEL} titles`,
   "Blending four rating sources",
   "Excluding what you have seen",
   "Weighing everyone's answers",

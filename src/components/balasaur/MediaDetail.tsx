@@ -28,7 +28,7 @@ import { computeBalasaurScore } from "@/lib/score";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
-import { titleProse, normalizedSources, divergenceNote } from "@/lib/titleProse";
+import { titleProse, normalizedSources, runtimeLabel, tenPoint } from "@/lib/titleProse";
 import { appearsInQueryOptions } from "@/hooks/useMediaDetail";
 import { themeForKeyword } from "@/lib/taxonomy";
 import { deriveOrigins } from "@/lib/origins";
@@ -69,13 +69,6 @@ function languageName(code?: string): string {
   } catch {
     return code.toUpperCase();
   }
-}
-
-function fmtRuntime(min?: number) {
-  if (!min) return undefined;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return h ? `${h}h ${m}m` : `${m}m`;
 }
 
 function PersonName({ name, personId }: { name: string; personId?: number }) {
@@ -268,7 +261,9 @@ function DetailInner({
   const typeLabel = detail.mediaType === "movie" ? "Movie" : "TV";
   const length =
     detail.mediaType === "movie"
-      ? fmtRuntime(detail.runtime)
+      ? detail.runtime
+        ? runtimeLabel(detail.runtime)
+        : undefined
       : detail.numberOfSeasons
         ? `${detail.numberOfSeasons} season${detail.numberOfSeasons === 1 ? "" : "s"}${
             detail.numberOfEpisodes
@@ -300,11 +295,9 @@ function DetailInner({
     awardNominee: detail.awardNominee,
     voteCount: detail.voteCount,
     ratings,
-    cohort: detail.context?.cohort,
     franchise: detail.context?.franchise,
   });
   const sourceBars = normalizedSources(ratings);
-  const divergence = divergenceNote(ratings);
   // One blend, read twice: the hero lockup and the Ratings section below it.
   const balasaur = ratings.balasaur ?? computeBalasaurScore(ratings);
 
@@ -473,7 +466,7 @@ function DetailInner({
                 const sources: { label: string; value?: string; weight: string }[] = [
                   {
                     label: "IMDb",
-                    value: ratings.imdb !== undefined ? `${ratings.imdb}/10` : undefined,
+                    value: ratings.imdb !== undefined ? `${tenPoint(ratings.imdb)}/10` : undefined,
                     weight: "25%",
                   },
                   {
@@ -492,7 +485,7 @@ function DetailInner({
                   },
                   {
                     label: "TMDB",
-                    value: ratings.tmdb !== undefined ? `${ratings.tmdb}/10` : undefined,
+                    value: ratings.tmdb !== undefined ? `${tenPoint(ratings.tmdb)}/10` : undefined,
                     weight: "10%",
                   },
                 ];
@@ -570,9 +563,6 @@ function DetailInner({
                     </span>
                   </div>
                 ))}
-                {divergence && (
-                  <p className="pt-1.5 text-[13px] leading-relaxed text-text-muted">{divergence}</p>
-                )}
                 {typeof detail.voteCount === "number" && detail.voteCount > 0 && (
                   <p className="font-mono text-[12px] tabular-nums text-text-dim">
                     {detail.voteCount.toLocaleString("en-US")} audience votes

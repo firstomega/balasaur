@@ -5,7 +5,16 @@
 // even if the env var is missing in a given environment.
 
 import { createIsomorphicFn } from "@tanstack/react-start";
-import { titleProse, type TitleProseInput } from "./titleProse";
+import {
+  consensusNote,
+  franchiseNote,
+  normalizedSources,
+  runtimeLabel,
+  seriesFinished,
+  serviceList,
+  tenPoint,
+  type TitleProseInput,
+} from "./titleProse";
 import { personProse } from "./personProse";
 import { computeBalasaurScore } from "./score";
 
@@ -167,13 +176,11 @@ export function noindexMeta(): MetaTag {
 // so media.server.ts can share the same rule without importing this module.
 export { MIN_SUBSTANCE_FACTS, hasSubstance, isIndexableDetail } from "./indexability";
 
-/** Intent-tuned title/description for movie & TV detail pages: front-load what
- *  searchers type ("watch X", "X streaming") plus the score. */
 // A title tag has roughly 60 characters of display width in Google's results
 // before it is truncated, and what survives the cut has to carry the words a
 // person types. Segments are therefore dropped from the least valuable end:
 //
-//   title and year > the rating > where to watch > the brand
+//   title and year > IMDb > Rotten Tomatoes > the brand
 //
 // The brand goes last on purpose. Balasaur has not been announced, so nobody
 // searches for it; a brand suffix on a site nobody knows is spent width. It
@@ -183,9 +190,9 @@ const BRAND_SUFFIX = ` | ${SITE_NAME}`;
 
 /** Keep as many optional tails as the budget allows, then add the brand only
  *  if it still fits. Written this way round on purpose: an earlier version
- *  reserved room for the brand first, which dropped "rating 89/100" from
- *  "Little Amélie or the Character of Rain" to make space for a brand nobody
- *  is searching for. */
+ *  reserved room for the brand first, which dropped the rating from "Little
+ *  Amélie or the Character of Rain" to make space for a brand nobody is
+ *  searching for. */
 export function composeTitle(head: string, optional: string[]): string {
   for (let take = optional.length; take >= 0; take--) {
     const body = head + optional.slice(0, take).join("");
@@ -195,52 +202,128 @@ export function composeTitle(head: string, optional: string[]): string {
   return head;
 }
 
+/** The scores people type next to a title, by the names they type: "inception
+ *  imdb", "inception rotten tomatoes". At most two, so the tag stays inside
+ *  the display budget for ordinary titles. Metacritic stands in only when one
+ *  of the first two is missing. TMDB never appears: nobody searches for it. */
+export function familiarScores(r: TitleProseInput["ratings"]): string[] {
+  const out: string[] = [];
+  if (typeof r.imdb === "number") out.push(`IMDb ${tenPoint(r.imdb)}`);
+  if (typeof r.rottenTomatoes === "number") out.push(`Rotten Tomatoes ${r.rottenTomatoes}%`);
+  if (typeof r.metacritic === "number") out.push(`Metacritic ${r.metacritic}`);
+  return out.slice(0, 2);
+}
+
+/** A head longer than this would leave no room in the description for the
+ *  facts it exists to carry, so the lead sentence says "It" instead. */
+const DESCRIPTION_HEAD_MAX = 60;
+
+type DetailMetaInput = TitleProseInput & {
+  overview?: string;
+  /** Detail payloads nest franchise standing here; the component unwraps it the
+   *  same way. Read both so a payload of either shape keeps the sentence. */
+  context?: { franchise?: TitleProseInput["franchise"] };
+  /** Detail payloads carry TMDB's series status here, not as completionStatus. */
+  facts?: { status?: string };
+};
+
+/** How long it takes to watch, as the opening clause of the description. */
+function lengthClause(d: DetailMetaInput): string | null {
+  if (d.mediaType === "tv" && typeof d.numberOfSeasons === "number" && d.numberOfSeasons > 0) {
+    const n = d.numberOfSeasons;
+    const e = typeof d.numberOfEpisodes === "number" ? d.numberOfEpisodes : 0;
+    const status = d.completionStatus ?? d.facts?.status;
+    const seasons = `${n} season${n === 1 ? "" : "s"}`;
+    const episodes = `${e} episode${e === 1 ? "" : "s"}`;
+    if (seriesFinished(status)) {
+      if (!e) return `ran ${seasons}`;
+      return n === 1 ? `ran 1 season of ${episodes}` : `ran ${seasons} and ${episodes}`;
+    }
+    const body = e ? `${seasons} and ${episodes}` : seasons;
+    return status ? `has ${body} so far` : `has ${body}`;
+  }
+  if (d.mediaType === "movie" && typeof d.runtime === "number" && d.runtime > 0) {
+    return `runs ${runtimeLabel(d.runtime)}`;
+  }
+  return null;
+}
+
+/**
+ * The meta description: the facts a person weighs before clicking, in the
+ * order they weigh them. How long it is, what the familiar scores say, where
+ * it streams, then the Balasaur Score that blends them.
+ *
+ * Every description used to open "A Balasaur Score of N out of 100, drawn
+ * from", so tens of thousands of snippets shared their first eight words and
+ * the part that differed was the part Google cuts. Opening on the title's own
+ * name and length makes the first words different on every page.
+ *
+ * TMDB's synopsis is on every site that mirrors the same API, so it is used
+ * only when there is no fact at all to state.
+ */
+export function detailDescription(d: DetailMetaInput, score: number | undefined): string {
+  const year = d.year ? ` (${d.year})` : "";
+  const head = `${d.title}${year}`;
+  const named = head.length <= DESCRIPTION_HEAD_MAX;
+  const subject = named ? head : "It";
+
+  const parts: string[] = [];
+  const length = lengthClause(d);
+  if (length) parts.push(`${subject} ${length}.`);
+
+  const sources = normalizedSources(d.ratings ?? {});
+  if (sources.length > 0) {
+    const list = sources.map((s) => `${s.label} ${s.shown}`).join(", ");
+    parts.push(parts.length === 0 && named ? `${head}: ${list}.` : `${list}.`);
+  }
+
+  const services = serviceList(d.streaming ?? []);
+  if (services) {
+    parts.push(
+      parts.length === 0 && named
+        ? `${head} is streaming on ${services}.`
+        : `Streaming on ${services}.`,
+    );
+  }
+
+  // One source is the whole score, so stating the blend would only restate it.
+  if (typeof score === "number" && sources.length >= 2) {
+    parts.push(`Balasaur Score ${score} out of 100.`);
+  }
+
+  if (parts.length === 0) return clampDescription(d.overview || undefined, 160);
+
+  const franchise = franchiseNote(d.franchise ?? d.context?.franchise);
+  if (franchise) parts.push(franchise);
+  const consensus = consensusNote(d.ratings ?? {}, d.voteCount);
+  if (consensus) parts.push(consensus);
+
+  return clampDescription(parts.join(" "), 160);
+}
+
 /**
  * Title tag and meta description for a movie or TV detail page.
  *
- * The description used to open with the score and then paste TMDB's synopsis.
- * That synopsis is on every site that mirrors the same API, so it was the one
- * piece of text here guaranteed not to be ours. It is replaced by the page's
- * own data-prose, which no competitor holds, and only falls back to the
- * synopsis when there is not enough data to say anything at all.
+ * The tag names the scores people search for by name, "Inception (2010):
+ * IMDb 8.8, Rotten Tomatoes 86%", and falls back to fewer of them, then to
+ * just the title and year, as sources go missing or the name runs long. It
+ * used to say "rating 84/100, where to watch": a number on a scale nobody
+ * searches for, and a phrase that promised a page section rather than a fact.
  */
-export function detailMeta(
-  d: TitleProseInput & {
-    overview?: string;
-    /** Detail payloads nest catalog standing here; the component unwraps it the
-     *  same way. Read both so a payload of either shape keeps the sentence. */
-    context?: {
-      cohort?: TitleProseInput["cohort"];
-      franchise?: TitleProseInput["franchise"];
-    };
-  },
-): {
+export function detailMeta(d: DetailMetaInput): {
   title: string;
   description: string;
 } {
   const year = d.year ? ` (${d.year})` : "";
-  // Same fallback the JSON-LD builder uses. Detail payloads do not carry the
-  // blended score; the page computes it at render time, so without this the
-  // title tag and the description both lost it.
+  // Detail payloads do not always carry the blended score; the page computes
+  // it at render time, so the description does the same.
   const score = d.ratings?.balasaur ?? computeBalasaurScore(d.ratings ?? {});
-  const hasStreaming = (d.streaming ?? []).length > 0;
 
-  const optional: string[] = [];
-  if (typeof score === "number") optional.push(` rating ${score}/100`);
-  if (hasStreaming) optional.push(optional.length ? `, where to watch` : ` where to watch`);
-
-  const prose = titleProse({
-    ...d,
-    ratings: typeof score === "number" ? { ...d.ratings, balasaur: score } : d.ratings,
-    cohort: d.cohort ?? d.context?.cohort,
-    franchise: d.franchise ?? d.context?.franchise,
-  });
-  const fallback =
-    (typeof score === "number" ? `Balasaur Score ${score}/100. ` : "") + (d.overview ?? "");
+  const optional = familiarScores(d.ratings ?? {}).map((s, i) => (i === 0 ? `: ${s}` : `, ${s}`));
 
   return {
     title: composeTitle(`${d.title}${year}`, optional),
-    description: clampDescription(prose || fallback, 160),
+    description: detailDescription(d, score),
   };
 }
 
