@@ -357,11 +357,21 @@ export function personMeta(d: {
     optional.push(`: movies and TV shows`);
   }
 
+  // The search result answers the question that brought the click, "what are
+  // their best movies", with the first three of the ranked set the page opens
+  // on. Each score is the one printed on that card.
+  const best = (d.catalog?.top ?? [])
+    .slice(0, 3)
+    .map((it) => ({ title: it.title, score: trustedScore(it) }))
+    .filter((t): t is { title: string; score: number } => typeof t.score === "number")
+    .map((t) => `${t.title} (${t.score})`);
+  const lead = best.length === 3 ? `Highest rated: ${best.join(", ")}.` : "";
   const prose = d.catalog ? personProse(d.name, d.catalog) : "";
+  const stated = [lead, prose].filter(Boolean).join(" ");
   return {
     title: composeTitle(d.name, optional),
     description: clampDescription(
-      prose || d.biography || `${d.name}'s movies and TV shows in the Balasaur catalog.`,
+      stated || d.biography || `${d.name}'s movies and TV shows in the Balasaur catalog.`,
       160,
     ),
   };

@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
 import { buildOriginCollection, listOriginCollections } from "./originCollections";
+import { personNameFromListTitle } from "./personLists";
 import type { MediaItem } from "@/types/media";
 
 // Server reads for the programmatic collections layer. The heavy lifting
@@ -189,6 +190,28 @@ export const getCollectionRedirect = createServerFn({ method: "GET" })
 export interface CollectionDetail {
   row: CollectionRow;
   items: MediaItem[];
+  /** For a person list, the person page it links back to. */
+  person?: { id: number; name: string };
+}
+
+/**
+ * The person a person list was built for. The list title is
+ * 'The Best <roster name> Movies', and the roster holds that name's TMDB id,
+ * which is the id the person page is served under. Nothing when the roster
+ * row has no id: a name match alone could point at a namesake.
+ */
+async function personForList(title: string): Promise<CollectionDetail["person"]> {
+  const name = personNameFromListTitle(title);
+  if (!name) return undefined;
+  const { data, error } = await loose(supabaseAdmin)
+    .from("person_collection_roster")
+    .select("person_name, person_id")
+    .eq("person_name", name)
+    .not("person_id", "is", null)
+    .limit(1);
+  const r = (data as { person_name: string; person_id: number }[] | null)?.[0];
+  if (error || !r) return undefined;
+  return { id: r.person_id, name: r.person_name };
 }
 
 export const getCollection = createServerFn({ method: "GET" })
@@ -225,7 +248,9 @@ export const getCollection = createServerFn({ method: "GET" })
     const items = ((itemRows ?? []) as unknown as { rank: number; media: CardRow | null }[])
       .filter((r) => r.media)
       .map((r) => rowToCardItem(r.media as CardRow));
-    return { row: row as CollectionRow, items };
+    const collection = row as CollectionRow;
+    const person = collection.kind === "person" ? await personForList(collection.title) : undefined;
+    return { row: collection, items, ...(person ? { person } : {}) };
   });
 
 /** One slot on a shelf: the rank and the card that holds it. */

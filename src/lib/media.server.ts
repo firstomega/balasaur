@@ -16,13 +16,8 @@ import { computeBalasaurScore } from "./score";
 import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
-import {
-  bestDecadeOf,
-  collaboratorsOf,
-  median,
-  pickTopCredits,
-  type PersonCreditFacts,
-} from "./personRanking";
+import { bestDecadeOf, pickTopCredits, rankedPool, type PersonCreditFacts } from "./personRanking";
+import { personListSlugs } from "./personLists";
 import { upsertInChunks } from "./chunkedUpsert";
 import {
   recordAvailabilityEvents,
@@ -2875,11 +2870,12 @@ async function attachPersonStats(detail: PersonDetail): Promise<void> {
 // TMDB's own order: the same thing a dozen other sites ship.
 
 /** Columns crossRowToItem reads, plus the generated score and the fields the
- *  catalog facts are computed from. */
+ *  catalog facts are computed from: the shared trust rule needs the vote
+ *  count and the film length, and the franchise cap needs the collection id. */
 const PERSON_CREDIT_COLUMNS =
   "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb," +
   "rating_rotten_tomatoes,rating_metacritic,rating_tmdb,rating_balasaur,genres,seasons," +
-  "people,award_winner,award_nominee";
+  "people,award_winner,award_nominee,vote_count,film_length_minutes,tmdb_collection_id";
 
 /** PostgREST builds the `in` filter into the URL, so ids go in batches. */
 const PERSON_CREDIT_CHUNK = 200;
@@ -2892,7 +2888,7 @@ interface PersonCreditRow extends CrossRow, PersonCreditFacts {
 async function fetchPersonCreditRows(ids: string[]): Promise<PersonCreditRow[]> {
   const out: PersonCreditRow[] = [];
   for (let i = 0; i < ids.length; i += PERSON_CREDIT_CHUNK) {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("media")
       .select(PERSON_CREDIT_COLUMNS)
       .in("media_id", ids.slice(i, i + PERSON_CREDIT_CHUNK));
@@ -2928,6 +2924,10 @@ async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
       // recomputed value in crossRowToItem is the fallback for rows the
       // generator has not reached.
       if (typeof r.rating_balasaur === "number") item.ratings.balasaur = r.rating_balasaur;
+      // The card's badge follows the shared trust rule, which reads the vote
+      // count. Without it a one-source score could never show, and a score
+      // with three votes would be judged on sources alone.
+      if (typeof r.vote_count === "number") item.voteCount = r.vote_count;
       return item;
     };
 
@@ -2938,21 +2938,55 @@ async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
       });
     }
 
-    const scores = rows
-      .map((r) => r.rating_balasaur)
-      .filter((v): v is number => typeof v === "number");
-
     detail.catalog = {
       titles: rows.length,
-      scored: scores.length,
-      medianScore: median(scores),
-      ...bestDecadeOf(rows),
+      bestDecade: bestDecadeOf(rankedPool(rows, detail.name)),
       top: pickTopCredits(rows, detail.name).map(toItem),
-      collaborators: collaboratorsOf(rows, detail.name),
     };
   } catch (e) {
     console.error("[person] catalog join failed:", e instanceof Error ? e.message : e);
   }
+}
+
+/**
+ * The /best lists built for this person, so the page can link to them. The
+ * roster is keyed by TMDB person id, which keeps a namesake's list off this
+ * page; the slug is then rebuilt from the roster's own spelling of the name
+ * and looked up, so a list that was never minted is never linked. Fail-soft.
+ */
+async function attachPersonLists(detail: PersonDetail): Promise<void> {
+  try {
+    const personId = Number.parseInt(detail.id, 10);
+    if (!Number.isFinite(personId)) return;
+    const { data: roster, error } = await loose(supabaseAdmin)
+      .from("person_collection_roster")
+      .select("person_name")
+      .eq("person_id", personId)
+      .limit(1);
+    const name = (roster as { person_name: string }[] | null)?.[0]?.person_name;
+    if (error || !name) return;
+    const { data: lists, error: listErr } = await loose(supabaseAdmin)
+      .from("collections")
+      .select("slug, title, item_count")
+      .eq("kind", "person")
+      .in("slug", personListSlugs(name));
+    if (listErr || !lists) return;
+    detail.lists = (lists as { slug: string; title: string; item_count: number }[])
+      .map((l) => ({ slug: l.slug, title: l.title, itemCount: l.item_count }))
+      // Movies before shows.
+      .sort((a, b) => a.slug.localeCompare(b.slug));
+  } catch (e) {
+    console.error("[person] list lookup failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/** Everything a person page derives from the catalog at read time. */
+function attachReadTimeFacts(detail: PersonDetail): Promise<unknown> {
+  return Promise.all([
+    attachPersonStats(detail),
+    attachCatalogFacts(detail),
+    attachPersonLists(detail),
+  ]);
 }
 
 export async function fetchPersonDetail(
@@ -2972,7 +3006,7 @@ export async function fetchPersonDetail(
         const age = Date.now() - new Date(data.fetched_at).getTime();
         if (age < PERSON_TTL_MS) {
           const cached = data.payload as unknown as PersonDetail;
-          await Promise.all([attachPersonStats(cached), attachCatalogFacts(cached)]);
+          await attachReadTimeFacts(cached);
           return cached;
         }
       }
@@ -3010,7 +3044,7 @@ export async function fetchPersonDetail(
     console.error("[cache] person_cache write failed:", e);
   }
 
-  await Promise.all([attachPersonStats(detail), attachCatalogFacts(detail)]);
+  await attachReadTimeFacts(detail);
   return detail;
 }
 

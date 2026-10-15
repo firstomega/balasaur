@@ -88,7 +88,7 @@ function decadeOf(year: string | undefined): string | null {
 }
 
 function CollectionPage() {
-  const { row, items, related } = Route.useLoaderData();
+  const { row, items, related, person } = Route.useLoaderData();
   const { statuses, ready } = useUserStatus();
   const [mounted, setMounted] = useState(false);
   const [hideSeen, setHideSeen] = useState(false);
@@ -187,6 +187,16 @@ function CollectionPage() {
           >
             Ranked by Balasaur Score
           </Link>
+          {/* A person list links to that person's page, which links back. */}
+          {person && (
+            <Link
+              to="/person/$id"
+              params={{ id: String(person.id) }}
+              className="rounded-sm border border-border bg-panel px-2.5 py-1 text-base font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
+            >
+              Every {person.name} credit
+            </Link>
+          )}
           {mounted && ready && seenCount > 0 && (
             <>
               <MetaChip>

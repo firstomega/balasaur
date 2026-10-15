@@ -159,19 +159,31 @@ export interface PersonDetail {
    *  numbers came from a name match against top-billed credits only, so the
    *  grid could not confirm a single one of them. */
   catalog?: PersonCatalog;
+  /** The /best/best-<name>-movies and -shows lists for this person, when the
+   *  nightly rebuild minted them. Attached at read time, like `catalog`. */
+  lists?: PersonList[];
+}
+
+export interface DecadeMedian {
+  decade: string;
+  median: number;
+  titles: number;
 }
 
 export interface PersonCatalog {
   /** Credits this catalog holds, across every department, deduped by title. */
   titles: number;
-  /** How many of those carry a Balasaur Score. */
-  scored: number;
-  medianScore?: number;
-  bestDecade?: string;
-  bestDecadeMedian?: number;
-  bestDecadeTitles?: number;
-  /** Highest-scoring credits, best first. Empty when there are too few scored
-   *  titles for an order to mean anything. */
+  /** The decade whose ranked titles rate highest, with the decade it beat.
+   *  Absent unless two decades qualify and one is ahead. */
+  bestDecade?: DecadeMedian & { runnerUp: DecadeMedian };
+  /** Highest-scoring credits, best first, one per franchise. Empty when the
+   *  ranked pool is too small for an order to mean anything. */
   top: MediaItem[];
-  collaborators: { name: string; together: number }[];
+}
+
+/** A /best list built for this person, linked from their page. */
+export interface PersonList {
+  slug: string;
+  title: string;
+  itemCount: number;
 }
