@@ -16,6 +16,11 @@ import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
 import { upsertInChunks } from "./chunkedUpsert";
+import {
+  recordAvailabilityEvents,
+  snapshotAvailability,
+  type AvailabilityClient,
+} from "./availabilityEvents";
 import type { EpisodeRating } from "./episodes";
 import { posterColorsFromJpeg, type PosterColors } from "./posterColor";
 import { tmdbImage } from "./tmdbImage";
@@ -1137,6 +1142,9 @@ export async function backfillFromRaw(opts?: {
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
+        // No availability_events here on purpose: this re-reads the payload
+        // already stored, so a difference means our provider mapping changed,
+        // not that the title moved. Only a fresh fetch is an observation.
         const streamingChanged =
           JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []) ||
           JSON.stringify(newStreamingRegions) !== JSON.stringify(row.streaming_regions ?? []);
@@ -1272,6 +1280,13 @@ export async function backfillFromRaw(opts?: {
  */
 async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<void> {
   if (rows.length === 0) return;
+  // Streaming history: read what each title was on before this write replaces
+  // it. Fail-soft (returns null on any error), see availabilityEvents.ts.
+  const availabilityClient = loose(supabaseAdmin) as unknown as AvailabilityClient;
+  const priorAvailability = await snapshotAvailability(
+    availabilityClient,
+    rows.map((r) => r.media_id),
+  );
   const { totalChunks, failedChunks, firstError, recoveredChunks } = await upsertInChunks(
     rows,
     async (chunk) =>
@@ -1305,6 +1320,10 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
       `write did not persist: ${probeId} has fetched_at=${data?.fetched_at ?? "null"} after upsert`,
     );
   }
+  // Only after the catalog write is confirmed. Never throws: a missing
+  // availability_events table or a failed insert is logged and ignored, so the
+  // nightly sync's pass/fail still means "did the catalog land".
+  await recordAvailabilityEvents(availabilityClient, priorAvailability, rows, { tag });
 }
 
 /** Newest `updated_at` in `media` — the freshness signal the nightly canary asserts on. */
