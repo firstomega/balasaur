@@ -19,8 +19,21 @@ gate, 57,469 indexable titles) and is gone from here.
   IndexNow key from the Bing UI.
 - **Add `APP_SUPABASE_SERVICE_ROLE_KEY` as a repo secret** so the layout check
   renders catalog pages instead of empty shells.
-- **One 5xx and the "alternate page with proper canonical" validation** in
-  Search Console need the Coverage UI (owner access) to identify.
+- **Search Console validations, diagnosed 2026-09-24 with URL Inspection**
+  (the gsc-sync `inspect` action, `store:false`):
+  - _Alternate page with proper canonical tag:_ the URLs were `/?type=tv` and
+    `/?type=movie`, which every title page's breadcrumb markup pointed at.
+    Removed from the breadcrumb. Do not validate this reason: the canonical
+    on filtered views is correct, so validation can never pass. It shrinks
+    on its own as Google recrawls title pages.
+  - _Review snippets, "Either ratingCount or reviewCount should be
+    specified":_ Google's copies of the failing pages date from June 3, June 5
+    and August 2; the markup was fixed August 21 (#180). The live payloads
+    for those three titles now produce either no rating block or a valid
+    one. Safe to click "Validate fix" again.
+  - _Not found (404):_ `/best/best-1990s-thriller` was last crawled September
+    1, before the redirect table covered it (September 8). Safe to revalidate.
+  - The 5xx is still unidentified; crawl_health has recorded none.
 - Optional signups when ready: Sentry (or any error tracker), an analytics
   tool (PostHog/Clarity), Resend (unblocks the watchlist email digest).
 

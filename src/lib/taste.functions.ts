@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { computeBalasaurScore } from "@/lib/score";
+import { trustedScore } from "@/lib/trust";
 import { MAX_FACT_IDS, type TitleFact } from "@/lib/taste";
 
 // Catalog facts for the Taste Card, by id.
@@ -18,9 +18,9 @@ import { MAX_FACT_IDS, type TitleFact } from "@/lib/taste";
 const CHUNK = 200;
 
 const COLS =
-  "media_id, media_type, title, year, poster_url, color_a, color_b, genres, origins, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb";
+  "media_id, media_type, title, year, poster_url, color_a, color_b, genres, origins, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count";
 
-interface FactRow {
+export interface FactRow {
   media_id: string;
   media_type: string;
   title: string;
@@ -34,6 +34,7 @@ interface FactRow {
   rating_rotten_tomatoes: number | null;
   rating_metacritic: number | null;
   rating_tmdb: number | null;
+  vote_count: number | null;
 }
 
 /** Metacritic is the critic number when there is one; Rotten Tomatoes is the
@@ -46,7 +47,7 @@ function criticOf(r: FactRow): Pick<TitleFact, "critic" | "criticSource"> {
   return {};
 }
 
-function toFact(r: FactRow): TitleFact {
+export function toFact(r: FactRow): TitleFact {
   return {
     id: r.media_id,
     title: r.title,
@@ -57,11 +58,16 @@ function toFact(r: FactRow): TitleFact {
     posterUrl: r.poster_url ?? undefined,
     colorA: r.color_a ?? undefined,
     colorB: r.color_b ?? undefined,
-    score: computeBalasaurScore({
-      imdb: r.rating_imdb,
-      rottenTomatoes: r.rating_rotten_tomatoes,
-      metacritic: r.rating_metacritic,
-      tmdb: r.rating_tmdb,
+    // The card prints this on a poster, so it follows the badge rule: no
+    // score from one source or a handful of votes.
+    score: trustedScore({
+      ratings: {
+        imdb: r.rating_imdb,
+        rottenTomatoes: r.rating_rotten_tomatoes,
+        metacritic: r.rating_metacritic,
+        tmdb: r.rating_tmdb,
+      },
+      voteCount: r.vote_count,
     }),
     ...criticOf(r),
   };

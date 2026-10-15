@@ -78,8 +78,14 @@ A number must also be a number someone wanted. True, reconstructable, and
 irrelevant is still noise, and it is the failure mode a data-driven writer
 falls into first, because the numbers that are easiest to compute are the ones
 nobody asked for. Nobody wonders where Inception ranks out of 66,000. They
-wonder whether it is worth two hours, whether it beats the other thing they
-were considering, and whether the good reviews and the audience agree.
+wonder whether it is worth two hours and whether it beats the other thing they
+were considering.
+
+A disagreement between sources is not one of those questions. "Critics rate it
+lower than audiences do" manufactures a tension no viewer asked about, and the
+owner rejected it everywhere: page copy, descriptions, games, llms.txt.
+
+**Check:** Does any sentence set one group of raters against another? Cut it.
 
 **Check:** Write the question this number answers, as a person would type it.
 If the question only makes sense to someone who already knows how the catalog

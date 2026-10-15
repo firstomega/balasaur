@@ -41,48 +41,79 @@ declare global {
 let scriptRequested = false;
 let lastTrackedPath: string | null = null;
 
-/** The official snippet, hand-written rather than pasted, so the queue shim is
- *  readable: calls made before the script lands are buffered and replayed. */
+/** Methods the page may call before PostHog's script has arrived. Each is
+ *  stubbed to record the call; PostHog replays them once it loads. */
+const STUBBED_METHODS = ["capture", "opt_out_capturing"] as const;
+
+/**
+ * PostHog's placeholder, in the one shape its loader recognises: an array
+ * marked `__SV`, with pending `init` calls in `_i` and every other call pushed
+ * onto the array itself. Exported so a test can pin that shape; a plain object
+ * here is what froze every phone that accepted cookies (see injectPostHog).
+ */
+export function createPostHogPlaceholder(): PostHogLike & unknown[] & Record<string, unknown> {
+  type Pending = unknown[];
+  const stub = [] as unknown as Pending[] & Record<string, unknown> & PostHogLike;
+  const pendingInits: Pending[] = [];
+  for (const method of STUBBED_METHODS) {
+    stub[method] = (...args: unknown[]) => {
+      stub.push([method, ...args]);
+    };
+  }
+  stub._i = pendingInits;
+  stub.init = (token: string, config: Record<string, unknown>) => {
+    pendingInits.push([token, config]);
+  };
+  stub.__SV = 1;
+  return stub;
+}
+
+/**
+ * Set up PostHog's placeholder and request its script.
+ *
+ * The placeholder has to be exactly the shape PostHog's loader looks for: an
+ * array marked `__SV`, holding pending `init` calls in `_i` and every other
+ * call as an entry of its own. On arrival the loader recognises that shape,
+ * initialises from `_i`, replays the entries, and replaces `window.posthog`
+ * with the real library. Nothing on this side replays anything.
+ *
+ * The version this replaces built a plain object instead and replayed the
+ * queue itself once the script loaded. PostHog does not recognise a plain
+ * object, so it never replaced it, and the replay pushed each call straight
+ * back onto the queue it was iterating. That loop never ended: tapping
+ * "Accept all" froze the tab and grew memory by about 300 MB a second until a
+ * phone's browser killed it. Every visitor who accepted cookies from 24 August
+ * hit it, which is also why PostHog never received a single event.
+ */
 function injectPostHog(): void {
   if (scriptRequested || typeof window === "undefined") return;
   scriptRequested = true;
+  if (window.posthog) return; // already set up by something else; leave it be
 
-  const queue: [string, unknown[]][] = [];
-  const shim = {
-    init: () => {},
-    capture: (...args: unknown[]) => queue.push(["capture", args]),
-    opt_out_capturing: (...args: unknown[]) => queue.push(["opt_out_capturing", args]),
-  } as unknown as PostHogLike;
-  window.posthog = window.posthog ?? shim;
+  window.posthog = createPostHogPlaceholder();
+
+  window.posthog.init(POSTHOG_TOKEN, {
+    api_host: POSTHOG_HOST,
+    ui_host: "https://us.posthog.com",
+    // Route changes are reported by hand (see trackPostHogPageView), the same
+    // way GA4 is, because a single-page app never fires a real page load.
+    capture_pageview: false,
+    // No profile is created for an anonymous visitor. Keeps the free tier
+    // from filling up with one-off crawlers and drive-by hits.
+    person_profiles: "identified_only",
+    // The reason this is installed at all.
+    disable_session_recording: false,
+    session_recording: {
+      // Never record what someone typed. Nothing on this site needs it, and
+      // the search box would otherwise capture free text.
+      maskAllInputs: true,
+    },
+  });
 
   const s = document.createElement("script");
   s.async = true;
+  s.crossOrigin = "anonymous";
   s.src = `${POSTHOG_ASSETS}/static/array.js`;
-  s.onload = () => {
-    const ph = window.posthog;
-    if (!ph) return;
-    ph.init(POSTHOG_TOKEN, {
-      api_host: POSTHOG_HOST,
-      ui_host: "https://us.posthog.com",
-      // Route changes are reported by hand (see trackPostHogPageView), the same
-      // way GA4 is, because a single-page app never fires a real page load.
-      capture_pageview: false,
-      // No profile is created for an anonymous visitor. Keeps the free tier
-      // from filling up with one-off crawlers and drive-by hits.
-      person_profiles: "identified_only",
-      // The reason this is installed at all.
-      disable_session_recording: false,
-      session_recording: {
-        // Never record what someone typed. Nothing on this site needs it, and
-        // the search box would otherwise capture free text.
-        maskAllInputs: true,
-      },
-    });
-    for (const [fn, args] of queue) {
-      (ph as unknown as Record<string, (...a: unknown[]) => void>)[fn]?.(...args);
-    }
-    queue.length = 0;
-  };
   document.head.appendChild(s);
 }
 

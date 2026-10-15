@@ -5,25 +5,39 @@
 // Two rules decide what is allowed in here.
 //
 // 1. Only this database can make the claim. A competitor mirroring the same
-//    API could not write the sentence. This is what carries a 66,000-page
-//    catalog past an ad network's originality review.
+//    API could not write the sentence. This is what carries a large catalog
+//    past an ad network's originality review.
 //
 // 2. The claim answers a question a viewer actually has. True, reconstructable
 //    and irrelevant is still noise, and it is the failure mode a data-driven
 //    writer falls into first, because the numbers that are easiest to compute
-//    are the ones nobody asked for. "Above the catalog median of 62" was in
-//    here and is gone: nobody holds a 66,000-title median in their head, so
-//    the sentence measured against a scale that exists only inside the
-//    database. What replaced it compares inside sets a person already holds:
-//    a series, a genre-and-decade shelf, the sources themselves.
+//    are the ones nobody asked for. Three sentences have been cut on exactly
+//    that ground:
+//
+//    "Above the catalog median of 62" measured against a scale that exists
+//    only inside the database.
+//
+//    "Scores higher than 96% of the 2,035 2020s action movies in this
+//    catalog" did the same with a smaller denominator. A shelf of 2,035 is
+//    still a set nobody holds in their head, and the sentence was really about
+//    how the catalog is built.
+//
+//    "Audiences rate it 14 points higher than critics do" manufactured a
+//    tension nobody came to the page to read about. A viewer weighs the
+//    numbers themselves, which sit right above the paragraph.
+//
+//    What is left compares inside sets a person already holds: a series, the
+//    sources themselves, the length of an evening.
 //
 // Someone landing here from a search is asking, in this order: is it any good,
-// do the people who rate things agree about that, how does it sit next to the
-// thing I already know, is it worth my evening, and where do I watch it. The
-// sentences are ordered to answer that, and a sentence is dropped whenever its
-// fact is not notable. A short honest paragraph beats a padded one, so the
-// paragraph is also hard-capped: past a certain length a reader stops reading
-// and starts skimming for the streaming line.
+// how does it sit next to the thing I already know, is it worth my evening,
+// and where do I watch it. The sentences are ordered to answer that, and a
+// sentence is dropped whenever its fact is not notable. A short honest
+// paragraph beats a padded one, so the paragraph is also hard-capped: past a
+// certain length a reader stops reading and starts skimming for the streaming
+// line.
+
+import { isScoreTrusted } from "./trust";
 
 export interface TitleProseInput {
   mediaType: string;
@@ -46,22 +60,10 @@ export interface TitleProseInput {
     metacritic?: number;
     tmdb?: number;
   };
-  /** Where the score sits inside its genre-and-decade cohort (title_context). */
-  cohort?: { label: string; size: number; percentile: number };
   /** Franchise standing by score (title_context). */
   franchise?: { size: number; rank: number };
 }
 
-// The agreement sentence is the one claim no competitor can copy, so the
-// bands are set from the actual spread across the catalog rather than by feel.
-// Over the 610 recent releases: a 12 point critic/audience gap catches 130
-// titles and an 8 point total spread catches 28, so the two together speak for
-// roughly a quarter of them. Widening further starts calling ordinary noise a
-// finding, which is worse than saying nothing. Ten points was tried and
-// rejected: at 67, 62 and 57 the sources are not agreeing, they are merely
-// not far apart.
-/** Below this, sources are close enough that "they disagree" would be noise. */
-const DIVERGENCE_POINTS = 12;
 /** At or under this, the sources are close enough that agreement is the story. */
 const CONSENSUS_POINTS = 8;
 /** Sentences past this get cut. A wall of facts reads as filler, not depth. */
@@ -76,6 +78,12 @@ function compact(n: number): string {
   return String(n);
 }
 
+/** A ten-point score the way IMDb and TMDB print it: always one decimal, so a
+ *  6 reads "6.0" here exactly as it does on the source's own page. */
+export function tenPoint(n: number): string {
+  return n.toFixed(1);
+}
+
 /** Put every source on the same 0 to 100 scale so they can be compared. */
 export function normalizedSources(r: TitleProseInput["ratings"]): {
   label: string;
@@ -84,7 +92,7 @@ export function normalizedSources(r: TitleProseInput["ratings"]): {
 }[] {
   const out: { label: string; shown: string; pct: number }[] = [];
   if (typeof r.imdb === "number") {
-    out.push({ label: "IMDb", shown: `${r.imdb}/10`, pct: Math.round(r.imdb * 10) });
+    out.push({ label: "IMDb", shown: `${tenPoint(r.imdb)}/10`, pct: Math.round(r.imdb * 10) });
   }
   if (typeof r.rottenTomatoes === "number") {
     out.push({
@@ -97,37 +105,16 @@ export function normalizedSources(r: TitleProseInput["ratings"]): {
     out.push({ label: "Metacritic", shown: `${r.metacritic}/100`, pct: Math.round(r.metacritic) });
   }
   if (typeof r.tmdb === "number" && typeof r.imdb !== "number") {
-    out.push({ label: "TMDB", shown: `${r.tmdb}/10`, pct: Math.round(r.tmdb * 10) });
+    out.push({ label: "TMDB", shown: `${tenPoint(r.tmdb)}/10`, pct: Math.round(r.tmdb * 10) });
   }
   return out;
 }
 
-/** The critic/audience split, when there is one worth naming. */
-export function divergenceNote(r: TitleProseInput["ratings"]): string | null {
-  const critic =
-    typeof r.metacritic === "number"
-      ? r.metacritic
-      : typeof r.rottenTomatoes === "number"
-        ? r.rottenTomatoes
-        : null;
-  const audience = typeof r.imdb === "number" ? r.imdb * 10 : null;
-  if (critic === null || audience === null) return null;
-  const gap = Math.round(audience - critic);
-  if (Math.abs(gap) < DIVERGENCE_POINTS) return null;
-  return gap > 0
-    ? `Audiences rate it ${gap} points higher than critics do.`
-    : `Critics rate it ${Math.abs(gap)} points higher than audiences do.`;
-}
-
-/** Do the sources agree, disagree, or is neither worth a sentence?
- *
- *  This is the one claim on the page that no competitor can copy, because
- *  nobody else holds all four numbers side by side. It answers "is it good"
- *  more honestly than any single score does, so it goes near the top. */
-function consensusNote(r: TitleProseInput["ratings"], voteCount?: number): string | null {
-  const split = divergenceNote(r);
-  if (split) return split;
-
+/** Do the sources land together? Said only when they genuinely do: three or
+ *  more of them inside a narrow band, which answers "is it good" more firmly
+ *  than any one of them can. When they do not, the page says nothing and the
+ *  numbers above the paragraph speak for themselves. */
+export function consensusNote(r: TitleProseInput["ratings"], voteCount?: number): string | null {
   const pcts = normalizedSources(r).map((s) => s.pct);
   if (pcts.length < 3) return null;
   const spread = Math.max(...pcts) - Math.min(...pcts);
@@ -142,10 +129,45 @@ function consensusNote(r: TitleProseInput["ratings"], voteCount?: number): strin
   return `Every source lands within ${spread} point${spread === 1 ? "" : "s"} of the others${backing}.`;
 }
 
+/** Where the title sits in its own series, by score. A series is a set the
+ *  viewer already holds, which is what makes the rank mean something. */
+export function franchiseNote(f: TitleProseInput["franchise"]): string | null {
+  if (!f || f.size < 2) return null;
+  return f.rank === 1
+    ? `The highest scoring of the ${f.size} titles in its series.`
+    : `Number ${f.rank} of ${f.size} in its series by score.`;
+}
+
+/** "2h 28m", "2h" on the hour, or "48m" under an hour. */
+export function runtimeLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (!h) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+/** True when the series has stopped making episodes. */
+export function seriesFinished(status?: string): boolean {
+  return status === "Ended" || status === "Canceled";
+}
+
+/** "Netflix", "Netflix and Hulu", "Netflix, Hulu, and Max". */
+export function serviceList(services: string[]): string | null {
+  const svc = services.filter(Boolean);
+  if (svc.length === 0) return null;
+  if (svc.length === 1) return svc[0];
+  if (svc.length === 2) return `${svc[0]} and ${svc[1]}`;
+  return `${svc.slice(0, -1).join(", ")}, and ${svc[svc.length - 1]}`;
+}
+
 export function titleProse(d: TitleProseInput): string {
   const parts: string[] = [];
   const sources = normalizedSources(d.ratings);
-  const score = d.ratings.balasaur;
+  // The trust rule in src/lib/trust.ts decides whether the Balasaur Score is
+  // said at all. Callers already strip an untrusted blend; checking here too
+  // means no future caller can put a hidden score back into the prose.
+  const ranked = isScoreTrusted({ ratings: d.ratings, voteCount: d.voteCount });
+  const score = ranked ? d.ratings.balasaur : undefined;
 
   // 1. Is it any good. The score, and the receipts behind it.
   if (typeof score === "number" && sources.length > 0) {
@@ -155,48 +177,29 @@ export function titleProse(d: TitleProseInput): string {
     parts.push(`A Balasaur Score of ${score} out of 100.`);
   }
 
-  // 2. Do the people who rate things agree about that. Only we can say.
   const consensus = consensusNote(d.ratings, d.voteCount);
   if (consensus) parts.push(consensus);
 
-  // 3. How it sits next to the thing you already know. A series is the set a
-  //    viewer holds most firmly, so it outranks the genre shelf.
-  if (d.franchise && d.franchise.size >= 2) {
-    parts.push(
-      d.franchise.rank === 1
-        ? `The highest scoring of the ${d.franchise.size} titles in its series.`
-        : `Number ${d.franchise.rank} of ${d.franchise.size} in its series by score.`,
-    );
-  } else if (d.cohort && d.cohort.size >= 50 && sources.length >= 2) {
-    // Two sources minimum. Ranking a title above 96% of a shelf on the strength
-    // of one unvetted number is the kind of ordering a skeptic can break.
-    const size = d.cohort.size.toLocaleString("en-US");
-    if (d.cohort.percentile >= 70) {
-      parts.push(
-        `Scores higher than ${d.cohort.percentile}% of the ${size} ${d.cohort.label} in this catalog.`,
-      );
-    } else if (d.cohort.percentile <= 30) {
-      parts.push(`Most of the ${size} ${d.cohort.label} in this catalog score higher.`);
-    }
-  }
+  // 2. How it sits next to the thing you already know. A series rank is a
+  //    ranking by score, so it is never said about a title whose score the
+  //    page will not show: an order built on a hidden number reads as broken.
+  const franchise = ranked ? franchiseNote(d.franchise) : null;
+  if (franchise) parts.push(franchise);
 
-  // 4. Is it worth the evening. Seasons for TV, runtime for film.
+  // 3. Is it worth the evening. Seasons for TV, runtime for film.
   if (d.mediaType === "tv" && typeof d.numberOfSeasons === "number" && d.numberOfSeasons > 0) {
     const eps =
       typeof d.numberOfEpisodes === "number" && d.numberOfEpisodes > 0
         ? ` across ${d.numberOfEpisodes} episodes`
         : "";
-    const ended = d.completionStatus === "Ended" || d.completionStatus === "Canceled";
     const seasonWord = d.numberOfSeasons === 1 ? "season" : "seasons";
     parts.push(
-      ended
+      seriesFinished(d.completionStatus)
         ? `The series ran ${d.numberOfSeasons} ${seasonWord}${eps} and has finished, so there is no cliffhanger risk.`
         : `${d.numberOfSeasons} ${seasonWord}${eps} so far, still running.`,
     );
   } else if (d.mediaType === "movie" && typeof d.runtime === "number" && d.runtime > 0) {
-    const h = Math.floor(d.runtime / 60);
-    const m = d.runtime % 60;
-    const len = h ? `${h}h ${m}m` : `${m}m`;
+    const len = runtimeLabel(d.runtime);
     // Only the extremes answer "is this worth my evening". A 2h 8m film is
     // every film, and "Running time is 2h 8m" restates the runtime already
     // printed in the header two inches above.
@@ -213,15 +216,10 @@ export function titleProse(d: TitleProseInput): string {
   // having names the Oscar, Emmy or BAFTA, and that needs `awards_won` carried
   // into the detail payload, which is its own change.
 
-  // 5. Where you can actually watch it. The reason most visitors arrived, so
+  // 4. Where you can actually watch it. The reason most visitors arrived, so
   //    it survives the length cap even when everything above it does not.
-  const svc = (d.streaming ?? []).filter(Boolean);
-  let watch: string | null = null;
-  if (svc.length === 1) watch = `Streaming on ${svc[0]}.`;
-  else if (svc.length === 2) watch = `Streaming on ${svc[0]} and ${svc[1]}.`;
-  else if (svc.length > 2) {
-    watch = `Streaming on ${svc.slice(0, -1).join(", ")}, and ${svc[svc.length - 1]}.`;
-  }
+  const services = serviceList(d.streaming ?? []);
+  const watch = services ? `Streaming on ${services}.` : null;
 
   const kept = parts.slice(0, watch ? MAX_SENTENCES - 1 : MAX_SENTENCES);
   if (watch) kept.push(watch);

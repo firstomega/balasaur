@@ -3,7 +3,6 @@
 // optional-safe — missing data is simply omitted.
 import type { MediaDetail, PersonDetail } from "@/types/media";
 import { SITE_NAME, SITE_ORIGIN, SITE_TAGLINE } from "./seo";
-import { computeBalasaurScore } from "./score";
 
 function dropEmpty<T extends Record<string, unknown>>(obj: T): T {
   for (const k of Object.keys(obj)) {
@@ -15,57 +14,30 @@ function dropEmpty<T extends Record<string, unknown>>(obj: T): T {
   return obj;
 }
 
-/** The Balasaur Score (0-100) with the count of published ratings it averages:
- *  an aggregator marking up its aggregate, Metacritic-style.
- *
- *  ratingCount used to carry TMDB's vote count, which paired a four-source
- *  blend with a one-source population. Inception went out as 84 out of 100
- *  "from 39,857 ratings", when those 39,857 people rated the TMDB number that
- *  carries a tenth of the weight. Google reads ratingValue and ratingCount as
- *  one claim, so the two have to describe the same population. The count is
- *  now the sources the blend averaged, which the score breakdown on the page
- *  lists by name with each value.
- *
- *  Two rules keep the block honest, and both cost coverage on purpose.
- *
- *  Schema.org requires ratingCount or reviewCount, and Search Console reports
- *  a block without one as an invalid item. A count-less fallback used to ship
- *  for titles with no vote count, which put 11,366 pages in the invalid pile
- *  for no gain. So no count, no aggregateRating.
- *
- *  And an AggregateRating is an average of MULTIPLE ratings. A title holding
- *  one published rating has no average to report: its score is that single
- *  source rescaled, so marking it up restates TMDB's or IMDb's rating as ours.
- *  10,843 catalogued titles sit there today, nearly all TMDB-only, and they
- *  get the block back the moment a second source lands. */
-function aggregateRating(d: MediaDetail) {
-  const r = d.ratings;
-  const ratingCount = [r.imdb, r.rottenTomatoes, r.metacritic, r.tmdb].filter(
-    (v) => typeof v === "number",
-  ).length;
-  if (ratingCount < 2) return undefined;
-  const balasaur = r.balasaur ?? computeBalasaurScore(r);
-  if (typeof balasaur !== "number") return undefined;
-  return {
-    "@type": "AggregateRating",
-    ratingValue: balasaur,
-    bestRating: 100,
-    worstRating: 0,
-    ratingCount,
-  };
-}
+// No AggregateRating on any page. The block used to carry the Balasaur Score
+// with a count of the sources it blends, which is a rating aggregated from
+// other sites. Google's review snippet policy excludes exactly that: ratings
+// must come from the site's own users, not be compiled from third parties.
+// Marking it up risks a manual action against every title page, and it was
+// never what earned a click. The score is visible on the page, which is where
+// it has to be believed.
 
-/** Home → Movies/TV → Title trail for detail pages. */
+/** Home → Title trail for detail pages.
+ *
+ *  There used to be a "Movies" or "TV Shows" step between them, pointing at
+ *  /?type=movie or /?type=tv. Those are filtered homepage views, and a
+ *  filtered view canonicalises to "/", so every one of 61,673 title pages
+ *  handed Google a URL that declares itself a copy of another page. Search
+ *  Console filed them under "Alternate page with proper canonical tag", and
+ *  a validation there can never pass, because the canonical is correct. A
+ *  crumb may only name a page that stands on its own. */
 export function breadcrumbJsonLd(d: MediaDetail, url: string): Record<string, unknown> {
-  const section = d.mediaType === "tv" ? "TV Shows" : "Movies";
-  const sectionUrl = `${SITE_ORIGIN}/?type=${d.mediaType}`;
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_ORIGIN },
-      { "@type": "ListItem", position: 2, name: section, item: sectionUrl },
-      { "@type": "ListItem", position: 3, name: d.title, item: url },
+      { "@type": "ListItem", position: 2, name: d.title, item: url },
     ],
   };
 }
@@ -139,7 +111,6 @@ export function movieJsonLd(d: MediaDetail, url: string): Record<string, unknown
     genre: d.genres,
     director: directors(d),
     actor: actors(d),
-    aggregateRating: aggregateRating(d),
   });
 }
 
@@ -155,7 +126,6 @@ export function tvJsonLd(d: MediaDetail, url: string): Record<string, unknown> {
     numberOfSeasons: d.numberOfSeasons || undefined,
     genre: d.genres,
     actor: actors(d),
-    aggregateRating: aggregateRating(d),
   });
 }
 
