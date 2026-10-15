@@ -3,6 +3,14 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
 import type { CollectionDetail, CollectionSummary } from "./collections.functions";
+import {
+  LIST_EXCLUDED_GENRES,
+  RANKED_MIN_FILM_MINUTES,
+  RANKED_MIN_VOTES,
+  SINGLE_SOURCE_MIN_VOTES,
+  isRankable,
+  type ListInput,
+} from "./trust";
 
 // Country-of-origin collections ("The Best Japanese Movies"), computed at
 // request time from the media table instead of materialized by the nightly
@@ -70,26 +78,36 @@ export function originTitleFor(def: OriginDef, mediaType: "movie" | "tv"): strin
 
 interface OriginCandidate extends CardRow {
   overview: string | null;
+  film_length_minutes: number | null;
   rating_balasaur: number | null;
   quality_score: number | null;
 }
 
+/** Fetched past the 60 shown so the title-pattern check, which runs here
+ *  rather than in the database, still leaves a full shelf. */
+const POOL_HEADROOM = 20;
+
 /**
- * Fetch the eligible pool for one country shelf. The filter is the _elig gate
- * from rebuild_collections() translated to PostgREST: not suggestive, poster
- * and overview present, scored and quality-ranked, and corroborated, meaning
- * real TMDB vote volume OR an IMDb score backed by a critic source or real
- * popularity. Rows are cut to 60 by quality_score (the selection order), then
- * re-sorted for display by the number printed on the card, the same
- * selection-vs-display split the SQL uses.
+ * Fetch the eligible pool for one country shelf. The filter is the shared
+ * trust rule (src/lib/trust.ts), the same one rebuild_collections() applies
+ * through balasaur_rankable(): not suggestive, poster and overview present,
+ * scored, 25+ votes, two sources or one source with 500+ votes, no Talk or
+ * Reality TV, no feature under 40 minutes. The title patterns run in
+ * isRankable() over the fetched rows. TMDB's News genre is not read here: it
+ * lives in raw_tmdb, which this read does not fetch. Rows are cut to 60 by
+ * quality_score (the selection order), then re-sorted for display by the
+ * number printed on the card, the same selection-vs-display split the SQL
+ * uses.
  */
 async function fetchOriginPool(
   def: OriginDef,
   mediaType: "movie" | "tv",
 ): Promise<{ rows: OriginCandidate[]; total: number } | null> {
-  const { data, error, count } = await loose(supabaseAdmin)
+  let q = loose(supabaseAdmin)
     .from("media")
-    .select(`${CARD_COLS},overview,rating_balasaur,quality_score`, { count: "exact" })
+    .select(`${CARD_COLS},overview,rating_balasaur,quality_score,film_length_minutes`, {
+      count: "exact",
+    })
     .eq("media_type", mediaType)
     .contains("origins", [def.label])
     .eq("suggestive", false)
@@ -98,18 +116,68 @@ async function fetchOriginPool(
     .neq("overview", "")
     .not("rating_balasaur", "is", null)
     .not("quality_score", "is", null)
-    .or(
-      "vote_count.gte.25," +
-        "and(rating_imdb.not.is.null," +
-        "or(rating_rotten_tomatoes.not.is.null,rating_metacritic.not.is.null,popularity.gte.20))",
-    )
+    .gte("vote_count", RANKED_MIN_VOTES)
+    .or(TWO_SOURCES_OR_CROWD)
+    .not("genres", "ov", `{${LIST_EXCLUDED_GENRES.join(",")}}`);
+  if (mediaType === "movie") {
+    q = q.or(
+      `film_length_minutes.is.null,film_length_minutes.lt.1,film_length_minutes.gte.${RANKED_MIN_FILM_MINUTES}`,
+    );
+  }
+  const { data, error, count } = await q
     .order("quality_score", { ascending: false })
-    .limit(60);
+    .limit(60 + POOL_HEADROOM);
   if (error) {
     console.error(`[origin-collections] pool failed for ${def.slug}:`, error.message);
     return null;
   }
-  return { rows: (data ?? []) as unknown as OriginCandidate[], total: count ?? 0 };
+  const fetched = (data ?? []) as unknown as OriginCandidate[];
+  const rows = fetched.filter((r) => isRankable(candidateTrustInput(r)));
+  return {
+    rows: rows.slice(0, 60),
+    total: Math.max((count ?? 0) - (fetched.length - rows.length), 0),
+  };
+}
+
+/** Two of the four sources present, or one with a crowd behind it. Every pair
+ *  is spelled out because PostgREST has no count-of-non-nulls operator. */
+const SOURCE_COLS = [
+  "rating_imdb",
+  "rating_rotten_tomatoes",
+  "rating_metacritic",
+  "rating_tmdb",
+] as const;
+export const TWO_SOURCES_OR_CROWD = [
+  `vote_count.gte.${SINGLE_SOURCE_MIN_VOTES}`,
+  ...SOURCE_COLS.flatMap((a, i) =>
+    SOURCE_COLS.slice(i + 1).map((b) => `and(${a}.not.is.null,${b}.not.is.null)`),
+  ),
+].join(",");
+
+export function candidateTrustInput(r: {
+  media_type: string;
+  title: string;
+  genres: string[] | null;
+  film_length_minutes?: number | null;
+  rating_imdb: number | null;
+  rating_rotten_tomatoes: number | null;
+  rating_metacritic: number | null;
+  rating_tmdb: number | null;
+  vote_count: number | null;
+}): ListInput {
+  return {
+    mediaType: r.media_type,
+    title: r.title,
+    genres: r.genres,
+    filmLengthMinutes: r.film_length_minutes ?? null,
+    voteCount: r.vote_count,
+    ratings: {
+      imdb: r.rating_imdb,
+      rottenTomatoes: r.rating_rotten_tomatoes,
+      metacritic: r.rating_metacritic,
+      tmdb: r.rating_tmdb,
+    },
+  };
 }
 
 /** Display order: the score on the card, then quality, then a stable key. */

@@ -37,6 +37,8 @@
 // certain length a reader stops reading and starts skimming for the streaming
 // line.
 
+import { isScoreTrusted } from "./trust";
+
 export interface TitleProseInput {
   mediaType: string;
   title: string;
@@ -161,7 +163,11 @@ export function serviceList(services: string[]): string | null {
 export function titleProse(d: TitleProseInput): string {
   const parts: string[] = [];
   const sources = normalizedSources(d.ratings);
-  const score = d.ratings.balasaur;
+  // The trust rule in src/lib/trust.ts decides whether the Balasaur Score is
+  // said at all. Callers already strip an untrusted blend; checking here too
+  // means no future caller can put a hidden score back into the prose.
+  const ranked = isScoreTrusted({ ratings: d.ratings, voteCount: d.voteCount });
+  const score = ranked ? d.ratings.balasaur : undefined;
 
   // 1. Is it any good. The score, and the receipts behind it.
   if (typeof score === "number" && sources.length > 0) {
@@ -174,8 +180,10 @@ export function titleProse(d: TitleProseInput): string {
   const consensus = consensusNote(d.ratings, d.voteCount);
   if (consensus) parts.push(consensus);
 
-  // 2. How it sits next to the thing you already know.
-  const franchise = franchiseNote(d.franchise);
+  // 2. How it sits next to the thing you already know. A series rank is a
+  //    ranking by score, so it is never said about a title whose score the
+  //    page will not show: an order built on a hidden number reads as broken.
+  const franchise = ranked ? franchiseNote(d.franchise) : null;
   if (franchise) parts.push(franchise);
 
   // 3. Is it worth the evening. Seasons for TV, runtime for film.

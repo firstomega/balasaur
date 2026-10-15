@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "@/lib/catalog.functions";
+import { listExclusion } from "@/lib/trust";
 import type { MediaItem } from "@/types/media";
 
 // The release calendar: what comes out, day by day, one month per page.
@@ -45,6 +46,10 @@ export function nextMonth(m: string, delta: 1 | -1): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+export interface CalendarRow extends CardRow {
+  film_length_minutes: number | null;
+}
+
 export const getReleaseCalendar = createServerFn({ method: "GET" })
   .inputValidator((p: { month: string }) => {
     if (!p || !MONTH_RE.test(p.month)) throw new Error("Invalid month");
@@ -55,7 +60,7 @@ export const getReleaseCalendar = createServerFn({ method: "GET" })
     const end = `${nextMonth(p.month, 1)}-01`;
     const { data, error } = await loose(supabaseAdmin)
       .from("media")
-      .select(CARD_COLS)
+      .select(`${CARD_COLS},film_length_minutes`)
       // The calendar is the site presenting premieres unprompted, so the whole
       // fan-service tier (`suggestive`, superset of `sensitive`) stays out.
       .eq("suggestive", false)
@@ -73,16 +78,36 @@ export const getReleaseCalendar = createServerFn({ method: "GET" })
       console.error("[calendar] query failed:", error.message);
       return { month: p.month, days: [], total: 0 };
     }
-    const byDay = new Map<string, MediaItem[]>();
-    for (const r of (data ?? []) as unknown as CardRow[]) {
-      const item = rowToCardItem(r);
-      const day = (item.releaseDate ?? "").slice(0, 10);
-      if (!day) continue;
-      if (!byDay.has(day)) byDay.set(day, []);
-      byDay.get(day)!.push(item);
-    }
-    const days = [...byDay.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, items]) => ({ date, items }));
+    const days = calendarDays((data ?? []) as unknown as CalendarRow[]);
     return { month: p.month, days, total: days.reduce((n, d) => n + d.items.length, 0) };
   });
+
+/** Group a month's rows by release day, dropping what is not a premiere. */
+export function calendarDays(rows: CalendarRow[]): CalendarDay[] {
+  const byDay = new Map<string, MediaItem[]>();
+  for (const r of rows) {
+    // Trailers, shorts, specials and talk shows are not premieres anyone
+    // plans an evening around; the same rule keeps them off ranked lists.
+    // Upcoming titles have no votes yet, so only the exclusions apply here,
+    // not the vote floor. Their badges follow the card's own rule.
+    if (
+      listExclusion({
+        mediaType: r.media_type,
+        title: r.title,
+        genres: r.genres,
+        filmLengthMinutes: r.film_length_minutes,
+        ratings: {},
+      })
+    ) {
+      continue;
+    }
+    const item = rowToCardItem(r);
+    const day = (item.releaseDate ?? "").slice(0, 10);
+    if (!day) continue;
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day)!.push(item);
+  }
+  return [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, items]) => ({ date, items }));
+}

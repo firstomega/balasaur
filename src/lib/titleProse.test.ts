@@ -188,6 +188,62 @@ describe("titleProse catalog and franchise claims", () => {
     const out = titleProse(withCohort);
     expect(out).not.toContain("in this catalog");
     expect(/higher than \d+%/.test(out)).toBe(false);
+    // The low end went with it: "Most of the 800 1990s comedy movies in this
+    // catalog score higher" ranked against the same unheld shelf.
+    const low = titleProse({
+      ...base,
+      ratings: { balasaur: 40, imdb: 4.2, rottenTomatoes: 38 },
+      cohort: { label: "1990s comedy movies", size: 800, percentile: 12 },
+    } as TitleProseInput);
+    expect(low).not.toContain("in this catalog");
+    expect(low).not.toContain("score higher");
+    // Nor on one source, nor on a score the page hides.
+    const single = titleProse({
+      mediaType: "movie",
+      title: "X",
+      ratings: { balasaur: 83, tmdb: 8.3 },
+      cohort: { label: "2020s action movies", size: 2035, percentile: 96 },
+    } as TitleProseInput);
+    expect(single).not.toContain("in this catalog");
+    const thinShelf = titleProse({
+      ...base,
+      voteCount: 3,
+      cohort: { label: "2010s action movies", size: 2072, percentile: 99 },
+    } as TitleProseInput);
+    expect(thinShelf).not.toContain("in this catalog");
+  });
+
+  it("does not rank a title whose score the page hides", () => {
+    // Two sources but three votes: no badge, so no "Number 1 of 4" either.
+    const thin = titleProse({
+      ...base,
+      voteCount: 3,
+      franchise: { size: 4, rank: 1 },
+    });
+    expect(thin).not.toContain("its series");
+    // One source with a crowd behind it is shown, so it may be ranked in its series.
+    const crowd = titleProse({
+      mediaType: "tv",
+      title: "X",
+      voteCount: 2956,
+      ratings: { tmdb: 8.0 },
+      franchise: { size: 3, rank: 1 },
+    });
+    expect(crowd).toContain("The highest scoring of the 3 titles in its series.");
+  });
+
+  it("does not state a score the page hides, even when the caller passes one", () => {
+    // A one-vote TMDB 10 blends to 100. The badge is hidden, so is the sentence.
+    const oneVote = titleProse({
+      mediaType: "movie",
+      title: "X",
+      voteCount: 1,
+      ratings: { balasaur: 100, tmdb: 10 },
+    });
+    expect(oneVote).not.toContain("Balasaur Score");
+    const thin = titleProse({ ...base, voteCount: 3 });
+    expect(thin).not.toContain("Balasaur Score");
+    expect(titleProse({ ...base, voteCount: 30 })).toContain("A Balasaur Score of 84 out of 100");
   });
 
   it("names franchise standing", () => {

@@ -36,6 +36,15 @@ describe("rating markup", () => {
     expect(out["@type"]).toBe("Movie");
   });
 
+  it("leaves aggregateRating off a title whose score the page hides", () => {
+    // Two sources but three votes: no badge on the page. With the block gone
+    // for every title, a thin one cannot slip a rating back into the markup.
+    const thin = { ...base, voteCount: 3, ratings: { imdb: 9.6, tmdb: 10 } } as MediaDetail;
+    const out = movieJsonLd(thin, url);
+    expect(out.aggregateRating).toBeUndefined();
+    expect(JSON.stringify(out)).not.toContain("Rating");
+  });
+
   it("leaves aggregateRating off a TV series", () => {
     const dahmer = {
       ...base,

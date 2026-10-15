@@ -16,7 +16,7 @@ import {
   type TitleProseInput,
 } from "./titleProse";
 import { personProse } from "./personProse";
-import { computeBalasaurScore } from "./score";
+import { trustedScore } from "./trust";
 
 const RAW_ORIGIN = (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://balasaur.com";
 
@@ -293,7 +293,9 @@ export function detailDescription(d: DetailMetaInput, score: number | undefined)
 
   if (parts.length === 0) return clampDescription(d.overview || undefined, 160);
 
-  const franchise = franchiseNote(d.franchise ?? d.context?.franchise);
+  // A series rank is a ranking by score: said only when the score is shown.
+  const franchise =
+    typeof score === "number" ? franchiseNote(d.franchise ?? d.context?.franchise) : null;
   if (franchise) parts.push(franchise);
   const consensus = consensusNote(d.ratings ?? {}, d.voteCount);
   if (consensus) parts.push(consensus);
@@ -315,9 +317,11 @@ export function detailMeta(d: DetailMetaInput): {
   description: string;
 } {
   const year = d.year ? ` (${d.year})` : "";
-  // Detail payloads do not always carry the blended score; the page computes
-  // it at render time, so the description does the same.
-  const score = d.ratings?.balasaur ?? computeBalasaurScore(d.ratings ?? {});
+  // Same rule the page uses. Detail payloads do not always carry the blended
+  // score; the page computes it at render time, so the description does the
+  // same. A score the page will not show is not put in the search result
+  // either, and neither is a series rank built on it.
+  const score = trustedScore({ ratings: d.ratings ?? {}, voteCount: d.voteCount });
 
   const optional = familiarScores(d.ratings ?? {}).map((s, i) => (i === 0 ? `: ${s}` : `, ${s}`));
 

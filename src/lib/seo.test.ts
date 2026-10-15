@@ -325,6 +325,30 @@ describe("detailMeta description", () => {
     expect(full.endsWith("Balasaur Score 89 out of 100.")).toBe(true);
   });
 
+  it("keeps a score the page hides out of the search result", () => {
+    // Two sources but three votes: no badge on the page, so no Balasaur Score
+    // and no series rank in the description, while the familiar scores stay.
+    const franchise = { size: 4, rank: 1 };
+    const thin = detailMeta({
+      ...severance,
+      voteCount: 3,
+      ratings: { imdb: 9.6, tmdb: 10 },
+      context: { franchise },
+    });
+    expect(thin.title).not.toContain("/100");
+    expect(thin.description).not.toContain("Balasaur Score");
+    expect(thin.description).not.toContain("its series");
+    expect(thin.description).toContain("IMDb 9.6/10");
+    // A precomputed blend in the payload does not get past the rule either.
+    const carried = detailMeta({ ...inception, voteCount: 3 });
+    expect(carried.description).not.toContain("Balasaur Score");
+    // One source with a small crowd: nothing to show.
+    const single = detailMeta({ ...dahmer, voteCount: 355, context: { franchise } });
+    expect(single.title).not.toContain("/100");
+    expect(single.description).not.toContain("Balasaur Score");
+    expect(single.description).not.toContain("its series");
+  });
+
   it("counts a single episode in the singular", () => {
     const special = { ...dahmer, numberOfEpisodes: 1 };
     expect(detailMeta(special).description).toContain("ran 1 season of 1 episode.");
