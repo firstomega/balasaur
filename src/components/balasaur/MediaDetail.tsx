@@ -28,7 +28,7 @@ import { computeBalasaurScore } from "@/lib/score";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
-import { titleProse, normalizedSources, divergenceNote } from "@/lib/titleProse";
+import { titleProse, normalizedSources } from "@/lib/titleProse";
 import { appearsInQueryOptions } from "@/hooks/useMediaDetail";
 import { themeForKeyword } from "@/lib/taxonomy";
 import { deriveOrigins } from "@/lib/origins";
@@ -300,11 +300,9 @@ function DetailInner({
     awardNominee: detail.awardNominee,
     voteCount: detail.voteCount,
     ratings,
-    cohort: detail.context?.cohort,
     franchise: detail.context?.franchise,
   });
   const sourceBars = normalizedSources(ratings);
-  const divergence = divergenceNote(ratings);
   // One blend, read twice: the hero lockup and the Ratings section below it.
   const balasaur = ratings.balasaur ?? computeBalasaurScore(ratings);
 
@@ -570,9 +568,6 @@ function DetailInner({
                     </span>
                   </div>
                 ))}
-                {divergence && (
-                  <p className="pt-1.5 text-[13px] leading-relaxed text-text-muted">{divergence}</p>
-                )}
                 {typeof detail.voteCount === "number" && detail.voteCount > 0 && (
                   <p className="font-mono text-[12px] tabular-nums text-text-dim">
                     {detail.voteCount.toLocaleString("en-US")} audience votes
