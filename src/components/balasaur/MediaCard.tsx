@@ -5,6 +5,7 @@ import type { MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
 import { mediaSlug } from "@/lib/slug";
+import { trustedScore } from "@/lib/trust";
 import { ScoreBadge } from "./ScoreBadge";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { posterLightVars, safeHex } from "@/lib/posterLight";
@@ -242,6 +243,8 @@ function CardArt({
   // rather than a ground, then handed to the hover shadow below. Null for a
   // black-and-white poster, and that card keeps the plain shadow.
   const light = posterLightVars(placeholder);
+  // A score from one source or a handful of votes is not shown at all.
+  const score = trustedScore(item);
   // A lazy poster fades up out of its stored color instead of cutting to the
   // photograph. Eager cards start visible: they are the largest thing painted
   // above the fold, and hiding them until React hydrates would push that paint
@@ -324,9 +327,9 @@ function CardArt({
       {/* One score format everywhere: the Balasaur badge or nothing. (The old
           "★ 7.0" raw-IMDb/TMDB fallback is gone — with TMDB in the blend, a
           card without a badge genuinely has no rating data.) */}
-      {typeof item.ratings.balasaur === "number" && (
+      {typeof score === "number" && (
         <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
-          <ScoreBadge score={item.ratings.balasaur} />
+          <ScoreBadge score={score} />
           {showVotes && item.voteCount != null && (
             <span className="rounded-[4px] bg-background px-1 py-0.5 font-mono text-[11px] tabular-nums text-text-muted">
               {Intl.NumberFormat("en-US", { notation: "compact" }).format(item.voteCount)} ratings

@@ -1,6 +1,6 @@
 {
   "totals": {
-    "fontSize": 882,
+    "fontSize": 881,
     "radius": 329,
     "duration": 4,
     "easing": 8,
@@ -171,7 +171,7 @@
       "radius": 1
     },
     "src/components/balasaur/MediaDetail.tsx": {
-      "fontSize": 41,
+      "fontSize": 40,
       "radius": 17,
       "hex": 1,
       "containerWidth": 6

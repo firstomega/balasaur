@@ -18,49 +18,61 @@ const base = {
   crew: [{ name: "Christopher Nolan", role: "Director" }],
   facts: {},
   voteCount: 39857,
-  ratings: { imdb: 8.8, rottenTomatoes: 87, metacritic: 74, tmdb: 8.4, balasaur: 84 },
+  ratings: { imdb: 8.8, rottenTomatoes: 86, metacritic: 74, tmdb: 8.4, balasaur: 84 },
 } as unknown as MediaDetail;
 
-const rating = (d: MediaDetail) =>
-  (movieJsonLd(d, "https://balasaur.com/movie/27205") as Record<string, unknown>)
-    .aggregateRating as Record<string, unknown> | undefined;
+describe("rating markup", () => {
+  // The Balasaur Score is compiled from IMDb, Rotten Tomatoes, Metacritic and
+  // TMDB, and Google's review snippet policy rules out ratings aggregated from
+  // other sites. No title emits the block, however many sources it has.
+  const url = "https://balasaur.com/movie/inception-27205";
 
-describe("aggregateRating", () => {
-  it("counts the ratings the score averages, not TMDB's voters", () => {
-    // Inception blends four published ratings. It used to ship ratingCount
-    // 39857, the number of people who rated one of them.
-    expect(JSON.stringify(rating(base))).toBe(
-      '{"@type":"AggregateRating","ratingValue":84,"bestRating":100,"worstRating":0,"ratingCount":4}',
-    );
+  it("leaves aggregateRating off a fully rated movie", () => {
+    // Inception shipped "aggregateRating":{...,"ratingCount":4} until this change.
+    const out = movieJsonLd(base, url);
+    expect(out.aggregateRating).toBeUndefined();
+    expect(JSON.stringify(out)).not.toContain("Rating");
+    expect(out.name).toBe("Inception");
+    expect(out["@type"]).toBe("Movie");
   });
 
-  it("counts only the sources this title actually has", () => {
-    const twoOf = { ...base, ratings: { imdb: 8.8, tmdb: 8.4, balasaur: 87 } } as MediaDetail;
-    expect(rating(twoOf)?.ratingCount).toBe(2);
+  it("leaves aggregateRating off a title whose score the page hides", () => {
+    // Two sources but three votes: no badge on the page. With the block gone
+    // for every title, a thin one cannot slip a rating back into the markup.
+    const thin = { ...base, voteCount: 3, ratings: { imdb: 9.6, tmdb: 10 } } as MediaDetail;
+    const out = movieJsonLd(thin, url);
+    expect(out.aggregateRating).toBeUndefined();
+    expect(JSON.stringify(out)).not.toContain("Rating");
   });
 
-  it("no longer needs a TMDB vote count to emit anything", () => {
-    const noVotes = { ...base, voteCount: undefined } as MediaDetail;
-    expect(rating(noVotes)?.ratingCount).toBe(4);
-  });
-
-  it("says nothing when one source is the whole score", () => {
-    // DAHMER: TMDB 8.0 and nothing else. A score of 80 here is TMDB's number
-    // rescaled, so there is no average of ours to report.
+  it("leaves aggregateRating off a TV series", () => {
     const dahmer = {
       ...base,
       mediaType: "tv",
       title: "DAHMER - Monster: The Jeffrey Dahmer Story",
+      numberOfSeasons: 1,
       voteCount: 2911,
       ratings: { tmdb: 8, balasaur: 80 },
     } as unknown as MediaDetail;
-    const out = tvJsonLd(dahmer, "https://balasaur.com/tv/113988") as Record<string, unknown>;
+    const out = tvJsonLd(dahmer, "https://balasaur.com/tv/113988");
     expect(out.aggregateRating).toBeUndefined();
-    expect(out.name).toBe("DAHMER - Monster: The Jeffrey Dahmer Story");
+    expect(JSON.stringify(out)).not.toContain("Rating");
+    expect(out.numberOfSeasons).toBe(1);
   });
 
-  it("says nothing when there are no ratings at all", () => {
-    expect(rating({ ...base, ratings: {} } as MediaDetail)).toBeUndefined();
+  it("still drops empty fields from a title with almost no data", () => {
+    const bare = {
+      ...base,
+      posterUrl: undefined,
+      overview: "",
+      genres: [],
+      cast: [],
+      crew: [],
+      ratings: {},
+    } as unknown as MediaDetail;
+    expect(Object.keys(movieJsonLd(bare, url)).sort().join(",")).toBe(
+      "@context,@type,datePublished,name,url",
+    );
   });
 });
 

@@ -10,7 +10,7 @@ import {
   FILM_LENGTH_BUCKETS,
   STREAMING_OPTIONS,
 } from "@/types/filters";
-import { computeBalasaurScore } from "@/lib/score";
+import { trustedScore } from "@/lib/trust";
 import { originsForCountry } from "@/lib/origins";
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 
@@ -112,11 +112,16 @@ export function rowToCardItem(r: CardRow): MediaItem {
       rottenTomatoes: r.rating_rotten_tomatoes ?? undefined,
       metacritic: r.rating_metacritic ?? undefined,
       tmdb: r.rating_tmdb ?? undefined,
-      balasaur: computeBalasaurScore({
-        imdb: r.rating_imdb,
-        rottenTomatoes: r.rating_rotten_tomatoes,
-        metacritic: r.rating_metacritic,
-        tmdb: r.rating_tmdb,
+      // Absent when it rests on one source or a handful of votes, so every
+      // reader of the card (badge, list prose, filters) agrees.
+      balasaur: trustedScore({
+        ratings: {
+          imdb: r.rating_imdb,
+          rottenTomatoes: r.rating_rotten_tomatoes,
+          metacritic: r.rating_metacritic,
+          tmdb: r.rating_tmdb,
+        },
+        voteCount: r.vote_count,
       }),
     },
     genres: r.genres ?? [],
@@ -737,11 +742,14 @@ function searchRowToHit(r: SearchRow): SearchHit {
     title: r.title,
     year: r.year,
     posterUrl: r.poster_url,
-    balasaur: computeBalasaurScore({
-      imdb: r.rating_imdb,
-      rottenTomatoes: r.rating_rotten_tomatoes,
-      metacritic: r.rating_metacritic,
-      tmdb: r.rating_tmdb,
+    // Search rows carry no vote count, so only the source rule applies here.
+    balasaur: trustedScore({
+      ratings: {
+        imdb: r.rating_imdb,
+        rottenTomatoes: r.rating_rotten_tomatoes,
+        metacritic: r.rating_metacritic,
+        tmdb: r.rating_tmdb,
+      },
     }),
   };
 }

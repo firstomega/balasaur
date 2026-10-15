@@ -16,6 +16,11 @@ import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
 import { upsertInChunks } from "./chunkedUpsert";
+import {
+  recordAvailabilityEvents,
+  snapshotAvailability,
+  type AvailabilityClient,
+} from "./availabilityEvents";
 import type { EpisodeRating } from "./episodes";
 import { posterColorsFromJpeg, type PosterColors } from "./posterColor";
 import { tmdbImage } from "./tmdbImage";
@@ -1137,6 +1142,9 @@ export async function backfillFromRaw(opts?: {
 
         const genresChanged = JSON.stringify(newGenres) !== JSON.stringify(row.genres ?? []);
         const originsChanged = JSON.stringify(newOrigins) !== JSON.stringify(row.origins ?? []);
+        // No availability_events here on purpose: this re-reads the payload
+        // already stored, so a difference means our provider mapping changed,
+        // not that the title moved. Only a fresh fetch is an observation.
         const streamingChanged =
           JSON.stringify(newStreaming) !== JSON.stringify(row.streaming ?? []) ||
           JSON.stringify(newStreamingRegions) !== JSON.stringify(row.streaming_regions ?? []);
@@ -1272,6 +1280,13 @@ export async function backfillFromRaw(opts?: {
  */
 async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<void> {
   if (rows.length === 0) return;
+  // Streaming history: read what each title was on before this write replaces
+  // it. Fail-soft (returns null on any error), see availabilityEvents.ts.
+  const availabilityClient = loose(supabaseAdmin) as unknown as AvailabilityClient;
+  const priorAvailability = await snapshotAvailability(
+    availabilityClient,
+    rows.map((r) => r.media_id),
+  );
   const { totalChunks, failedChunks, firstError, recoveredChunks } = await upsertInChunks(
     rows,
     async (chunk) =>
@@ -1305,6 +1320,10 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
       `write did not persist: ${probeId} has fetched_at=${data?.fetched_at ?? "null"} after upsert`,
     );
   }
+  // Only after the catalog write is confirmed. Never throws: a missing
+  // availability_events table or a failed insert is logged and ignored, so the
+  // nightly sync's pass/fail still means "did the catalog land".
+  await recordAvailabilityEvents(availabilityClient, priorAvailability, rows, { tag });
 }
 
 /** Newest `updated_at` in `media` — the freshness signal the nightly canary asserts on. */
@@ -2497,30 +2516,23 @@ export async function fetchMediaDetail(
           // cached detail payload does not, each one silently costing something
           // that is invisible from the code alone:
           //
-          //   voteCount  drops AggregateRating.ratingCount, which is what made
-          //              Search Console call the rating markup invalid.
+          //   voteCount  drops the vote line under the source bars.
           //   balasaur   is computed at render time on the page but never
           //              written to the payload, so the head() that builds the
-          //              title tag and meta description could not see it.
-          //              Inception shipped as "Inception (2010) | Balasaur"
-          //              with no rating, and its description opened on the
-          //              second sentence.
+          //              meta description could not see it.
           //   streaming  is derived only on a fresh TMDB fetch, so cached
           //              payloads carry an empty array while the catalog row
-          //              says Disney+. Every title page lost both the "where
-          //              to watch" half of its title tag and the streaming
+          //              says Disney+. Every title page lost the streaming
           //              line, which is the one sentence exempt from the
           //              length cap because it is why most visitors arrived.
           //
           // Healed from the catalog row rather than by purging ~190k cached
           // details, which would also stampede TMDB with rebuild fetches.
           //   the per-source ratings are healed for the same reason. The
-          //              rating markup counts how many of the four sources the
-          //              score averaged, so a stale payload holding only
-          //              {tmdb} while the catalog row holds three sources
-          //              silently drops the block off pages like Seinfeld and
-          //              The Simpsons. Healing the sources keeps the count
-          //              describing the same population the score does.
+          //              title tag names IMDb and Rotten Tomatoes, so a stale
+          //              payload holding only {tmdb} while the catalog row
+          //              holds three sources ships pages like Seinfeld and
+          //              The Simpsons with a bare "Title (Year)" tag.
           const sourceCount = (r?: MediaDetail["ratings"]) =>
             [r?.imdb, r?.rottenTomatoes, r?.metacritic, r?.tmdb].filter(
               (v) => typeof v === "number",
