@@ -25,13 +25,23 @@ function panelRows(): Row[] {
   return rows;
 }
 
-/** The family gsc-sync stores for a URL, so the panel and index_status agree. */
+/**
+ * The family gsc-sync stores for a URL, read from gsc-sync itself, so a change
+ * to its rules fails here instead of silently splitting the panel's families
+ * from the ones index_status records.
+ */
 function familyOf(url: string): string {
-  if (url.includes("/best/")) return "collection";
-  if (url.includes("/person/")) return "person";
-  if (url.includes("/movie/")) return "movie";
-  if (url.includes("/tv/")) return "tv";
-  return "page";
+  const block = GSC_SYNC.slice(GSC_SYNC.indexOf("family: url.includes("));
+  const end = block.indexOf(",\n");
+  const chain = block.slice(0, end);
+  const rules = [...chain.matchAll(/url\.includes\("([^"]+)"\)\s*\?\s*"([a-z]+)"/g)].map(
+    (m) => [m[1], m[2]] as const,
+  );
+  const fallback = chain.match(/:\s*"([a-z]+)"\s*$/)?.[1];
+  expect(rules.length).toBe(4);
+  expect(fallback).toBe("page");
+  for (const [needle, family] of rules) if (url.includes(needle)) return family;
+  return fallback as string;
 }
 
 function sampleFn(): string {
@@ -109,6 +119,12 @@ describe("reporting views", () => {
       expect(MIGRATION).toContain(`revoke all on table public.${view} from anon, authenticated;`);
     });
   }
+
+  it("calls a panel URL indexed on the verdict gsc-sync stores for indexed pages", () => {
+    // gsc-sync stores Google's verdict as-is; PASS is "URL is on Google".
+    expect(GSC_SYNC).toContain("verdict: s.verdict ?? null");
+    expect(MIGRATION).toContain("(l.verdict = 'PASS') as indexed");
+  });
 
   it("counts only real positions in the top-20 and top-10 cuts", () => {
     // gsc_performance defaults position to 0; counting 0 as "<= 10" would

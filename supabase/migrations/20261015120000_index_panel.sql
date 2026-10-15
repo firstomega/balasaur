@@ -27,8 +27,9 @@
 --      next to panel_checked: below 100 means some URLs have never been
 --      inspected yet and the share is over fewer pages. family_indexed_pct
 --      splits it by page type. The title group was seeded mostly from titles
---      already indexed, so for titles watch for a fall; the /best and people
---      groups start mostly unindexed, so watch those for a rise. One run is
+--      already indexed, so for titles watch for a fall. /best starts at 14 of
+--      23 inspected lists indexed, and 16 of the 20 people have never been
+--      inspected, so watch those two for a rise. One run is
 --      noise at this size (one URL is one point); trust a move that holds for
 --      two runs.
 --
