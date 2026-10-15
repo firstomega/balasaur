@@ -260,8 +260,11 @@ function lengthClause(d: DetailMetaInput): string | null {
  *
  * TMDB's synopsis is on every site that mirrors the same API, so it is used
  * only when there is no fact at all to state.
+ *
+ * Not exported: `score` must already have passed the trust rule, and
+ * detailMeta is the one caller that guarantees it.
  */
-export function detailDescription(d: DetailMetaInput, score: number | undefined): string {
+function detailDescription(d: DetailMetaInput, score: number | undefined): string {
   const year = d.year ? ` (${d.year})` : "";
   const head = `${d.title}${year}`;
   const named = head.length <= DESCRIPTION_HEAD_MAX;

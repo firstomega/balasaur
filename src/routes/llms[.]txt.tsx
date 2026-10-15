@@ -40,7 +40,7 @@ rebuild date.
 
 ## Titles
 
-- [${SITE_ORIGIN}/sitemap-titles.xml](${SITE_ORIGIN}/sitemap-titles.xml): individual movie and TV pages, each carrying the blended score, the source ratings behind it, and where the title streams.
+- [${SITE_ORIGIN}/sitemap-titles.xml](${SITE_ORIGIN}/sitemap-titles.xml): individual movie and TV pages, each carrying the source ratings, where the title streams, and the blended score wherever enough ratings back it.
 
 ## Attribution
 

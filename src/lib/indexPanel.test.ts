@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 // run to the next, which nothing else would notice breaking: the SQL runs
 // fine with 90 rows, with a duplicate, or with the panel sorted last.
 const MIGRATION = readFileSync(
-  new URL("../../supabase/migrations/20261015120000_index_panel.sql", import.meta.url),
+  new URL("../../supabase/migrations/20261015120200_index_panel.sql", import.meta.url),
   "utf8",
 );
 const GSC_SYNC = readFileSync(
