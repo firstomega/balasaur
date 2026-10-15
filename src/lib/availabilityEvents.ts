@@ -32,10 +32,22 @@
 //        and not exists (                            -- and not reversed since
 //          select 1 from availability_events x
 //          where x.media_id = e.media_id and x.region = e.region
-//            and x.provider = e.provider and x.observed_at > e.observed_at);
+//            and x.provider = e.provider and x.observed_at > e.observed_at)
+//        and not exists (                            -- and not undoing a flicker
+//          select 1 from availability_events p
+//          where p.media_id = e.media_id and p.region = e.region
+//            and p.provider = e.provider and p.event <> e.event
+//            and p.observed_at >= e.previous_fetched_at
+//            and p.observed_at < e.observed_at);
 //
-//    A flicker shows up as a 'left' followed by an 'arrived' for the same key,
-//    so the "not reversed since" clause drops both halves of it.
+//    A flicker shows up as a 'left' at one refresh and an 'arrived' at the
+//    very next one. The "not reversed since" clause drops the 'left'. The last
+//    clause drops the 'arrived': it undoes a change recorded at the refresh
+//    just before it (that refresh stamped the fetched_at this event saved as
+//    previous_fetched_at, then recorded its events after it). Without that
+//    clause the restored service counts as a new arrival. A service that
+//    leaves, stays gone through a later refresh, and then comes back is a
+//    real return and is kept. (Checked 2026-10-15 against hand-built rows.)
 //
 // 3. A change to the provider name mapping in media.server.ts (a service
 //    renamed or newly recognised) shows up as departures and arrivals on the

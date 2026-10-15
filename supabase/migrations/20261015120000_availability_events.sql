@@ -14,9 +14,12 @@
 --     between previous_fetched_at and observed_at".
 --   * Provider data flickers. Count an event only after a later refresh
 --     agrees with it: media.fetched_at > observed_at, the current
---     media.streaming_regions still agrees, and no later event exists for the
---     same (media_id, region, provider). The full query is in the header of
---     src/lib/availabilityEvents.ts.
+--     media.streaming_regions still agrees, no later event exists for the
+--     same (media_id, region, provider), and the event does not undo an
+--     opposite event recorded at the refresh just before it (observed_at at or
+--     after this row's previous_fetched_at). That last condition is what drops
+--     the 'arrived' half of a one-refresh flicker. The full query is in the
+--     header of src/lib/availabilityEvents.ts.
 --   * A new title's first fetch writes nothing (no earlier state to compare).
 
 create table if not exists public.availability_events (

@@ -240,6 +240,20 @@ describe("recordAvailabilityEvents is fail-soft", () => {
     expect(r.written).toBe(0);
   });
 
+  it("stamps observed_at after the refresh's own fetched_at by default", async () => {
+    // The documented confirmation query relies on this order: the refresh that
+    // saw a change has fetched_at < observed_at, so only a LATER refresh
+    // confirms it, and the next event's previous_fetched_at lands at or before
+    // this observed_at, which is how a flicker's second half is recognised.
+    const fetchedAt = new Date().toISOString();
+    const f = fakeClient({});
+    await recordAvailabilityEvents(f.client, prior, refreshed, { log: quiet });
+    for (const row of f.inserted[0]) {
+      expect(row.observed_at >= fetchedAt).toBe(true);
+      expect(row.observed_on).toBe(row.observed_at.slice(0, 10));
+    }
+  });
+
   it("writes nothing when the snapshot could not be taken", async () => {
     const f = fakeClient({});
     const r = await recordAvailabilityEvents(f.client, null, refreshed, { now: NOW, log: quiet });
@@ -287,6 +301,8 @@ describe("strict media upsert wiring", () => {
     expect(verify).toBeGreaterThan(-1);
     expect(snap).toBeLessThan(upsert);
     expect(record).toBeGreaterThan(verify);
+    // observed_at must be the time of recording, after the rows were stamped.
+    expect(fn.slice(record, fn.indexOf(");", record))).not.toContain("now");
   });
 
   it("does not record history from the backfill, which re-reads stored payloads", () => {
