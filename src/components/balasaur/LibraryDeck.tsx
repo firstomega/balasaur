@@ -16,6 +16,7 @@ import {
 import type { UserStatusRecord } from "@/hooks/useUserStatus";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { ScoreBadge } from "./ScoreBadge";
+import { trustedScore } from "@/lib/trust";
 import { ChompMask } from "./ChompMask";
 import { EmptyState, EMPTY_ACTION_CLASS, EMPTY_ACTION_QUIET_CLASS } from "./EmptyState";
 
@@ -442,7 +443,7 @@ function DraggableCard({
 }
 
 function DeckInfo({ item }: { item: MediaItem }) {
-  const score = item.ratings.balasaur;
+  const score = trustedScore(item);
   const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
   return (
     <>
@@ -491,7 +492,7 @@ function CardFace({
   infoOpen?: boolean;
   chomp?: boolean;
 }) {
-  const score = item.ratings.balasaur;
+  const score = trustedScore(item);
   const cueColor = cue ? ACTION_HEX[cue] : null;
 
   return (

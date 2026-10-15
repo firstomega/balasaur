@@ -3,7 +3,7 @@
 // optional-safe — missing data is simply omitted.
 import type { MediaDetail, PersonDetail } from "@/types/media";
 import { SITE_NAME, SITE_ORIGIN, SITE_TAGLINE } from "./seo";
-import { computeBalasaurScore } from "./score";
+import { trustedScore } from "./trust";
 
 function dropEmpty<T extends Record<string, unknown>>(obj: T): T {
   for (const k of Object.keys(obj)) {
@@ -44,7 +44,8 @@ function aggregateRating(d: MediaDetail) {
     (v) => typeof v === "number",
   ).length;
   if (ratingCount < 2) return undefined;
-  const balasaur = r.balasaur ?? computeBalasaurScore(r);
+  // The page's own rule: no badge on the page, no rating in the markup.
+  const balasaur = trustedScore({ ratings: r, voteCount: d.voteCount });
   if (typeof balasaur !== "number") return undefined;
   return {
     "@type": "AggregateRating",

@@ -24,7 +24,7 @@ import { EpisodeHeatmap } from "./EpisodeHeatmap";
 import { ScoreBadge, tierName } from "./ScoreBadge";
 import { AmbientGlow } from "./AmbientGlow";
 import { ScrollRail } from "./ScrollRail";
-import { computeBalasaurScore } from "@/lib/score";
+import { trustedScore } from "@/lib/trust";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
@@ -283,6 +283,11 @@ function DetailInner({
   // Chinese, Indian, Spanish, French); English-language titles resolve to no bucket here.
   const origin = deriveOrigins(facts.originalLanguage, undefined)[0];
 
+  // One blend, read three times: the hero lockup, the Ratings section, and the
+  // prose. Undefined when it rests on one source or a handful of votes, so the
+  // badge, the tier name and the sentence all go together.
+  const balasaur = trustedScore({ ratings, voteCount: detail.voteCount });
+
   // Deterministic data-prose, composed from what this database holds. See
   // src/lib/titleProse.ts for why this exists and what it is allowed to say.
   const prose = titleProse({
@@ -299,14 +304,13 @@ function DetailInner({
     awardWinner: detail.awardWinner,
     awardNominee: detail.awardNominee,
     voteCount: detail.voteCount,
-    ratings,
+    // Strip an untrusted blend; never add one the payload did not carry.
+    ratings: { ...ratings, balasaur: ratings.balasaur === undefined ? undefined : balasaur },
     cohort: detail.context?.cohort,
     franchise: detail.context?.franchise,
   });
   const sourceBars = normalizedSources(ratings);
   const divergence = divergenceNote(ratings);
-  // One blend, read twice: the hero lockup and the Ratings section below it.
-  const balasaur = ratings.balasaur ?? computeBalasaurScore(ratings);
 
   return (
     <article>

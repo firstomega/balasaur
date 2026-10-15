@@ -44,6 +44,11 @@ describe("aggregateRating", () => {
     expect(rating(noVotes)?.ratingCount).toBe(4);
   });
 
+  it("says nothing when the page hides the score for want of votes", () => {
+    const thin = { ...base, voteCount: 3, ratings: { imdb: 9.6, tmdb: 10 } } as MediaDetail;
+    expect(rating(thin)).toBeUndefined();
+  });
+
   it("says nothing when one source is the whole score", () => {
     // DAHMER: TMDB 8.0 and nothing else. A score of 80 here is TMDB's number
     // rescaled, so there is no average of ours to report.

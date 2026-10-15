@@ -7,7 +7,7 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { titleProse, type TitleProseInput } from "./titleProse";
 import { personProse } from "./personProse";
-import { computeBalasaurScore } from "./score";
+import { trustedScore } from "./trust";
 
 const RAW_ORIGIN = (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://balasaur.com";
 
@@ -219,10 +219,11 @@ export function detailMeta(
   description: string;
 } {
   const year = d.year ? ` (${d.year})` : "";
-  // Same fallback the JSON-LD builder uses. Detail payloads do not carry the
-  // blended score; the page computes it at render time, so without this the
-  // title tag and the description both lost it.
-  const score = d.ratings?.balasaur ?? computeBalasaurScore(d.ratings ?? {});
+  // Same rule the page and the JSON-LD builder use. Detail payloads do not
+  // carry the blended score; the page computes it at render time, so without
+  // this the title tag and the description both lost it. A score the page
+  // will not show is not put in the search result either.
+  const score = trustedScore({ ratings: d.ratings ?? {}, voteCount: d.voteCount });
   const hasStreaming = (d.streaming ?? []).length > 0;
 
   const optional: string[] = [];
@@ -231,7 +232,7 @@ export function detailMeta(
 
   const prose = titleProse({
     ...d,
-    ratings: typeof score === "number" ? { ...d.ratings, balasaur: score } : d.ratings,
+    ratings: { ...d.ratings, balasaur: score },
     cohort: d.cohort ?? d.context?.cohort,
     franchise: d.franchise ?? d.context?.franchise,
   });
