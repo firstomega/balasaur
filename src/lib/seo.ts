@@ -234,11 +234,12 @@ function lengthClause(d: DetailMetaInput): string | null {
     const e = typeof d.numberOfEpisodes === "number" ? d.numberOfEpisodes : 0;
     const status = d.completionStatus ?? d.facts?.status;
     const seasons = `${n} season${n === 1 ? "" : "s"}`;
+    const episodes = `${e} episode${e === 1 ? "" : "s"}`;
     if (seriesFinished(status)) {
       if (!e) return `ran ${seasons}`;
-      return n === 1 ? `ran 1 season of ${e} episodes` : `ran ${seasons} and ${e} episodes`;
+      return n === 1 ? `ran 1 season of ${episodes}` : `ran ${seasons} and ${episodes}`;
     }
-    const body = e ? `${seasons} and ${e} episodes` : seasons;
+    const body = e ? `${seasons} and ${episodes}` : seasons;
     return status ? `has ${body} so far` : `has ${body}`;
   }
   if (d.mediaType === "movie" && typeof d.runtime === "number" && d.runtime > 0) {

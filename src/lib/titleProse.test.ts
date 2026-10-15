@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { titleProse, normalizedSources, type TitleProseInput } from "./titleProse";
+import { titleProse, normalizedSources, runtimeLabel, type TitleProseInput } from "./titleProse";
 
 const movie: TitleProseInput = {
   mediaType: "movie",
@@ -30,6 +30,14 @@ describe("normalizedSources", () => {
     // Birds of Prey sits at a flat 6 on IMDb, which IMDb itself prints as 6.0.
     expect(normalizedSources({ imdb: 6 })[0].shown).toBe("6.0/10");
     expect(normalizedSources({ tmdb: 8 })[0].shown).toBe("8.0/10");
+  });
+});
+
+describe("runtimeLabel", () => {
+  it("drops the minutes on the hour and the hours under one", () => {
+    expect(runtimeLabel(148)).toBe("2h 28m");
+    expect(runtimeLabel(120)).toBe("2h");
+    expect(runtimeLabel(48)).toBe("48m");
   });
 });
 

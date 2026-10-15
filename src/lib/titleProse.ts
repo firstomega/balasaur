@@ -136,11 +136,12 @@ export function franchiseNote(f: TitleProseInput["franchise"]): string | null {
     : `Number ${f.rank} of ${f.size} in its series by score.`;
 }
 
-/** "2h 28m", or "48m" under an hour. */
+/** "2h 28m", "2h" on the hour, or "48m" under an hour. */
 export function runtimeLabel(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return h ? `${h}h ${m}m` : `${m}m`;
+  if (!h) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
 }
 
 /** True when the series has stopped making episodes. */

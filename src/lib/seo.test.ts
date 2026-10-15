@@ -325,6 +325,19 @@ describe("detailMeta description", () => {
     expect(full.endsWith("Balasaur Score 89 out of 100.")).toBe(true);
   });
 
+  it("counts a single episode in the singular", () => {
+    const special = { ...dahmer, numberOfEpisodes: 1 };
+    expect(detailMeta(special).description).toContain("ran 1 season of 1 episode.");
+    const pilot = { ...severance, numberOfSeasons: 1, numberOfEpisodes: 1 };
+    expect(detailMeta(pilot).description).toContain("has 1 season and 1 episode so far.");
+  });
+
+  it("states a runtime on the hour without a zero", () => {
+    // 1,338 catalogued movies run a whole number of hours.
+    const out = detailMeta({ ...inception, runtime: 120 }).description;
+    expect(out).toStartWith("Inception (2010) runs 2h.");
+  });
+
   it("falls back to the synopsis only when there is no fact to state", () => {
     const out = detailMeta({
       mediaType: "movie",
