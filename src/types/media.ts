@@ -145,6 +145,10 @@ export interface PersonDetail {
   profileUrl?: string;
   imdbId?: string;
   groups: PersonCreditGroup[];
+  /** Whether this person is in the kept set Google is offered
+   *  (person_index_kept, see src/lib/indexKeep.ts). Read on every request,
+   *  never trusted from the cache; absent when the lookup failed. */
+  indexable?: boolean;
   /** Catalog statistics from person_stats(): counts, median, best decade,
    *  frequent collaborators. Attached at read time, never cached stale. */
   stats?: {
