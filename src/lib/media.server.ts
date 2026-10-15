@@ -17,7 +17,8 @@ import { computeQualityScore, computeRankScore } from "./rank";
 import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
 import { bestDecadeOf, pickTopCredits, rankedPool, type PersonCreditFacts } from "./personRanking";
-import { personListSlugs } from "./personLists";
+import { personListTitles } from "./personLists";
+import { RANKED_MIN_VOTES } from "./trust";
 import { upsertInChunks } from "./chunkedUpsert";
 import {
   recordAvailabilityEvents,
@@ -2895,7 +2896,42 @@ async function fetchPersonCreditRows(ids: string[]): Promise<PersonCreditRow[]> 
     if (error) throw new Error(error.message);
     out.push(...((data ?? []) as unknown as PersonCreditRow[]));
   }
+  await attachTmdbGenres(out);
   return out;
+}
+
+/**
+ * The trust rule keeps News shows off every ranked list, and News is a TMDB
+ * genre the stored genres fold into Documentary (Saturday Night Live and This
+ * Hour Has 22 Minutes are both tagged News). It is read from raw_tmdb, which
+ * is too heavy to pull for every credit, so only shows that could otherwise
+ * be ranked are asked for it. A failed read is logged and the rows go on
+ * without it, so the page still renders its scores.
+ */
+async function attachTmdbGenres(rows: PersonCreditRow[]): Promise<void> {
+  const tv = rows.filter(
+    (r) =>
+      r.media_type === "tv" &&
+      typeof r.rating_balasaur === "number" &&
+      (r.vote_count ?? 0) >= RANKED_MIN_VOTES,
+  );
+  if (tv.length === 0) return;
+  const byId = new Map(tv.map((r) => [r.media_id, r]));
+  const ids = [...byId.keys()];
+  for (let i = 0; i < ids.length; i += PERSON_CREDIT_CHUNK) {
+    const { data, error } = await loose(supabaseAdmin)
+      .from("media")
+      .select("media_id, tmdb_genres:raw_tmdb->genres")
+      .in("media_id", ids.slice(i, i + PERSON_CREDIT_CHUNK));
+    if (error) {
+      console.error("[person] TMDB genre read failed:", error.message);
+      return;
+    }
+    for (const g of (data ?? []) as { media_id: string; tmdb_genres: unknown }[]) {
+      const row = byId.get(g.media_id);
+      if (row) row.tmdb_genres = g.tmdb_genres;
+    }
+  }
 }
 
 /**
@@ -2951,8 +2987,9 @@ async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
 /**
  * The /best lists built for this person, so the page can link to them. The
  * roster is keyed by TMDB person id, which keeps a namesake's list off this
- * page; the slug is then rebuilt from the roster's own spelling of the name
- * and looked up, so a list that was never minted is never linked. Fail-soft.
+ * page; the list is then found by the exact title the nightly rebuild gives
+ * it from the roster's own spelling of the name, so a list that was never
+ * minted is never linked. Fail-soft.
  */
 async function attachPersonLists(detail: PersonDetail): Promise<void> {
   try {
@@ -2969,7 +3006,7 @@ async function attachPersonLists(detail: PersonDetail): Promise<void> {
       .from("collections")
       .select("slug, title, item_count")
       .eq("kind", "person")
-      .in("slug", personListSlugs(name));
+      .in("title", personListTitles(name));
     if (listErr || !lists) return;
     detail.lists = (lists as { slug: string; title: string; item_count: number }[])
       .map((l) => ({ slug: l.slug, title: l.title, itemCount: l.item_count }))

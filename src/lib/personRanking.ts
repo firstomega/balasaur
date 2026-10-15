@@ -28,6 +28,9 @@ export interface PersonCreditFacts {
   /** TMDB's franchise id. Stored for movies only. */
   tmdb_collection_id: number | null;
   people: unknown;
+  /** TMDB's own genre objects (`raw_tmdb->genres`), for the trust rule's News
+   *  check on shows. Fetched for TV candidates only; absent means unread. */
+  tmdb_genres?: unknown;
 }
 
 /** A ranked set drawn from six titles is that person's whole filmography in a
@@ -54,6 +57,16 @@ const PERSON_DECADE_MIN_TITLES = 3;
  *  "Self- Team Captain". 26,000+ rows on 2026-10-15. */
 export const SELF_ROLE_PATTERN = "^\\s*(self|himself|herself|themselves|themself)([^a-z]|$)";
 
+/** A "Self" credit that names characters is a sketch performance, not an
+ *  appearance: SNL's cast is "Self - Various Characters", Bob Odenkirk and
+ *  David Cross on Mr. Show are "Self - Host / Various", Sid Caesar on Your
+ *  Show of Shows is "Self - Regular Performer", Jim Carrey on In Living Color
+ *  and Martin Short on SCTV are "Self - Various Characters". Not applied in a
+ *  documentary, where the same words describe the subject (Choi Eun-hee in
+ *  The Lovers and the Despot is "Self - Actress / Various Roles"). Read from
+ *  the live roles on 2026-10-15. */
+export const SELF_PERFORMING_PATTERN = "various|character|regular performer";
+
 /** Footage reused from elsewhere: "(archive footage)", "Self (archival footage)". */
 export const ARCHIVE_ROLE_PATTERN = "archiv";
 
@@ -76,6 +89,7 @@ export const VOICE_NARRATOR_PATTERN = "^\\s*(the\\s+)?narrat[a-z]*\\s*\\(voice\\
 export const DOC_NON_PERFORMING_PATTERN = "^\\s*((the\\s+)?narrat.*|cast)?\\s*$";
 
 const SELF_RE = new RegExp(SELF_ROLE_PATTERN, "i");
+const SELF_PERFORMING_RE = new RegExp(SELF_PERFORMING_PATTERN, "i");
 const ARCHIVE_RE = new RegExp(ARCHIVE_ROLE_PATTERN, "i");
 const HOST_RE = new RegExp(HOST_ROLE_PATTERN, "i");
 const VOICE_NARRATOR_RE = new RegExp(VOICE_NARRATOR_PATTERN, "i");
@@ -85,9 +99,8 @@ const DOC_NON_PERFORMING_RE = new RegExp(DOC_NON_PERFORMING_PATTERN, "i");
  *  appearing as themselves, hosting, or narrating. */
 export function isWorkRole(role: string | null | undefined, isDocumentary: boolean): boolean {
   const r = role ?? "";
-  if (SELF_RE.test(r) || ARCHIVE_RE.test(r) || HOST_RE.test(r) || VOICE_NARRATOR_RE.test(r)) {
-    return false;
-  }
+  if (ARCHIVE_RE.test(r) || HOST_RE.test(r) || VOICE_NARRATOR_RE.test(r)) return false;
+  if (SELF_RE.test(r) && (isDocumentary || !SELF_PERFORMING_RE.test(r))) return false;
   if (isDocumentary && DOC_NON_PERFORMING_RE.test(r)) return false;
   return true;
 }
@@ -116,11 +129,20 @@ export function isWorkCredit(
   );
 }
 
+/** TMDB genre names from the stored `[{id, name}]` objects. */
+function tmdbGenreNames(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((g) => (g && typeof g === "object" ? (g as { name?: unknown }).name : undefined))
+    .filter((n): n is string => typeof n === "string");
+}
+
 function trustInputOf(r: PersonCreditFacts): ListInput {
   return {
     mediaType: r.media_type,
     title: r.title,
     genres: r.genres,
+    tmdbGenres: tmdbGenreNames(r.tmdb_genres),
     filmLengthMinutes: r.film_length_minutes,
     voteCount: r.vote_count,
     ratings: {
@@ -163,9 +185,10 @@ export function rankedPool<T extends PersonCreditFacts>(rows: T[], name: string)
 
 /**
  * Which franchise a title belongs to, for the one-per-franchise cap. Movies
- * carry TMDB's collection id. Shows do not, so a show falls back to its title
- * up to the first colon, which puts Adventure Time and Adventure Time: Distant
- * Lands together.
+ * in a TMDB collection carry its id. Everything else (every show, and movies
+ * outside a collection) falls back to the title up to the first colon, which
+ * puts Adventure Time with Adventure Time: Distant Lands, and Rocko's Modern
+ * Life with the Static Cling movie.
  */
 export function franchiseKey(r: Pick<PersonCreditFacts, "tmdb_collection_id" | "title">): string {
   if (typeof r.tmdb_collection_id === "number") return `c:${r.tmdb_collection_id}`;

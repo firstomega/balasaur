@@ -1,48 +1,16 @@
 // The person page and the /best list built for the same person link to each
 // other. The list is minted nightly by rebuild_collections() from
-// person_collection_roster, with the slug
-//   'best-' || slugify(unaccent(person_name)) || '-movies' (or '-shows')
-// and the title 'The Best ' || person_name || ' Movies' (or ' Shows').
-// These helpers mirror those two expressions so either page can find the
-// other without a schema change. A mismatch costs a missing link, never a
-// wrong one: the slug is looked up, not assumed.
+// person_collection_roster, with the title
+//   'The Best ' || person_name || ' Movies' (or ' Shows')
+// These helpers mirror that one expression, so either page can find the other
+// by an exact match on the roster's own spelling of the name. Matching the
+// title rather than rebuilding the slug means no copy of slugify() and
+// unaccent() lives here to drift. A mismatch costs a missing link, never a
+// wrong one: the list is looked up, not assumed.
 
-/** Letters unaccent() rewrites that Unicode decomposition leaves alone. */
-const UNACCENT_EXTRA: Record<string, string> = {
-  ø: "o",
-  Ø: "O",
-  ß: "ss",
-  æ: "ae",
-  Æ: "AE",
-  œ: "oe",
-  Œ: "OE",
-  ł: "l",
-  Ł: "L",
-  đ: "d",
-  Đ: "D",
-  ð: "d",
-  þ: "th",
-  ı: "i",
-};
-
-/** public.slugify(unaccent(t)), in JavaScript. */
-export function sqlSlugify(t: string): string {
-  const unaccented = t
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[øØßæÆœŒłŁđĐðþı]/g, (c) => UNACCENT_EXTRA[c] ?? c);
-  return unaccented
-    .toLowerCase()
-    .replace(/\+/g, "-plus")
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-/** The two list slugs a roster name can have. */
-export function personListSlugs(name: string): string[] {
-  const s = sqlSlugify(name);
-  return s ? [`best-${s}-movies`, `best-${s}-shows`] : [];
+/** The two list titles a roster name can have, movies first. */
+export function personListTitles(name: string): string[] {
+  return name.trim() ? [`The Best ${name} Movies`, `The Best ${name} Shows`] : [];
 }
 
 /** The roster name a person list's title was built from. */

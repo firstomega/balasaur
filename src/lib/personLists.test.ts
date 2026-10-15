@@ -1,26 +1,31 @@
 import { describe, expect, it } from "bun:test";
-import { personListSlugs, personNameFromListTitle, sqlSlugify } from "./personLists";
+import { personListTitles, personNameFromListTitle } from "./personLists";
 
 const json = (v: unknown) => JSON.stringify(v);
 
-describe("personListSlugs", () => {
-  // Each one is a live slug from the collections table on 2026-10-15.
-  it("reproduces the slugs rebuild_collections() minted", () => {
-    expect(personListSlugs("Tom Hanks")[0]).toBe("best-tom-hanks-movies");
-    expect(personListSlugs("Samuel L. Jackson")[0]).toBe("best-samuel-l-jackson-movies");
-    expect(personListSlugs("J.K. Simmons")[1]).toBe("best-j-k-simmons-shows");
-    expect(personListSlugs("Luis Guzmán")[0]).toBe("best-luis-guzman-movies");
-    expect(personListSlugs("Vincent D'Onofrio")[0]).toBe("best-vincent-d-onofrio-movies");
-    expect(personListSlugs("Robert Downey Jr.")[0]).toBe("best-robert-downey-jr-movies");
+describe("personListTitles", () => {
+  // Live titles from the collections table on 2026-10-15, including names
+  // with initials, an accent and an apostrophe, which a rebuilt slug had to
+  // get exactly right and an exact title match does not.
+  it("reproduces the titles rebuild_collections() minted", () => {
+    expect(json(personListTitles("Tom Hanks"))).toBe(
+      json(["The Best Tom Hanks Movies", "The Best Tom Hanks Shows"]),
+    );
+    expect(personListTitles("Samuel L. Jackson")[0]).toBe("The Best Samuel L. Jackson Movies");
+    expect(personListTitles("Luis Guzmán")[0]).toBe("The Best Luis Guzmán Movies");
+    expect(personListTitles("Vincent D'Onofrio")[1]).toBe("The Best Vincent D'Onofrio Shows");
   });
 
-  it("folds the letters unaccent() rewrites", () => {
-    expect(sqlSlugify("Nikolaj Lie Kaas Ørsted")).toBe("nikolaj-lie-kaas-orsted");
-    expect(sqlSlugify("Rock & Roll+")).toBe("rock-and-roll-plus");
+  it("returns nothing for an empty name", () => {
+    expect(json(personListTitles("  "))).toBe(json([]));
   });
 
-  it("returns nothing for a name with no letters", () => {
-    expect(json(personListSlugs("…"))).toBe(json([]));
+  it("round-trips through personNameFromListTitle", () => {
+    for (const name of ["Tom Hanks", "J.K. Simmons", "Robert Downey Jr."]) {
+      for (const title of personListTitles(name)) {
+        expect(personNameFromListTitle(title)).toBe(name);
+      }
+    }
   });
 });
 

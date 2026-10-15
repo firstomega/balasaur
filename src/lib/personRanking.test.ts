@@ -149,6 +149,28 @@ describe("pickTopCredits", () => {
     }
   });
 
+  it("keeps a show TMDB files under News out, as every ranked list does", () => {
+    const news = [{ id: 10763, name: "News" }];
+    const rows = [
+      credit("Saturday Night Live", 99, ["Ann Lee"], {
+        media_type: "tv",
+        genres: ["Comedy"],
+        tmdb_genres: [{ id: 35, name: "Comedy" }, ...news],
+        role: "Self - Various Characters",
+      }),
+      credit("A Sitcom", 90, ["Ann Lee"], {
+        media_type: "tv",
+        tmdb_genres: [{ id: 35, name: "Comedy" }],
+      }),
+      ...filler("Ann Lee", PERSON_TOP_MIN_LED),
+    ];
+    expect(titles(rankedPool(rows, "Ann Lee")).includes("Saturday Night Live")).toBe(false);
+    // The role and stored genres alone would admit it: only News keeps it out.
+    const unread = rows.map((r) => ({ ...r, tmdb_genres: undefined }));
+    expect(titles(rankedPool(unread, "Ann Lee"))[0]).toBe("Saturday Night Live");
+    expect(pickTopCredits(rows, "Ann Lee")[0].title).toBe("A Sitcom");
+  });
+
   it("keeps a documentary the person directed", () => {
     const rows = [
       credit("The Last Waltz", 85, ["Martin Scorsese"], {
@@ -195,6 +217,9 @@ describe("isWorkRole", () => {
       "Herself - Host",
       "Self - Narrator (voice)",
       "Self (archive footage)",
+      "Self / Various (archive footage)",
+      "Self - Anchor",
+      "Self - Team Captain",
       "Self- Team Captain",
       "Themself",
       "(archive footage)",
@@ -224,6 +249,22 @@ describe("isWorkRole", () => {
     }
   });
 
+  it('keeps a "Self" credit that names the characters played', () => {
+    // Live roles, 2026-10-15: SNL's cast, Mr. Show's two leads, Sid Caesar.
+    for (const role of [
+      "Self - Various Characters",
+      "Self - Host / Various",
+      "Self / Various",
+      "Self - Regular Performer",
+      "Himself / Various Characters",
+    ]) {
+      expect(isWorkRole(role, false)).toBe(true);
+    }
+    // In a documentary the same words describe the subject, not a part.
+    expect(isWorkRole("Self - Actress / Various Roles", true)).toBe(false);
+    expect(isWorkRole("Self / Various Character Scratch Singing", true)).toBe(false);
+  });
+
   it("treats a documentary's narrator and unnamed cast slot as not a performance", () => {
     expect(isWorkRole("Narrator", true)).toBe(false);
     expect(isWorkRole("Narrateur", true)).toBe(false);
@@ -242,10 +283,14 @@ describe("isWorkCredit", () => {
 });
 
 describe("franchiseKey", () => {
-  it("uses the collection id for movies and the title stem for shows", () => {
+  it("uses the collection id when there is one and the title stem otherwise", () => {
     expect(franchiseKey({ tmdb_collection_id: 10194, title: "Toy Story 3" })).toBe("c:10194");
     expect(franchiseKey({ tmdb_collection_id: null, title: "Adventure Time" })).toBe(
       franchiseKey({ tmdb_collection_id: null, title: "Adventure Time: Distant Lands" }),
+    );
+    // A movie outside a collection joins its show: Rocko's Modern Life.
+    expect(franchiseKey({ tmdb_collection_id: null, title: "Rocko's Modern Life" })).toBe(
+      franchiseKey({ tmdb_collection_id: null, title: "Rocko's Modern Life: Static Cling" }),
     );
     expect(franchiseKey({ tmdb_collection_id: null, title: "Breaking Bad" })).not.toBe(
       franchiseKey({ tmdb_collection_id: null, title: "Better Call Saul" }),
