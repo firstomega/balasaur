@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { deriveAudience } from "./taxonomy";
+import { deriveAudience, themeEchoesSubGenre } from "./taxonomy";
 
 // This project's bun:test type stubs only expose toBe, so arrays are compared
 // through a stable join.
@@ -36,5 +36,19 @@ describe("deriveAudience", () => {
     expect(aud({ certification: "R", genres: [], mediaType: "movie", matureContent: true })).toBe(
       "Adult",
     );
+  });
+});
+
+describe("themeEchoesSubGenre", () => {
+  it("treats a theme fired by the same keyword as the same fact", () => {
+    expect(themeEchoesSubGenre("Espionage", "Spy / Espionage")).toBe(true);
+    expect(themeEchoesSubGenre("Mafia & Mob", "Mob / Mafia")).toBe(true);
+    expect(themeEchoesSubGenre("Aliens", "Alien Invasion")).toBe(true);
+    expect(themeEchoesSubGenre("Detective", "Procedural")).toBe(true);
+  });
+
+  it("keeps a different idea distinct", () => {
+    expect(themeEchoesSubGenre("Heist", "Spy / Espionage")).toBe(false);
+    expect(themeEchoesSubGenre("Time Travel", "Space Opera")).toBe(false);
   });
 });

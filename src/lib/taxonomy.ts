@@ -245,6 +245,26 @@ export const SUBGENRE_OPTIONS: { label: string; parents: string[] }[] = SUBGENRE
 /** Every distinct cross-genre theme, alphabetical. */
 export const THEME_OPTIONS: string[] = Array.from(new Set(Object.values(THEME_MAP))).sort();
 
+/** For each sub-genre, the themes that fire from the same TMDB keywords. A "spy"
+ *  keyword writes both "Spy / Espionage" and "Espionage", so a title sharing both
+ *  with another shares one fact, not two. Derived from the two dictionaries above
+ *  so it cannot drift from what deriveFacets() writes. */
+const SUBGENRE_ECHO_THEMES: Map<string, Set<string>> = new Map(
+  SUBGENRE_RULES.map((r) => [
+    r.label,
+    new Set(r.keywords.map((k) => THEME_MAP[norm(k)]).filter((t): t is string => !!t)),
+  ]),
+);
+
+/** Whether a theme only restates a sub-genre (same source keyword, or the same
+ *  word: "Superhero" and "Superhero", "Military" and "Military Sci-Fi"). */
+export function themeEchoesSubGenre(theme: string, subGenre: string): boolean {
+  if (SUBGENRE_ECHO_THEMES.get(subGenre)?.has(theme)) return true;
+  const t = norm(theme).replace(/s$/, "");
+  const s = norm(subGenre);
+  return s.includes(t);
+}
+
 /** Audience bands, broadest → most mature. */
 export const AUDIENCE_OPTIONS: string[] = ["Kids", "Family", "Teen", "Adult", "Mature"];
 
