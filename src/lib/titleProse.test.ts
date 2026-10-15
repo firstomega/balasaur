@@ -197,6 +197,31 @@ describe("titleProse cohort and franchise claims", () => {
     expect(single).not.toContain("in this catalog");
   });
 
+  it("does not rank a title whose score the page hides", () => {
+    // Two sources but three votes: no badge, so no "Number 1 of 4" either.
+    const thin = titleProse({
+      ...base,
+      voteCount: 3,
+      franchise: { size: 4, rank: 1 },
+    });
+    expect(thin).not.toContain("its series");
+    const thinShelf = titleProse({
+      ...base,
+      voteCount: 3,
+      cohort: { label: "2010s action movies", size: 2072, percentile: 99 },
+    });
+    expect(thinShelf).not.toContain("in this catalog");
+    // One source with a crowd behind it is shown, so it may be ranked in its series.
+    const crowd = titleProse({
+      mediaType: "tv",
+      title: "X",
+      voteCount: 2956,
+      ratings: { tmdb: 8.0 },
+      franchise: { size: 3, rank: 1 },
+    });
+    expect(crowd).toContain("The highest scoring of the 3 titles in its series.");
+  });
+
   it("states the low end flatly", () => {
     const low = titleProse({
       ...base,

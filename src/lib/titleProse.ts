@@ -25,6 +25,8 @@
 // paragraph is also hard-capped: past a certain length a reader stops reading
 // and starts skimming for the streaming line.
 
+import { isScoreTrusted } from "./trust";
+
 export interface TitleProseInput {
   mediaType: string;
   title: string;
@@ -160,14 +162,17 @@ export function titleProse(d: TitleProseInput): string {
   if (consensus) parts.push(consensus);
 
   // 3. How it sits next to the thing you already know. A series is the set a
-  //    viewer holds most firmly, so it outranks the genre shelf.
-  if (d.franchise && d.franchise.size >= 2) {
+  //    viewer holds most firmly, so it outranks the genre shelf. Both are
+  //    rankings by score, so neither is said about a title whose score the
+  //    page will not show: an order built on a hidden number reads as broken.
+  const ranked = isScoreTrusted({ ratings: d.ratings, voteCount: d.voteCount });
+  if (ranked && d.franchise && d.franchise.size >= 2) {
     parts.push(
       d.franchise.rank === 1
         ? `The highest scoring of the ${d.franchise.size} titles in its series.`
         : `Number ${d.franchise.rank} of ${d.franchise.size} in its series by score.`,
     );
-  } else if (d.cohort && d.cohort.size >= 50 && sources.length >= 2) {
+  } else if (ranked && d.cohort && d.cohort.size >= 50 && sources.length >= 2) {
     // Two sources minimum. Ranking a title above 96% of a shelf on the strength
     // of one unvetted number is the kind of ordering a skeptic can break.
     const size = d.cohort.size.toLocaleString("en-US");

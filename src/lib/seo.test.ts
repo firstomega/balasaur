@@ -79,6 +79,15 @@ describe("detailMeta", () => {
     expect(detailMeta(base).title).toContain("rating 81/100");
   });
 
+  it("keeps a score the page hides out of the search result", () => {
+    // Two sources but three votes, then one source with a small crowd.
+    const thin = detailMeta({ ...base, voteCount: 3, ratings: { imdb: 9.6, tmdb: 10 } });
+    expect(thin.title).not.toContain("/100");
+    expect(thin.description).not.toContain("Balasaur Score");
+    const single = detailMeta({ ...base, voteCount: 355, ratings: { tmdb: 8.8 } });
+    expect(single.title).not.toContain("/100");
+  });
+
   it("describes the page with its own prose, not the shared TMDB synopsis", () => {
     const overview = "A pair of brothers return to their hometown and find something waiting.";
     const out = detailMeta({ ...base, overview });
