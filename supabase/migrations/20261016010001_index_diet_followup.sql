@@ -2,8 +2,11 @@
 -- on its own: it parses TMDB credits for about 9,000 titles, which is too
 -- slow to sit inside a migration. Until it runs, every person page says
 -- noindex, the people sitemap is empty, and index_status_sample() errors.
--- Safe to run again at any time; the nightly cron job does the same thing
--- concurrently once the view has been filled once.
+-- Safe to run again at any time. The 09:36 cron job refreshes it every
+-- night, and fills it the plain way if this file was never run.
+--
+-- Read 2026-10-16: the same ranking, run as a plain read-only SELECT,
+-- finished inside the query tool's time limit. Its run time was not timed.
 
 refresh materialized view public.person_index_kept;
 

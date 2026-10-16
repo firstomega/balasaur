@@ -231,3 +231,29 @@ describe("retired lists and the index panel", () => {
     expect(inserted.map((m) => m[2]).sort()).toEqual(out);
   });
 });
+
+describe("the nightly jobs that read the kept sets", () => {
+  it("the people refresh fills an empty view instead of failing every night", () => {
+    // A concurrent refresh raises on a view that was never filled, which is
+    // the state this migration leaves it in until the follow-up runs.
+    const job = MIGRATION.slice(
+      MIGRATION.indexOf("select cron.schedule('person-index-kept-refresh'"),
+      MIGRATION.indexOf("$job$\n$$);"),
+    );
+    expect(job).toContain("ispopulated");
+    expect(job).toContain("refresh materialized view concurrently public.person_index_kept;");
+    expect(job).toContain("else\n    refresh materialized view public.person_index_kept;");
+  });
+
+  it("the inspection sample draws from the kept sets and keeps its three windows", () => {
+    const start = MIGRATION.indexOf("create or replace function public.index_status_sample()");
+    const fn = MIGRATION.slice(start, MIGRATION.indexOf("$$;", start));
+    expect(fn).toContain("from collection_index_kept\n  where kept");
+    expect(fn).toContain("from index_kept_media");
+    expect(fn).toContain("from person_index_kept");
+    expect(/from (collections|indexable_media|person_index)\b(?!_)/.test(fn)).toBe(false);
+    const windows = [...fn.matchAll(/\) < (\d+)\s*$/gm)].map((m) => Number(m[1]));
+    // Same windows as 20261015120200_index_panel.sql: 35 lists, 45 titles, 20 people.
+    expect(windows).toEqual([35, 45, 20]);
+  });
+});

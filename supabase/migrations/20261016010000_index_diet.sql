@@ -4,7 +4,11 @@
 -- project, followed straight away by 20261016010001_index_diet_followup.sql,
 -- which fills the people set (it parses TMDB credits for about 9,000 titles,
 -- too slow to sit inside a migration). Until the follow-up runs, every person
--- page says noindex and the people sitemap is empty. Safe to run twice.
+-- page says noindex, the people sitemap is empty, and index_status_sample()
+-- errors, which fails the Monday and Thursday 10:30 index inspection
+-- (index_status_snapshot). If the follow-up is skipped, the 09:36 job below
+-- fills the people set itself the next morning.
+-- Safe to run twice.
 --
 -- WHY. On 2026-10-15 the site offered about 70,000 near-identical pages on a
 -- five-month-old domain with no backlinks. Google indexed about 21% of a
@@ -68,7 +72,8 @@ grant select on public.index_kept_media to service_role;
 --     (4,191st) fall outside and are swapped off the panel below.
 --
 -- Created empty: filling it parses TMDB credits for every title with 500+
--- votes. The follow-up file fills it; cron keeps it fresh after that.
+-- votes. The follow-up file fills it; cron keeps it fresh after that, and
+-- fills it at 09:36 on its own if the follow-up was skipped.
 create materialized view if not exists public.person_index_kept as
 with base as (
   select media_id, media_type, vote_count, raw_tmdb->'credits' as cr
@@ -233,8 +238,22 @@ grant select on public.collection_index_kept to service_role;
 -- so a failure in one does not roll back the other.
 select cron.schedule('collection-index-kept-refresh', '35 9 * * *',
   $$refresh materialized view concurrently public.collection_index_kept$$);
-select cron.schedule('person-index-kept-refresh', '36 9 * * *',
-  $$refresh materialized view concurrently public.person_index_kept$$);
+-- The people job heals itself: a concurrent refresh fails on a view that has
+-- never been filled, so if the follow-up file was never run the job fills it
+-- the plain way on its first night instead of failing every night after.
+select cron.schedule('person-index-kept-refresh', '36 9 * * *', $$
+do $job$
+begin
+  if exists (select 1 from pg_matviews
+             where schemaname = 'public' and matviewname = 'person_index_kept'
+               and ispopulated) then
+    refresh materialized view concurrently public.person_index_kept;
+  else
+    refresh materialized view public.person_index_kept;
+  end if;
+end
+$job$
+$$);
 
 -- ---------------------------------------------------------------------------
 -- 4. IndexNow announces only kept URLs
