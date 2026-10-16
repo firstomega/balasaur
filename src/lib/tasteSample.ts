@@ -5,8 +5,8 @@
 // page met them with a locked panel, which is the one thing guaranteed not to
 // make anybody want one. This is seventeen real catalog rows, run through the
 // same `computeTaste` as a real list, so the example card is drawn by the real
-// rule table rather than typed out by hand: the name, the sentence, the four
-// posters and the disagreement are all consequences of these rows.
+// rule table rather than typed out by hand: the name, the sentence and the
+// four posters are all consequences of these rows.
 //
 // It lives in its own module so the rows never reach the profile page or any
 // other importer of `@/lib/taste`.

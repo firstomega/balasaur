@@ -36,7 +36,7 @@ export const Route = createFileRoute("/taste")({
       {
         name: "description",
         content:
-          "One image with the name your list earns, the four titles you scored highest, and the one you liked that critics did not.",
+          "One image with the name your list earns and the four highest-scoring titles on it.",
       },
       // A page whose whole point is one visitor's own list has nothing to
       // offer a search result.
@@ -55,8 +55,7 @@ function TastePage() {
           Taste Card
         </h1>
         <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-text-muted">
-          The name your list earns, the four titles you scored highest, and the one you liked that
-          critics did not.
+          The name your list earns, and the four highest-scoring titles on it.
         </p>
 
         <CardSection />
@@ -92,7 +91,6 @@ function cardOptions(profile: TasteProfile) {
     counts: profile.counts,
     decades: profile.decadeCount,
     posters: profile.posters,
-    contrarian: profile.contrarian?.line ?? null,
   };
 }
 
@@ -143,11 +141,6 @@ function CardSection() {
     return (
       <section className="mt-9">
         <TasteCardPreview options={cardOptions(profile)} />
-        {profile.contrarian && (
-          <p className="mt-4 text-center text-[13px] text-text-dim">
-            Critic score from {profile.contrarian.criticSource}
-          </p>
-        )}
       </section>
     );
   }

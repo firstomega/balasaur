@@ -46,7 +46,6 @@ export const POSTER_SIZE = "w342";
 // House palette, mirrored from styles.css because a canvas cannot read CSS
 // variables. Keep in step with `:root` there.
 const GROUND = "#08090b";
-const PANEL = "#12161c";
 const BRIGHT = "#ffffff";
 /** The proof sentence sits on the lit half, so it is brighter than body copy
  *  elsewhere on the site: it clears 4.5:1 over any tint `tintAlpha` allows. */
@@ -76,8 +75,6 @@ export interface TasteCardOptions {
   decades: number;
   /** Up to four, already ordered highest score first. */
   posters: CardPoster[];
-  /** "You liked Venom. Critics gave it 31." Omitted when nothing was panned. */
-  contrarian?: string | null;
   /** Defaults to balasaur.com/taste. */
   url?: string;
 }
@@ -453,22 +450,7 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
   ctx.fillStyle = DIM;
   ctx.fillText("Title data from TMDB and OMDb", PAD, footerY);
 
-  // The disagreement, sitting above the footer.
-  let bandBottomLimit = footerY - 150;
-  if (o.contrarian) {
-    ctx.font = `600 40px ${SANS}`;
-    const lines = wrapLines(measure, o.contrarian, INNER - 72, 3);
-    const boxH = 56 + lines.length * 54;
-    const boxY = footerY - 132 - boxH;
-    ctx.fillStyle = PANEL;
-    roundRect(ctx, PAD, boxY, INNER, boxH, 8);
-    ctx.fill();
-    ctx.fillStyle = tint.a;
-    ctx.fillRect(PAD, boxY, 7, boxH);
-    ctx.fillStyle = BRIGHT;
-    lines.forEach((line, i) => ctx.fillText(line, PAD + 44, boxY + 68 + i * 54));
-    bandBottomLimit = boxY - 76;
-  }
+  const bandBottomLimit = footerY - 150;
 
   // The posters, edge to edge: the widest tiles the canvas can give them, and
   // the only element that flexes, so the slack from a one-line versus two-line

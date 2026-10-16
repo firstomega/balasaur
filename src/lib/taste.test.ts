@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test";
 import type { StatusMap, UserStatusRecord } from "@/hooks/useUserStatus";
 import {
   ARCHETYPES,
-  CONTRARIAN_CRITIC_MAX,
   HOUSE_TINT,
   MIN_BASIS_TITLES,
   cardTint,
@@ -110,7 +109,6 @@ describe("computeTaste, empty and tiny libraries", () => {
     expect(p.total).toBe(0);
     expect(p.needed).toBe(MIN_BASIS_TITLES);
     expect(p.posters.length).toBe(0);
-    expect(p.contrarian).toBe(null);
     expect(p.decadeCount).toBe(0);
   });
 
@@ -386,52 +384,6 @@ describe("posters", () => {
   });
 });
 
-describe("the contrarian pick", () => {
-  it("is the Loved title critics scored lowest", () => {
-    const p = profileOf([
-      fact({ title: "Venom", critic: 31 }),
-      fact({ title: "Battleship", critic: 41 }),
-      fact({ title: "Parasite", critic: 96 }),
-      ...many(9),
-    ]);
-    expect(p.contrarian?.line).toBe("You liked Venom. Critics gave it 31.");
-    expect(p.contrarian?.title).toBe("Venom");
-  });
-
-  it("stays silent when nothing was panned", () => {
-    const p = profileOf(many(12, { critic: CONTRARIAN_CRITIC_MAX + 1 }));
-    expect(p.contrarian).toBe(null);
-  });
-
-  it("includes a title sitting exactly on the cutoff", () => {
-    const p = profileOf([fact({ title: "Edge", critic: CONTRARIAN_CRITIC_MAX }), ...many(9)]);
-    expect(p.contrarian?.title).toBe("Edge");
-  });
-
-  it("comes from the Loved list even when the archetype describes the watched list", () => {
-    const loved = [fact({ title: "Venom", critic: 31 })];
-    const seen = many(20, { critic: 20, genres: ["Comedy"] });
-    const m: StatusMap = { ...library(loved, liked), ...library(seen, watched) };
-    const p = computeTaste(m, [...loved, ...seen]);
-    expect(p.basis).toBe("watched");
-    expect(p.contrarian?.title).toBe("Venom");
-  });
-
-  it("stays silent when the panned title was watched but never Loved", () => {
-    const p = profileOf(many(12, { critic: 20 }), watched);
-    expect(p.contrarian).toBe(null);
-  });
-
-  it("breaks a tie by title", () => {
-    const p = profileOf([
-      fact({ title: "Zardoz", critic: 30 }),
-      fact({ title: "Alone", critic: 30 }),
-      ...many(9),
-    ]);
-    expect(p.contrarian?.title).toBe("Alone");
-  });
-});
-
 describe("the published table", () => {
   it("gives every archetype a name and a rule a reader can check", () => {
     expect(ARCHETYPES.length).toBeGreaterThan(11);
@@ -689,9 +641,8 @@ describe("the example card", () => {
     expect(p.decadeCount).toBe(5);
   });
 
-  it("has four posters and a disagreement to print", () => {
+  it("has four posters to print", () => {
     expect(p.posters.length).toBe(4);
     expect(json(p.posters.map((x) => x.score))).toBe(json([87, 84, 83, 83]));
-    expect(p.contrarian?.line).toBe("You liked Event Horizon. Critics gave it 35.");
   });
 });

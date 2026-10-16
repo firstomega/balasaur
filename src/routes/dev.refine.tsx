@@ -410,7 +410,6 @@ function TastePanel() {
           counts: profile.counts,
           decades: profile.decadeCount,
           posters: profile.posters,
-          contrarian: profile.contrarian?.line ?? null,
         }}
       />
     </section>
