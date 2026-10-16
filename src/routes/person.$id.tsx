@@ -11,6 +11,7 @@ import {
   noindexMeta,
 } from "@/lib/seo";
 import { personJsonLd } from "@/lib/jsonld";
+import { isIndexablePerson } from "@/lib/indexKeep";
 
 export const Route = createFileRoute("/person/$id")({
   loader: async ({ context, params }) => {
@@ -41,23 +42,16 @@ export const Route = createFileRoute("/person/$id")({
     const { title, description } = d
       ? personMeta(d)
       : { title: "Balasaur", description: "Person details on Balasaur." };
-    // Half a million people are reachable through credits links, most with a
-    // couple of rows to their name. Only a real filmography earns an index
-    // slot; the rest stay crawlable with noindex, mirroring the title gate.
-    //
-    // Count titles this site carries, not TMDB credits. groups comes from
-    // combined_credits with no catalog lookup, so someone with fifty credits
-    // for titles the catalog does not hold cleared a gate meant to keep them
-    // out, and the page it let through has nothing on it. stats.titles is the
-    // person_stats count over the catalog, and 8 is the same threshold the
-    // people sitemap applies to person_index, so the two gates now agree on
-    // which people are worth an index slot. stats is absent below 3 titles,
-    // which falls on the noindex side of the same test.
-    const workCount = d?.stats?.titles ?? 0;
+    // Half a million people are reachable through credits links. Only the
+    // kept set is offered to Google: the 850 most famous people with a real
+    // filmography in the catalog (person_index_kept, see indexKeep.ts). The
+    // people sitemap lists exactly that set. Everyone else stays crawlable
+    // with noindex, and so does a page whose lookup failed: unconfirmed is
+    // not kept, the same answer the sitemap gives.
     return {
       meta: [
         ...buildMeta({ title, description, url, image: d?.profileUrl, type: "profile" }),
-        ...(d && workCount < 8 ? [noindexMeta()] : []),
+        ...(d && !isIndexablePerson(d) ? [noindexMeta()] : []),
       ],
       links: [canonicalLink(url)],
       ...(d ? { scripts: [jsonLdScript(personJsonLd(d, url))] } : {}),

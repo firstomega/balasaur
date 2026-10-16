@@ -189,6 +189,24 @@ export const getCollectionRedirect = createServerFn({ method: "GET" })
 export interface CollectionDetail {
   row: CollectionRow;
   items: MediaItem[];
+  /** Offered to Google: in collection_index_kept with kept = true, or a
+   *  country shelf that passed its own gate. Absent when the lookup failed,
+   *  which the page treats as not kept. See src/lib/indexKeep.ts. */
+  indexable?: boolean;
+}
+
+/** Is this materialized list in the kept set? undefined when the read fails. */
+async function listIsKept(slug: string): Promise<boolean | undefined> {
+  const { data, error } = await loose(supabaseAdmin)
+    .from("collection_index_kept")
+    .select("kept")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) {
+    console.error("[collections] kept-set lookup failed:", error.message);
+    return undefined;
+  }
+  return (data as { kept: boolean } | null)?.kept === true;
 }
 
 export const getCollection = createServerFn({ method: "GET" })
@@ -212,20 +230,23 @@ export const getCollection = createServerFn({ method: "GET" })
       return buildOriginCollection(slug);
     }
 
-    const { data: itemRows, error: itemsErr } = await loose(supabaseAdmin)
-      .from("collection_items")
-      .select(`rank, media:media_id ( ${CARD_COLS} )`)
-      .eq("slug", slug)
-      .order("rank", { ascending: true });
+    const [{ data: itemRows, error: itemsErr }, indexable] = await Promise.all([
+      loose(supabaseAdmin)
+        .from("collection_items")
+        .select(`rank, media:media_id ( ${CARD_COLS} )`)
+        .eq("slug", slug)
+        .order("rank", { ascending: true }),
+      listIsKept(slug),
+    ]);
     if (itemsErr) {
       console.error("[collections] items failed:", itemsErr.message);
-      return { row: row as CollectionRow, items: [] };
+      return { row: row as CollectionRow, items: [], indexable: false };
     }
 
     const items = ((itemRows ?? []) as unknown as { rank: number; media: CardRow | null }[])
       .filter((r) => r.media)
       .map((r) => rowToCardItem(r.media as CardRow));
-    return { row: row as CollectionRow, items };
+    return { row: row as CollectionRow, items, indexable };
   });
 
 /** One slot on a shelf: the rank and the card that holds it. */

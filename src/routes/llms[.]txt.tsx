@@ -36,7 +36,7 @@ strictly by Balasaur Score and rebuilt nightly, and each page states its own
 rebuild date.
 
 - [${SITE_ORIGIN}/collections](${SITE_ORIGIN}/collections): index of every ranked collection.
-- [${SITE_ORIGIN}/sitemap-pages.xml](${SITE_ORIGIN}/sitemap-pages.xml): machine-readable list of all collection URLs.
+- [${SITE_ORIGIN}/sitemap-pages.xml](${SITE_ORIGIN}/sitemap-pages.xml): the collections that do not repeat a broader list, as a machine-readable file.
 
 ## Titles
 

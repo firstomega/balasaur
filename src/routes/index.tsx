@@ -54,16 +54,10 @@ import type { MediaItem } from "@/types/media";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { SITE_ORIGIN, canonicalLink, jsonLdScript } from "@/lib/seo";
+import { SITE_ORIGIN, canonicalLink, jsonLdScript, noindexMeta } from "@/lib/seo";
+import { MAX_PAGE, canonicalPath, homeIsIndexable, isFiltered, pageNumber } from "@/lib/homePaging";
 import { websiteJsonLd } from "@/lib/jsonld";
 
-/** ?page=N to a row offset. Anything junk reads as page 1, and the ceiling
- *  stops a crawler wandering into an unbounded range of empty pages. */
-const MAX_PAGE = 400;
-function pageNumber(raw: string | undefined): number {
-  const n = Number.parseInt(raw ?? "1", 10);
-  return Number.isFinite(n) && n >= 1 && n <= MAX_PAGE ? n : 1;
-}
 function pageOffset(raw: string | undefined): number {
   return (pageNumber(raw) - 1) * PAGE_SIZE;
 }
@@ -72,19 +66,6 @@ const BASE_TITLE = "Balasaur: Stop Scrolling, Start Watching";
 
 /** The homepage's light is the brand's own blue. See the mount below. */
 const BRAND_GLOW = "#3b82f6";
-
-/** True when anything other than the page cursor is narrowing the catalog. */
-function isFiltered(search: FilterSearch | undefined): boolean {
-  if (!search) return false;
-  return Object.entries(search).some(([k, v]) => k !== "page" && v !== undefined && v !== "");
-}
-
-/** Where this view says it lives. Filtered slices consolidate to the root. */
-function canonicalPath(search: FilterSearch | undefined): string {
-  if (isFiltered(search)) return "/";
-  const n = pageNumber(search?.page);
-  return n > 1 ? `/?page=${n}` : "/";
-}
 
 /** Page 2 and beyond say so, rather than 400 URLs sharing one title. */
 function pageTitle(search: FilterSearch | undefined): string {
@@ -150,18 +131,20 @@ export const Route = createFileRoute("/")({
           "Movies and TV scored 0 to 100 by blending IMDb, Rotten Tomatoes, Metacritic and TMDB. Filter by service, genre, year or score to find what to watch tonight.",
       },
       { property: "og:url", content: SITE_ORIGIN + "/" },
+      ...(homeIsIndexable(match?.search as FilterSearch | undefined) ? [] : [noindexMeta()]),
     ],
     links: [
-      // Page 2 and beyond self-canonicalise: each is a distinct slice of the
-      // catalog, not a duplicate of the homepage, and pointing them all at "/"
-      // would tell Google to ignore the very links the trail exists to offer.
+      // Page 2 and beyond self-canonicalise and say "noindex, follow" (see
+      // homeIsIndexable): pointing them at "/" would tell Google to ignore
+      // the very links the trail exists to offer, and indexing them spent
+      // crawl budget on 400 slices of one grid.
       //
       // A FILTERED view is the opposite case and used to be handled wrong.
       // /?genre=Horror&page=3 canonicalised to /?page=3, which is a different
       // set of titles, so the page claimed to be a page it was not. Filters
       // produce hundreds of near-duplicate slices of one catalog and none of
       // them is the canonical home for anything, so they all consolidate to "/"
-      // and the crawl budget goes to the 61,673 title pages instead.
+      // and the crawl budget goes to the kept title pages instead.
       canonicalLink(SITE_ORIGIN + canonicalPath(match?.search as FilterSearch | undefined)),
     ],
     scripts: [jsonLdScript(websiteJsonLd())],
