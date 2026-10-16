@@ -223,7 +223,10 @@ select slug, kind, item_count, top_count, max_shared, parents,
         and item_count >= 10                                -- LIST_KEEP_MIN_ITEMS
         and top_count > 0
         and max_shared * 2 < top_count) as kept             -- LIST_MAX_PARENT_SHARE (under half)
-from judged;
+from judged
+-- Created empty and filled by the follow-up file: filling it here pushed the
+-- migration past the 60-second limit of the tool it was applied through.
+with no data;
 
 create unique index if not exists collection_index_kept_slug on public.collection_index_kept (slug);
 
@@ -236,8 +239,19 @@ grant select on public.collection_index_kept to service_role;
 -- Kept fresh after the nightly jobs: rebuild_collections() at 09:20,
 -- person_index at 09:30, IndexNow at 09:40, which reads both sets. Two jobs,
 -- so a failure in one does not roll back the other.
-select cron.schedule('collection-index-kept-refresh', '35 9 * * *',
-  $$refresh materialized view concurrently public.collection_index_kept$$);
+select cron.schedule('collection-index-kept-refresh', '35 9 * * *', $$
+do $job$
+begin
+  if exists (select 1 from pg_matviews
+             where schemaname = 'public' and matviewname = 'collection_index_kept'
+               and ispopulated) then
+    refresh materialized view concurrently public.collection_index_kept;
+  else
+    refresh materialized view public.collection_index_kept;
+  end if;
+end
+$job$
+$$);
 -- The people job heals itself: a concurrent refresh fails on a view that has
 -- never been filled, so if the follow-up file was never run the job fills it
 -- the plain way on its first night instead of failing every night after.
@@ -411,6 +425,8 @@ on conflict (from_slug) do nothing;
 --   best-crime-shows-on-hulu        (8 of 10)                  -> best-shows-on-max
 --   best-mystery-movies-on-tubi     (9 of 10)                  -> best-crime-movies
 --   best-romance-movies-on-tubi     (9 of 10)                  -> best-fantasy-movies-on-tubi
+-- Applied live 2026-10-16 as an UPDATE of the same eight rows (old url to new
+-- url): the Supabase MCP tool hangs on any DELETE. The end state is identical.
 delete from public.index_panel where url in (
   'https://balasaur.com/person/119143',
   'https://balasaur.com/person/123813',

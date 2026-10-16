@@ -236,13 +236,19 @@ describe("the nightly jobs that read the kept sets", () => {
   it("the people refresh fills an empty view instead of failing every night", () => {
     // A concurrent refresh raises on a view that was never filled, which is
     // the state this migration leaves it in until the follow-up runs.
-    const job = MIGRATION.slice(
-      MIGRATION.indexOf("select cron.schedule('person-index-kept-refresh'"),
-      MIGRATION.indexOf("$job$\n$$);"),
-    );
+    const start = MIGRATION.indexOf("select cron.schedule('person-index-kept-refresh'");
+    const job = MIGRATION.slice(start, MIGRATION.indexOf("$job$\n$$);", start));
     expect(job).toContain("ispopulated");
     expect(job).toContain("refresh materialized view concurrently public.person_index_kept;");
     expect(job).toContain("else\n    refresh materialized view public.person_index_kept;");
+  });
+
+  it("the list refresh fills an empty view instead of failing every night", () => {
+    const start = MIGRATION.indexOf("select cron.schedule('collection-index-kept-refresh'");
+    const job = MIGRATION.slice(start, MIGRATION.indexOf("$job$\n$$);", start));
+    expect(job).toContain("ispopulated");
+    expect(job).toContain("refresh materialized view concurrently public.collection_index_kept;");
+    expect(job).toContain("else\n    refresh materialized view public.collection_index_kept;");
   });
 
   it("the inspection sample draws from the kept sets and keeps its three windows", () => {

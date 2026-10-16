@@ -8,6 +8,7 @@
 -- Read 2026-10-16: the same ranking, run as a plain read-only SELECT,
 -- finished inside the query tool's time limit. Its run time was not timed.
 
+refresh materialized view public.collection_index_kept;
 refresh materialized view public.person_index_kept;
 
 -- What to expect, read 2026-10-15: 850 rows, rank 1 Robert Downey Jr.,
