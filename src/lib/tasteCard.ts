@@ -452,9 +452,10 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
 
   const bandBottomLimit = footerY - 150;
 
-  // The posters, edge to edge: the widest tiles the canvas can give them, and
-  // the only element that flexes, so the slack from a one-line versus two-line
-  // name lands on the artwork instead of opening a hole in the middle.
+  // The posters, edge to edge: the widest tiles the canvas can give them. The
+  // band stops at its ceiling on every card (the longest name and sentence
+  // still leave 669px for it), so it sits centred in that room and the slack
+  // from a one-line versus two-line name splits evenly above and below it.
   const bandTopLimit = labelBaseline + 96;
   const n = Math.max(posters.length, 1);
   const gap = 4;

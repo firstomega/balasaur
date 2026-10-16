@@ -55,7 +55,7 @@ function TastePage() {
           Taste Card
         </h1>
         <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-text-muted">
-          The name your list earns, and the four highest-scoring titles on it.
+          The name your list earns and the four highest-scoring titles on it.
         </p>
 
         <CardSection />

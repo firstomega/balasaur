@@ -426,11 +426,11 @@ describe("the real library on file", () => {
   const REAL: Array<[genres: string[], year: string, score: number]> = [
     [["Animation", "Action", "Adventure", "Science Fiction", "Fantasy"], "2021", 89],
     [["Family", "Comedy", "Animation", "Adventure"], "1995", 89],
-    [["Animation", "Comedy", "Science Fiction", "Fantasy", "Action", "Adventure"], "2013", 89], // prettier-ignore
+    [["Animation", "Comedy", "Science Fiction", "Fantasy", "Action", "Adventure"], "2013", 89],
     [["Adventure", "Action", "Science Fiction"], "1977", 88],
     [["Animation", "Family", "Science Fiction"], "2008", 88],
     [["Animation", "Family", "Adventure", "Drama", "Comedy"], "2015", 87],
-    [["Animation", "Drama", "Science Fiction", "Fantasy", "Action", "Adventure"], "2021", 87], // prettier-ignore
+    [["Animation", "Drama", "Science Fiction", "Fantasy", "Action", "Adventure"], "2021", 87],
     [["Animation", "Action", "Adventure", "Science Fiction"], "2018", 87],
     [["Animation", "Comedy", "Family", "Adventure"], "2009", 87],
     [["Animation", "Action", "Adventure", "Science Fiction"], "2023", 87],
