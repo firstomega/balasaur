@@ -24,7 +24,8 @@ import { EpisodeHeatmap } from "./EpisodeHeatmap";
 import { ScoreBadge, tierName } from "./ScoreBadge";
 import { AmbientGlow } from "./AmbientGlow";
 import { ScrollRail } from "./ScrollRail";
-import { trustedScore } from "@/lib/trust";
+import { isRankable, trustedScore } from "@/lib/trust";
+import { listLabel } from "@/lib/ranksOn";
 import { displayYear } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
@@ -304,6 +305,17 @@ function DetailInner({
     franchise: detail.context?.franchise,
   });
   const sourceBars = normalizedSources(ratings);
+  // A list position is a promise the title belongs there. One that no longer
+  // passes the trust rule (one source, a handful of votes, a trailer) keeps
+  // its page but loses every "#N on" claim, here and in the closing rail.
+  const rankable = isRankable({
+    ratings,
+    voteCount: detail.voteCount,
+    mediaType: detail.mediaType,
+    title: detail.title,
+    genres: detail.genres,
+    filmLengthMinutes: detail.mediaType === "movie" ? detail.runtime : null,
+  });
 
   return (
     <article>
@@ -448,6 +460,7 @@ function DetailInner({
             <section>
               <SectionHeading>The read</SectionHeading>
               <p className="text-[15px] leading-relaxed text-text-bright">{prose}</p>
+              {rankable && <RanksOn key={detail.id} mediaId={detail.id} title={detail.title} />}
             </section>
           )}
 
@@ -778,7 +791,7 @@ function DetailInner({
         </aside>
       </div>
 
-      <ShelfRail mediaId={detail.id} title={detail.title} />
+      {rankable && <ShelfRail mediaId={detail.id} title={detail.title} />}
 
       {/* Trailer dialog: iframe only mounted on open */}
       {detail.trailer && (
@@ -820,6 +833,44 @@ function DetailInner({
   );
 }
 
+// One line under the read naming the lists this title holds a place on, each
+// linked: "Breaking Bad is #1 on Best Crime Shows on Netflix, #1 on Best Drama
+// Shows and #1 on Best Shows of 2008." The number is the position the linked
+// page prints, so following the link shows where it came from. Same query as
+// the closing rail, prefetched by the route so the links are in the HTML.
+// Nothing renders while loading, on error, or for a title on no list.
+//
+// The line sits on the first screen, so it renders only when the lists were in
+// hand at first render. When the route's lookup ran past its budget, a line
+// arriving after hydration would shove the synopsis and everything under it
+// down (a layout shift, counted in CLS) on every visit served that cached
+// page. The caller keys this by title so the decision is made once per page.
+function RanksOn({ mediaId, title }: { mediaId: string; title: string }) {
+  const { data } = useQuery(appearsInQueryOptions(mediaId));
+  const [inFirstRender] = useState(() => data !== undefined);
+  const lists = inFirstRender ? (data?.ranksOn ?? []) : [];
+  if (lists.length === 0) return null;
+  return (
+    <p className="mt-3 text-lg leading-relaxed text-text">
+      {title} is{" "}
+      {lists.map((p, i) => (
+        <span key={p.slug}>
+          {i > 0 && (i === lists.length - 1 ? " and " : ", ")}
+          <span className="font-mono tabular-nums text-text-bright">#{p.rank}</span> on{" "}
+          <Link
+            to="/best/$slug"
+            params={{ slug: p.slug }}
+            className="text-text-bright underline decoration-border-strong underline-offset-2 transition-colors hover:text-primary"
+          >
+            {listLabel(p)}
+          </Link>
+        </span>
+      ))}
+      .
+    </p>
+  );
+}
+
 // The page closes on the shelf this title ranks in: the collection, the place
 // it holds, and the titles either side of it carrying their rank numerals, so
 // the order on screen is explained by what is on screen. Replaces the "Appears
@@ -829,7 +880,7 @@ function DetailInner({
 // not earned a shelf spot. Those titles end the page where it ended before.
 function ShelfRail({ mediaId, title }: { mediaId: string; title: string }) {
   const { data } = useQuery(appearsInQueryOptions(mediaId));
-  const shelf = data?.[0];
+  const shelf = data?.shelf;
   // Two slots is not a shelf, and a rail of one card is a worse ending than
   // no rail at all.
   if (!shelf || shelf.neighbors.length < 3) return null;

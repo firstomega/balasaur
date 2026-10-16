@@ -9,9 +9,9 @@ import {
   jsonLdScript,
   cacheSsrResponse,
   detailMeta,
-  isIndexableDetail,
   noindexMeta,
 } from "@/lib/seo";
+import { isIndexableTitle } from "@/lib/indexKeep";
 import { breadcrumbJsonLd, movieJsonLd } from "@/lib/jsonld";
 import { mediaSlug, parseMediaId } from "@/lib/slug";
 import { ssrBudget } from "@/lib/ssrBudget";
@@ -81,9 +81,10 @@ export const Route = createFileRoute("/movie/$id")({
     return {
       meta: [
         ...buildMeta({ title, description, url, image, type: "video.movie" }),
-        // Thin pages stay out of the index until they can stand alone in a
-        // search result (mirrors the sitemap gate).
-        ...(d && !isIndexableDetail(d) ? [noindexMeta()] : []),
+        // Offered to Google only when the page can stand alone AND the title
+        // is in the kept set: the same two rules the sitemap and IndexNow
+        // read from index_kept_media. Everything else stays linked, noindex.
+        ...(d && !isIndexableTitle(d) ? [noindexMeta()] : []),
       ],
       links: [canonicalLink(url)],
       ...(d

@@ -3,9 +3,8 @@ import { SITE_ORIGIN } from "@/lib/seo";
 import { listSitemapEntries } from "@/lib/media.server";
 import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
 
-// Served at /sitemap-titles.xml — individual movie and TV pages, capped at the
-// budget in listSitemapEntries and ordered by how many people have rated the
-// title. Deliberately a fraction of the catalog: see the note there.
+// Served at /sitemap-titles.xml: every kept movie and TV page (see
+// src/lib/indexKeep.ts), about 3,700 of the 82,000 that can stand alone.
 export const Route = createFileRoute("/sitemap-titles.xml")({
   server: {
     handlers: {
@@ -14,7 +13,7 @@ export const Route = createFileRoute("/sitemap-titles.xml")({
         try {
           const entries = await listSitemapEntries();
           for (const e of entries) {
-            urls.push({ loc: `${SITE_ORIGIN}${e.path}`, lastmod: e.lastmod });
+            urls.push({ loc: `${SITE_ORIGIN}${e.path}` });
           }
         } catch (err) {
           // An empty urlset is valid XML — better than a 500 that makes Search

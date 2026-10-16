@@ -5,6 +5,7 @@ import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
 import { buildOriginCollection, listOriginCollections } from "./originCollections";
 import { personNameFromListTitle } from "./personLists";
+import { pickRanksOn, type Placement } from "./ranksOn";
 import type { MediaItem } from "@/types/media";
 
 // Server reads for the programmatic collections layer. The heavy lifting
@@ -192,6 +193,10 @@ export interface CollectionDetail {
   items: MediaItem[];
   /** For a person list, the person page it links back to. */
   person?: { id: number; name: string };
+  /** Offered to Google: in collection_index_kept with kept = true, or a
+   *  country shelf that passed its own gate. Absent when the lookup failed,
+   *  which the page treats as not kept. See src/lib/indexKeep.ts. */
+  indexable?: boolean;
 }
 
 /**
@@ -212,6 +217,20 @@ async function personForList(title: string): Promise<CollectionDetail["person"]>
   const r = (data as { person_name: string; person_id: number }[] | null)?.[0];
   if (error || !r) return undefined;
   return { id: r.person_id, name: r.person_name };
+}
+
+/** Is this materialized list in the kept set? undefined when the read fails. */
+async function listIsKept(slug: string): Promise<boolean | undefined> {
+  const { data, error } = await loose(supabaseAdmin)
+    .from("collection_index_kept")
+    .select("kept")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) {
+    console.error("[collections] kept-set lookup failed:", error.message);
+    return undefined;
+  }
+  return (data as { kept: boolean } | null)?.kept === true;
 }
 
 export const getCollection = createServerFn({ method: "GET" })
@@ -235,14 +254,17 @@ export const getCollection = createServerFn({ method: "GET" })
       return buildOriginCollection(slug);
     }
 
-    const { data: itemRows, error: itemsErr } = await loose(supabaseAdmin)
-      .from("collection_items")
-      .select(`rank, media:media_id ( ${CARD_COLS} )`)
-      .eq("slug", slug)
-      .order("rank", { ascending: true });
+    const [{ data: itemRows, error: itemsErr }, indexable] = await Promise.all([
+      loose(supabaseAdmin)
+        .from("collection_items")
+        .select(`rank, media:media_id ( ${CARD_COLS} )`)
+        .eq("slug", slug)
+        .order("rank", { ascending: true }),
+      listIsKept(slug),
+    ]);
     if (itemsErr) {
       console.error("[collections] items failed:", itemsErr.message);
-      return { row: row as CollectionRow, items: [] };
+      return { row: row as CollectionRow, items: [], indexable: false };
     }
 
     const items = ((itemRows ?? []) as unknown as { rank: number; media: CardRow | null }[])
@@ -250,7 +272,7 @@ export const getCollection = createServerFn({ method: "GET" })
       .map((r) => rowToCardItem(r.media as CardRow));
     const collection = row as CollectionRow;
     const person = collection.kind === "person" ? await personForList(collection.title) : undefined;
-    return { row: collection, items, ...(person ? { person } : {}) };
+    return { row: collection, items, indexable, ...(person ? { person } : {}) };
   });
 
 /** One slot on a shelf: the rank and the card that holds it. */
@@ -282,35 +304,46 @@ function shelfWindow(rank: number, size: number): { lo: number; hi: number } {
   return { lo: Math.max(1, size - SHELF_WINDOW + 1), hi: size };
 }
 
-/** The shelf a title ranks best on, plus its neighbours on that shelf.
- *
- *  One placement, not three: the detail page closes with a single rail, and a
- *  list of shelf names it does not render is payload that rots. */
+/** What a title page shows about the lists it ranks on. */
+export interface TitleShelves {
+  /** The shelf it ranks best on, with its neighbours, for the closing rail. */
+  shelf: AppearsIn | null;
+  /** Up to three placements for the "ranks on" line, most specific first. */
+  ranksOn: Placement[];
+}
+
+const NO_SHELVES: TitleShelves = { shelf: null, ranksOn: [] };
+
+/** Every list a title ranks on, read once: the best placement and its
+ *  neighbours feed the closing rail, the most specific three feed the line
+ *  under the read. */
 export const getAppearsIn = createServerFn({ method: "GET" })
   .inputValidator((p: { mediaId: string }) => p)
-  .handler(async ({ data: p }): Promise<AppearsIn[]> => {
-    if (!/^(movie|tv)-\d{1,10}$/.test(p.mediaId ?? "")) return [];
+  .handler(async ({ data: p }): Promise<TitleShelves> => {
+    if (!/^(movie|tv)-\d{1,10}$/.test(p.mediaId ?? "")) return NO_SHELVES;
     const { data, error } = await loose(supabaseAdmin)
       .from("collection_items")
-      .select("rank, collections:slug ( slug, title, item_count )")
+      .select("rank, collections:slug ( slug, title, kind, item_count )")
       .eq("media_id", p.mediaId);
-    if (error || !data) return [];
-    const best = (
+    if (error || !data) return NO_SHELVES;
+    const placements: Placement[] = (
       data as unknown as {
         rank: number;
-        collections: { slug: string; title: string; item_count: number } | null;
+        collections: { slug: string; title: string; kind: string; item_count: number } | null;
       }[]
     )
       .filter((r) => r.collections)
       .map((r) => ({
         slug: r.collections!.slug,
         title: r.collections!.title,
+        kind: r.collections!.kind,
         rank: r.rank,
         item_count: r.collections!.item_count,
-      }))
-      // Best placement first: high rank in a big shelf beats #1 of a tiny one.
-      .sort((a, b) => a.rank - b.rank || b.item_count - a.item_count)[0];
-    if (!best) return [];
+      }));
+    const ranksOn = pickRanksOn(placements);
+    // Best placement first: high rank in a big shelf beats #1 of a tiny one.
+    const best = [...placements].sort((a, b) => a.rank - b.rank || b.item_count - a.item_count)[0];
+    if (!best) return { shelf: null, ranksOn };
 
     const size = Math.max(best.item_count || 0, best.rank);
     const { lo, hi } = shelfWindow(best.rank, size);
@@ -321,14 +354,21 @@ export const getAppearsIn = createServerFn({ method: "GET" })
       .gte("rank", lo)
       .lte("rank", hi)
       .order("rank", { ascending: true });
+    const shelfOf = (neighbors: ShelfSlot[]): AppearsIn => ({
+      slug: best.slug,
+      title: best.title,
+      rank: best.rank,
+      item_count: best.item_count,
+      neighbors,
+    });
     if (nearbyErr) {
       console.error("[collections] shelf neighbours failed:", nearbyErr.message);
-      return [{ ...best, neighbors: [] }];
+      return { shelf: shelfOf([]), ranksOn };
     }
     const neighbors = ((nearby ?? []) as unknown as { rank: number; media: CardRow | null }[])
       .filter((r) => r.media)
       .map((r) => ({ rank: r.rank, item: rowToCardItem(r.media as CardRow) }));
-    return [{ ...best, neighbors }];
+    return { shelf: shelfOf(neighbors), ranksOn };
   });
 
 export interface RelatedCollection {

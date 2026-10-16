@@ -16,7 +16,9 @@ import {
   jsonLdScript,
   composeTitle,
   clampDescription,
+  noindexMeta,
 } from "@/lib/seo";
+import { isIndexableList } from "@/lib/indexKeep";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { mediaSlug } from "@/lib/slug";
 
@@ -65,14 +67,21 @@ export const Route = createFileRoute("/best/$slug")({
       })),
     };
     return {
-      meta: buildMeta({
-        // The item count used to ride in the title as "(60)", which reads as a
-        // stray UI artifact in a search result and repeats the dek's opening
-        // sentence. The title now spends its width on the words people type.
-        title: composeTitle(d.row.title, []),
-        description: clampDescription(dek, 160),
-        url,
-      }),
+      meta: [
+        ...buildMeta({
+          // The item count used to ride in the title as "(60)", which reads as
+          // a stray UI artifact in a search result and repeats the dek's
+          // opening sentence. The title spends its width on the words people
+          // type.
+          title: composeTitle(d.row.title, []),
+          description: clampDescription(dek, 160),
+          url,
+        }),
+        // Only lists that do not repeat a broader one are offered to Google,
+        // the same set the sitemap and IndexNow read (collection_index_kept).
+        // The rest stay linked and followed.
+        ...(isIndexableList(d) ? [] : [noindexMeta()]),
+      ],
       links: [canonicalLink(url)],
       scripts: [jsonLdScript(itemList)],
     };

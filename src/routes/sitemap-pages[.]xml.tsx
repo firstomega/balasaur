@@ -6,10 +6,14 @@ import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
 import { listOriginCollections } from "@/lib/originCollections";
 import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
 
-// Served at /sitemap-pages.xml — static pages plus every ranked collection.
-// These are the pages that answer questions the incumbents answer badly
-// ("best sci-fi on Netflix"), so they are the ones worth watching in Search
-// Console. Kept apart from titles so their coverage is reported separately.
+// Served at /sitemap-pages.xml: static pages plus the kept collections, the
+// lists that do not repeat a broader one (collection_index_kept, see
+// src/lib/indexKeep.ts), and the country shelves. The list page reads the
+// same set to decide noindex. Kept apart from titles so their coverage is
+// reported separately.
+//
+// No lastmod on lists. Every list is deleted and rebuilt each night, so its
+// updated_at is always last night whether or not a single rank moved.
 export const Route = createFileRoute("/sitemap-pages.xml")({
   server: {
     handlers: {
@@ -36,30 +40,26 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
 
         try {
           // Paged, like the people and title sitemaps: PostgREST clamps any
-          // single request to ~1,000 rows. The shelf count sits at 673 and
-          // grows every time a facet is added, so an unpaged read would one
-          // day drop shelves out of the sitemap with no error to notice.
+          // single request to ~1,000 rows.
           const PAGE = 1000;
           for (let offset = 0; offset < 10000; offset += PAGE) {
             const { data: shelves, error } = await loose(supabaseAdmin)
-              .from("collections")
-              .select("slug, updated_at")
+              .from("collection_index_kept")
+              .select("slug")
+              .eq("kept", true)
               .order("slug", { ascending: true })
               .range(offset, offset + PAGE - 1);
             if (error) throw error;
-            for (const s of (shelves ?? []) as { slug: string; updated_at: string | null }[]) {
-              urls.push({
-                loc: `${SITE_ORIGIN}/best/${s.slug}`,
-                lastmod: s.updated_at ? s.updated_at.slice(0, 10) : undefined,
-              });
+            for (const s of (shelves ?? []) as { slug: string }[]) {
+              urls.push({ loc: `${SITE_ORIGIN}/best/${s.slug}` });
             }
             if (!shelves || shelves.length < PAGE) break;
           }
 
           // Country shelves are request-time, not materialized (see
           // originCollections.ts), so the loop above never sees them. Only
-          // gate-passing shelves come back, which keeps 404s out of the
-          // sitemap; anything already in the table is skipped as a duplicate.
+          // gate-passing shelves come back, and every one is kept; anything
+          // already listed is skipped as a duplicate.
           const submitted = new Set(urls.map((u) => u.loc));
           for (const o of await listOriginCollections()) {
             const loc = `${SITE_ORIGIN}/best/${o.slug}`;

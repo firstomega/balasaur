@@ -44,12 +44,11 @@ type MediaRow = TablesInsert<"media"> & {
 };
 
 /**
- * How many title URLs the sitemap asks Google to index. Deliberately small.
- * Googlebot crawls this site at roughly 100 pages a day, so a focused list
- * indexes faster than an aspirational one, and a mass of thin pages drags the
- * whole domain's quality assessment down with it.
+ * The sitemap protocol's ceiling on URLs per file. Not a budget: the title
+ * sitemap lists exactly the kept set (index_kept_media, about 3,700 titles),
+ * and which titles are kept is decided in src/lib/indexKeep.ts.
  */
-export const SITEMAP_TITLE_BUDGET = 2500;
+export const SITEMAP_URL_LIMIT = 50000;
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const OMDB_BASE = "https://www.omdbapi.com";
@@ -511,72 +510,47 @@ async function mapWithLimit<T, R>(
 }
 
 /**
- * Lightweight list of catalogued titles for the sitemap. Reads only the
- * columns needed to build a URL + lastmod. NO upstream API calls. Capped well
- * under the 50k sitemap limit, most-popular first.
+ * Every kept title, as canonical URLs, for the title sitemap. Reads only the
+ * columns needed to build a URL. NO upstream API calls.
  */
-export async function listSitemapEntries(
-  limit = SITEMAP_TITLE_BUDGET,
-): Promise<{ path: string; lastmod?: string }[]> {
-  // Reads the indexable_media view, which encodes the same rule as
-  // isCorroborated() in indexability.ts and is also what ping_indexnow() reads.
-  // One definition, three callers: a URL can never be submitted whose page
-  // renders noindex. The thin tail stays reachable (linked, crawlable) but
-  // carries noindex until it earns its way in.
+export async function listSitemapEntries(limit = SITEMAP_URL_LIMIT): Promise<{ path: string }[]> {
+  // Reads index_kept_media: titles that can stand alone (indexable_media) AND
+  // sit in the kept set (src/lib/indexKeep.ts). The page head applies the same
+  // two rules and ping_indexnow() reads the same view, so a URL is never
+  // submitted whose page renders noindex, and every kept page is submitted.
   //
-  // Ordered by RATING COUNT, not TMDB popularity. Popularity measures what is
-  // trending on TMDB this week, which is uncorrelated with what people search
-  // for: under it, 896 of the 2,500 submitted URLs went to titles with under
-  // 50 ratings, while 4,749 titles with 1,000+ ratings were left out of the
-  // sitemap entirely, Guardians of the Galaxy and John Wick among them. Rating
-  // count is a direct proxy for how many people have seen a title, so it
-  // approximates search demand. Under it every one of the 2,500 slots goes to
-  // a title with 1,000+ ratings and the weakest submitted has 2,426. Measured
-  // against production 2026-08-27.
+  // No lastmod. The nightly refresh touches every row whether or not anything
+  // on the page changed, so updated_at would tell Google that thousands of
+  // pages changed every night. A date that is always new is a date Google
+  // learns to ignore.
   //
-  // The order clause below is the single decision this whole function exists
-  // to get right. Do not change it without re-running those counts.
+  // Ordered by RATING COUNT so that, if a read fails partway, the titles most
+  // people have seen are the ones already listed. Popularity measures what is
+  // trending on TMDB this week and was measured on 2026-08-27 to hand slots to
+  // titles with under 50 ratings; sitemapOrder.test.ts guards this.
   //
   // Paged in 1,000-row chunks: PostgREST clamps any single request to its
-  // max-rows setting (default 1000), which silently capped the old
-  // `.limit(20000)` at ~1,000 URLs — Search Console's "1,005 discovered
-  // pages" was this bug.
+  // max-rows setting (default 1000), which once silently capped the sitemap
+  // at about 1,000 URLs.
   const PAGE = 1000;
-  const rows: {
-    media_id: string;
-    media_type: string;
-    title: string | null;
-    updated_at: string | null;
-  }[] = [];
+  const rows: { media_id: string; media_type: string; title: string | null }[] = [];
   for (let offset = 0; offset < limit; offset += PAGE) {
     const { data, error } = await loose(supabaseAdmin)
-      .from("indexable_media")
-      .select("media_id, media_type, title, updated_at")
-      // Ordered by RATING COUNT. This was briefly reverted to popularity on the
-      // grounds that "vote_count desc nulls last sorted all 23,436 titles with
-      // no vote data behind every measured one". That count is from the media
-      // table, not from this view: indexable_media requires corroboration, so
-      // only 43 of its 61,673 rows have a null vote_count and 1,347 have none
-      // or zero. The objection does not apply here and the revert cost more
-      // than it saved. Measured 2026-08-27.
+      .from("index_kept_media")
+      .select("media_id, media_type, title")
       .order("vote_count", { ascending: false, nullsFirst: false })
       .order("media_id", { ascending: true }) // stable tiebreak across pages
       .range(offset, Math.min(offset + PAGE, limit) - 1);
 
     if (error) {
       console.error("[sitemap] media query failed:", error.message);
-      break; // serve what we have — a partial sitemap beats a 500
+      break; // serve what we have: a partial sitemap beats a 500
     }
     // A view reports every column as nullable, so drop any row missing the two
     // fields a URL cannot be built without rather than emitting "/movie/null".
     for (const r of data ?? []) {
       if (r.media_id && r.media_type) {
-        rows.push({
-          media_id: r.media_id,
-          media_type: r.media_type,
-          title: r.title,
-          updated_at: r.updated_at,
-        });
+        rows.push({ media_id: r.media_id, media_type: r.media_type, title: r.title });
       }
     }
     if (!data || data.length < PAGE) break;
@@ -586,10 +560,7 @@ export async function listSitemapEntries(
     const rawId = r.media_id.replace(/^(movie|tv)-/, "");
     const seg = r.media_type === "tv" ? "tv" : "movie";
     // Emit the canonical slugged URL so crawlers index it directly (no 301 hop).
-    return {
-      path: `/${seg}/${mediaSlug(rawId, r.title)}`,
-      lastmod: r.updated_at ? new Date(r.updated_at).toISOString().slice(0, 10) : undefined,
-    };
+    return { path: `/${seg}/${mediaSlug(rawId, r.title)}` };
   });
 }
 
@@ -2541,45 +2512,47 @@ export async function fetchMediaDetail(
             [r?.imdb, r?.rottenTomatoes, r?.metacritic, r?.tmdb].filter(
               (v) => typeof v === "number",
             ).length;
-          const needsVotes = cached.voteCount === undefined;
+          // The vote count is always re-read, not only when missing. The kept
+          // set (src/lib/indexKeep.ts) draws a line on it, and the sitemap
+          // reads the catalog row's count; a payload up to seven days old
+          // would let a title near the line say noindex while the sitemap
+          // still lists it.
           const needsScore = cached.ratings?.balasaur === undefined;
           const needsStreaming = (cached.streaming ?? []).length === 0;
           const needsSources = sourceCount(cached.ratings) < 2;
-          if (needsVotes || needsScore || needsStreaming || needsSources) {
-            try {
-              const { data: row } = await loose(supabaseAdmin)
-                .from("media")
-                .select(
-                  "vote_count, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
-                )
-                .eq("media_id", cacheId)
-                .maybeSingle();
-              if (needsVotes && typeof row?.vote_count === "number") {
-                cached.voteCount = row.vote_count;
-              }
-              if (needsScore && typeof row?.rating_balasaur === "number") {
-                cached.ratings = { ...(cached.ratings ?? {}), balasaur: row.rating_balasaur };
-              }
-              if (needsStreaming && Array.isArray(row?.streaming) && row.streaming.length > 0) {
-                cached.streaming = row.streaming;
-              }
-              if (needsSources && row) {
-                const healed = {
-                  imdb: cached.ratings?.imdb ?? row.rating_imdb ?? undefined,
-                  rottenTomatoes:
-                    cached.ratings?.rottenTomatoes ?? row.rating_rotten_tomatoes ?? undefined,
-                  metacritic: cached.ratings?.metacritic ?? row.rating_metacritic ?? undefined,
-                  tmdb: cached.ratings?.tmdb ?? row.rating_tmdb ?? undefined,
-                };
-                // Only adopt the healed set if it actually adds a source, so a
-                // catalog row that is itself thin never overwrites good data.
-                if (sourceCount(healed) > sourceCount(cached.ratings)) {
-                  cached.ratings = { ...(cached.ratings ?? {}), ...healed };
-                }
-              }
-            } catch {
-              // best-effort — the page still renders without these
+          try {
+            const { data: row } = await loose(supabaseAdmin)
+              .from("media")
+              .select(
+                "vote_count, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
+              )
+              .eq("media_id", cacheId)
+              .maybeSingle();
+            if (typeof row?.vote_count === "number") {
+              cached.voteCount = row.vote_count;
             }
+            if (needsScore && typeof row?.rating_balasaur === "number") {
+              cached.ratings = { ...(cached.ratings ?? {}), balasaur: row.rating_balasaur };
+            }
+            if (needsStreaming && Array.isArray(row?.streaming) && row.streaming.length > 0) {
+              cached.streaming = row.streaming;
+            }
+            if (needsSources && row) {
+              const healed = {
+                imdb: cached.ratings?.imdb ?? row.rating_imdb ?? undefined,
+                rottenTomatoes:
+                  cached.ratings?.rottenTomatoes ?? row.rating_rotten_tomatoes ?? undefined,
+                metacritic: cached.ratings?.metacritic ?? row.rating_metacritic ?? undefined,
+                tmdb: cached.ratings?.tmdb ?? row.rating_tmdb ?? undefined,
+              };
+              // Only adopt the healed set if it actually adds a source, so a
+              // catalog row that is itself thin never overwrites good data.
+              if (sourceCount(healed) > sourceCount(cached.ratings)) {
+                cached.ratings = { ...(cached.ratings ?? {}), ...healed };
+              }
+            }
+          } catch {
+            // best-effort — the page still renders without these
           }
           // Payloads written before the similarity engine carry a rail with
           // no reasons (or TMDB's unfiltered list). Rebuild both rails once
@@ -3017,10 +2990,35 @@ async function attachPersonLists(detail: PersonDetail): Promise<void> {
   }
 }
 
+/** Whether the person is in the kept set the people sitemap lists. Read on
+ *  every request, like the stats, so a cached payload never carries a stale
+ *  answer. A failed lookup leaves it unset and the page says noindex, the
+ *  same answer the sitemap gives a person it cannot confirm. */
+async function attachPersonIndexable(detail: PersonDetail): Promise<void> {
+  delete detail.indexable;
+  const personId = Number.parseInt(detail.id, 10);
+  if (!Number.isFinite(personId)) return;
+  try {
+    const { data, error } = await loose(supabaseAdmin)
+      .from("person_index_kept")
+      .select("person_id")
+      .eq("person_id", personId)
+      .maybeSingle();
+    if (error) {
+      console.error("[person] kept-set lookup failed:", error.message);
+      return;
+    }
+    detail.indexable = Boolean(data);
+  } catch (e) {
+    console.error("[person] kept-set lookup failed:", e);
+  }
+}
+
 /** Everything a person page derives from the catalog at read time. */
 function attachReadTimeFacts(detail: PersonDetail): Promise<unknown> {
   return Promise.all([
     attachPersonStats(detail),
+    attachPersonIndexable(detail),
     attachCatalogFacts(detail),
     attachPersonLists(detail),
   ]);

@@ -145,6 +145,10 @@ export interface PersonDetail {
   profileUrl?: string;
   imdbId?: string;
   groups: PersonCreditGroup[];
+  /** Whether this person is in the kept set Google is offered
+   *  (person_index_kept, see src/lib/indexKeep.ts). Read on every request,
+   *  never trusted from the cache; absent when the lookup failed. */
+  indexable?: boolean;
   /** Leading and directing credits, from person_stats(). Never rendered: this
    *  is the index gate only, and it counts a person only where they are
    *  top-billed or directing, which is the wrong number to print. The numbers

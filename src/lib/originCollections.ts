@@ -234,6 +234,10 @@ export async function buildOriginCollection(slug: string): Promise<CollectionDet
   return {
     row: buildRow(parsed.def, parsed.mediaType, ranked, pool.total),
     items: ranked.map((r) => rowToCardItem(r)),
+    // A country shelf has no broader list in the catalog to repeat, and its
+    // own gate (MIN_ITEMS) is stricter than the kept set's ten, so every
+    // shelf that renders is kept. src/lib/indexKeep.ts.
+    indexable: true,
   };
 }
 
