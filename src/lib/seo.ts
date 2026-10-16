@@ -341,21 +341,37 @@ export function personMeta(d: {
   name: string;
   biography?: string;
   knownForDepartment?: string;
-  stats?: Parameters<typeof personProse>[1];
+  catalog?: Parameters<typeof personProse>[1];
 }): { title: string; description: string } {
-  const titles = d.stats?.titles;
+  const titles = d.catalog?.titles;
   const optional: string[] = [];
-  if (typeof titles === "number" && titles >= 3) {
+  // "ranked" is a promise the result makes in the search listing, so it is
+  // only made when the page actually opens with a ranked set. Below the
+  // ranking gate the page is a filmography in date order, and saying
+  // otherwise earns a click that bounces.
+  if (d.catalog && d.catalog.top.length > 0 && typeof titles === "number") {
     optional.push(`: ${titles} movies and TV shows, ranked`);
+  } else if (typeof titles === "number" && titles >= 3) {
+    optional.push(`: ${titles} movies and TV shows`);
   } else {
     optional.push(`: movies and TV shows`);
   }
 
-  const prose = d.stats ? personProse(d.name, d.stats) : "";
+  // The search result answers the question that brought the click, "what are
+  // their best movies", with the first three of the ranked set the page opens
+  // on. Each score is the one printed on that card.
+  const best = (d.catalog?.top ?? [])
+    .slice(0, 3)
+    .map((it) => ({ title: it.title, score: trustedScore(it) }))
+    .filter((t): t is { title: string; score: number } => typeof t.score === "number")
+    .map((t) => `${t.title} (${t.score})`);
+  const lead = best.length === 3 ? `Highest rated: ${best.join(", ")}.` : "";
+  const prose = d.catalog ? personProse(d.name, d.catalog) : "";
+  const stated = [lead, prose].filter(Boolean).join(" ");
   return {
     title: composeTitle(d.name, optional),
     description: clampDescription(
-      prose || d.biography || `${d.name}'s movies and TV shows in the Balasaur catalog.`,
+      stated || d.biography || `${d.name}'s movies and TV shows in the Balasaur catalog.`,
       160,
     ),
   };

@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
 import { buildOriginCollection, listOriginCollections } from "./originCollections";
+import { personNameFromListTitle } from "./personLists";
 import { pickRanksOn, type Placement } from "./ranksOn";
 import type { MediaItem } from "@/types/media";
 
@@ -190,10 +191,32 @@ export const getCollectionRedirect = createServerFn({ method: "GET" })
 export interface CollectionDetail {
   row: CollectionRow;
   items: MediaItem[];
+  /** For a person list, the person page it links back to. */
+  person?: { id: number; name: string };
   /** Offered to Google: in collection_index_kept with kept = true, or a
    *  country shelf that passed its own gate. Absent when the lookup failed,
    *  which the page treats as not kept. See src/lib/indexKeep.ts. */
   indexable?: boolean;
+}
+
+/**
+ * The person a person list was built for. The list title is
+ * 'The Best <roster name> Movies', and the roster holds that name's TMDB id,
+ * which is the id the person page is served under. Nothing when the roster
+ * row has no id: a name match alone could point at a namesake.
+ */
+async function personForList(title: string): Promise<CollectionDetail["person"]> {
+  const name = personNameFromListTitle(title);
+  if (!name) return undefined;
+  const { data, error } = await loose(supabaseAdmin)
+    .from("person_collection_roster")
+    .select("person_name, person_id")
+    .eq("person_name", name)
+    .not("person_id", "is", null)
+    .limit(1);
+  const r = (data as { person_name: string; person_id: number }[] | null)?.[0];
+  if (error || !r) return undefined;
+  return { id: r.person_id, name: r.person_name };
 }
 
 /** Is this materialized list in the kept set? undefined when the read fails. */
@@ -247,7 +270,9 @@ export const getCollection = createServerFn({ method: "GET" })
     const items = ((itemRows ?? []) as unknown as { rank: number; media: CardRow | null }[])
       .filter((r) => r.media)
       .map((r) => rowToCardItem(r.media as CardRow));
-    return { row: row as CollectionRow, items, indexable };
+    const collection = row as CollectionRow;
+    const person = collection.kind === "person" ? await personForList(collection.title) : undefined;
+    return { row: collection, items, indexable, ...(person ? { person } : {}) };
   });
 
 /** One slot on a shelf: the rank and the card that holds it. */

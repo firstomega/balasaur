@@ -1,43 +1,26 @@
 // Person-page data-prose, same house pattern as titleProse.ts: deterministic
-// sentences from catalog statistics, every number reconstructable from the
-// filmography rendered below it. Sentences are omitted when the fact is
-// missing or too thin to mean anything.
+// sentences from catalog facts, said only when they answer something a viewer
+// would actually ask, and omitted when the fact is missing or too thin.
+//
+// What is NOT here, on purpose. A median score across a whole filmography and
+// a "most often alongside" list were both cut on 2026-10-15: true and
+// reconstructable, but nobody types "Tom Hanks median score", and a count of
+// shared top-six billings is a fact about how the catalog stores credits. The
+// ranked set answers "what are their best films", so the prose does not
+// repeat it.
+//
+// What is. "What was their best decade" is a question people ask, and the
+// answer here is a comparison (the winning decade against the runner-up),
+// drawn from the same ranked pool as the six on the page, so every score
+// behind it has already passed the trust rule.
 
-import type { PersonDetail } from "@/types/media";
+import type { PersonCatalog } from "@/types/media";
 
-export function personProse(name: string, stats: NonNullable<PersonDetail["stats"]>): string {
-  const parts: string[] = [];
-
-  if (stats.titles >= 3) {
-    const scored =
-      stats.scored > 0 && stats.scored < stats.titles ? `, ${stats.scored} of them scored` : "";
-    const median =
-      typeof stats.medianScore === "number"
-        ? ` with a median Balasaur Score of ${stats.medianScore}`
-        : "";
-    parts.push(`${stats.titles} titles in this catalog${scored}${median}.`);
-  }
-
-  if (
-    stats.bestDecade &&
-    typeof stats.bestDecadeMedian === "number" &&
-    typeof stats.bestDecadeTitles === "number" &&
-    stats.bestDecadeTitles >= 3 &&
-    typeof stats.medianScore === "number" &&
-    stats.bestDecadeMedian > stats.medianScore
-  ) {
-    parts.push(
-      `The ${stats.bestDecade} rate best: median ${stats.bestDecadeMedian} across ${stats.bestDecadeTitles} titles.`,
-    );
-  }
-
-  const collabs = stats.collaborators.filter((c) => c.together >= 3).slice(0, 3);
-  if (collabs.length > 0) {
-    const list = collabs
-      .map((c, i) => (i === 0 ? `${c.name} (${c.together} titles)` : `${c.name} (${c.together})`))
-      .join(", ");
-    parts.push(`${name} appears most often alongside ${list}.`);
-  }
-
-  return parts.join(" ");
+export function personProse(name: string, catalog: PersonCatalog): string {
+  const d = catalog.bestDecade;
+  if (!d) return "";
+  return (
+    `${name}'s ${d.decade} titles rate highest: a median Balasaur Score of ${d.median} ` +
+    `across ${d.titles}, against ${d.runnerUp.median} for the ${d.runnerUp.decade}.`
+  );
 }

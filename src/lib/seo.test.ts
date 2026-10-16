@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { clampDescription, composeTitle, detailMeta, personMeta } from "./seo";
+import type { PersonCatalog } from "@/types/media";
 
 describe("composeTitle", () => {
   it("keeps every tail that fits and adds the brand when it is free", () => {
@@ -375,33 +376,72 @@ describe("detailMeta description", () => {
 });
 
 describe("personMeta", () => {
-  const stats = {
+  const card = (title: string, balasaur: number, voteCount = 5000) =>
+    ({
+      id: `movie-${title}`,
+      title,
+      ratings: { imdb: 8, tmdb: 8, balasaur },
+      voteCount,
+    }) as unknown as PersonCatalog["top"][number];
+  const ranked = [
+    card("Toy Story", 89),
+    card("Saving Private Ryan", 88),
+    card("Forrest Gump", 84),
+    card("Catch Me If You Can", 83),
+  ];
+  const catalog: PersonCatalog = {
     titles: 80,
-    scored: 78,
-    medianScore: 73,
-    bestDecade: "1990s",
-    bestDecadeMedian: 78,
-    bestDecadeTitles: 14,
-    collaborators: [{ name: "Tim Allen", together: 13 }],
+    bestDecade: {
+      decade: "1990s",
+      median: 82,
+      titles: 9,
+      runnerUp: { decade: "2010s", median: 77, titles: 8 },
+    },
+    top: ranked,
   };
 
   it("counts the filmography in the title", () => {
-    expect(personMeta({ name: "Tom Hanks", stats }).title).toBe(
+    expect(personMeta({ name: "Tom Hanks", catalog }).title).toBe(
       "Tom Hanks: 80 movies and TV shows, ranked | Balasaur",
     );
   });
 
-  it("describes the person with catalog stats, not the shared TMDB biography", () => {
-    const out = personMeta({ name: "Tom Hanks", biography: "Born in Concord, California.", stats });
-    expect(out.description).toContain("median Balasaur Score of 73");
+  it("does not promise a ranking the page does not show", () => {
+    // Below the ranking gate the server returns no ranked set, so the search
+    // listing must not advertise one.
+    const out = personMeta({ name: "Tom Hanks", catalog: { ...catalog, top: [] } });
+    expect(out.title).toBe("Tom Hanks: 80 movies and TV shows | Balasaur");
+    expect(out.title).not.toContain("ranked");
+  });
+
+  it("answers 'their best movies' with the top three, not the shared TMDB biography", () => {
+    const out = personMeta({
+      name: "Tom Hanks",
+      biography: "Born in Concord, California.",
+      catalog,
+    });
+    expect(out.description).toBe(
+      "Highest rated: Toy Story (89), Saving Private Ryan (88), Forrest Gump (84). Tom Hanks's 1990s titles rate highest: a median Balasaur Score of 82 across 9,…",
+    );
     expect(out.description).not.toContain("Concord");
+  });
+
+  it("never quotes a score the card would not show", () => {
+    const out = personMeta({
+      name: "Tom Hanks",
+      catalog: {
+        titles: 80,
+        top: [card("Toy Story", 89), card("Thin", 95, 3), card("Forrest Gump", 84)],
+      },
+    });
+    expect(out.description).not.toContain("95");
   });
 
   it("falls back to the biography for a thin filmography", () => {
     const out = personMeta({
       name: "Nobody",
       biography: "Born in Concord, California.",
-      stats: { titles: 1, scored: 0, collaborators: [] },
+      catalog: { titles: 1, top: [] },
     });
     expect(out.title).toBe("Nobody: movies and TV shows | Balasaur");
     expect(out.description).toBe("Born in Concord, California.");

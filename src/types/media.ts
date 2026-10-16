@@ -149,15 +149,45 @@ export interface PersonDetail {
    *  (person_index_kept, see src/lib/indexKeep.ts). Read on every request,
    *  never trusted from the cache; absent when the lookup failed. */
   indexable?: boolean;
-  /** Catalog statistics from person_stats(): counts, median, best decade,
-   *  frequent collaborators. Attached at read time, never cached stale. */
+  /** Leading and directing credits, from person_stats(). Never rendered: this
+   *  is the index gate only, and it counts a person only where they are
+   *  top-billed or directing, which is the wrong number to print. The numbers
+   *  the page prints come from `catalog` below. */
   stats?: {
     titles: number;
-    scored: number;
-    medianScore?: number;
-    bestDecade?: string;
-    bestDecadeMedian?: number;
-    bestDecadeTitles?: number;
-    collaborators: { name: string; together: number }[];
   };
+  /** Facts derived by joining every credit above against the catalog. Attached
+   *  at read time, so they track the nightly refresh rather than the cached
+   *  payload's age. Every number here is reconstructable from the cards the
+   *  page renders, which is the whole point of computing it this way: the old
+   *  numbers came from a name match against top-billed credits only, so the
+   *  grid could not confirm a single one of them. */
+  catalog?: PersonCatalog;
+  /** The /best/best-<name>-movies and -shows lists for this person, when the
+   *  nightly rebuild minted them. Attached at read time, like `catalog`. */
+  lists?: PersonList[];
+}
+
+export interface DecadeMedian {
+  decade: string;
+  median: number;
+  titles: number;
+}
+
+export interface PersonCatalog {
+  /** Credits this catalog holds, across every department, deduped by title. */
+  titles: number;
+  /** The decade whose ranked titles rate highest, with the decade it beat.
+   *  Absent unless two decades qualify and one is ahead. */
+  bestDecade?: DecadeMedian & { runnerUp: DecadeMedian };
+  /** Highest-scoring credits, best first, one per franchise. Empty when the
+   *  ranked pool is too small for an order to mean anything. */
+  top: MediaItem[];
+}
+
+/** A /best list built for this person, linked from their page. */
+export interface PersonList {
+  slug: string;
+  title: string;
+  itemCount: number;
 }

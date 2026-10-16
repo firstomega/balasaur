@@ -1,4 +1,5 @@
 import { Suspense, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import { MediaCard } from "./MediaCard";
 import { usePersonDetail } from "@/hooks/usePersonDetail";
@@ -24,16 +25,18 @@ function lifeLine(d: PersonDetailType): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
+/** Collapsed to three lines: TMDB's biography is the same text every other
+ *  site carries, so it sits below the ranking and opens on request. */
 function Bio({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
-  const long = text.length > 360;
+  const long = text.length > 240;
   return (
     <section>
       <SectionHeading>Biography</SectionHeading>
       <p
         className={
           "whitespace-pre-line text-[15px] leading-relaxed text-text-bright " +
-          (!open && long ? "line-clamp-6" : "")
+          (!open && long ? "line-clamp-3" : "")
         }
       >
         {text}
@@ -53,6 +56,7 @@ function Bio({ text }: { text: string }) {
 
 function PersonInner({ detail }: { detail: PersonDetailType }) {
   const life = lifeLine(detail);
+  const prose = detail.catalog ? personProse(detail.name, detail.catalog) : "";
   return (
     <article className="mx-auto max-w-[1100px] px-4 py-8 pb-16">
       {/* Header */}
@@ -96,12 +100,52 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
         </div>
       </header>
 
-      {/* Catalog statistics: claims only this database can make about the
-          filmography rendered below. */}
-      {detail.stats && personProse(detail.name, detail.stats) && (
-        <p className="mt-6 max-w-3xl text-[14px] leading-relaxed text-text">
-          {personProse(detail.name, detail.stats)}
-        </p>
+      {/* The ranked opener, first thing under the name. Ordered by the
+          Balasaur Score printed on each poster, so a stranger can check the
+          order against the page. The server returns nothing here when the
+          pool is too small for an order to carry a claim, and then the page
+          opens on the filmography instead. */}
+      {detail.catalog && detail.catalog.top.length > 0 && (
+        <section className="mt-8">
+          <SectionHeading>Highest rated</SectionHeading>
+          <div className="grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-3 md:grid-cols-6">
+            {detail.catalog.top.map((it, i) => (
+              <MediaCard
+                key={it.id}
+                item={it}
+                eager={i < 6}
+                posterOverlay={
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-3xl font-bold tabular-nums leading-none text-white/95 [text-shadow:0_2px_10px_rgba(0,0,0,0.95)]"
+                  >
+                    {i + 1}
+                  </span>
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* The best-decade comparison, drawn from the same pool as the six. */}
+      {prose && <p className="mt-6 max-w-3xl text-[14px] leading-relaxed text-text">{prose}</p>}
+
+      {/* The /best list for this person, which links back here. */}
+      {detail.lists && detail.lists.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {detail.lists.map((l) => (
+            <Link
+              key={l.slug}
+              to="/best/$slug"
+              params={{ slug: l.slug }}
+              className="rounded-sm border border-border bg-panel px-2.5 py-1.5 text-base font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
+            >
+              {l.title}{" "}
+              <span className="ml-1 font-mono text-sm tabular-nums opacity-70">{l.itemCount}</span>
+            </Link>
+          ))}
+        </div>
       )}
 
       {detail.biography && (
@@ -110,7 +154,8 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
         </div>
       )}
 
-      {/* Works grouped by role */}
+      {/* Works grouped by role, newest first: the order someone looking up a
+          filmography expects to find it in. */}
       <div className="mt-10 space-y-8">
         {detail.groups.map((g) => (
           <section key={g.department}>

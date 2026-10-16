@@ -41,6 +41,16 @@
         ]
       },
       {
+        "_comment": "Read-only GitHub and Lovable tools. These are the bulk of the prompts in any session that watches a PR: checking CI status and reading job logs runs on a loop, several times per PR, and every one of them was stopping to ask. Matched on the tool's function rather than its server, for the same reconnect reason as the Supabase rule above. Reads only: merging, opening or editing a PR, dispatching a workflow, and deploying still ask, because those are the ones a person should see. Owner granted this on 2026-09-18 after a session produced dozens of prompts.",
+        "matcher": "^mcp__[^_]*(_[^_]+)*__(pull_request_read|list_pull_requests|search_pull_requests|actions_list|actions_get|get_job_logs|get_check_run|list_commits|get_commit|get_file_contents|list_branches|list_tags|get_tag|issue_read|list_issues|search_issues|search_code|search_repositories|list_releases|get_latest_release|get_me|list_repository_collaborators|list_edits|list_projects|get_project|get_diff|read_file|list_files|list_messages|get_message)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"Read-only GitHub and Lovable tools pre-approved for this project by the owner\"}}'"
+          }
+        ]
+      },
+      {
         "_comment": "Owner granted standing permission on 2026-08-27 to read and reply to artifact comments without a prompt. Scoped by inspecting the action on stdin rather than allowing the whole Artifact tool, so publishing a new artifact version still asks. Silent on every other action, which falls through to the normal permission flow.",
         "matcher": "^Artifact$",
         "hooks": [
