@@ -6,7 +6,7 @@
 // number, and that number is printed on the card next to the sentence that
 // uses it. "Horror is 34% of what you Loved" sits beside "41 LOVED", so a
 // stranger can check it. A rule whose denominator is some filtered subset
-// (only the titles that happen to carry a critic score, say) would produce a
+// (only the titles that happen to have a release year, say) would produce a
 // percentage nobody can reconstruct, which is the failure this rule exists to
 // prevent. Titles missing a fact simply never satisfy the predicate.
 //
@@ -53,9 +53,6 @@ export interface TitleFact {
   colorB?: string;
   /** Balasaur Score, 0 to 100. */
   score?: number;
-  /** Critic score, 0 to 100. Metacritic when present, else Rotten Tomatoes. */
-  critic?: number;
-  criticSource?: "Metacritic" | "Rotten Tomatoes";
 }
 
 export type TasteBasis = "loved" | "watched";

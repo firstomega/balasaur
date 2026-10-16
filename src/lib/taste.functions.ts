@@ -37,16 +37,6 @@ export interface FactRow {
   vote_count: number | null;
 }
 
-/** Metacritic is the critic number when there is one; Rotten Tomatoes is the
- *  fallback. Both run 0 to 100, so the sentence reads the same either way. */
-function criticOf(r: FactRow): Pick<TitleFact, "critic" | "criticSource"> {
-  if (r.rating_metacritic != null)
-    return { critic: r.rating_metacritic, criticSource: "Metacritic" };
-  if (r.rating_rotten_tomatoes != null)
-    return { critic: r.rating_rotten_tomatoes, criticSource: "Rotten Tomatoes" };
-  return {};
-}
-
 export function toFact(r: FactRow): TitleFact {
   return {
     id: r.media_id,
@@ -69,7 +59,6 @@ export function toFact(r: FactRow): TitleFact {
       },
       voteCount: r.vote_count,
     }),
-    ...criticOf(r),
   };
 }
 

@@ -36,8 +36,6 @@ const WATCHED: Seed[] = [
     origins: ["British", "American"],
     posterUrl: `${P}/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg`,
     score: 87,
-    critic: 89,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -49,8 +47,6 @@ const WATCHED: Seed[] = [
     origins: ["American"],
     posterUrl: `${P}/wijlZ3HaYMvlDTPqJoTCWKFkCPU.jpg`,
     score: 84,
-    critic: 91,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -62,8 +58,6 @@ const WATCHED: Seed[] = [
     origins: ["American"],
     posterUrl: `${P}/j2AtZFsflxiluaNtajMTI0Avm8C.jpg`,
     score: 83,
-    critic: 88,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -75,8 +69,6 @@ const WATCHED: Seed[] = [
     origins: ["American"],
     posterUrl: `${P}/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg`,
     score: 83,
-    critic: 85,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -88,8 +80,6 @@ const WATCHED: Seed[] = [
     origins: ["British", "American"],
     posterUrl: `${P}/uAR0AWqhQL1hQa69UDEbb2rE5Wx.jpg`,
     score: 80,
-    critic: 68,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -101,8 +91,6 @@ const WATCHED: Seed[] = [
     origins: ["British", "American"],
     posterUrl: `${P}/dmJW8IAKHKxFNiUnoDR7JfsK7Rp.jpg`,
     score: 80,
-    critic: 78,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -114,8 +102,6 @@ const WATCHED: Seed[] = [
     origins: ["British", "American"],
     posterUrl: `${P}/4GFPuL14eXi66V96xBWY73Y9PfR.jpg`,
     score: 79,
-    critic: 87,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -127,8 +113,6 @@ const WATCHED: Seed[] = [
     origins: ["American"],
     posterUrl: `${P}/tzGY49kseSE9QAKk47uuDGwnSCu.jpg`,
     score: 77,
-    critic: 57,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -140,8 +124,6 @@ const WATCHED: Seed[] = [
     origins: ["British", "American"],
     posterUrl: `${P}/6siwECwpRbNX70ybF8iqZqnspGP.jpg`,
     score: 76,
-    critic: 79,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -153,8 +135,6 @@ const WATCHED: Seed[] = [
     origins: ["British", "American"],
     posterUrl: `${P}/qfluaDXv0cIdLwgQWzNB2piHL2q.jpg`,
     score: 53,
-    critic: 35,
-    criticSource: "Metacritic",
     state: "liked",
   },
   {
@@ -166,8 +146,6 @@ const WATCHED: Seed[] = [
     origins: [],
     posterUrl: `${P}/sEcvc9h1X3hYZdFgtiiKMm6RB3f.jpg`,
     score: 79,
-    critic: 79,
-    criticSource: "Metacritic",
     state: "seen",
   },
   {
@@ -179,8 +157,6 @@ const WATCHED: Seed[] = [
     origins: ["American"],
     posterUrl: `${P}/wVYREutTvI2tmxr6ujrHT704wGF.jpg`,
     score: 76,
-    critic: 68,
-    criticSource: "Metacritic",
     state: "seen",
   },
   {
@@ -192,8 +168,6 @@ const WATCHED: Seed[] = [
     origins: ["American"],
     posterUrl: `${P}/7LEI8ulZzO5gy9Ww2NVCrKmHeDZ.jpg`,
     score: 74,
-    critic: 72,
-    criticSource: "Metacritic",
     state: "seen",
   },
 ];
