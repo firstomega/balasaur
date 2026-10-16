@@ -733,9 +733,7 @@ interface SearchRow {
   rating_rotten_tomatoes: number | null;
   rating_metacritic: number | null;
   rating_tmdb: number | null;
-  /** Absent until the search_titles migration of 2026-10-16 is applied; an
-   *  absent count is unknown, so only the source rule applies. */
-  vote_count?: number | null;
+  vote_count: number | null;
 }
 
 function searchRowToHit(r: SearchRow): SearchHit {
