@@ -460,7 +460,7 @@ function DetailInner({
             <section>
               <SectionHeading>The read</SectionHeading>
               <p className="text-[15px] leading-relaxed text-text-bright">{prose}</p>
-              {rankable && <RanksOn mediaId={detail.id} title={detail.title} />}
+              {rankable && <RanksOn key={detail.id} mediaId={detail.id} title={detail.title} />}
             </section>
           )}
 
@@ -834,14 +834,21 @@ function DetailInner({
 }
 
 // One line under the read naming the lists this title holds a place on, each
-// linked: "Breaking Bad is #1 on Best Drama Shows on Netflix, #1 on Best Crime
+// linked: "Breaking Bad is #1 on Best Crime Shows on Netflix, #1 on Best Drama
 // Shows and #1 on Best Shows of 2008." The number is the position the linked
 // page prints, so following the link shows where it came from. Same query as
 // the closing rail, prefetched by the route so the links are in the HTML.
 // Nothing renders while loading, on error, or for a title on no list.
+//
+// The line sits on the first screen, so it renders only when the lists were in
+// hand at first render. When the route's lookup ran past its budget, a line
+// arriving after hydration would shove the synopsis and everything under it
+// down (a layout shift, counted in CLS) on every visit served that cached
+// page. The caller keys this by title so the decision is made once per page.
 function RanksOn({ mediaId, title }: { mediaId: string; title: string }) {
   const { data } = useQuery(appearsInQueryOptions(mediaId));
-  const lists = data?.ranksOn ?? [];
+  const [inFirstRender] = useState(() => data !== undefined);
+  const lists = inFirstRender ? (data?.ranksOn ?? []) : [];
   if (lists.length === 0) return null;
   return (
     <p className="mt-3 text-lg leading-relaxed text-text">

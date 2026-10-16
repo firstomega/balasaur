@@ -37,9 +37,32 @@ function kindOrder(kind: string): number {
   return i === -1 ? KIND_ORDER.length : i;
 }
 
-/** Up to RANKS_ON_MAX placements, most specific kind first. One list per kind
- *  before a second of any kind, so Breaking Bad reads Netflix drama, all-time
- *  crime, 2008 rather than three Netflix lists. */
+/** Kinds whose slug names one genre: best-crime-shows,
+ *  best-crime-shows-on-netflix, best-korean-crime-shows. */
+const GENRE_KINDS = new Set(["genre-service", "origin-genre", "genre"]);
+
+/** The genre part of a genre list's slug ("crime-shows"), or null. */
+function genreKey(p: Placement): string | null {
+  if (!GENRE_KINDS.has(p.kind)) return null;
+  return p.slug.replace(/^best-/, "").replace(/-on-[a-z0-9-]+$/, "");
+}
+
+/** Whether `p` names a genre a picked list already named: "#1 on Best Crime
+ *  Shows on Netflix" then "#1 on Best Crime Shows" says crime twice. An origin
+ *  list ends with its genre ("korean-crime-shows"), so the test is a suffix. */
+function restatesGenre(p: Placement, picked: Placement[]): boolean {
+  const k = genreKey(p);
+  if (!k) return false;
+  return picked.some((q) => {
+    const j = genreKey(q);
+    return !!j && (j === k || j.endsWith(`-${k}`) || k.endsWith(`-${j}`));
+  });
+}
+
+/** Up to RANKS_ON_MAX placements, most specific kind first. One list per kind,
+ *  and no genre named twice, before a second of any kind, so Breaking Bad
+ *  reads Netflix crime, all-time drama, 2008 rather than three Netflix lists
+ *  or crime on Netflix followed by crime again. */
 export function pickRanksOn(placements: Placement[]): Placement[] {
   const sorted = placements
     .filter((p) => !SKIPPED_KINDS.has(p.kind) && p.rank >= 1)
@@ -54,7 +77,7 @@ export function pickRanksOn(placements: Placement[]): Placement[] {
   const kinds = new Set<string>();
   for (const p of sorted) {
     if (picked.length >= RANKS_ON_MAX) break;
-    if (kinds.has(p.kind)) continue;
+    if (kinds.has(p.kind) || restatesGenre(p, picked)) continue;
     picked.push(p);
     kinds.add(p.kind);
   }
