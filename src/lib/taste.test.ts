@@ -202,15 +202,6 @@ describe("archetype boundaries", () => {
     expect(p.archetype?.evidence).toBe("Non-English titles are 30% of what you Loved.");
   });
 
-  it("fires Critic Proof on a critic score under 60, and treats a missing score as no match", () => {
-    expect(atShare(50, { critic: undefined }).archetype?.key).not.toBe("criticproof");
-    expect(atShare(29, { critic: 59 }, { critic: 80 }).archetype?.key).not.toBe("criticproof");
-    const p = atShare(30, { critic: 59 }, { critic: 80 });
-    expect(p.archetype?.key).toBe("criticproof");
-    expect(p.archetype?.evidence).toBe("30% of what you Loved scored under 60 with critics.");
-    expect(atShare(40, { critic: 60 }, { critic: 80 }).archetype?.key).not.toBe("criticproof");
-  });
-
   it("fires High Bar at 85, not at 84", () => {
     expect(atShare(40, { score: 84 }, { score: 50 }).archetype?.key).not.toBe("highbar");
     const p = atShare(35, { score: 85 }, { score: 50 });
@@ -386,7 +377,7 @@ describe("posters", () => {
 
 describe("the published table", () => {
   it("gives every archetype a name and a rule a reader can check", () => {
-    expect(ARCHETYPES.length).toBeGreaterThan(11);
+    expect(ARCHETYPES.length).toBe(13);
     for (const a of ARCHETYPES) {
       expect(a.name.length).toBeGreaterThan(0);
       expect(a.rule.endsWith(".")).toBe(true);
@@ -413,7 +404,6 @@ describe("the published table", () => {
       many(10, { genres: ["Animation"] }),
       many(10, { genres: ["Documentary"] }),
       many(10, { genres: ["Romance"] }),
-      many(10, { critic: 20 }),
       many(10, { score: 95 }),
       [
         ...many(2, { genres: ["Drama"] }),

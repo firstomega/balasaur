@@ -345,14 +345,6 @@ const RULES: Rule[] = [
     (p, phrase) => `Romance is ${p}% of ${phrase}.`,
   ),
   shareRule(
-    "criticproof",
-    "Critic Proof",
-    "At least 30% scored under 60 with critics.",
-    0.3,
-    (f) => f.critic !== undefined && f.critic < 60,
-    (p, phrase) => `${p}% of ${phrase} scored under 60 with critics.`,
-  ),
-  shareRule(
     "highbar",
     "High Bar",
     "At least 35% scores 85 or better.",
