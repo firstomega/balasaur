@@ -24,13 +24,6 @@ import {
 import type { EpisodeRating } from "./episodes";
 import { posterColorsFromJpeg, type PosterColors } from "./posterColor";
 import { tmdbImage } from "./tmdbImage";
-import {
-  matchReasons,
-  railAnchorOf,
-  selectRail,
-  type RailAnchor,
-  type RelatedFacets,
-} from "./relatedRail";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
@@ -2390,25 +2383,60 @@ function buildDetailFromRaw(
 // genres, with a small same-era bonus; the Balasaur Score is a quality floor.
 // Audience compatibility is a hard wall and the fan-service tier (`suggestive`)
 // never appears. Each returned row carries WHICH facets it shares, so every
-// card can say why it is here. Which rows earn a card, and how many, is
-// src/lib/relatedRail.ts.
+// card can say why it is here — and a rail with fewer than 6 real matches is
+// refused outright rather than padded with filler.
 
-interface RelatedRow extends CrossRow, Omit<RelatedFacets, "year" | "genres"> {
+interface RelatedRow extends CrossRow {
   rating_balasaur: number | null;
   match_score: number;
+  same_franchise: boolean | null;
+  shared_people: string[] | null;
+  shared_sub_genres: string[] | null;
+  shared_themes: string[] | null;
+  shared_genres: string[] | null;
+  era_match: boolean | null;
 }
 
-/** Bump when the rail logic changes shape: cached payloads below this version
+/** Bump when the rail logic changes shape — cached payloads below this version
  *  get their rails rebuilt once on read, then persisted.
- *  v3: also attaches title_context (cohort percentile + franchise standing).
- *  v4: a card needs a shared key person, the franchise, or a sub-genre and a
- *      distinct theme in the same register; at most 8 cards, no rail under 4. */
-const RELATED_ENGINE_VERSION = 4;
+ *  v3: also attaches title_context (cohort percentile + franchise standing). */
+const RELATED_ENGINE_VERSION = 3;
+const MIN_RELATED_MATCHES = 6;
+
+/** A candidate that only shares one broad genre is not a match, it is a
+ *  coincidence. Strong = franchise, a person, a sub-genre, a theme, or at
+ *  least two shared genres. */
+function isStrongMatch(r: RelatedRow): boolean {
+  return (
+    r.same_franchise === true ||
+    (r.shared_people?.length ?? 0) > 0 ||
+    (r.shared_sub_genres?.length ?? 0) > 0 ||
+    (r.shared_themes?.length ?? 0) > 0 ||
+    (r.shared_genres?.length ?? 0) >= 2
+  );
+}
+
+/** Up to three reason chips, most specific first. Skips a label already
+ *  covered by a stronger one ("Spy / Espionage" already says "Espionage"). */
+function matchReasons(r: RelatedRow): string[] {
+  const out: string[] = [];
+  const add = (label: string) => {
+    if (!out.some((x) => x.includes(label) || label.includes(x))) out.push(label);
+  };
+  if (r.same_franchise) out.push("Same series");
+  for (const p of r.shared_people ?? []) add(p);
+  for (const s of r.shared_sub_genres ?? []) add(s);
+  for (const t of r.shared_themes ?? []) add(t);
+  if (out.length < 3) for (const g of r.shared_genres ?? []) add(g);
+  if (out.length < 3 && r.era_match && r.year && /^\d{4}/.test(r.year)) {
+    out.push(`${r.year.slice(0, 3)}0s`);
+  }
+  return out.slice(0, 3);
+}
 
 async function fetchRelatedRail(
   anchorId: string,
   targetType: "movie" | "tv",
-  anchor: RailAnchor,
 ): Promise<MediaItem[] | undefined> {
   const { data, error } = await loose(supabaseAdmin).rpc("related_titles", {
     p_media_id: anchorId,
@@ -2418,12 +2446,13 @@ async function fetchRelatedRail(
     console.error("[detail] related_titles failed:", error.message);
     return undefined;
   }
-  const rows = selectRail((data ?? []) as unknown as RelatedRow[], anchor);
-  return rows?.map((r) => {
+  const rows = ((data ?? []) as unknown as RelatedRow[]).filter(isStrongMatch);
+  if (rows.length < MIN_RELATED_MATCHES) return undefined;
+  return rows.slice(0, 12).map((r) => {
     const item = crossRowToItem(r);
     // The DB-generated score is canonical when present.
     if (typeof r.rating_balasaur === "number") item.ratings.balasaur = r.rating_balasaur;
-    item.matchReasons = matchReasons(r, anchor.keyPeople);
+    item.matchReasons = matchReasons(r);
     return item;
   });
 }
@@ -2431,10 +2460,9 @@ async function fetchRelatedRail(
 async function attachRelatedRails(detail: MediaDetail): Promise<void> {
   if (detail.mediaType !== "movie" && detail.mediaType !== "tv") return;
   const other = detail.mediaType === "tv" ? "movie" : "tv";
-  const anchor = railAnchorOf(detail);
   const [own, cross, ctx] = await Promise.all([
-    fetchRelatedRail(detail.id, detail.mediaType, anchor),
-    fetchRelatedRail(detail.id, other, anchor),
+    fetchRelatedRail(detail.id, detail.mediaType),
+    fetchRelatedRail(detail.id, other),
     loose(supabaseAdmin)
       .rpc("title_context", { p_media_id: detail.id })
       .then(
@@ -2442,7 +2470,7 @@ async function attachRelatedRails(detail: MediaDetail): Promise<void> {
         () => null,
       ),
   ]);
-  // No weak rail: fewer than 4 strong matches means no rail at all. This also
+  // No weak rail: fewer than 6 real matches means no rail at all. This also
   // drops TMDB's raw recommendation list, which had no content filters.
   detail.related = own;
   detail.relatedCross = cross;
