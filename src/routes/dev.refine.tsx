@@ -125,7 +125,6 @@ interface Seed {
   genres: string[];
   origins: string[];
   score: number;
-  critic?: number;
   from: string;
   to: string;
   state: "liked" | "seen" | "want";
@@ -140,7 +139,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama", "Crime"],
     origins: ["us"],
     score: 91,
-    critic: 88,
     from: "#1e3a5f",
     to: "#0d1b2a",
     state: "liked",
@@ -153,7 +151,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama", "Thriller"],
     origins: ["gb"],
     score: 88,
-    critic: 81,
     from: "#3d2c4a",
     to: "#160f1e",
     state: "liked",
@@ -166,7 +163,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama"],
     origins: ["us"],
     score: 86,
-    critic: 79,
     from: "#4a3520",
     to: "#1c1208",
     state: "liked",
@@ -179,7 +175,6 @@ const SEEDS: Seed[] = [
     genres: ["Mystery", "Drama"],
     origins: ["kr"],
     score: 84,
-    critic: 74,
     from: "#1f4038",
     to: "#0a1a16",
     state: "liked",
@@ -192,7 +187,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama", "History"],
     origins: ["gb"],
     score: 83,
-    critic: 85,
     from: "#2b3a2f",
     to: "#101710",
     state: "liked",
@@ -205,7 +199,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama", "Romance"],
     origins: ["fr"],
     score: 82,
-    critic: 77,
     from: "#4a2030",
     to: "#1a0b12",
     state: "liked",
@@ -218,7 +211,6 @@ const SEEDS: Seed[] = [
     genres: ["Action", "Science Fiction"],
     origins: ["us"],
     score: 71,
-    critic: 31,
     from: "#2a1c3f",
     to: "#0e0817",
     state: "liked",
@@ -231,7 +223,6 @@ const SEEDS: Seed[] = [
     genres: ["Comedy"],
     origins: ["us"],
     score: 80,
-    critic: 72,
     from: "#3f3a18",
     to: "#161408",
     state: "liked",
@@ -244,7 +235,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama"],
     origins: ["us"],
     score: 85,
-    critic: 83,
     from: "#1c3346",
     to: "#0a1119",
     state: "seen",
@@ -257,7 +247,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama", "Western"],
     origins: ["us"],
     score: 78,
-    critic: 69,
     from: "#43301c",
     to: "#171008",
     state: "seen",
@@ -270,7 +259,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama", "Crime"],
     origins: ["gb"],
     score: 81,
-    critic: 76,
     from: "#243c4a",
     to: "#0c151b",
     state: "seen",
@@ -283,7 +271,6 @@ const SEEDS: Seed[] = [
     genres: ["Thriller"],
     origins: ["us"],
     score: 74,
-    critic: 66,
     from: "#33203a",
     to: "#120b15",
     state: "want",
@@ -296,7 +283,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama"],
     origins: ["jp"],
     score: 87,
-    critic: 84,
     from: "#1e3b2c",
     to: "#0a1710",
     state: "want",
@@ -309,7 +295,6 @@ const SEEDS: Seed[] = [
     genres: ["Drama", "Mystery"],
     origins: ["se"],
     score: 89,
-    critic: 86,
     from: "#2c2f45",
     to: "#101119",
     state: "want",
@@ -336,8 +321,6 @@ const TASTE_FACTS: TitleFact[] = SEEDS.map((s) => ({
   origins: s.origins,
   posterUrl: poster(s.title, s.from, s.to),
   score: s.score,
-  critic: s.critic,
-  criticSource: "Metacritic" as const,
 }));
 
 // ---------------------------------------------------------------------------
@@ -410,7 +393,6 @@ function TastePanel() {
           counts: profile.counts,
           decades: profile.decadeCount,
           posters: profile.posters,
-          contrarian: profile.contrarian?.line ?? null,
         }}
       />
     </section>

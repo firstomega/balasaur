@@ -6,7 +6,7 @@
 // number, and that number is printed on the card next to the sentence that
 // uses it. "Horror is 34% of what you Loved" sits beside "41 LOVED", so a
 // stranger can check it. A rule whose denominator is some filtered subset
-// (only the titles that happen to carry a critic score, say) would produce a
+// (only the titles that happen to have a release year, say) would produce a
 // percentage nobody can reconstruct, which is the failure this rule exists to
 // prevent. Titles missing a fact simply never satisfy the predicate.
 //
@@ -35,9 +35,6 @@ export const CARD_POSTERS = 4;
  *  importing anything that touches the database. */
 export const MAX_FACT_IDS = 600;
 
-/** A critic score at or under this is what makes a liked title contrarian. */
-export const CONTRARIAN_CRITIC_MAX = 55;
-
 /** Catalog facts for one title, as the taste page loads them. */
 export interface TitleFact {
   id: string;
@@ -56,9 +53,6 @@ export interface TitleFact {
   colorB?: string;
   /** Balasaur Score, 0 to 100. */
   score?: number;
-  /** Critic score, 0 to 100. Metacritic when present, else Rotten Tomatoes. */
-  critic?: number;
-  criticSource?: "Metacritic" | "Rotten Tomatoes";
 }
 
 export type TasteBasis = "loved" | "watched";
@@ -101,15 +95,6 @@ export interface CardPoster {
   colorB?: string;
 }
 
-export interface Contrarian {
-  id: string;
-  title: string;
-  critic: number;
-  criticSource: string;
-  /** "You liked Venom. Critics gave it 31." */
-  line: string;
-}
-
 export interface TasteReadiness {
   liked: number;
   watched: number;
@@ -135,7 +120,6 @@ export interface TasteProfile {
   /** Distinct decades in the basis set. */
   decadeCount: number;
   posters: CardPoster[];
-  contrarian: Contrarian | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -358,14 +342,6 @@ const RULES: Rule[] = [
     (p, phrase) => `Romance is ${p}% of ${phrase}.`,
   ),
   shareRule(
-    "criticproof",
-    "Critic Proof",
-    "At least 30% scored under 60 with critics.",
-    0.3,
-    (f) => f.critic !== undefined && f.critic < 60,
-    (p, phrase) => `${p}% of ${phrase} scored under 60 with critics.`,
-  ),
-  shareRule(
     "highbar",
     "High Bar",
     "At least 35% scores 85 or better.",
@@ -444,32 +420,6 @@ function postersOf(rows: Row[]): CardPoster[] {
     }));
 }
 
-/**
- * The one Loved title critics disliked most. Always drawn from the Loved list
- * even when the archetype falls back to watched, because having watched
- * something is not a disagreement with anybody.
- */
-function contrarianOf(likedRows: Row[]): Contrarian | null {
-  const candidates = likedRows.filter(
-    (r) => r.fact.critic !== undefined && r.fact.critic <= CONTRARIAN_CRITIC_MAX,
-  );
-  if (candidates.length === 0) return null;
-  candidates.sort(
-    (a, b) =>
-      (a.fact.critic ?? 0) - (b.fact.critic ?? 0) ||
-      a.fact.title.localeCompare(b.fact.title) ||
-      a.fact.id.localeCompare(b.fact.id),
-  );
-  const pick = candidates[0].fact;
-  return {
-    id: pick.id,
-    title: pick.title,
-    critic: pick.critic!,
-    criticSource: pick.criticSource ?? "Metacritic",
-    line: `You liked ${pick.title}. Critics gave it ${pick.critic}.`,
-  };
-}
-
 function pickArchetype(shape: Shape): Archetype | null {
   let best: { rule: Rule; strength: number; evidence: string } | null = null;
   for (const rule of RULES) {
@@ -541,7 +491,6 @@ export function computeTaste(statuses: StatusMap, facts: readonly TitleFact[]): 
     decades,
     decadeCount: decades.length,
     posters: postersOf(rows),
-    contrarian: contrarianOf(likedRows),
   };
 }
 
