@@ -733,6 +733,9 @@ interface SearchRow {
   rating_rotten_tomatoes: number | null;
   rating_metacritic: number | null;
   rating_tmdb: number | null;
+  /** Absent until the search_titles migration of 2026-10-16 is applied; an
+   *  absent count is unknown, so only the source rule applies. */
+  vote_count?: number | null;
 }
 
 function searchRowToHit(r: SearchRow): SearchHit {
@@ -742,7 +745,6 @@ function searchRowToHit(r: SearchRow): SearchHit {
     title: r.title,
     year: r.year,
     posterUrl: r.poster_url,
-    // Search rows carry no vote count, so only the source rule applies here.
     balasaur: trustedScore({
       ratings: {
         imdb: r.rating_imdb,
@@ -750,6 +752,7 @@ function searchRowToHit(r: SearchRow): SearchHit {
         metacritic: r.rating_metacritic,
         tmdb: r.rating_tmdb,
       },
+      voteCount: r.vote_count,
     }),
   };
 }
@@ -775,7 +778,7 @@ export const searchTitles = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabaseAdmin
       .from("media")
       .select(
-        "media_id, media_type, title, year, poster_url, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
+        "media_id, media_type, title, year, poster_url, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count",
       )
       .ilike("title", `%${q}%`)
       .order("rank_score", { ascending: false, nullsFirst: false })
