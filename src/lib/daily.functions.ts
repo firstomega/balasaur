@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dayNumber, dailyIndex, redactTitle, leaksTitle } from "@/lib/daily";
+import { trustedScore } from "@/lib/trust";
 import type { MediaPerson } from "@/types/media";
 
 // The daily pick. Pool: titles with 1,500+ ratings, so the answer is always
@@ -37,7 +38,7 @@ function boxOfficeWords(raw?: string): string {
 }
 
 const CHALLENGE_COLS =
-  "media_id, media_type, title, year, poster_url, rating_balasaur, rating_imdb, rating_rotten_tomatoes, genres, people, seasons, awards_won, raw_tmdb, raw_omdb";
+  "media_id, media_type, title, year, poster_url, rating_balasaur, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count, genres, people, seasons, awards_won, raw_tmdb, raw_omdb";
 
 /** The pinned pick for a day, computing and pinning it on first request. */
 async function pinnedMediaId(day: number): Promise<string | null> {
@@ -115,6 +116,9 @@ export const getDailyChallenge = createServerFn({ method: "GET" }).handler(
       people: MediaPerson[] | null;
       rating_imdb: number | null;
       rating_rotten_tomatoes: number | null;
+      rating_metacritic: number | null;
+      rating_tmdb: number | null;
+      vote_count: number | null;
       seasons: { episode_count?: number }[] | null;
       awards_won: string[] | null;
       raw_tmdb: { tagline?: string; networks?: { name?: string }[] } | null;
@@ -156,8 +160,21 @@ export const getDailyChallenge = createServerFn({ method: "GET" }).handler(
       }
       return "";
     };
-    const scoreLine =
-      typeof r.rating_balasaur === "number" ? `Balasaur Score: ${r.rating_balasaur}.` : "";
+    // The same rule as every other score on the site. The 1,500-vote pool
+    // means it passes every title today; it is here so the clue and the end
+    // screen can never print a number the title page would not.
+    const score =
+      trustedScore({
+        ratings: {
+          imdb: r.rating_imdb,
+          rottenTomatoes: r.rating_rotten_tomatoes,
+          metacritic: r.rating_metacritic,
+          tmdb: r.rating_tmdb,
+          balasaur: r.rating_balasaur,
+        },
+        voteCount: r.vote_count,
+      }) ?? null;
+    const scoreLine = score === null ? "" : `Balasaur Score: ${score}.`;
     const imdbLine =
       typeof r.rating_imdb === "number" ? `IMDb users give it ${r.rating_imdb}.` : "";
     const rtLine =
@@ -203,7 +220,7 @@ export const getDailyChallenge = createServerFn({ method: "GET" }).handler(
       year: r.year,
       mediaType: r.media_type === "tv" ? "tv" : "movie",
       posterUrl: r.poster_url,
-      score: r.rating_balasaur,
+      score,
       clues,
     };
   },

@@ -3,16 +3,20 @@ import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { SITE_ORIGIN } from "@/lib/seo";
 import { mediaSlug } from "@/lib/slug";
+import { trustedScore } from "@/lib/trust";
 
 /**
  * Public API-lite: GET /api/public/v1/score?id=<movie|tv>-<tmdbId>
  *
- * Read-only, attribution-required access to the Balasaur Score for one title —
+ * Read-only, attribution-required access to the Balasaur Score for one title,
  * the seed of the "developers embed our data, links accrue to us" loop. Kept
- * deliberately tiny: one row, six public fields, aggressive CDN caching
+ * deliberately tiny: one row, eight public fields (id, type, title, year,
+ * balasaurScore, weightedScore, url, attribution), aggressive CDN caching
  * (s-maxage=86400) so even heavy third-party use costs one DB read per title
  * per day. No key/auth: everything returned is already publicly visible on the
- * site, and the cache header is the abuse valve.
+ * site, and the cache header is the abuse valve. balasaurScore follows the
+ * site's trust rule (src/lib/trust.ts): null wherever a title page shows no
+ * score.
  */
 export const Route = createFileRoute("/api/public/v1/score")({
   server: {
@@ -37,7 +41,9 @@ export const Route = createFileRoute("/api/public/v1/score")({
 
         const { data, error } = await loose(supabaseAdmin)
           .from("media")
-          .select("media_id, media_type, title, year, rating_balasaur, quality_score, sensitive")
+          .select(
+            "media_id, media_type, title, year, rating_balasaur, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count, quality_score, sensitive",
+          )
           .eq("media_id", id)
           .maybeSingle();
         if (error) return json({ error: "Lookup failed" }, 500, false);
@@ -51,7 +57,17 @@ export const Route = createFileRoute("/api/public/v1/score")({
           type: data.media_type,
           title: data.title,
           year: data.year,
-          balasaurScore: data.rating_balasaur,
+          balasaurScore:
+            trustedScore({
+              ratings: {
+                imdb: data.rating_imdb,
+                rottenTomatoes: data.rating_rotten_tomatoes,
+                metacritic: data.rating_metacritic,
+                tmdb: data.rating_tmdb,
+                balasaur: data.rating_balasaur,
+              },
+              voteCount: data.vote_count,
+            }) ?? null,
           weightedScore: data.quality_score,
           url: `${SITE_ORIGIN}/${seg}/${mediaSlug(rawId, data.title)}`,
           attribution: "Score by Balasaur (balasaur.com). Link required when displayed.",
