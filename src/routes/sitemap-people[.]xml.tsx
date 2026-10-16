@@ -4,13 +4,14 @@ import { SITE_ORIGIN } from "@/lib/seo";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
 
-/** A person earns a sitemap slot with this many leading or directing credits
- *  in indexable titles. Stricter than the search gate (3): a submitted page
- *  should carry a filmography a stranger would recognize, not three rows. */
-const SITEMAP_MIN_TITLES = 8;
-
-// Served at /sitemap-people.xml — people pages worth an index slot, from the
-// nightly person_index view. About 1,860 people at the current gate.
+// Served at /sitemap-people.xml: exactly the kept set, person_index_kept, the
+// same rows the person page reads to decide noindex. 850 people (see
+// src/lib/indexKeep.ts), down from 10,970.
+//
+// Ordered by person id, which carries no meaning. It used to be ordered by
+// credit count, which put the voice actors with 140 anime credits first;
+// Google does not need to be told an order, and an order that ranks the
+// wrong people first is worse than none.
 export const Route = createFileRoute("/sitemap-people.xml")({
   server: {
     handlers: {
@@ -18,14 +19,12 @@ export const Route = createFileRoute("/sitemap-people.xml")({
         const urls: SitemapUrl[] = [];
         try {
           // Paged: PostgREST clamps any single request to ~1,000 rows, which
-          // once silently truncated the title sitemap. Cap 5,000 for safety.
+          // once silently truncated the title sitemap.
           const PAGE = 1000;
-          for (let offset = 0; offset < 5000; offset += PAGE) {
+          for (let offset = 0; offset < 50000; offset += PAGE) {
             const { data, error } = await loose(supabaseAdmin)
-              .from("person_index")
+              .from("person_index_kept")
               .select("person_id")
-              .gte("titles", SITEMAP_MIN_TITLES)
-              .order("titles", { ascending: false })
               .order("person_id", { ascending: true })
               .range(offset, offset + PAGE - 1);
             if (error) throw error;
