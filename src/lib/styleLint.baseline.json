@@ -1,10 +1,10 @@
 {
   "totals": {
-    "fontSize": 881,
+    "fontSize": 880,
     "radius": 329,
     "duration": 4,
     "easing": 8,
-    "hex": 382,
+    "hex": 381,
     "containerWidth": 76
   },
   "files": {
@@ -257,7 +257,7 @@
       "hex": 2
     },
     "src/lib/tasteCard.ts": {
-      "hex": 9
+      "hex": 8
     },
     "src/lib/userStatus.ts": {
       "hex": 5
@@ -424,7 +424,7 @@
       "radius": 5
     },
     "src/routes/taste.tsx": {
-      "fontSize": 8
+      "fontSize": 7
     },
     "src/routes/terms.tsx": {
       "fontSize": 3

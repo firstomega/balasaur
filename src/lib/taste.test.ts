@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test";
 import type { StatusMap, UserStatusRecord } from "@/hooks/useUserStatus";
 import {
   ARCHETYPES,
-  CONTRARIAN_CRITIC_MAX,
   HOUSE_TINT,
   MIN_BASIS_TITLES,
   cardTint,
@@ -37,8 +36,6 @@ function fact(over: Partial<TitleFact> = {}): TitleFact {
     colorA: over.colorA,
     colorB: over.colorB,
     score: over.score,
-    critic: over.critic,
-    criticSource: over.criticSource,
   };
 }
 
@@ -110,7 +107,6 @@ describe("computeTaste, empty and tiny libraries", () => {
     expect(p.total).toBe(0);
     expect(p.needed).toBe(MIN_BASIS_TITLES);
     expect(p.posters.length).toBe(0);
-    expect(p.contrarian).toBe(null);
     expect(p.decadeCount).toBe(0);
   });
 
@@ -202,15 +198,6 @@ describe("archetype boundaries", () => {
     const p = atShare(30, { origins: ["Korean"] });
     expect(p.archetype?.key).toBe("subtitles");
     expect(p.archetype?.evidence).toBe("Non-English titles are 30% of what you Loved.");
-  });
-
-  it("fires Critic Proof on a critic score under 60, and treats a missing score as no match", () => {
-    expect(atShare(50, { critic: undefined }).archetype?.key).not.toBe("criticproof");
-    expect(atShare(29, { critic: 59 }, { critic: 80 }).archetype?.key).not.toBe("criticproof");
-    const p = atShare(30, { critic: 59 }, { critic: 80 });
-    expect(p.archetype?.key).toBe("criticproof");
-    expect(p.archetype?.evidence).toBe("30% of what you Loved scored under 60 with critics.");
-    expect(atShare(40, { critic: 60 }, { critic: 80 }).archetype?.key).not.toBe("criticproof");
   });
 
   it("fires High Bar at 85, not at 84", () => {
@@ -386,55 +373,9 @@ describe("posters", () => {
   });
 });
 
-describe("the contrarian pick", () => {
-  it("is the Loved title critics scored lowest", () => {
-    const p = profileOf([
-      fact({ title: "Venom", critic: 31 }),
-      fact({ title: "Battleship", critic: 41 }),
-      fact({ title: "Parasite", critic: 96 }),
-      ...many(9),
-    ]);
-    expect(p.contrarian?.line).toBe("You liked Venom. Critics gave it 31.");
-    expect(p.contrarian?.title).toBe("Venom");
-  });
-
-  it("stays silent when nothing was panned", () => {
-    const p = profileOf(many(12, { critic: CONTRARIAN_CRITIC_MAX + 1 }));
-    expect(p.contrarian).toBe(null);
-  });
-
-  it("includes a title sitting exactly on the cutoff", () => {
-    const p = profileOf([fact({ title: "Edge", critic: CONTRARIAN_CRITIC_MAX }), ...many(9)]);
-    expect(p.contrarian?.title).toBe("Edge");
-  });
-
-  it("comes from the Loved list even when the archetype describes the watched list", () => {
-    const loved = [fact({ title: "Venom", critic: 31 })];
-    const seen = many(20, { critic: 20, genres: ["Comedy"] });
-    const m: StatusMap = { ...library(loved, liked), ...library(seen, watched) };
-    const p = computeTaste(m, [...loved, ...seen]);
-    expect(p.basis).toBe("watched");
-    expect(p.contrarian?.title).toBe("Venom");
-  });
-
-  it("stays silent when the panned title was watched but never Loved", () => {
-    const p = profileOf(many(12, { critic: 20 }), watched);
-    expect(p.contrarian).toBe(null);
-  });
-
-  it("breaks a tie by title", () => {
-    const p = profileOf([
-      fact({ title: "Zardoz", critic: 30 }),
-      fact({ title: "Alone", critic: 30 }),
-      ...many(9),
-    ]);
-    expect(p.contrarian?.title).toBe("Alone");
-  });
-});
-
 describe("the published table", () => {
   it("gives every archetype a name and a rule a reader can check", () => {
-    expect(ARCHETYPES.length).toBeGreaterThan(11);
+    expect(ARCHETYPES.length).toBe(13);
     for (const a of ARCHETYPES) {
       expect(a.name.length).toBeGreaterThan(0);
       expect(a.rule.endsWith(".")).toBe(true);
@@ -461,7 +402,6 @@ describe("the published table", () => {
       many(10, { genres: ["Animation"] }),
       many(10, { genres: ["Documentary"] }),
       many(10, { genres: ["Romance"] }),
-      many(10, { critic: 20 }),
       many(10, { score: 95 }),
       [
         ...many(2, { genres: ["Drama"] }),
@@ -483,95 +423,95 @@ describe("the real library on file", () => {
   // The 84 watched titles of the largest account in the database on
   // 2026-09-08, reduced to the facts the rules read. This is here so a
   // threshold change has to explain itself against a person, not a fixture.
-  const REAL: Array<[genres: string[], year: string, critic: number | undefined, score: number]> = [
-    [["Animation", "Action", "Adventure", "Science Fiction", "Fantasy"], "2021", undefined, 89],
-    [["Family", "Comedy", "Animation", "Adventure"], "1995", 96, 89],
-    [["Animation", "Comedy", "Science Fiction", "Fantasy", "Action", "Adventure"], "2013", undefined, 89], // prettier-ignore
-    [["Adventure", "Action", "Science Fiction"], "1977", 90, 88],
-    [["Animation", "Family", "Science Fiction"], "2008", 95, 88],
-    [["Animation", "Family", "Adventure", "Drama", "Comedy"], "2015", 94, 87],
-    [["Animation", "Drama", "Science Fiction", "Fantasy", "Action", "Adventure"], "2021", undefined, 87], // prettier-ignore
-    [["Animation", "Action", "Adventure", "Science Fiction"], "2018", 87, 87],
-    [["Animation", "Comedy", "Family", "Adventure"], "2009", 88, 87],
-    [["Animation", "Action", "Adventure", "Science Fiction"], "2023", 86, 87],
-    [["Animation", "Family", "Adventure"], "2003", 90, 87],
-    [["Action", "Adventure", "Mystery", "Science Fiction", "Fantasy"], "2016", undefined, 86],
-    [["Family", "Animation", "Music", "Adventure"], "2017", 81, 86],
-    [["Adventure", "Science Fiction", "Action"], "2019", 78, 85],
-    [["Science Fiction", "Fantasy", "Action", "Adventure"], "2019", undefined, 85],
-    [["Adventure", "Action", "Fantasy"], "2026", 88, 85],
-    [["Action", "Adventure", "Animation", "Science Fiction", "Fantasy"], "2026", undefined, 85],
-    [["Science Fiction", "Adventure"], "2026", 77, 84],
-    [["Animation", "Adventure", "Family", "Comedy"], "2016", 78, 83],
-    [["Drama"], "2011", undefined, 83],
-    [["Fantasy", "Adventure", "Animation", "Family"], "2010", 75, 83],
-    [["Horror", "Thriller"], "2026", 77, 82],
-    [["Action", "Adventure", "Science Fiction", "Fantasy"], "2023", undefined, 82],
-    [["Action", "Drama", "Science Fiction"], "2017", 77, 82],
-    [["Science Fiction", "Drama", "Adventure"], "2015", 80, 82],
-    [["Action", "Adventure", "Animation", "Family"], "2004", 90, 82],
-    [["Action", "Science Fiction", "Adventure"], "2008", 79, 82],
-    [["Family", "Comedy", "Animation", "Adventure"], "2019", 84, 82],
-    [["Action", "Science Fiction", "Adventure"], "2014", 76, 81],
-    [["Action", "Adventure", "Science Fiction"], "2021", 71, 81],
-    [["Adventure", "Action", "Science Fiction"], "2018", 68, 81],
-    [["Action", "Adventure", "Science Fiction"], "2018", 88, 81],
-    [["Adventure", "Drama", "Science Fiction"], "2014", 74, 81],
-    [["Action", "Adventure", "Science Fiction"], "2014", 75, 80],
-    [["Science Fiction", "Action", "Adventure"], "2009", 83, 80],
-    [["Action", "Adventure", "Science Fiction"], "2004", 83, 80],
-    [["Action", "Thriller", "Crime"], "2023", 78, 80],
-    [["Science Fiction", "Action", "Adventure"], "2012", 69, 80],
-    [["Adventure", "Family", "Animation", "Action", "Comedy"], "2014", 74, 80],
-    [["Adventure", "Action", "Science Fiction"], "2016", 75, 79],
-    [["Animation", "Family", "Comedy", "Adventure"], "2026", 73, 79],
-    [["Horror", "Thriller", "Science Fiction"], "2026", 81, 78],
-    [["Adventure", "Animation", "Comedy", "Family"], "1998", 78, 77],
-    [["Animation", "Family", "Adventure", "Fantasy"], "2013", 75, 77],
-    [["Science Fiction", "Action", "Adventure"], "2026", 66, 77],
-    [["Action", "Adventure", "Science Fiction"], "2017", 73, 77],
-    [["Action", "Science Fiction"], "2002", 73, 77],
-    [["Action", "Adventure", "Science Fiction"], "2019", 69, 76],
-    [["Adventure", "Action", "Science Fiction"], "2017", 84, 76],
-    [["Science Fiction", "Adventure", "Action"], "2023", 64, 76],
-    [["Action", "Adventure", "Drama", "Science Fiction", "Fantasy"], "2023", undefined, 76],
-    [["Action", "Science Fiction", "Adventure"], "2025", 71, 76],
-    [["Adventure", "Fantasy", "Action"], "2003", 63, 76],
-    [["Action", "Adventure", "Mystery"], "2026", undefined, 76],
-    [["Comedy", "Adventure", "Fantasy"], "2023", 80, 75],
-    [["Action", "Adventure", "Science Fiction"], "2022", 67, 74],
-    [["Science Fiction", "Fantasy", "Action", "Adventure"], "2023", undefined, 74],
-    [["Action", "Science Fiction", "Adventure"], "2025", 68, 74],
-    [["Fantasy", "Family", "Action", "Adventure"], "2025", 61, 74],
-    [["Action", "Drama", "History"], "2006", 68, 73],
-    [["Action", "Adventure", "Science Fiction"], "2018", 70, 73],
-    [["Science Fiction", "Adventure", "Action"], "2025", 68, 73],
-    [["Adventure", "Family", "Fantasy"], "2005", 75, 72],
-    [["Action", "Adventure", "Science Fiction"], "2015", 66, 72],
-    [["Action", "Comedy", "Science Fiction"], "2024", 56, 72],
-    [["Action", "Thriller", "Adventure"], "2025", 67, 72],
-    [["Action", "Adventure", "Science Fiction"], "2013", 62, 70],
-    [["Action", "Adventure", "Science Fiction"], "2012", 66, 69],
-    [["Science Fiction", "Adventure", "Action"], "2025", 65, 68],
-    [["Adventure", "Action", "Science Fiction"], "2010", 57, 67],
-    [["Action", "Thriller", "Comedy", "Crime"], "2025", 59, 66],
-    [["Action", "Adventure", "Drama"], "2024", 64, 66],
-    [["Adventure", "Action", "Science Fiction"], "2002", 54, 63],
-    [["Action", "Science Fiction", "Adventure"], "2023", 55, 63],
-    [["Action", "Adventure", "Science Fiction"], "2007", 59, 62],
-    [["Action", "Adventure", "Science Fiction"], "2014", 53, 60],
-    [["Science Fiction", "Fantasy", "Action"], "2016", 52, 60],
-    [["Action", "Adventure", "Science Fiction"], "2012", 51, 60],
-    [["Action", "Science Fiction", "Adventure"], "2021", 45, 60],
-    [["Action", "Adventure", "Science Fiction"], "2023", 48, 55],
-    [["Science Fiction", "Action", "Adventure"], "2024", 41, 53],
-    [["Action", "Thriller"], "2026", 40, 53],
-    [["Science Fiction", "Action", "Adventure"], "2023", 31, 45],
-    [["Action", "Adventure", "Thriller"], "2024", 35, 44],
+  const REAL: Array<[genres: string[], year: string, score: number]> = [
+    [["Animation", "Action", "Adventure", "Science Fiction", "Fantasy"], "2021", 89],
+    [["Family", "Comedy", "Animation", "Adventure"], "1995", 89],
+    [["Animation", "Comedy", "Science Fiction", "Fantasy", "Action", "Adventure"], "2013", 89],
+    [["Adventure", "Action", "Science Fiction"], "1977", 88],
+    [["Animation", "Family", "Science Fiction"], "2008", 88],
+    [["Animation", "Family", "Adventure", "Drama", "Comedy"], "2015", 87],
+    [["Animation", "Drama", "Science Fiction", "Fantasy", "Action", "Adventure"], "2021", 87],
+    [["Animation", "Action", "Adventure", "Science Fiction"], "2018", 87],
+    [["Animation", "Comedy", "Family", "Adventure"], "2009", 87],
+    [["Animation", "Action", "Adventure", "Science Fiction"], "2023", 87],
+    [["Animation", "Family", "Adventure"], "2003", 87],
+    [["Action", "Adventure", "Mystery", "Science Fiction", "Fantasy"], "2016", 86],
+    [["Family", "Animation", "Music", "Adventure"], "2017", 86],
+    [["Adventure", "Science Fiction", "Action"], "2019", 85],
+    [["Science Fiction", "Fantasy", "Action", "Adventure"], "2019", 85],
+    [["Adventure", "Action", "Fantasy"], "2026", 85],
+    [["Action", "Adventure", "Animation", "Science Fiction", "Fantasy"], "2026", 85],
+    [["Science Fiction", "Adventure"], "2026", 84],
+    [["Animation", "Adventure", "Family", "Comedy"], "2016", 83],
+    [["Drama"], "2011", 83],
+    [["Fantasy", "Adventure", "Animation", "Family"], "2010", 83],
+    [["Horror", "Thriller"], "2026", 82],
+    [["Action", "Adventure", "Science Fiction", "Fantasy"], "2023", 82],
+    [["Action", "Drama", "Science Fiction"], "2017", 82],
+    [["Science Fiction", "Drama", "Adventure"], "2015", 82],
+    [["Action", "Adventure", "Animation", "Family"], "2004", 82],
+    [["Action", "Science Fiction", "Adventure"], "2008", 82],
+    [["Family", "Comedy", "Animation", "Adventure"], "2019", 82],
+    [["Action", "Science Fiction", "Adventure"], "2014", 81],
+    [["Action", "Adventure", "Science Fiction"], "2021", 81],
+    [["Adventure", "Action", "Science Fiction"], "2018", 81],
+    [["Action", "Adventure", "Science Fiction"], "2018", 81],
+    [["Adventure", "Drama", "Science Fiction"], "2014", 81],
+    [["Action", "Adventure", "Science Fiction"], "2014", 80],
+    [["Science Fiction", "Action", "Adventure"], "2009", 80],
+    [["Action", "Adventure", "Science Fiction"], "2004", 80],
+    [["Action", "Thriller", "Crime"], "2023", 80],
+    [["Science Fiction", "Action", "Adventure"], "2012", 80],
+    [["Adventure", "Family", "Animation", "Action", "Comedy"], "2014", 80],
+    [["Adventure", "Action", "Science Fiction"], "2016", 79],
+    [["Animation", "Family", "Comedy", "Adventure"], "2026", 79],
+    [["Horror", "Thriller", "Science Fiction"], "2026", 78],
+    [["Adventure", "Animation", "Comedy", "Family"], "1998", 77],
+    [["Animation", "Family", "Adventure", "Fantasy"], "2013", 77],
+    [["Science Fiction", "Action", "Adventure"], "2026", 77],
+    [["Action", "Adventure", "Science Fiction"], "2017", 77],
+    [["Action", "Science Fiction"], "2002", 77],
+    [["Action", "Adventure", "Science Fiction"], "2019", 76],
+    [["Adventure", "Action", "Science Fiction"], "2017", 76],
+    [["Science Fiction", "Adventure", "Action"], "2023", 76],
+    [["Action", "Adventure", "Drama", "Science Fiction", "Fantasy"], "2023", 76],
+    [["Action", "Science Fiction", "Adventure"], "2025", 76],
+    [["Adventure", "Fantasy", "Action"], "2003", 76],
+    [["Action", "Adventure", "Mystery"], "2026", 76],
+    [["Comedy", "Adventure", "Fantasy"], "2023", 75],
+    [["Action", "Adventure", "Science Fiction"], "2022", 74],
+    [["Science Fiction", "Fantasy", "Action", "Adventure"], "2023", 74],
+    [["Action", "Science Fiction", "Adventure"], "2025", 74],
+    [["Fantasy", "Family", "Action", "Adventure"], "2025", 74],
+    [["Action", "Drama", "History"], "2006", 73],
+    [["Action", "Adventure", "Science Fiction"], "2018", 73],
+    [["Science Fiction", "Adventure", "Action"], "2025", 73],
+    [["Adventure", "Family", "Fantasy"], "2005", 72],
+    [["Action", "Adventure", "Science Fiction"], "2015", 72],
+    [["Action", "Comedy", "Science Fiction"], "2024", 72],
+    [["Action", "Thriller", "Adventure"], "2025", 72],
+    [["Action", "Adventure", "Science Fiction"], "2013", 70],
+    [["Action", "Adventure", "Science Fiction"], "2012", 69],
+    [["Science Fiction", "Adventure", "Action"], "2025", 68],
+    [["Adventure", "Action", "Science Fiction"], "2010", 67],
+    [["Action", "Thriller", "Comedy", "Crime"], "2025", 66],
+    [["Action", "Adventure", "Drama"], "2024", 66],
+    [["Adventure", "Action", "Science Fiction"], "2002", 63],
+    [["Action", "Science Fiction", "Adventure"], "2023", 63],
+    [["Action", "Adventure", "Science Fiction"], "2007", 62],
+    [["Action", "Adventure", "Science Fiction"], "2014", 60],
+    [["Science Fiction", "Fantasy", "Action"], "2016", 60],
+    [["Action", "Adventure", "Science Fiction"], "2012", 60],
+    [["Action", "Science Fiction", "Adventure"], "2021", 60],
+    [["Action", "Adventure", "Science Fiction"], "2023", 55],
+    [["Science Fiction", "Action", "Adventure"], "2024", 53],
+    [["Action", "Thriller"], "2026", 53],
+    [["Science Fiction", "Action", "Adventure"], "2023", 45],
+    [["Action", "Adventure", "Thriller"], "2024", 44],
   ];
 
-  const realFacts = REAL.map(([genres, year, critic, score], i) =>
-    fact({ id: `real-${i}`, title: `Real ${i}`, genres, year, critic, score, mediaType: "movie" }),
+  const realFacts = REAL.map(([genres, year, score], i) =>
+    fact({ id: `real-${i}`, title: `Real ${i}`, genres, year, score, mediaType: "movie" }),
   );
 
   it("calls this person Opening Weekend, on 84 titles", () => {
@@ -689,9 +629,8 @@ describe("the example card", () => {
     expect(p.decadeCount).toBe(5);
   });
 
-  it("has four posters and a disagreement to print", () => {
+  it("has four posters to print", () => {
     expect(p.posters.length).toBe(4);
     expect(json(p.posters.map((x) => x.score))).toBe(json([87, 84, 83, 83]));
-    expect(p.contrarian?.line).toBe("You liked Event Horizon. Critics gave it 35.");
   });
 });

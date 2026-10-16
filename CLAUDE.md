@@ -83,7 +83,8 @@ were considering.
 
 A disagreement between sources is not one of those questions. "Critics rate it
 lower than audiences do" manufactures a tension no viewer asked about, and the
-owner rejected it everywhere: page copy, descriptions, games, llms.txt.
+owner rejected it everywhere: page copy, descriptions, games, llms.txt, the
+Taste Card.
 
 **Check:** Does any sentence set one group of raters against another? Cut it.
 
