@@ -10,12 +10,36 @@
 // "HBO Max Amazon Channel" plays inside Prime Video, so that is where the
 // click goes. Providers with no reliable public search URL return null and
 // the chip falls back to the aggregate all-options page.
+//
+// Monetization: the Amazon Video search URL carries the site's Amazon
+// Associates tag when VITE_AMAZON_ASSOCIATE_TAG is set in the environment,
+// so a click that ends in a rental or purchase earns the commission. Unset
+// (local dev, tests) the URL is the plain search URL it has always been —
+// providerLinks.test.ts pins that untagged shape.
 
 interface Pattern {
   /** Matched against the normalized provider name (lowercase, alphanumerics). */
   match: RegExp;
   /** Builds the search URL from an already URI-encoded title. */
   url: (encodedTitle: string) => string;
+}
+
+/** Amazon Associates tag from the environment, or "" when unconfigured.
+ *  Read through a cast because import.meta.env's typing depends on
+ *  vite/client types being in scope, which not every loader of this module
+ *  (SSR, bun test) sets up the same way. */
+const AMAZON_ASSOCIATE_TAG = (
+  (import.meta as { env?: Record<string, string | undefined> }).env
+    ?.VITE_AMAZON_ASSOCIATE_TAG ?? ""
+).trim();
+
+/** Amazon Video search URL, with the Associates tag appended when one is
+ *  configured. */
+function amazonVideoUrl(encodedTitle: string): string {
+  const base = `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
+  return AMAZON_ASSOCIATE_TAG
+    ? `${base}&tag=${encodeURIComponent(AMAZON_ASSOCIATE_TAG)}`
+    : base;
 }
 
 // Channel storefronts first: the suffix decides where playback lives, so
@@ -28,7 +52,7 @@ const PATTERNS: Pattern[] = [
 
   { match: /^netflix/, url: (t) => `https://www.netflix.com/search?q=${t}` },
   { match: /^amazonprimevideo/, url: (t) => `https://www.primevideo.com/search/?phrase=${t}` },
-  { match: /^amazonvideo/, url: (t) => `https://www.amazon.com/s?k=${t}&i=instant-video` },
+  { match: /^amazonvideo/, url: (t) => amazonVideoUrl(t) },
   { match: /^disneyplus/, url: (t) => `https://www.disneyplus.com/search?q=${t}` },
   { match: /^hbomax|^max$/, url: (t) => `https://play.hbomax.com/search?q=${t}` },
   { match: /^hulu/, url: (t) => `https://www.hulu.com/search?q=${t}` },
