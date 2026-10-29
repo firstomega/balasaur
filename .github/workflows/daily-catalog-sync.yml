@@ -55,13 +55,22 @@ jobs:
             BODY=$(printf '{"bucket":%d,"refreshExisting":true}' "$bucket")
             HTTP=000
             for attempt in 1 2 3 4; do
+              # On a timeout curl still prints "000" itself, so the fallback must add
+              # nothing: the old `|| echo 000` made it "000000", which matched no
+              # retry case, and a hung pass failed the night on its first attempt
+              # (21 and 24 Oct).
               HTTP=$(curl -sS -o /tmp/sync.json -w "%{http_code}" \
                 -X POST "$BASE_URL/api/public/hooks/sync-media" \
                 -H "apikey: $APIKEY" -H "Content-Type: application/json" \
-                --max-time 300 -d "$BODY" || echo 000)
+                --max-time 300 -d "$BODY" || true)
+              HTTP=${HTTP:-000}
               [ "$HTTP" = "200" ] && break
               echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/sync.json 2>/dev/null; echo
-              case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
+              # 500 is retried here too: a pass is a set of upserts, so running it
+              # again only redoes what did not land, and from 19 Oct a 500 meant
+              # writes that gave up waiting for a database connection under scraper
+              # load. A real bug still fails, after four attempts instead of one.
+              case "$HTTP" in 500 | 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
               backoff=$((attempt * attempt * 5)); echo "retrying in ${backoff}s…"; sleep "$backoff"
             done
             echo "HTTP $HTTP"; echo "Response:"; cat /tmp/sync.json; echo
@@ -121,7 +130,8 @@ jobs:
               HTTP=$(curl -sS -o /tmp/refresh.json -w "%{http_code}" \
                 -X POST "$BASE_URL/api/public/hooks/sync-media" \
                 -H "apikey: $APIKEY" -H "Content-Type: application/json" \
-                --max-time 300 -d '{"mode":"refresh"}' || echo 000)
+                --max-time 300 -d '{"mode":"refresh"}' || true)
+              HTTP=${HTTP:-000}
               [ "$HTTP" = "200" ] && break
               echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/refresh.json 2>/dev/null; echo
               case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
@@ -185,7 +195,8 @@ jobs:
               HTTP=$(curl -sS -o /tmp/bf.json -w "%{http_code}" \
                 -X POST "$BASE_URL/api/public/hooks/backfill-media" \
                 -H "apikey: $APIKEY" -H "Content-Type: application/json" \
-                --max-time 150 -d "$BODY" || echo 000)
+                --max-time 150 -d "$BODY" || true)
+              HTTP=${HTTP:-000}
               [ "$HTTP" = "200" ] && break
               echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/bf.json 2>/dev/null; echo
               case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
@@ -245,7 +256,7 @@ jobs:
             HTTP=$(curl -sS -o /tmp/pc.json -w "%{http_code}" \
               -X POST "$BASE_URL/api/public/hooks/sync-media" \
               -H "apikey: $APIKEY" -H "Content-Type: application/json" \
-              --max-time 120 -d '{"mode":"posterColors","limit":400,"timeBudgetMs":60000}' || echo 000)
+              --max-time 120 -d '{"mode":"posterColors","limit":400,"timeBudgetMs":60000}' || true)
             if [ "$HTTP" != "200" ]; then
               echo "::warning::Poster-colour pass $i returned HTTP $HTTP — stopping (non-fatal, resumes next run)."
               cat /tmp/pc.json 2>/dev/null; echo

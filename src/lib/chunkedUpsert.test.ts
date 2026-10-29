@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { isStatementTimeout, upsertInChunks, type WriteResult } from "./chunkedUpsert";
+import { isTimeout, upsertInChunks, type WriteResult } from "./chunkedUpsert";
 
 const TIMEOUT = "canceling statement due to statement timeout";
+/** What the server's own request cutoff reports, verbatim from the 28 Oct run. */
+const CLIENT_TIMEOUT = "TimeoutError: The operation was aborted due to timeout";
 const rowsOf = (n: number) => Array.from({ length: n }, (_, i) => i);
 const json = (v: unknown) => JSON.stringify(v);
 
@@ -65,8 +67,23 @@ describe("upsertInChunks", () => {
     expect(t.calls.length).toBe(1);
   });
 
-  it("recognises Postgres's timeout message and nothing else", () => {
-    expect(isStatementTimeout(TIMEOUT)).toBe(true);
-    expect(isStatementTimeout("duplicate key value violates unique constraint")).toBe(false);
+  it("recovers a chunk the server gave up on while it waited for a connection", async () => {
+    // 19 to 28 Oct: the write never reached the database in time, so the
+    // server's own cutoff fired instead of Postgres's.
+    const t = fakeWriter((chunk, call) =>
+      chunk[0] === 25 && chunk.length === 25 && call === 2 ? CLIENT_TIMEOUT : null,
+    );
+    const r = await upsertInChunks(rowsOf(60), t.write, { pauseMs: 0 });
+    expect(r.failedChunks).toBe(0);
+    expect(r.recoveredChunks).toBe(1);
+    expect(json([...t.landed].sort((a, b) => a - b))).toBe(json(rowsOf(60)));
+  });
+
+  it("recognises both timeouts and nothing else", () => {
+    expect(isTimeout(TIMEOUT)).toBe(true);
+    expect(isTimeout(CLIENT_TIMEOUT)).toBe(true);
+    expect(isTimeout("duplicate key value violates unique constraint")).toBe(false);
+    expect(isTimeout('column "nope" does not exist')).toBe(false);
+    expect(isTimeout("AbortError: The user aborted a request.")).toBe(false);
   });
 });

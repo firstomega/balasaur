@@ -1247,6 +1247,16 @@ export async function backfillFromRaw(opts?: {
 }
 
 /**
+ * How long one sync write may wait before the server gives up on it. Page
+ * loads keep the 10-second cap in client.server.ts, which is right for a
+ * visitor. A nightly write has no visitor waiting: under scraper load it spends
+ * most of that 10 seconds queued for a database connection, and the database
+ * stops any statement at 8 seconds anyway (the authenticator role's
+ * statement_timeout), so a longer wait buys queue time, not a longer query.
+ */
+const SYNC_WRITE_TIMEOUT_MS = 30_000;
+
+/**
  * Upsert enriched media rows in chunks and REFUSE to fail silently: any chunk
  * error, or a write that reports success without persisting, throws — bubbling
  * up through the sync hooks as a non-200 so the nightly Action goes red instead
@@ -1265,7 +1275,10 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
   const { totalChunks, failedChunks, firstError, recoveredChunks } = await upsertInChunks(
     rows,
     async (chunk) =>
-      await loose(supabaseAdmin).from("media").upsert(chunk, { onConflict: "media_id" }),
+      await loose(supabaseAdmin)
+        .from("media")
+        .upsert(chunk, { onConflict: "media_id" })
+        .abortSignal(AbortSignal.timeout(SYNC_WRITE_TIMEOUT_MS)),
     { onError: (message) => console.error(`[${tag}] upsert chunk failed:`, message) },
   );
   if (recoveredChunks > 0) {
@@ -1287,6 +1300,7 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
     .from("media")
     .select("media_id, fetched_at")
     .eq("media_id", probeId)
+    .abortSignal(AbortSignal.timeout(SYNC_WRITE_TIMEOUT_MS))
     .maybeSingle();
   if (error) throw new Error(`post-write verification read failed: ${error.message}`);
   const persistedAt = data?.fetched_at ? new Date(data.fetched_at).getTime() : 0;

@@ -1,5 +1,5 @@
-// Write rows in fixed-size chunks, giving a chunk that hit the database's
-// statement timeout one second chance as two smaller halves.
+// Write rows in fixed-size chunks, giving a chunk that timed out one second
+// chance as two smaller halves.
 //
 // Why only timeouts: from 22 Sep the nightly catalog sync failed on 7 of 10
 // nights, every time the same way. One 25-row chunk of the `media` upsert hit
@@ -7,6 +7,14 @@
 // in that pass landed, on a different pass each night. A slow write is worth
 // retrying smaller; any other error (bad column, permissions, constraint) will
 // fail identically on retry, so it is reported at once instead.
+//
+// Two timeouts count. The database's own ("canceling statement due to
+// statement timeout") and the server's request cutoff ("TimeoutError: The
+// operation was aborted due to timeout"), which fires when a write waits too
+// long for a database connection. From 19 Oct the second one failed the sync
+// on 9 of 10 nights while scrapers kept every connection busy, and the retry
+// above never fired because it only knew the first. Retrying either is safe:
+// an upsert writes the same values however many times it lands.
 //
 // Nothing here is allowed to fail quietly. A chunk that still fails after the
 // retry is counted, and the caller throws on any failure exactly as before.
@@ -25,8 +33,8 @@ export interface ChunkedUpsertResult {
   recoveredChunks: number;
 }
 
-export function isStatementTimeout(message: string): boolean {
-  return /statement timeout/i.test(message);
+export function isTimeout(message: string): boolean {
+  return /statement timeout|TimeoutError|aborted due to timeout/i.test(message);
 }
 
 export async function upsertInChunks<T>(
@@ -52,7 +60,7 @@ export async function upsertInChunks<T>(
     const chunk = rows.slice(i, i + chunkSize);
     const { error } = await write(chunk);
     if (!error) continue;
-    if (!isStatementTimeout(error.message) || chunk.length < 2) {
+    if (!isTimeout(error.message) || chunk.length < 2) {
       fail(error.message);
       continue;
     }
