@@ -29,17 +29,14 @@ interface Pattern {
  *  vite/client types being in scope, which not every loader of this module
  *  (SSR, bun test) sets up the same way. */
 const AMAZON_ASSOCIATE_TAG = (
-  (import.meta as { env?: Record<string, string | undefined> }).env
-    ?.VITE_AMAZON_ASSOCIATE_TAG ?? ""
+  (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_AMAZON_ASSOCIATE_TAG ?? ""
 ).trim();
 
 /** Amazon Video search URL, with the Associates tag appended when one is
  *  configured. */
 function amazonVideoUrl(encodedTitle: string): string {
   const base = `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
-  return AMAZON_ASSOCIATE_TAG
-    ? `${base}&tag=${encodeURIComponent(AMAZON_ASSOCIATE_TAG)}`
-    : base;
+  return AMAZON_ASSOCIATE_TAG ? `${base}&tag=${encodeURIComponent(AMAZON_ASSOCIATE_TAG)}` : base;
 }
 
 // Channel storefronts first: the suffix decides where playback lives, so
