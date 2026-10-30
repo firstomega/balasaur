@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, redirect, useRouter } , type ErrorComponentProps } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect, useRouter , type ErrorComponentProps } from "@tanstack/react-router";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { appearsInQueryOptions, mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import {

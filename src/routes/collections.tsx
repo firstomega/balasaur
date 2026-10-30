@@ -1,4 +1,4 @@
-import { createFileRoute, Link } , type ErrorComponentProps } from "@tanstack/react-router";
+import { createFileRoute, Link , type ErrorComponentProps } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   EmptyState,

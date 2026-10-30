@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } , type ErrorComponentProps } from "@tanstack/react-router";
+import { createFileRoute, Link , type ErrorComponentProps } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
