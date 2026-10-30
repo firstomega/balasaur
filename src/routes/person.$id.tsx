@@ -1,4 +1,10 @@
-import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useRouter,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import { PersonDetail } from "@/components/balasaur/PersonDetail";
 import { personDetailQueryOptions } from "@/hooks/usePersonDetail";
 import {
@@ -67,7 +73,7 @@ function PersonPage() {
   return <PersonDetail id={id} />;
 }
 
-function PersonError({ reset }: { error: Error; reset: () => void }) {
+function PersonError({ reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <div className="min-h-screen bg-background">

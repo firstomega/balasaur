@@ -1,4 +1,11 @@
-import { createFileRoute, Link, notFound, redirect, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  redirect,
+  useRouter,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { appearsInQueryOptions, mediaDetailQueryOptions } from "@/hooks/useMediaDetail";
 import {
@@ -103,7 +110,7 @@ function MoviePage() {
   return <MediaDetail mediaType="movie" id={id} colorA={glow?.colorA} colorB={glow?.colorB} />;
 }
 
-function DetailError({ reset }: { error: Error; reset: () => void }) {
+function DetailError({ reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <div className="min-h-screen bg-background">

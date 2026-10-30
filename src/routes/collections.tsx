@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, type ErrorComponentProps } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   EmptyState,
@@ -640,7 +640,7 @@ function IndexDeadEnd() {
   );
 }
 
-function CollectionsError({ error }: { error: Error }) {
+function CollectionsError({ error }: ErrorComponentProps) {
   console.error(error);
   return (
     <CollectionsShell>

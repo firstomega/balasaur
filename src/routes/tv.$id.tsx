@@ -1,4 +1,11 @@
-import { createFileRoute, Link, notFound, redirect, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  redirect,
+  useRouter,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { episodeRatingsQueryOptions } from "@/lib/episodes.functions";
@@ -122,7 +129,7 @@ function TvPage() {
   );
 }
 
-function DetailError({ reset }: { error: Error; reset: () => void }) {
+function DetailError({ reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <div className="min-h-screen bg-background">

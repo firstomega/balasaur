@@ -9,127 +9,87 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WatchedRouteImport } from './routes/watched'
-import { Route as TriageRouteImport } from './routes/triage'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as TasteRouteImport } from './routes/taste'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SitemapTitlesDotxmlRouteImport } from './routes/sitemap-titles[.]xml'
-import { Route as SitemapPeopleDotxmlRouteImport } from './routes/sitemap-people[.]xml'
-import { Route as SitemapPagesDotxmlRouteImport } from './routes/sitemap-pages[.]xml'
-import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as MethodologyRouteImport } from './routes/methodology'
-import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
-import { Route as ListsRouteImport } from './routes/lists'
-import { Route as LibraryRouteImport } from './routes/library'
-import { Route as D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport } from './routes/d50e38be1b86ef6ef1079ff766aa2079[.]txt'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as CollectionsRouteImport } from './routes/collections'
-import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as AccountRouteImport } from './routes/account'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PlayIndexRouteImport } from './routes/play.index'
-import { Route as NightIndexRouteImport } from './routes/night.index'
-import { Route as TvIdRouteImport } from './routes/tv.$id'
-import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
-import { Route as PlayTaglinesRouteImport } from './routes/play.taglines'
-import { Route as PlaySpeedSortRouteImport } from './routes/play.speed-sort'
-import { Route as PlaySequelOrFakeRouteImport } from './routes/play.sequel-or-fake'
-import { Route as PlayScreeningRouteImport } from './routes/play.screening'
-import { Route as PlayQuoteMatchRouteImport } from './routes/play.quote-match'
-import { Route as PlayPosterRevealRouteImport } from './routes/play.poster-reveal'
-import { Route as PlayLinkUpRouteImport } from './routes/play.link-up'
-import { Route as PlayLeaderboardRouteImport } from './routes/play.leaderboard'
-import { Route as PlayEmojiRouteImport } from './routes/play.emoji'
-import { Route as PlayCastingCallRouteImport } from './routes/play.casting-call'
-import { Route as PlayBalasaurdleRouteImport } from './routes/play.balasaurdle'
-import { Route as PersonIdRouteImport } from './routes/person.$id'
-import { Route as NightCodeRouteImport } from './routes/night.$code'
-import { Route as MovieIdRouteImport } from './routes/movie.$id'
-import { Route as DevRefineRouteImport } from './routes/dev.refine'
-import { Route as DevArcadeRouteImport } from './routes/dev.arcade'
+import { Route as HandleRouteImport } from './routes/$handle'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as CollectionsRouteImport } from './routes/collections'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport } from './routes/d50e38be1b86ef6ef1079ff766aa2079[.]txt'
+import { Route as LibraryRouteImport } from './routes/library'
+import { Route as ListsRouteImport } from './routes/lists'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
+import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapPagesDotxmlRouteImport } from './routes/sitemap-pages[.]xml'
+import { Route as SitemapPeopleDotxmlRouteImport } from './routes/sitemap-people[.]xml'
+import { Route as SitemapTitlesDotxmlRouteImport } from './routes/sitemap-titles[.]xml'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TasteRouteImport } from './routes/taste'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TriageRouteImport } from './routes/triage'
+import { Route as WatchedRouteImport } from './routes/watched'
 import { Route as BestSlugRouteImport } from './routes/best.$slug'
-import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
-import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
+import { Route as DevArcadeRouteImport } from './routes/dev.arcade'
+import { Route as DevRefineRouteImport } from './routes/dev.refine'
+import { Route as MovieIdRouteImport } from './routes/movie.$id'
+import { Route as NightIndexRouteImport } from './routes/night.index'
+import { Route as NightCodeRouteImport } from './routes/night.$code'
+import { Route as PersonIdRouteImport } from './routes/person.$id'
+import { Route as PlayIndexRouteImport } from './routes/play.index'
+import { Route as PlayBalasaurdleRouteImport } from './routes/play.balasaurdle'
+import { Route as PlayCastingCallRouteImport } from './routes/play.casting-call'
+import { Route as PlayEmojiRouteImport } from './routes/play.emoji'
+import { Route as PlayLeaderboardRouteImport } from './routes/play.leaderboard'
+import { Route as PlayLinkUpRouteImport } from './routes/play.link-up'
+import { Route as PlayPosterRevealRouteImport } from './routes/play.poster-reveal'
+import { Route as PlayQuoteMatchRouteImport } from './routes/play.quote-match'
+import { Route as PlayScreeningRouteImport } from './routes/play.screening'
+import { Route as PlaySequelOrFakeRouteImport } from './routes/play.sequel-or-fake'
+import { Route as PlaySpeedSortRouteImport } from './routes/play.speed-sort'
+import { Route as PlayTaglinesRouteImport } from './routes/play.taglines'
+import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
+import { Route as TvIdRouteImport } from './routes/tv.$id'
 import { Route as ApiPublicHooksBackfillMediaRouteImport } from './routes/api/public/hooks/backfill-media'
+import { Route as ApiPublicHooksSyncMediaRouteImport } from './routes/api/public/hooks/sync-media'
+import { Route as ApiPublicV1ScoreRouteImport } from './routes/api/public/v1/score'
 
-const WatchedRoute = WatchedRouteImport.update({
-  id: '/watched',
-  path: '/watched',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TriageRoute = TriageRouteImport.update({
-  id: '/triage',
-  path: '/triage',
+const HandleRoute = HandleRouteImport.update({
+  id: '/$handle',
+  path: '/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TasteRoute = TasteRouteImport.update({
-  id: '/taste',
-  path: '/taste',
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapTitlesDotxmlRoute = SitemapTitlesDotxmlRouteImport.update({
-  id: '/sitemap-titles.xml',
-  path: '/sitemap-titles.xml',
+const CollectionsRoute = CollectionsRouteImport.update({
+  id: '/collections',
+  path: '/collections',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapPeopleDotxmlRoute = SitemapPeopleDotxmlRouteImport.update({
-  id: '/sitemap-people.xml',
-  path: '/sitemap-people.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapPagesDotxmlRoute = SitemapPagesDotxmlRouteImport.update({
-  id: '/sitemap-pages.xml',
-  path: '/sitemap-pages.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
-  id: '/robots.txt',
-  path: '/robots.txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MethodologyRoute = MethodologyRouteImport.update({
-  id: '/methodology',
-  path: '/methodology',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
-  id: '/llms.txt',
-  path: '/llms.txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ListsRoute = ListsRouteImport.update({
-  id: '/lists',
-  path: '/lists',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LibraryRoute = LibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const D50e38be1b86ef6ef1079ff766aa2079DottxtRoute =
@@ -138,139 +98,79 @@ const D50e38be1b86ef6ef1079ff766aa2079DottxtRoute =
     path: '/d50e38be1b86ef6ef1079ff766aa2079.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CollectionsRoute = CollectionsRouteImport.update({
-  id: '/collections',
-  path: '/collections',
+const ListsRoute = ListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CalendarRoute = CalendarRouteImport.update({
-  id: '/calendar',
-  path: '/calendar',
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountRoute = AccountRouteImport.update({
-  id: '/account',
-  path: '/account',
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HandleRoute = HandleRouteImport.update({
-  id: '/$handle',
-  path: '/$handle',
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayIndexRoute = PlayIndexRouteImport.update({
-  id: '/play/',
-  path: '/play/',
+const SitemapPagesDotxmlRoute = SitemapPagesDotxmlRouteImport.update({
+  id: '/sitemap-pages.xml',
+  path: '/sitemap-pages.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NightIndexRoute = NightIndexRouteImport.update({
-  id: '/night/',
-  path: '/night/',
+const SitemapPeopleDotxmlRoute = SitemapPeopleDotxmlRouteImport.update({
+  id: '/sitemap-people.xml',
+  path: '/sitemap-people.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TvIdRoute = TvIdRouteImport.update({
-  id: '/tv/$id',
-  path: '/tv/$id',
+const SitemapTitlesDotxmlRoute = SitemapTitlesDotxmlRouteImport.update({
+  id: '/sitemap-titles.xml',
+  path: '/sitemap-titles.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayTimelineRoute = PlayTimelineRouteImport.update({
-  id: '/play/timeline',
-  path: '/play/timeline',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayTaglinesRoute = PlayTaglinesRouteImport.update({
-  id: '/play/taglines',
-  path: '/play/taglines',
+const TasteRoute = TasteRouteImport.update({
+  id: '/taste',
+  path: '/taste',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlaySpeedSortRoute = PlaySpeedSortRouteImport.update({
-  id: '/play/speed-sort',
-  path: '/play/speed-sort',
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlaySequelOrFakeRoute = PlaySequelOrFakeRouteImport.update({
-  id: '/play/sequel-or-fake',
-  path: '/play/sequel-or-fake',
+const TriageRoute = TriageRouteImport.update({
+  id: '/triage',
+  path: '/triage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayScreeningRoute = PlayScreeningRouteImport.update({
-  id: '/play/screening',
-  path: '/play/screening',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayQuoteMatchRoute = PlayQuoteMatchRouteImport.update({
-  id: '/play/quote-match',
-  path: '/play/quote-match',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayPosterRevealRoute = PlayPosterRevealRouteImport.update({
-  id: '/play/poster-reveal',
-  path: '/play/poster-reveal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayLinkUpRoute = PlayLinkUpRouteImport.update({
-  id: '/play/link-up',
-  path: '/play/link-up',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayLeaderboardRoute = PlayLeaderboardRouteImport.update({
-  id: '/play/leaderboard',
-  path: '/play/leaderboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayEmojiRoute = PlayEmojiRouteImport.update({
-  id: '/play/emoji',
-  path: '/play/emoji',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayCastingCallRoute = PlayCastingCallRouteImport.update({
-  id: '/play/casting-call',
-  path: '/play/casting-call',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlayBalasaurdleRoute = PlayBalasaurdleRouteImport.update({
-  id: '/play/balasaurdle',
-  path: '/play/balasaurdle',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PersonIdRoute = PersonIdRouteImport.update({
-  id: '/person/$id',
-  path: '/person/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NightCodeRoute = NightCodeRouteImport.update({
-  id: '/night/$code',
-  path: '/night/$code',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MovieIdRoute = MovieIdRouteImport.update({
-  id: '/movie/$id',
-  path: '/movie/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevRefineRoute = DevRefineRouteImport.update({
-  id: '/dev/refine',
-  path: '/dev/refine',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevArcadeRoute = DevArcadeRouteImport.update({
-  id: '/dev/arcade',
-  path: '/dev/arcade',
+const WatchedRoute = WatchedRouteImport.update({
+  id: '/watched',
+  path: '/watched',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BestSlugRoute = BestSlugRouteImport.update({
@@ -278,14 +178,104 @@ const BestSlugRoute = BestSlugRouteImport.update({
   path: '/best/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicV1ScoreRoute = ApiPublicV1ScoreRouteImport.update({
-  id: '/api/public/v1/score',
-  path: '/api/public/v1/score',
+const DevArcadeRoute = DevArcadeRouteImport.update({
+  id: '/dev/arcade',
+  path: '/dev/arcade',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksSyncMediaRoute = ApiPublicHooksSyncMediaRouteImport.update({
-  id: '/api/public/hooks/sync-media',
-  path: '/api/public/hooks/sync-media',
+const DevRefineRoute = DevRefineRouteImport.update({
+  id: '/dev/refine',
+  path: '/dev/refine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MovieIdRoute = MovieIdRouteImport.update({
+  id: '/movie/$id',
+  path: '/movie/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NightIndexRoute = NightIndexRouteImport.update({
+  id: '/night/',
+  path: '/night/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NightCodeRoute = NightCodeRouteImport.update({
+  id: '/night/$code',
+  path: '/night/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PersonIdRoute = PersonIdRouteImport.update({
+  id: '/person/$id',
+  path: '/person/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayIndexRoute = PlayIndexRouteImport.update({
+  id: '/play/',
+  path: '/play/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayBalasaurdleRoute = PlayBalasaurdleRouteImport.update({
+  id: '/play/balasaurdle',
+  path: '/play/balasaurdle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayCastingCallRoute = PlayCastingCallRouteImport.update({
+  id: '/play/casting-call',
+  path: '/play/casting-call',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayEmojiRoute = PlayEmojiRouteImport.update({
+  id: '/play/emoji',
+  path: '/play/emoji',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayLeaderboardRoute = PlayLeaderboardRouteImport.update({
+  id: '/play/leaderboard',
+  path: '/play/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayLinkUpRoute = PlayLinkUpRouteImport.update({
+  id: '/play/link-up',
+  path: '/play/link-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayPosterRevealRoute = PlayPosterRevealRouteImport.update({
+  id: '/play/poster-reveal',
+  path: '/play/poster-reveal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayQuoteMatchRoute = PlayQuoteMatchRouteImport.update({
+  id: '/play/quote-match',
+  path: '/play/quote-match',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayScreeningRoute = PlayScreeningRouteImport.update({
+  id: '/play/screening',
+  path: '/play/screening',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaySequelOrFakeRoute = PlaySequelOrFakeRouteImport.update({
+  id: '/play/sequel-or-fake',
+  path: '/play/sequel-or-fake',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaySpeedSortRoute = PlaySpeedSortRouteImport.update({
+  id: '/play/speed-sort',
+  path: '/play/speed-sort',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayTaglinesRoute = PlayTaglinesRouteImport.update({
+  id: '/play/taglines',
+  path: '/play/taglines',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayTimelineRoute = PlayTimelineRouteImport.update({
+  id: '/play/timeline',
+  path: '/play/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TvIdRoute = TvIdRouteImport.update({
+  id: '/tv/$id',
+  path: '/tv/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksBackfillMediaRoute =
@@ -294,6 +284,16 @@ const ApiPublicHooksBackfillMediaRoute =
     path: '/api/public/hooks/backfill-media',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSyncMediaRoute = ApiPublicHooksSyncMediaRouteImport.update({
+  id: '/api/public/hooks/sync-media',
+  path: '/api/public/hooks/sync-media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1ScoreRoute = ApiPublicV1ScoreRouteImport.update({
+  id: '/api/public/v1/score',
+  path: '/api/public/v1/score',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -645,151 +645,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/watched': {
-      id: '/watched'
-      path: '/watched'
-      fullPath: '/watched'
-      preLoaderRoute: typeof WatchedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/triage': {
-      id: '/triage'
-      path: '/triage'
-      fullPath: '/triage'
-      preLoaderRoute: typeof TriageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/taste': {
-      id: '/taste'
-      path: '/taste'
-      fullPath: '/taste'
-      preLoaderRoute: typeof TasteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap-titles.xml': {
-      id: '/sitemap-titles.xml'
-      path: '/sitemap-titles.xml'
-      fullPath: '/sitemap-titles.xml'
-      preLoaderRoute: typeof SitemapTitlesDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap-people.xml': {
-      id: '/sitemap-people.xml'
-      path: '/sitemap-people.xml'
-      fullPath: '/sitemap-people.xml'
-      preLoaderRoute: typeof SitemapPeopleDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap-pages.xml': {
-      id: '/sitemap-pages.xml'
-      path: '/sitemap-pages.xml'
-      fullPath: '/sitemap-pages.xml'
-      preLoaderRoute: typeof SitemapPagesDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/robots.txt': {
-      id: '/robots.txt'
-      path: '/robots.txt'
-      fullPath: '/robots.txt'
-      preLoaderRoute: typeof RobotsDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/methodology': {
-      id: '/methodology'
-      path: '/methodology'
-      fullPath: '/methodology'
-      preLoaderRoute: typeof MethodologyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/llms.txt': {
-      id: '/llms.txt'
-      path: '/llms.txt'
-      fullPath: '/llms.txt'
-      preLoaderRoute: typeof LlmsDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lists': {
-      id: '/lists'
-      path: '/lists'
-      fullPath: '/lists'
-      preLoaderRoute: typeof ListsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/library': {
-      id: '/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof LibraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/d50e38be1b86ef6ef1079ff766aa2079.txt': {
-      id: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
-      path: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
-      fullPath: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
-      preLoaderRoute: typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/collections': {
-      id: '/collections'
-      path: '/collections'
-      fullPath: '/collections'
-      preLoaderRoute: typeof CollectionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calendar': {
-      id: '/calendar'
-      path: '/calendar'
-      fullPath: '/calendar'
-      preLoaderRoute: typeof CalendarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account': {
-      id: '/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof AccountRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$handle': {
@@ -799,151 +659,151 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HandleRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/': {
-      id: '/play/'
-      path: '/play'
-      fullPath: '/play/'
-      preLoaderRoute: typeof PlayIndexRouteImport
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/night/': {
-      id: '/night/'
-      path: '/night'
-      fullPath: '/night/'
-      preLoaderRoute: typeof NightIndexRouteImport
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tv/$id': {
-      id: '/tv/$id'
-      path: '/tv/$id'
-      fullPath: '/tv/$id'
-      preLoaderRoute: typeof TvIdRouteImport
+    '/collections': {
+      id: '/collections'
+      path: '/collections'
+      fullPath: '/collections'
+      preLoaderRoute: typeof CollectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/timeline': {
-      id: '/play/timeline'
-      path: '/play/timeline'
-      fullPath: '/play/timeline'
-      preLoaderRoute: typeof PlayTimelineRouteImport
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/taglines': {
-      id: '/play/taglines'
-      path: '/play/taglines'
-      fullPath: '/play/taglines'
-      preLoaderRoute: typeof PlayTaglinesRouteImport
+    '/d50e38be1b86ef6ef1079ff766aa2079.txt': {
+      id: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+      path: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+      fullPath: '/d50e38be1b86ef6ef1079ff766aa2079.txt'
+      preLoaderRoute: typeof D50e38be1b86ef6ef1079ff766aa2079DottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/speed-sort': {
-      id: '/play/speed-sort'
-      path: '/play/speed-sort'
-      fullPath: '/play/speed-sort'
-      preLoaderRoute: typeof PlaySpeedSortRouteImport
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/sequel-or-fake': {
-      id: '/play/sequel-or-fake'
-      path: '/play/sequel-or-fake'
-      fullPath: '/play/sequel-or-fake'
-      preLoaderRoute: typeof PlaySequelOrFakeRouteImport
+    '/lists': {
+      id: '/lists'
+      path: '/lists'
+      fullPath: '/lists'
+      preLoaderRoute: typeof ListsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/screening': {
-      id: '/play/screening'
-      path: '/play/screening'
-      fullPath: '/play/screening'
-      preLoaderRoute: typeof PlayScreeningRouteImport
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/quote-match': {
-      id: '/play/quote-match'
-      path: '/play/quote-match'
-      fullPath: '/play/quote-match'
-      preLoaderRoute: typeof PlayQuoteMatchRouteImport
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/poster-reveal': {
-      id: '/play/poster-reveal'
-      path: '/play/poster-reveal'
-      fullPath: '/play/poster-reveal'
-      preLoaderRoute: typeof PlayPosterRevealRouteImport
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/link-up': {
-      id: '/play/link-up'
-      path: '/play/link-up'
-      fullPath: '/play/link-up'
-      preLoaderRoute: typeof PlayLinkUpRouteImport
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/leaderboard': {
-      id: '/play/leaderboard'
-      path: '/play/leaderboard'
-      fullPath: '/play/leaderboard'
-      preLoaderRoute: typeof PlayLeaderboardRouteImport
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/emoji': {
-      id: '/play/emoji'
-      path: '/play/emoji'
-      fullPath: '/play/emoji'
-      preLoaderRoute: typeof PlayEmojiRouteImport
+    '/sitemap-pages.xml': {
+      id: '/sitemap-pages.xml'
+      path: '/sitemap-pages.xml'
+      fullPath: '/sitemap-pages.xml'
+      preLoaderRoute: typeof SitemapPagesDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/casting-call': {
-      id: '/play/casting-call'
-      path: '/play/casting-call'
-      fullPath: '/play/casting-call'
-      preLoaderRoute: typeof PlayCastingCallRouteImport
+    '/sitemap-people.xml': {
+      id: '/sitemap-people.xml'
+      path: '/sitemap-people.xml'
+      fullPath: '/sitemap-people.xml'
+      preLoaderRoute: typeof SitemapPeopleDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/play/balasaurdle': {
-      id: '/play/balasaurdle'
-      path: '/play/balasaurdle'
-      fullPath: '/play/balasaurdle'
-      preLoaderRoute: typeof PlayBalasaurdleRouteImport
+    '/sitemap-titles.xml': {
+      id: '/sitemap-titles.xml'
+      path: '/sitemap-titles.xml'
+      fullPath: '/sitemap-titles.xml'
+      preLoaderRoute: typeof SitemapTitlesDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/person/$id': {
-      id: '/person/$id'
-      path: '/person/$id'
-      fullPath: '/person/$id'
-      preLoaderRoute: typeof PersonIdRouteImport
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/night/$code': {
-      id: '/night/$code'
-      path: '/night/$code'
-      fullPath: '/night/$code'
-      preLoaderRoute: typeof NightCodeRouteImport
+    '/taste': {
+      id: '/taste'
+      path: '/taste'
+      fullPath: '/taste'
+      preLoaderRoute: typeof TasteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/movie/$id': {
-      id: '/movie/$id'
-      path: '/movie/$id'
-      fullPath: '/movie/$id'
-      preLoaderRoute: typeof MovieIdRouteImport
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dev/refine': {
-      id: '/dev/refine'
-      path: '/dev/refine'
-      fullPath: '/dev/refine'
-      preLoaderRoute: typeof DevRefineRouteImport
+    '/triage': {
+      id: '/triage'
+      path: '/triage'
+      fullPath: '/triage'
+      preLoaderRoute: typeof TriageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dev/arcade': {
-      id: '/dev/arcade'
-      path: '/dev/arcade'
-      fullPath: '/dev/arcade'
-      preLoaderRoute: typeof DevArcadeRouteImport
+    '/watched': {
+      id: '/watched'
+      path: '/watched'
+      fullPath: '/watched'
+      preLoaderRoute: typeof WatchedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/best/$slug': {
@@ -953,11 +813,151 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BestSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/v1/score': {
-      id: '/api/public/v1/score'
-      path: '/api/public/v1/score'
-      fullPath: '/api/public/v1/score'
-      preLoaderRoute: typeof ApiPublicV1ScoreRouteImport
+    '/dev/arcade': {
+      id: '/dev/arcade'
+      path: '/dev/arcade'
+      fullPath: '/dev/arcade'
+      preLoaderRoute: typeof DevArcadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/refine': {
+      id: '/dev/refine'
+      path: '/dev/refine'
+      fullPath: '/dev/refine'
+      preLoaderRoute: typeof DevRefineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movie/$id': {
+      id: '/movie/$id'
+      path: '/movie/$id'
+      fullPath: '/movie/$id'
+      preLoaderRoute: typeof MovieIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/night/': {
+      id: '/night/'
+      path: '/night'
+      fullPath: '/night/'
+      preLoaderRoute: typeof NightIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/night/$code': {
+      id: '/night/$code'
+      path: '/night/$code'
+      fullPath: '/night/$code'
+      preLoaderRoute: typeof NightCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/person/$id': {
+      id: '/person/$id'
+      path: '/person/$id'
+      fullPath: '/person/$id'
+      preLoaderRoute: typeof PersonIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/': {
+      id: '/play/'
+      path: '/play'
+      fullPath: '/play/'
+      preLoaderRoute: typeof PlayIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/balasaurdle': {
+      id: '/play/balasaurdle'
+      path: '/play/balasaurdle'
+      fullPath: '/play/balasaurdle'
+      preLoaderRoute: typeof PlayBalasaurdleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/casting-call': {
+      id: '/play/casting-call'
+      path: '/play/casting-call'
+      fullPath: '/play/casting-call'
+      preLoaderRoute: typeof PlayCastingCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/emoji': {
+      id: '/play/emoji'
+      path: '/play/emoji'
+      fullPath: '/play/emoji'
+      preLoaderRoute: typeof PlayEmojiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/leaderboard': {
+      id: '/play/leaderboard'
+      path: '/play/leaderboard'
+      fullPath: '/play/leaderboard'
+      preLoaderRoute: typeof PlayLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/link-up': {
+      id: '/play/link-up'
+      path: '/play/link-up'
+      fullPath: '/play/link-up'
+      preLoaderRoute: typeof PlayLinkUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/poster-reveal': {
+      id: '/play/poster-reveal'
+      path: '/play/poster-reveal'
+      fullPath: '/play/poster-reveal'
+      preLoaderRoute: typeof PlayPosterRevealRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/quote-match': {
+      id: '/play/quote-match'
+      path: '/play/quote-match'
+      fullPath: '/play/quote-match'
+      preLoaderRoute: typeof PlayQuoteMatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/screening': {
+      id: '/play/screening'
+      path: '/play/screening'
+      fullPath: '/play/screening'
+      preLoaderRoute: typeof PlayScreeningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/sequel-or-fake': {
+      id: '/play/sequel-or-fake'
+      path: '/play/sequel-or-fake'
+      fullPath: '/play/sequel-or-fake'
+      preLoaderRoute: typeof PlaySequelOrFakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/speed-sort': {
+      id: '/play/speed-sort'
+      path: '/play/speed-sort'
+      fullPath: '/play/speed-sort'
+      preLoaderRoute: typeof PlaySpeedSortRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/taglines': {
+      id: '/play/taglines'
+      path: '/play/taglines'
+      fullPath: '/play/taglines'
+      preLoaderRoute: typeof PlayTaglinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/timeline': {
+      id: '/play/timeline'
+      path: '/play/timeline'
+      fullPath: '/play/timeline'
+      preLoaderRoute: typeof PlayTimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tv/$id': {
+      id: '/tv/$id'
+      path: '/tv/$id'
+      fullPath: '/tv/$id'
+      preLoaderRoute: typeof TvIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/backfill-media': {
+      id: '/api/public/hooks/backfill-media'
+      path: '/api/public/hooks/backfill-media'
+      fullPath: '/api/public/hooks/backfill-media'
+      preLoaderRoute: typeof ApiPublicHooksBackfillMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/sync-media': {
@@ -967,11 +967,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/backfill-media': {
-      id: '/api/public/hooks/backfill-media'
-      path: '/api/public/hooks/backfill-media'
-      fullPath: '/api/public/hooks/backfill-media'
-      preLoaderRoute: typeof ApiPublicHooksBackfillMediaRouteImport
+    '/api/public/v1/score': {
+      id: '/api/public/v1/score'
+      path: '/api/public/v1/score'
+      fullPath: '/api/public/v1/score'
+      preLoaderRoute: typeof ApiPublicV1ScoreRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
