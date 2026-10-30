@@ -1,4 +1,10 @@
-import { createFileRoute, Link, notFound, useRouter , type ErrorComponentProps } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useRouter,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import { PersonDetail } from "@/components/balasaur/PersonDetail";
 import { personDetailQueryOptions } from "@/hooks/usePersonDetail";
 import {

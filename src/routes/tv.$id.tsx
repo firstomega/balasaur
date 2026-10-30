@@ -1,4 +1,11 @@
-import { createFileRoute, Link, notFound, redirect, useRouter , type ErrorComponentProps } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  redirect,
+  useRouter,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { MediaDetail } from "@/components/balasaur/MediaDetail";
 import { episodeRatingsQueryOptions } from "@/lib/episodes.functions";
