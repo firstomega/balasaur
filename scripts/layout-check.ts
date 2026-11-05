@@ -218,6 +218,7 @@ async function main() {
       "/tv/breaking-bad-1396",
       "/person/31",
       "/best/best-action-movies-on-netflix",
+      "/best/best-yuma-uchida-shows",
       "/lists",
       "/play/balasaurdle",
       "/taste",

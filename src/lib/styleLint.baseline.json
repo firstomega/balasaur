@@ -1,7 +1,7 @@
 {
   "totals": {
-    "fontSize": 839,
-    "radius": 302,
+    "fontSize": 824,
+    "radius": 294,
     "duration": 4,
     "easing": 8,
     "hex": 249,
@@ -259,8 +259,7 @@
       "containerWidth": 2
     },
     "src/routes/best.$slug.tsx": {
-      "fontSize": 16,
-      "radius": 8,
+      "fontSize": 1,
       "containerWidth": 3
     },
     "src/routes/calendar.tsx": {
