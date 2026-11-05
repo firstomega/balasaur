@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
 import { Bookmark, Check, MoreHorizontal } from "lucide-react";
 import type { MediaItem } from "@/types/media";
@@ -115,14 +116,17 @@ export function RankedRow({
         </h3>
         {meta.length > 0 && (
           <p className="mt-0.5 text-sm text-text-muted md:text-base">
+            {/* The dot travels with the bit after it, and the only break
+                opportunity is the plain space before the dot, so a wrap never
+                strands a separator or splits "2 Seasons". */}
             {meta.map((bit, i) => (
-              <span key={i} className="whitespace-nowrap">
-                {/* The dot travels with the bit after it, so a wrap never
-                    strands a separator at the end of a line. */}
-                {i > 0 && "· "}
-                {bit}
-                {i < meta.length - 1 && " "}
-              </span>
+              <Fragment key={i}>
+                {i > 0 && " "}
+                <span className="whitespace-nowrap">
+                  {i > 0 && "· "}
+                  {bit}
+                </span>
+              </Fragment>
             ))}
           </p>
         )}

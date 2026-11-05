@@ -227,7 +227,7 @@ function CollectionPage() {
               </span>
               {/* A person list links to that person's page, which links back. */}
               {person && (
-                <span className="whitespace-nowrap">
+                <span>
                   {" · "}
                   <Link
                     to="/person/$id"
@@ -286,7 +286,7 @@ function CollectionPage() {
             </div>
           )}
 
-          <ol className="mt-4 flex flex-col gap-1.5 md:mt-5 md:gap-2">
+          <ol className="mt-4 flex max-w-article flex-col gap-1.5 md:mt-5 md:gap-2">
             {displayItems.map(({ item, rank }, i) => {
               const rec = mounted ? statuses[item.id] : undefined;
               return (
