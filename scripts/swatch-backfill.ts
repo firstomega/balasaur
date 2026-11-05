@@ -23,6 +23,7 @@
  *   a..n    swatch number 1..14 (SWATCH_KEYS order), no second swatch
  *   A..N x  swatch, then its second swatch as a..n
  *   .       poster could not be read: swatch null, stamped so it is not retried
+ *   _       the fetch failed: row left untouched, so the nightly queue retries it
  *
  * Two guards make a mismatch write nothing: an md5 of the slice's
  * "media_id poster_url" pairs, which fails if the catalog moved (a title added,
@@ -149,7 +150,7 @@ function batchSql(slice: Row[], lo: number, tokens: string[]): string {
   const hi = lo + slice.length;
   return `-- swatch batch: ranks ${lo + 1}..${hi}
 with p as (select $c$${codes}$c$::text c),
-k as (select t.n::int rn, t.m[1] tok from p, regexp_matches(p.c, '[A-N][a-n]|[a-n.]', 'g') with ordinality t(m, n)),
+k as (select t.n::int rn, t.m[1] tok from p, regexp_matches(p.c, '[A-N][a-n]|[a-n._]', 'g') with ordinality t(m, n)),
 r as (select media_id, poster_url, row_number() over (order by popularity desc nulls last, media_id collate "C") rn from public.media where poster_url is not null and sensitive = false),
 s as (select * from r where rn > ${lo} and rn <= ${hi}),
 ok as (select (select md5(string_agg(media_id || ' ' || poster_url, ',' order by rn)) from s) = '${setHash}' and (select count(*) from k) = ${slice.length} and (select md5(c) from p) = '${md5(codes)}' fine),
@@ -158,7 +159,7 @@ u as (update public.media m set
   swatch_alt = case when length(k.tok) = 2 then (array[${keys}])[ascii(right(k.tok, 1)) - 96] end,
   swatch_at = now()
   from s join k on k.rn = s.rn - ${lo}
-  where m.media_id = s.media_id and (select fine from ok)
+  where m.media_id = s.media_id and k.tok <> '_' and (select fine from ok)
   returning 1)
 select (select fine from ok) fine, (select count(*) from u) updated;
 `;
@@ -203,22 +204,16 @@ async function main() {
   await writeFile(cachePath, JSON.stringify(cache));
   console.log(`read ${done}, ${failed} fetches failed and are left for the nightly queue`);
 
-  // Batches stop at the first title with no result, because a slice must be
-  // complete to match the database's ranks.
-  let lo = 0;
+  // A title whose fetch failed rides its batch as "_", so the slice still
+  // lines up with the database's ranks and that row is left for the queue.
   let n = 0;
-  while (lo < rows.length) {
+  for (let lo = 0; lo < rows.length; lo += BATCH) {
     const slice = rows.slice(lo, lo + BATCH);
-    const tokens = slice.map((r) => cache[r.id]?.tok);
-    const gap = tokens.indexOf(undefined);
-    if (gap === 0) break;
-    const full = gap < 0 ? slice : slice.slice(0, gap);
+    const tokens = slice.map((r) => cache[r.id]?.tok ?? "_");
     const name = `${OUT}/batch-${String(++n).padStart(3, "0")}.sql`;
-    await writeFile(name, batchSql(full, lo, tokens.slice(0, full.length) as string[]));
-    lo += full.length;
-    if (gap >= 0) break;
+    await writeFile(name, batchSql(slice, lo, tokens));
   }
-  console.log(`${n} batch files cover ranks 1..${lo}`);
+  console.log(`${n} batch files cover ranks 1..${rows.length}`);
 }
 
 if (import.meta.main) await main();
