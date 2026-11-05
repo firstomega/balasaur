@@ -263,14 +263,22 @@ jobs:
               break
             fi
             echo "$(jq -c '{scanned,stored,noColor,failed,remaining}' /tmp/pc.json 2>/dev/null || cat /tmp/pc.json)"
+            SCANNED=$(jq -r '.scanned // 0' /tmp/pc.json 2>/dev/null || echo 0)
             STORED=$(jq -r '.stored // 0' /tmp/pc.json 2>/dev/null || echo 0)
+            NOCOLOR=$(jq -r '.noColor // 0' /tmp/pc.json 2>/dev/null || echo 0)
             REMAINING=$(jq -r '.remaining // 0' /tmp/pc.json 2>/dev/null || echo 0)
             TOTAL_STORED=$(( TOTAL_STORED + STORED ))
             if [ "$REMAINING" = "0" ]; then echo "✅ Poster colours complete after pass $i."; break; fi
-            # A pass that stores nothing but still reports work left means every
-            # candidate failed to download; stop rather than spin.
-            if [ "$STORED" = "0" ]; then
-              echo "::warning::Pass $i stored nothing with $REMAINING left — stopping for tonight."; break
+            # Stop on rows claimed, not colours stored: a pass of posters that
+            # were read but hold no colour still moves the queue forward, so it
+            # must not end the night.
+            if [ "$SCANNED" = "0" ]; then
+              echo "::warning::Pass $i claimed no titles with $REMAINING reported left — stopping for tonight."; break
+            fi
+            # Every claimed title failed to download or to write, so the same
+            # titles would be claimed again next pass; stop rather than spin.
+            if [ $(( STORED + NOCOLOR )) -eq 0 ]; then
+              echo "::warning::Pass $i read none of its $SCANNED titles — stopping for tonight."; break
             fi
             sleep 5
           done
