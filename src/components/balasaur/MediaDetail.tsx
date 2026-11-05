@@ -415,7 +415,14 @@ function DetailInner({
               </div>
             </div>
 
-            <div className="order-last min-w-0 basis-full md:order-none md:basis-auto md:flex-1">
+            <div
+              className={cn(
+                "order-last min-w-0 basis-full md:order-none md:basis-auto md:flex-1",
+                // The row is pulled 160px up into the backdrop for the poster;
+                // the title must start below the image, never on it.
+                detail.backdropUrl && "md:pt-44",
+              )}
+            >
               <h1
                 className={cn(
                   "text-balance break-words font-display font-extrabold leading-[0.95]",
@@ -577,7 +584,7 @@ function DetailInner({
                           key={sn.seasonNumber}
                           className="border-b border-border last:border-b-0"
                         >
-                          <td className="px-3 py-2 font-mono text-sm tabular-nums text-text-dim">
+                          <td className="w-10 px-3 py-2 font-mono text-sm tabular-nums text-text-dim">
                             {sn.seasonNumber}
                           </td>
                           <td className="min-w-0 px-1 py-2 text-base font-semibold text-text-bright">
