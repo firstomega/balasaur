@@ -11,6 +11,7 @@ import {
   STREAMING_OPTIONS,
 } from "@/types/filters";
 import { trustedScore } from "@/lib/trust";
+import { asSwatchKey } from "@/lib/posterSwatch";
 import { originsForCountry } from "@/lib/origins";
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
 
@@ -66,7 +67,7 @@ export interface CatalogQueryParams {
 // render them), which is most of the payload savings. `seasons` is read only to
 // derive the TV year range, then dropped before it goes to the client.
 export const CARD_COLS =
-  "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,seasons,award_winner,award_nominee,vote_count";
+  "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,seasons,award_winner,award_nominee,vote_count,swatch,swatch_alt";
 
 export interface CardRow {
   media_id: string;
@@ -87,6 +88,8 @@ export interface CardRow {
   award_winner: boolean | null;
   award_nominee: boolean | null;
   vote_count: number | null;
+  swatch?: string | null;
+  swatch_alt?: string | null;
 }
 
 export function rowToCardItem(r: CardRow): MediaItem {
@@ -130,6 +133,8 @@ export function rowToCardItem(r: CardRow): MediaItem {
     lengthLabel: "",
     people: [] as MediaPerson[],
     popularity: r.popularity ?? undefined,
+    swatch: asSwatchKey(r.swatch),
+    swatchAlt: asSwatchKey(r.swatch_alt),
     lastAirYear,
     seasonCount,
     releaseDate: r.release_date ?? undefined,

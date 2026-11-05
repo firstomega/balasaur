@@ -1,3 +1,5 @@
+import type { SwatchKey } from "@/lib/posterSwatch";
+
 export type MediaType = "movie" | "tv" | "book" | "podcast";
 
 export interface MediaRatings {
@@ -79,6 +81,14 @@ export interface MediaItem {
   seasonCount?: number;
   /** TMDB community vote count. */
   voteCount?: number;
+  /**
+   * Tile colour read from the poster (media.swatch), one of the keys in
+   * src/lib/posterSwatch.ts. Null or absent until the poster has been read;
+   * a card then paints on the neutral paper tile.
+   */
+  swatch?: SwatchKey | null;
+  /** The poster's second swatch, when it has one that differs (media.swatch_alt). */
+  swatchAlt?: SwatchKey | null;
   /**
    * Why this card is in a related rail — the facets it shares with the anchor
    * title ("Same series", a person, a sub-genre, a theme, a decade). Set only

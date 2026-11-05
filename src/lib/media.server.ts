@@ -26,7 +26,8 @@ import {
   type AvailabilityClient,
 } from "./availabilityEvents";
 import type { EpisodeRating } from "./episodes";
-import { posterColorsFromJpeg, type PosterColors } from "./posterColor";
+import { posterReadPatch, readPosterBytes, type PosterRead } from "./posterRead";
+import { asSwatchKey, type SwatchKey } from "./posterSwatch";
 import { tmdbImage } from "./tmdbImage";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
@@ -597,6 +598,8 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
     seasons: unknown;
     award_winner: boolean | null;
     award_nominee: boolean | null;
+    swatch: string | null;
+    swatch_alt: string | null;
   };
   const rows: Row[] = [];
   for (let offset = 0; offset < limit; offset += POSTGREST_PAGE) {
@@ -604,7 +607,7 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
     const { data, error } = await supabaseAdmin
       .from("media")
       .select(
-        "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,people,seasons,award_winner,award_nominee",
+        "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb,rating_rotten_tomatoes,rating_metacritic,rating_tmdb,genres,origins,streaming,people,seasons,award_winner,award_nominee,swatch,swatch_alt",
       )
       .order("popularity", { ascending: false, nullsFirst: false })
       .range(offset, end);
@@ -613,7 +616,7 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
       console.error("[catalog] load failed:", error.message);
       return [];
     }
-    const page = (data ?? []) as Row[];
+    const page = (data ?? []) as unknown as Row[];
     rows.push(...page);
     if (page.length < end - offset + 1) break; // exhausted
   }
@@ -657,6 +660,8 @@ export async function loadCatalogFromDb(limit = CATALOG_LIMIT): Promise<MediaIte
       lengthLabel: "", // intentionally omitted — fetched on detail page
       people: (r.people as unknown as MediaPerson[]) ?? [],
       popularity: r.popularity ?? undefined,
+      swatch: asSwatchKey(r.swatch),
+      swatchAlt: asSwatchKey(r.swatch_alt),
       lastAirYear,
       seasonCount,
       releaseDate: r.release_date ?? undefined,
@@ -1333,7 +1338,7 @@ async function catalogMaxUpdatedAt(): Promise<string | null> {
 // ---------- Poster colors ----------
 
 /**
- * Two colors per title, read out of the poster on the server so the ambient
+ * Two colors and a tile swatch per title, read out of the poster on the server so the ambient
  * glow and the card placeholder tint are already in the HTML. The w92 poster is
  * about 2 KB and one HTTP hop from the CDN we already talk to.
  *
@@ -1342,9 +1347,10 @@ async function catalogMaxUpdatedAt(): Promise<string | null> {
  * the same keys, so a batch where some titles got a color and some did not
  * would be rejected wholesale, taking the catalog write down with it.
  *
- * media.color_a / color_b / color_at arrived in the poster-color migration.
+ * media.color_a / color_b / color_at arrived in the poster-color migration,
+ * swatch / swatch_alt / swatch_at in the poster-swatch one.
  * src/integrations/supabase/types.ts is regenerated on its own cadence, so
- * until it catches up those three columns are addressed through the local
+ * until it catches up these columns are addressed through the local
  * shapes below.
  */
 const POSTER_COLOR_SIZE = "w92";
@@ -1358,12 +1364,22 @@ const POSTER_COLOR_BACKFILL_LIMIT = 400;
 const POSTER_COLOR_HARD_CEILING = 2000;
 const POSTER_COLOR_BUDGET_MS = 60_000;
 const POSTER_COLOR_CONCURRENCY = 8;
+/**
+ * A title is queued while either reading is missing: never looked at for its
+ * glow colours, or looked at before the tile swatch existed. One poster read
+ * fills both, so the swatch backlog drains through the same queue, most
+ * popular first.
+ */
+const POSTER_QUEUE = "color_at.is.null,swatch_at.is.null";
 
 type PosterColorTarget = { media_id: string; poster_url: string | null };
 
 export interface PosterColorPair {
   colorA: string | null;
   colorB: string | null;
+  /** Tile swatch from the same poster (media.swatch), null until it has been read. */
+  swatch: SwatchKey | null;
+  swatchAlt: SwatchKey | null;
 }
 
 export interface PosterColorResult {
@@ -1381,6 +1397,8 @@ export interface PosterColorResult {
   durationMs: number;
 }
 
+const NOTHING_READ: PosterRead = { colors: null, swatch: null };
+
 /**
  * `looked: true` means the poster was read and this is the answer, so the title
  * can be stamped and never queued again. `looked: false` means the fetch itself
@@ -1388,30 +1406,26 @@ export interface PosterColorResult {
  */
 async function readPosterColors(
   posterUrl: string | null,
-): Promise<{ colors: PosterColors | null; looked: boolean }> {
+): Promise<{ read: PosterRead; looked: boolean }> {
   const url = tmdbImage(posterUrl, POSTER_COLOR_SIZE);
-  if (!url) return { colors: null, looked: true };
+  if (!url) return { read: NOTHING_READ, looked: true };
   try {
     const res = await fetchWithTimeout(url, POSTER_COLOR_TIMEOUT_MS);
     // A poster TMDB no longer serves is an answer, not a failure.
-    if (res.status === 403 || res.status === 404) return { colors: null, looked: true };
-    if (!res.ok) return { colors: null, looked: false };
+    if (res.status === 403 || res.status === 404) return { read: NOTHING_READ, looked: true };
+    if (!res.ok) return { read: NOTHING_READ, looked: false };
     const buf = await res.arrayBuffer();
     if (buf.byteLength === 0 || buf.byteLength > POSTER_COLOR_MAX_BYTES) {
-      return { colors: null, looked: true };
+      return { read: NOTHING_READ, looked: true };
     }
-    return { colors: posterColorsFromJpeg(new Uint8Array(buf)), looked: true };
+    return { read: readPosterBytes(new Uint8Array(buf)), looked: true };
   } catch {
-    return { colors: null, looked: false };
+    return { read: NOTHING_READ, looked: false };
   }
 }
 
-async function stampPosterColors(mediaId: string, colors: PosterColors | null): Promise<boolean> {
-  const patch = {
-    color_a: colors?.colorA ?? null,
-    color_b: colors?.colorB ?? null,
-    color_at: new Date().toISOString(),
-  };
+async function stampPosterColors(mediaId: string, read: PosterRead): Promise<boolean> {
+  const patch = posterReadPatch(read, new Date().toISOString());
   const { error } = await supabaseAdmin
     .from("media")
     .update(patch as unknown as TablesUpdate<"media">)
@@ -1437,14 +1451,14 @@ async function colorTargets(
       budgetHit = true;
       return;
     }
-    const { colors, looked } = await readPosterColors(t.poster_url);
+    const { read, looked } = await readPosterColors(t.poster_url);
     if (!looked) {
       failed++;
       return;
     }
-    const ok = await stampPosterColors(t.media_id, colors);
+    const ok = await stampPosterColors(t.media_id, read);
     if (!ok) failed++;
-    else if (colors) stored++;
+    else if (read.colors) stored++;
     else noColor++;
   });
   return { stored, noColor, failed, budgetHit };
@@ -1454,7 +1468,7 @@ async function pendingPosterColorCount(): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from("media")
     .select("media_id", { count: "exact", head: true })
-    .filter("color_at", "is", null)
+    .or(POSTER_QUEUE)
     .not("poster_url", "is", null);
   if (error) {
     console.error("[colors] pending count failed:", error.message);
@@ -1482,7 +1496,7 @@ export async function backfillPosterColors(opts?: {
   const { data, error } = await supabaseAdmin
     .from("media")
     .select("media_id, poster_url")
-    .filter("color_at", "is", null)
+    .or(POSTER_QUEUE)
     .not("poster_url", "is", null)
     .order("popularity", { ascending: false, nullsFirst: false })
     .limit(limit);
@@ -1516,7 +1530,7 @@ async function colorFreshlySynced(mediaIds: string[], tag: string): Promise<void
       .from("media")
       .select("media_id, poster_url")
       .in("media_id", mediaIds)
-      .filter("color_at", "is", null)
+      .or(POSTER_QUEUE)
       .not("poster_url", "is", null)
       .limit(POSTER_COLOR_PER_SYNC);
     if (error) {
@@ -1537,49 +1551,79 @@ async function colorFreshlySynced(mediaIds: string[], tag: string): Promise<void
   }
 }
 
-/** The stored colors for one title, or null when it has none. */
+/** The stored colors and swatches for one title, or null when it has none. */
 export async function loadPosterColors(mediaId: string): Promise<PosterColorPair | null> {
   const { data, error } = await supabaseAdmin
     .from("media")
-    .select("color_a, color_b")
+    .select("color_a, color_b, swatch, swatch_alt")
     .eq("media_id", mediaId)
     .maybeSingle();
   if (error) {
     console.error(`[colors] read failed for ${mediaId}:`, error.message);
     return null;
   }
-  const row = data as unknown as { color_a: string | null; color_b: string | null } | null;
-  if (!row || (!row.color_a && !row.color_b)) return null;
-  return { colorA: row.color_a, colorB: row.color_b };
+  const row = data as unknown as PosterPaintRow | null;
+  return row ? paintFromRow(row) : null;
 }
 
-/** The stored colors for a set of titles, keyed by media_id. Missing ids are absent. */
+type PosterPaintRow = {
+  color_a: string | null;
+  color_b: string | null;
+  swatch: string | null;
+  swatch_alt: string | null;
+};
+
+function paintFromRow(r: PosterPaintRow): PosterColorPair | null {
+  const swatch = asSwatchKey(r.swatch);
+  if (!r.color_a && !r.color_b && !swatch) return null;
+  return {
+    colorA: r.color_a,
+    colorB: r.color_b,
+    swatch,
+    swatchAlt: asSwatchKey(r.swatch_alt),
+  };
+}
+
+/** The stored colors and swatches for a set of titles, keyed by media_id. Missing ids are absent. */
 export async function loadPosterColorsMany(
   mediaIds: string[],
 ): Promise<Map<string, PosterColorPair>> {
   const out = new Map<string, PosterColorPair>();
   if (mediaIds.length === 0) return out;
-  const CHUNK = 500;
+  const CHUNK = 200;
   for (let i = 0; i < mediaIds.length; i += CHUNK) {
     const { data, error } = await supabaseAdmin
       .from("media")
-      .select("media_id, color_a, color_b")
+      .select("media_id, color_a, color_b, swatch, swatch_alt")
       .in("media_id", mediaIds.slice(i, i + CHUNK));
     if (error) {
       console.error("[colors] batch read failed:", error.message);
       continue;
     }
-    const rows = (data ?? []) as unknown as {
-      media_id: string;
-      color_a: string | null;
-      color_b: string | null;
-    }[];
+    const rows = (data ?? []) as unknown as (PosterPaintRow & { media_id: string })[];
     for (const r of rows) {
-      if (!r.color_a && !r.color_b) continue;
-      out.set(r.media_id, { colorA: r.color_a, colorB: r.color_b });
+      const paint = paintFromRow(r);
+      if (paint) out.set(r.media_id, paint);
     }
   }
   return out;
+}
+
+/**
+ * Fill in swatches on cards built from a source that does not carry them (the
+ * related_titles RPC returns a fixed column list). One indexed read by id;
+ * a failed read leaves the cards on the neutral tile.
+ */
+export async function attachSwatches(items: MediaItem[]): Promise<void> {
+  const missing = items.filter((it) => it.swatch === undefined).map((it) => it.id);
+  if (missing.length === 0) return;
+  const paint = await loadPosterColorsMany(missing);
+  for (const it of items) {
+    if (it.swatch !== undefined) continue;
+    const p = paint.get(it.id);
+    it.swatch = p?.swatch ?? null;
+    it.swatchAlt = p?.swatchAlt ?? null;
+  }
 }
 
 export interface SyncResult {
@@ -2064,6 +2108,9 @@ interface CrossRow {
   seasons: unknown;
   award_winner: boolean | null;
   award_nominee: boolean | null;
+  /** Absent from the related_titles RPC, whose fixed return type predates it. */
+  swatch?: string | null;
+  swatch_alt?: string | null;
 }
 
 // Map a DB media row to a slim card item for the cross-category "more like this"
@@ -2101,6 +2148,10 @@ function crossRowToItem(r: CrossRow): MediaItem {
     lengthLabel: "",
     people: [],
     popularity: r.popularity ?? undefined,
+    // Left undefined when the source row has no swatch column, so
+    // attachSwatches knows to look it up.
+    swatch: r.swatch === undefined ? undefined : asSwatchKey(r.swatch),
+    swatchAlt: r.swatch_alt === undefined ? undefined : asSwatchKey(r.swatch_alt),
     lastAirYear,
     awardWinner: r.award_winner ?? false,
     awardNominee: r.award_nominee ?? false,
@@ -2437,13 +2488,15 @@ async function fetchRelatedRail(
   }
   const rows = ((data ?? []) as unknown as RelatedRow[]).filter(isStrongMatch);
   if (rows.length < MIN_RELATED_MATCHES) return undefined;
-  return rows.slice(0, 12).map((r) => {
+  const items = rows.slice(0, 12).map((r) => {
     const item = crossRowToItem(r);
     // The DB-generated score is canonical when present.
     if (typeof r.rating_balasaur === "number") item.ratings.balasaur = r.rating_balasaur;
     item.matchReasons = matchReasons(r);
     return item;
   });
+  await attachSwatches(items);
+  return items;
 }
 
 async function attachRelatedRails(detail: MediaDetail): Promise<void> {
@@ -2863,7 +2916,7 @@ async function attachPersonStats(detail: PersonDetail): Promise<void> {
 const PERSON_CREDIT_COLUMNS =
   "media_id,media_type,title,year,poster_url,popularity,release_date,rating_imdb," +
   "rating_rotten_tomatoes,rating_metacritic,rating_tmdb,rating_balasaur,genres,seasons," +
-  "people,award_winner,award_nominee,vote_count,film_length_minutes,tmdb_collection_id";
+  "people,award_winner,award_nominee,vote_count,film_length_minutes,tmdb_collection_id,swatch,swatch_alt";
 
 /** PostgREST builds the `in` filter into the URL, so ids go in batches. */
 const PERSON_CREDIT_CHUNK = 200;

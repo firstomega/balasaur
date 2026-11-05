@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
 import type { CollectionDetail, CollectionSummary } from "./collections.functions";
+import { leadOfItems } from "./tileLead";
 import {
   LIST_EXCLUDED_GENRES,
   RANKED_MIN_FILM_MINUTES,
@@ -267,6 +268,7 @@ export async function listOriginCollections(): Promise<CollectionSummary[]> {
           .slice(0, 5)
           .map((r) => r.poster_url)
           .filter((p): p is string => !!p),
+        lead: leadOfItems(ranked.slice(0, 5).map((r) => rowToCardItem(r))),
         top_titles: ranked.slice(0, 3).map((r) => ({
           title: r.title,
           score: r.rating_balasaur !== null ? Math.round(r.rating_balasaur) : null,
