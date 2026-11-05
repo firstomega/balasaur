@@ -260,7 +260,7 @@ export function MatchBoard({
                     />
                   ) : (
                     <span
-                      className="flex h-full w-full items-center justify-center px-1 text-center text-[11px] font-black leading-tight tracking-[-0.02em] text-text-bright sm:text-[14px]"
+                      className="flex h-full w-full items-center justify-center px-1 text-center text-[11px] font-black leading-tight tracking-[-0.02em] text-white sm:text-[14px]"
                       style={{
                         background:
                           "linear-gradient(160deg, color-mix(in oklab, var(--game) 45%, #0b0d10), color-mix(in oklab, var(--game) 18%, #0b0d10))",
@@ -354,7 +354,7 @@ export function MatchBoard({
                     <span className="block text-[14px] leading-snug text-text-bright sm:text-[15px]">
                       {p.text}
                     </span>
-                    <span className="mt-0.5 block font-mono text-[11px] text-[var(--game)]">
+                    <span className="mt-0.5 block font-mono text-[11px] text-text-muted">
                       {titleLabel(title)}
                     </span>
                   </span>

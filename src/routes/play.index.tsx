@@ -247,7 +247,7 @@ function TileSlot({
         <NextCountdown
           label="Doors close in"
           format="short"
-          className="pointer-events-none absolute bottom-5 right-5 rounded-full bg-black/35 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-wider text-white/85"
+          className="pointer-events-none absolute bottom-5 right-5 rounded-full bg-background/90 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-wider text-text-muted"
         />
       )}
     </div>
