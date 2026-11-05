@@ -102,7 +102,7 @@ function buildHuffTable(counts: Uint8Array, values: Uint8Array): HuffTable {
 }
 
 /**
- * Decode a baseline JPEG down to one average color per 8x8 block.
+ * Decode a baseline or progressive JPEG down to one average color per 8x8 block.
  * Returns null for anything it cannot read honestly.
  */
 export function decodeJpegBlockAverages(bytes: Uint8Array): BlockImage | null {
@@ -174,6 +174,9 @@ function decodeUnsafe(data: Uint8Array): BlockImage | null {
     } else if (UNSUPPORTED_SOF.has(marker)) {
       return null;
     } else if (SUPPORTED_SOF.has(marker) || marker === PROGRESSIVE_SOF) {
+      // A second frame header would orphan the passes already read, so a
+      // progressive file that carries one is refused rather than half-read.
+      if (frame && (progressive || marker === PROGRESSIVE_SOF)) return null;
       progressive = marker === PROGRESSIVE_SOF;
       // A 12-bit progressive file would need a different level shift.
       if (progressive && data[segStart] !== 8) return null;

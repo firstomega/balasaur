@@ -241,6 +241,23 @@ describe("progressive JPEG", () => {
     expect(decodeJpegBlockAverages(withFirstScanHeader(full, 0, 0, 0x0e))).toBe(null);
   });
 
+  it("refuses a second frame header between first passes", () => {
+    // Splice a copy of the frame header in front of the second per-component
+    // pass. The luma pass already read belongs to the first header, so the
+    // second header's luma would be empty, and the answer would be gray.
+    const b = bytes(SCARFACE_SPLIT_RESTART);
+    let sof = 2;
+    while (!(b[sof] === 0xff && b[sof + 1] === 0xc2)) sof++;
+    const header = b.slice(sof, sof + 2 + ((b[sof + 2] << 8) | b[sof + 3]));
+    const at = scanOffsets(b)[1];
+    const spliced = new Uint8Array(b.length + header.length);
+    spliced.set(b.slice(0, at));
+    spliced.set(header, at);
+    spliced.set(b.slice(at), at + header.length);
+    expect(decodeJpegBlockAverages(b)).not.toBe(null);
+    expect(decodeJpegBlockAverages(spliced)).toBe(null);
+  });
+
   it("never throws on a cut or damaged file", () => {
     const full = bytes(SCARFACE_PROGRESSIVE);
     let threw = false;
