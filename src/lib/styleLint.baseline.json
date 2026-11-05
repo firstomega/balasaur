@@ -1,11 +1,11 @@
 {
   "totals": {
-    "fontSize": 824,
-    "radius": 294,
+    "fontSize": 781,
+    "radius": 271,
     "duration": 4,
     "easing": 8,
     "hex": 249,
-    "containerWidth": 76
+    "containerWidth": 72
   },
   "files": {
     "src/components/arcade/ArcadeTile.tsx": {
@@ -133,7 +133,7 @@
       "containerWidth": 2
     },
     "src/components/balasaur/EpisodeHeatmap.tsx": {
-      "fontSize": 10,
+      "fontSize": 9,
       "radius": 3,
       "hex": 9,
       "containerWidth": 3
@@ -155,9 +155,8 @@
       "containerWidth": 4
     },
     "src/components/balasaur/MediaDetail.tsx": {
-      "fontSize": 38,
-      "radius": 17,
-      "containerWidth": 6
+      "fontSize": 2,
+      "containerWidth": 2
     },
     "src/components/balasaur/MediaTypeSwitch.tsx": {
       "fontSize": 1,
@@ -304,10 +303,6 @@
       "fontSize": 14,
       "containerWidth": 1
     },
-    "src/routes/movie.$id.tsx": {
-      "fontSize": 3,
-      "radius": 3
-    },
     "src/routes/night.$code.tsx": {
       "fontSize": 49,
       "radius": 30
@@ -399,10 +394,6 @@
     },
     "src/routes/terms.tsx": {
       "fontSize": 3
-    },
-    "src/routes/tv.$id.tsx": {
-      "fontSize": 3,
-      "radius": 3
     }
   }
 }

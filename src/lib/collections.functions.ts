@@ -373,12 +373,18 @@ function shelfWindow(rank: number, size: number): { lo: number; hi: number } {
   return { lo: Math.max(1, size - SHELF_WINDOW + 1), hi: size };
 }
 
+/** A list the title holds a place on, with the list's own leader, so the
+ *  title page can paint it as a list tile in the leader's colour. */
+export interface RankedPlacement extends Placement {
+  lead: TileLead | null;
+}
+
 /** What a title page shows about the lists it ranks on. */
 export interface TitleShelves {
   /** The shelf it ranks best on, with its neighbours, for the closing rail. */
   shelf: AppearsIn | null;
-  /** Up to three placements for the "ranks on" line, most specific first. */
-  ranksOn: Placement[];
+  /** Up to three placements for the "ranks on" tiles, most specific first. */
+  ranksOn: RankedPlacement[];
 }
 
 const NO_SHELVES: TitleShelves = { shelf: null, ranksOn: [] };
@@ -392,37 +398,56 @@ export const getAppearsIn = createServerFn({ method: "GET" })
     if (!/^(movie|tv)-\d{1,10}$/.test(p.mediaId ?? "")) return NO_SHELVES;
     const { data, error } = await loose(supabaseAdmin)
       .from("collection_items")
-      .select("rank, collections:slug ( slug, title, kind, item_count )")
+      .select("rank, collections:slug ( slug, title, kind, item_count, poster_ids )")
       .eq("media_id", p.mediaId);
     if (error || !data) return NO_SHELVES;
-    const placements: Placement[] = (
+    const rows = (
       data as unknown as {
         rank: number;
-        collections: { slug: string; title: string; kind: string; item_count: number } | null;
+        collections: {
+          slug: string;
+          title: string;
+          kind: string;
+          item_count: number;
+          poster_ids: string[] | null;
+        } | null;
       }[]
-    )
-      .filter((r) => r.collections)
-      .map((r) => ({
-        slug: r.collections!.slug,
-        title: r.collections!.title,
-        kind: r.collections!.kind,
-        rank: r.rank,
-        item_count: r.collections!.item_count,
-      }));
-    const ranksOn = pickRanksOn(placements);
+    ).filter((r) => r.collections);
+    const placements: Placement[] = rows.map((r) => ({
+      slug: r.collections!.slug,
+      title: r.collections!.title,
+      kind: r.collections!.kind,
+      rank: r.rank,
+      item_count: r.collections!.item_count,
+    }));
+    // Each tile is painted from its list's leader, the same lead the list's
+    // tile carries everywhere else, so a list looks the same on every page.
+    const picked = pickRanksOn(placements);
+    const leadIds = new Map(
+      rows.map((r) => [r.collections!.slug, (r.collections!.poster_ids ?? []).slice(0, 3)]),
+    );
+    // Read alongside the shelf neighbours below, not before them.
+    const leadsRead = postersByIds([
+      ...new Set(picked.flatMap((pl) => leadIds.get(pl.slug) ?? [])),
+    ]).then((byId): RankedPlacement[] =>
+      picked.map((pl) => ({ ...pl, lead: leadOf(leadIds.get(pl.slug) ?? [], byId) })),
+    );
     // Best placement first: high rank in a big shelf beats #1 of a tiny one.
     const best = [...placements].sort((a, b) => a.rank - b.rank || b.item_count - a.item_count)[0];
-    if (!best) return { shelf: null, ranksOn };
+    if (!best) return { shelf: null, ranksOn: await leadsRead };
 
     const size = Math.max(best.item_count || 0, best.rank);
     const { lo, hi } = shelfWindow(best.rank, size);
-    const { data: nearby, error: nearbyErr } = await loose(supabaseAdmin)
-      .from("collection_items")
-      .select(`rank, media:media_id ( ${CARD_COLS} )`)
-      .eq("slug", best.slug)
-      .gte("rank", lo)
-      .lte("rank", hi)
-      .order("rank", { ascending: true });
+    const [{ data: nearby, error: nearbyErr }, ranksOn] = await Promise.all([
+      loose(supabaseAdmin)
+        .from("collection_items")
+        .select(`rank, media:media_id ( ${CARD_COLS} )`)
+        .eq("slug", best.slug)
+        .gte("rank", lo)
+        .lte("rank", hi)
+        .order("rank", { ascending: true }),
+      leadsRead,
+    ]);
     const shelfOf = (neighbors: ShelfSlot[]): AppearsIn => ({
       slug: best.slug,
       title: best.title,

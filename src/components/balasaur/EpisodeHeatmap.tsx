@@ -294,7 +294,7 @@ export function EpisodeHeatmap({ rows, seasons, className }: EpisodeHeatmapProps
 
   return (
     <section className={cn(className)}>
-      <h2 className="mb-3 text-[18px] font-black tracking-[-0.02em] text-text-bright">
+      <h2 className="mb-3 font-display text-2xl font-extrabold leading-none text-text-bright md:text-3xl">
         Episode ratings
       </h2>
 

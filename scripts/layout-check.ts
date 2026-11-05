@@ -216,6 +216,10 @@ async function main() {
       "/watched",
       "/movie/inception-27205",
       "/tv/breaking-bad-1396",
+      // A title with no poster swatch (the paper band) and a long name on the
+      // red band, the two worst real rows for the title-page hero.
+      "/movie/x-760104",
+      "/movie/doctor-strange-in-the-multiverse-of-madness-453395",
       "/person/31",
       "/best/best-action-movies-on-netflix",
       "/best/best-yuma-uchida-shows",

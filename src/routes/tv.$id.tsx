@@ -67,11 +67,11 @@ export const Route = createFileRoute("/tv/$id")({
     // first byte on a slow database. A show with no stored episode ratings
     // resolves to an empty array and the grid renders nothing.
     //
-    // The poster's stored colors join the same batch. The glow they paint sits
-    // behind the title in the first byte of HTML, and a third budget in
+    // The poster's stored colors join the same batch. The swatch they hold paints
+    // the hero band in the first byte of HTML, and a third budget in
     // sequence would put another 600ms in front of it. A show with no stored
-    // colors, or a lookup that runs long, resolves to nothing and the page
-    // keeps its flat ground.
+    // colors, or a lookup that runs long, resolves to nothing and the band
+    // is painted on paper.
     const [, , colors] = await Promise.all([
       ssrBudget(context.queryClient.prefetchQuery(appearsInQueryOptions(`tv-${id}`)), 800),
       ssrBudget(context.queryClient.prefetchQuery(episodeRatingsQueryOptions(`tv-${id}`)), 800),
@@ -119,13 +119,7 @@ function TvPage() {
   const { data: episodeRatings } = useQuery(episodeRatingsQueryOptions(`tv-${id}`));
   const { glow } = Route.useLoaderData();
   return (
-    <MediaDetail
-      mediaType="tv"
-      id={id}
-      episodeRatings={episodeRatings}
-      colorA={glow?.colorA}
-      colorB={glow?.colorB}
-    />
+    <MediaDetail mediaType="tv" id={id} episodeRatings={episodeRatings} swatch={glow?.swatch} />
   );
 }
 
@@ -134,23 +128,22 @@ function DetailError({ reset }: ErrorComponentProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <h1 className="text-xl font-semibold text-text-bright">Couldn't load this title</h1>
-        <p className="mt-2 text-sm text-text-muted">
-          We hit a snag fetching the details. Try again or head back to the grid.
-        </p>
+        <h1 className="font-display text-3xl font-extrabold text-text-bright">
+          Couldn't load this title
+        </h1>
         <div className="mt-5 flex justify-center gap-2">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="rounded-[5px] bg-primary px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground"
+            className="rounded-full bg-primary px-4 py-2 text-lg font-bold text-primary-foreground"
           >
             Try again
           </button>
           <Link
             to="/"
-            className="rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
+            className="rounded-full border-2 border-text-bright px-4 py-2 text-lg font-bold text-text-bright"
           >
             Back to grid
           </Link>
@@ -164,13 +157,15 @@ function DetailNotFound() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <h1 className="text-xl font-semibold text-text-bright">Couldn't find this title</h1>
-        <p className="mt-2 text-sm text-text-muted">
+        <h1 className="font-display text-3xl font-extrabold text-text-bright">
+          Couldn't find this title
+        </h1>
+        <p className="mt-2 text-base text-text-muted">
           It may have been removed or the link is wrong.
         </p>
         <Link
           to="/"
-          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
+          className="mt-5 inline-block rounded-full border-2 border-text-bright px-4 py-2 text-lg font-bold text-text-bright"
         >
           Back to grid
         </Link>
