@@ -37,6 +37,9 @@ export const SITE_TAGLINE = "A movie and TV database built around one number";
 // and the share card cannot drift apart. scripts/brand-assets.ts reads both of
 // these straight out of this file when it renders public/og-default.png.
 export const SITE_PROOF = "Every title carries a Balasaur Score from 0 to 100, refreshed nightly.";
+// The site-wide meta description: the tagline and its backing, nothing else.
+// Any page without its own composed description falls back to this.
+export const SITE_DESCRIPTION = `${SITE_TAGLINE}. ${SITE_PROOF}`;
 // Fallback share image: the branded card in public/og-default.png. Pages with
 // real art (posters, backdrops) pass their own image; this covers the rest.
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-default.png`;
@@ -54,7 +57,7 @@ export function absoluteUrl(path: string): string {
  *  the most valuable line in a search result on half a fact. Falls back to a
  *  word-boundary cut only when even the first sentence is too long. */
 export function clampDescription(text: string | undefined, max = 160): string {
-  if (!text) return `${SITE_TAGLINE}. Discover, track, and rate movies and TV.`;
+  if (!text) return SITE_DESCRIPTION;
   const t = text.trim();
   if (t.length <= max) return t;
 
