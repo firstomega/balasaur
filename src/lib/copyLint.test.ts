@@ -107,6 +107,37 @@ const VOICE_EXCLUDED = new Set(["src/routes/dev.arcade.tsx", "src/routes/dev.ref
  *  description, a lede. A question here is a slogan, not a form. */
 type Slot = "hook" | "description" | "lede" | "blurb" | "tagline" | "heading";
 const SLOT_KEY = /\b(hook|description|lede|blurb|tagline)\s*(?::|=\s*\{?)\s*$/;
+/** A head tag written out by hand: { name: "description", content: "..." }. */
+const META_DESCRIPTION =
+  /\b(?:name|property)\s*:\s*["'](?:og:|twitter:)?description["']\s*,\s*content\s*:\s*$/;
+/** A constant that holds hooks by another key, such as TILE_HOOKS keyed by
+ *  game slug, or a single HOOK string. Every value inside it is a hook. */
+const HOOK_CONST = /\b(?:const|let)\s+\w*HOOKS?\s*(?::[^=]+)?=\s*/g;
+
+/** Source ranges [start, end) of every hook constant's value. */
+function hookRanges(src: string): [number, number][] {
+  const out: [number, number][] = [];
+  for (const m of src.matchAll(HOOK_CONST)) {
+    const start = m.index + m[0].length;
+    if (src[start] !== "{") {
+      const end = src.indexOf(";", start);
+      out.push([start, end < 0 ? src.length : end]);
+      continue;
+    }
+    let depth = 0;
+    let i = start;
+    for (; i < src.length; i++) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}" && --depth === 0) break;
+    }
+    out.push([start, i]);
+  }
+  return out;
+}
+
+/** Inline elements inside a paragraph. Blanked before JSX text is read so
+ *  "<b>Aliens</b> scores 85." is one sentence, not the fragment "scores 85." */
+const INLINE_TAG = /<\/?(?:a|b|strong|em|i|span|mark|small|abbr|time|Link)\b[^<>]*>/g;
 
 /** One piece of visible text: a string literal, a run of JSX text, or the
  *  text of an h1 to h3. `slotOnly` units feed the slot checks and nothing
@@ -139,10 +170,28 @@ const looksLikeCode = (s: string) =>
 /** Lines whose strings are for developers: logs, thrown errors. */
 const DEV_LINE = /console\.|\bthrow\b|new (?:Error|RegExp|URL)\b/;
 
+/** Runs of JSX text in `src`: their squashed text, the offset of their first
+ *  character, and the span they were read from. */
+function jsxRuns(src: string): { text: string; at: number; start: number; end: number }[] {
+  const out: { text: string; at: number; start: number; end: number }[] = [];
+  for (const j of src.matchAll(/>([^<>]+)</g)) {
+    let body = j[1].replace(/\{\s*(["'`])\s*\1\s*\}/g, " ");
+    for (let prev = ""; prev !== body; )
+      [prev, body] = [body, body.replace(/\{[^{}]*\}/g, "\uE000")];
+    if (/[{};=`]|&&|\|\|/.test(body)) continue;
+    const text = squash(body.replace(/\uE000/g, "{x}"));
+    if (!/[A-Za-z]{2,}/.test(text) || !/\s/.test(text)) continue;
+    const lead = j[1].length - j[1].trimStart().length;
+    out.push({ text, at: j.index + 1 + lead, start: j.index, end: j.index + j[0].length });
+  }
+  return out;
+}
+
 function units(raw: string): Unit[] {
   const src = blankComments(raw);
   const lines = src.split("\n");
   const out: Unit[] = [];
+  const hooks = hookRanges(src);
 
   // String literals, with the key they are assigned to when it is a slot.
   STRING_LITERAL.lastIndex = 0;
@@ -156,8 +205,12 @@ function units(raw: string): Unit[] {
     // looksLikeCode, which is how the patterns were measured.
     const text = squash((m[1] ?? m[2] ?? m[3] ?? "").replace(/\$\{[^}]*\}/g, "{x}"));
     if (!/[A-Za-z]{2,}/.test(text) || looksLikeCode(text)) continue;
-    const key = SLOT_KEY.exec(src.slice(Math.max(0, m.index - 40), m.index));
-    const slot = (key?.[1] as Slot | undefined) ?? null;
+    const before = src.slice(Math.max(0, m.index - 80), m.index);
+    const key = SLOT_KEY.exec(before.slice(-40));
+    const inHooks = hooks.some(([a, b]) => m!.index >= a && m!.index < b);
+    const slot: Slot | null =
+      (key?.[1] as Slot | undefined) ??
+      (META_DESCRIPTION.test(before) ? "description" : inHooks ? "hook" : null);
     // An unkeyed literal has to read like a sentence to count as copy.
     if (!slot && !(/\s/.test(text) && /^[A-Z0-9"'{]/.test(text))) continue;
     out.push({ text, line, slot });
@@ -165,17 +218,17 @@ function units(raw: string): Unit[] {
 
   // JSX text: whatever sits between a closing ">" and the next "<", with
   // {expressions} folded to {x}. Anything still carrying code punctuation
-  // after the fold is not text.
-  for (const j of src.matchAll(/>([^<>]+)</g)) {
-    let body = j[1];
-    for (let prev = ""; prev !== body; )
-      [prev, body] = [body, body.replace(/\{[^{}]*\}/g, "\u0001")];
-    if (/[{};=`]|&&|\|\|/.test(body)) continue;
-    const text = squash(body.replace(/\u0001/g, "{x}"));
-    if (!/[A-Za-z]{2,}/.test(text) || !/\s/.test(text)) continue;
-    const lead = j[1].length - j[1].trimStart().length;
-    out.push({ text, line: lineAt(src, j.index + 1 + lead), slot: null });
-  }
+  // after the fold is not text. It is read twice. First with inline tags
+  // blanked in place, so "<b>Aliens</b> scores 85." is one sentence and not
+  // the fragment "scores 85.". Then as written, for runs the first read lost
+  // because blanking a tag joined them to the code around it, such as a
+  // <span> inside {cond && (...)}.
+  const blanked = jsxRuns(src.replace(INLINE_TAG, (t) => t.replace(/[^\n]/g, " ")));
+  const asWritten = jsxRuns(src).filter(
+    (r) => !blanked.some((b) => r.start >= b.start && r.end <= b.end),
+  );
+  for (const r of [...blanked, ...asWritten])
+    out.push({ text: r.text, line: lineAt(src, r.at), slot: null });
 
   // Headings. Expressions inside keep only their string literals, so the "?"
   // of a ternary is not read as a question.
@@ -312,8 +365,8 @@ const WARN: Check[] = [
 
 type Hit = { id: string; file: string; line: number; text: string };
 
-/** Hits for one file, counted once per pattern and line so a heading and the
- *  JSX text inside it are not counted twice. */
+/** Hits for one file, counted once per pattern, line and text, so a second
+ *  bad string on a line that already holds one still raises the count. */
 function scan(file: string, src: string, checks: Check[]): Hit[] {
   const seen = new Set<string>();
   const hits: Hit[] = [];
@@ -321,7 +374,7 @@ function scan(file: string, src: string, checks: Check[]): Hit[] {
     for (const c of checks) {
       if (u.slotOnly && c.id !== "H3") continue;
       if (!c.test(u)) continue;
-      const k = `${c.id}:${u.line}`;
+      const k = `${c.id}:${u.line}:${u.text}`;
       if (seen.has(k)) continue;
       seen.add(k);
       hits.push({ id: c.id, file, line: u.line, text: u.text });
@@ -350,6 +403,8 @@ const MUST_CATCH: Record<string, string[]> = {
     `<h2>Did you get them?</h2>`,
     `hook: "Six clues. How few do you need?",`,
     `description:\n  "Titanic II is real. Which of these are not?",`,
+    `{ name: "description", content: "Big night in? Start here." },`,
+    `const TILE_HOOKS = {\n  timeline: "Which came first? Everyone is wrong.",\n};`,
   ],
   H4: [
     `<h1>You watch like the {archetype}.</h1>`,
@@ -364,10 +419,13 @@ const MUST_CATCH: Record<string, string[]> = {
   H6: [
     `hook: "Ten questions. Same ten for everyone. One board.",`,
     `hook: "Sixty seconds. Two bins. Your thumb versus the catalog.",`,
+    `<p>Movies. <b>Ranked.</b> Finally.</p>`,
   ],
   H6b: [
     `hook: "Three were in it. One never was. Five seconds.",`,
     `hook: "A whole movie in emoji. Name it.",`,
+    `const TILE_HOOKS = {\n  "speed-sort": "Sixty seconds. Two bins. Go.",\n};`,
+    `const HOOK = "Ten questions. One board.";`,
   ],
   H7: [
     `<h2>What everyone is looking up</h2>`,
@@ -482,7 +540,6 @@ describe("copy lint: voice", () => {
 
   if (WRITE) {
     writeFileSync(BASELINE_PATH, JSON.stringify(now, null, 2) + "\n");
-    // eslint-disable-next-line no-console
     console.log(`wrote src/lib/copyLint.baseline.json:`, now.totals);
   }
 
@@ -501,7 +558,6 @@ describe("copy lint: voice", () => {
       out.push(`copy lint warning ${c.id}, ${c.what}: ${mine.length}`);
       for (const w of mine) out.push(`    ${w.file}:${w.line}  ${w.text.slice(0, 90)}`);
     }
-    // eslint-disable-next-line no-console
     if (out.length) console.log(out.join("\n"));
     expect(true).toBe(true);
   });
