@@ -180,9 +180,9 @@ function ProfileEditor() {
 
   const uStatusColor =
     uStatus.kind === "ok"
-      ? "text-emerald-400"
+      ? "text-rating"
       : uStatus.kind === "bad"
-        ? "text-red-400"
+        ? "text-destructive"
         : "text-text-dim";
 
   return (
@@ -358,7 +358,7 @@ function ProfileEditor() {
             {saveMsg && (
               <span
                 className={`text-[13px] ${
-                  saveMsg.kind === "ok" ? "text-emerald-400" : "text-red-400"
+                  saveMsg.kind === "ok" ? "text-rating" : "text-destructive"
                 }`}
               >
                 {saveMsg.text}

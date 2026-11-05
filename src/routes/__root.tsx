@@ -13,7 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import archivoFontUrl from "../fonts/archivo-latin-var.woff2?url";
-import monoFontUrl from "../fonts/jetbrains-mono-latin-var.woff2?url";
+import displayFontUrl from "../fonts/archivo-condensed-800-latin.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Footer } from "@/components/balasaur/Footer";
@@ -120,6 +120,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // The page ground is white. Without these the browser chrome on phones
+      // and the form controls default to the system theme, which on a dark
+      // phone puts a black address bar and dark inputs on a white page.
+      { name: "theme-color", content: "white" },
+      { name: "color-scheme", content: "light" },
       { title: "Balasaur" },
       {
         name: "description",
@@ -165,7 +170,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://image.tmdb.org" },
       // Fonts are self-hosted (see styles.css). Preloading them here means the
       // real face is usually in place for first paint, so there is no swap and
-      // no layout shift from it.
+      // no layout shift from it. Two preloads, not three: the body face and
+      // the display face set the text that paints first. JetBrains Mono sets
+      // small numerals, and its metric-matched fallback keeps that swap from
+      // moving anything.
       {
         rel: "preload",
         as: "font",
@@ -177,7 +185,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "preload",
         as: "font",
         type: "font/woff2",
-        href: monoFontUrl,
+        href: displayFontUrl,
         crossOrigin: "anonymous",
       },
     ],

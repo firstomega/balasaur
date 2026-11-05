@@ -180,7 +180,7 @@ export function TopBarSearch() {
         <div
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 top-[calc(100%+4px)] z-40 max-h-[70vh] overflow-y-auto rounded-[5px] border border-border bg-panel shadow-[0_12px_32px_-12px_rgba(0,0,0,0.8)]"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-40 max-h-[70vh] overflow-y-auto rounded-[5px] border border-border bg-panel shadow-[0_12px_32px_-12px_rgba(0,0,0,0.25)]"
         >
           {results.length === 0 && people.length === 0 ? (
             <EmptyState

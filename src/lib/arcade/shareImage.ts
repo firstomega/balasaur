@@ -8,27 +8,11 @@
 
 import { MARK_PATHS, MARK_VIEWBOX } from "@/components/arcade/markPaths";
 import { gridCells } from "@/components/arcade/ResultGrid";
-import { GAMES } from "./games";
-import type { ArcadeHue, GameSlug } from "./types";
+import { GAMES, HUE_HEX, HUE_INK } from "./games";
+import type { GameSlug } from "./types";
 
 export const CARD_W = 1080;
 export const CARD_H = 1350;
-
-/** Hue values mirrored from styles.css for the canvas, which cannot read
- *  CSS variables. Ink is the readable text color on the hue. */
-export const HUE_HEX: Record<ArcadeHue, { hue: string; ink: string }> = {
-  blue: { hue: "#3b82f6", ink: "#ffffff" },
-  ice: { hue: "#22d3ee", ink: "#0b0d10" },
-  crimson: { hue: "#ef4444", ink: "#ffffff" },
-  magenta: { hue: "#e879f9", ink: "#ffffff" },
-  gold: { hue: "#f5b82e", ink: "#0b0d10" },
-  teal: { hue: "#2dd4bf", ink: "#ffffff" },
-  violet: { hue: "#a78bfa", ink: "#ffffff" },
-  ruby: { hue: "#f43f5e", ink: "#ffffff" },
-  sun: { hue: "#fde047", ink: "#0b0d10" },
-  lime: { hue: "#a3e635", ink: "#0b0d10" },
-  orange: { hue: "#fb923c", ink: "#ffffff" },
-};
 
 const GROUND = "#0b0d10";
 const SQUARE_HEX = {
@@ -126,7 +110,8 @@ const MONO = "'JetBrains Mono', ui-monospace, monospace";
 /** Draw the card and return it as a PNG blob. */
 export async function renderShareCard(o: ShareCardOptions): Promise<Blob> {
   const game = GAMES[o.slug];
-  const { hue, ink } = HUE_HEX[game.hue];
+  const hue = HUE_HEX[game.hue];
+  const ink = HUE_INK[game.hue];
   const canvas = document.createElement("canvas");
   canvas.width = CARD_W;
   canvas.height = CARD_H;

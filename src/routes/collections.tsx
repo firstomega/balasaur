@@ -163,7 +163,7 @@ function FeaturedCard({ c }: { c: CollectionSummary }) {
       params={{ slug: c.slug }}
       // overflow-hidden: on narrow phones the five-poster fan is wider than the
       // card, so the deck clips at the edge instead of widening the layout.
-      className="group block overflow-hidden rounded-[8px] bg-gradient-to-b from-panel to-panel/40 p-4 transition-colors hover:bg-[#1c2129] sm:p-5"
+      className="group block overflow-hidden rounded-[8px] bg-gradient-to-b from-panel to-panel/40 p-4 transition-colors hover:bg-secondary sm:p-5"
     >
       <span className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
         <span className="shrink-0">

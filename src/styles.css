@@ -2,20 +2,16 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 /*
  * Design system definition.
  *
  * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
+ * classes (e.g. --color-primary -> bg-primary, text-primary). The values live
+ * in :root. There is one theme, the light Colour Shelf ground.
  *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ * To add a colour: give it a value in :root, register it in @theme inline as
+ * --color-<name>: var(--<name>), and if text sits on it, add the pair to
+ * src/lib/palette.test.ts.
  */
 
 @theme inline {
@@ -78,37 +74,20 @@
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
   --color-panel: var(--panel);
   --color-border-strong: var(--border-strong);
   /* The base reading colour, completing the text-* family. It was missing, so
@@ -125,94 +104,180 @@
   --color-media-book: var(--media-book);
   --color-media-podcast: var(--media-podcast);
   --color-warn: var(--warn);
+  --color-status-watchlist: var(--status-watchlist);
+  --color-status-seen: var(--status-seen);
+  --color-status-loved: var(--status-loved);
+  --color-status-skip: var(--status-skip);
+  --color-status-disliked: var(--status-disliked);
+  --color-status-never: var(--status-never);
+  --color-sticker: var(--sticker);
+  --color-sticker-ink: var(--sticker-ink);
+  /* Poster swatches: bg-swatch-<name> with text-swatch-<name>-ink. */
+  --color-swatch-red: var(--swatch-red);
+  --color-swatch-red-ink: var(--swatch-red-ink);
+  --color-swatch-orange: var(--swatch-orange);
+  --color-swatch-orange-ink: var(--swatch-orange-ink);
+  --color-swatch-gold: var(--swatch-gold);
+  --color-swatch-gold-ink: var(--swatch-gold-ink);
+  --color-swatch-lime: var(--swatch-lime);
+  --color-swatch-lime-ink: var(--swatch-lime-ink);
+  --color-swatch-green: var(--swatch-green);
+  --color-swatch-green-ink: var(--swatch-green-ink);
+  --color-swatch-teal: var(--swatch-teal);
+  --color-swatch-teal-ink: var(--swatch-teal-ink);
+  --color-swatch-sky: var(--swatch-sky);
+  --color-swatch-sky-ink: var(--swatch-sky-ink);
+  --color-swatch-blue: var(--swatch-blue);
+  --color-swatch-blue-ink: var(--swatch-blue-ink);
+  --color-swatch-violet: var(--swatch-violet);
+  --color-swatch-violet-ink: var(--swatch-violet-ink);
+  --color-swatch-pink: var(--swatch-pink);
+  --color-swatch-pink-ink: var(--swatch-pink-ink);
+  --color-swatch-wine: var(--swatch-wine);
+  --color-swatch-wine-ink: var(--swatch-wine-ink);
+  --color-swatch-rust: var(--swatch-rust);
+  --color-swatch-rust-ink: var(--swatch-rust-ink);
+  --color-swatch-navy: var(--swatch-navy);
+  --color-swatch-navy-ink: var(--swatch-navy-ink);
+  --color-swatch-noir: var(--swatch-noir);
+  --color-swatch-noir-ink: var(--swatch-noir-ink);
   --font-sans: "Archivo", "Archivo Fallback", system-ui, sans-serif;
+  /* Headings and display numerals: Archivo at 75% width and weight 800, one
+     static file. The body face cannot stand in, because its file carries no
+     width axis. */
+  --font-display: "Archivo Condensed", "Archivo Condensed Fallback", "Arial Narrow", sans-serif;
   --font-mono: "JetBrains Mono", "JetBrains Mono Fallback", ui-monospace, monospace;
 }
 
 :root {
-  /* Balasaur — utilitarian dark (single theme). */
-  /* OLED ground. On a phone this is pixels that are off, and every panel above
-     it reads as a raised surface instead of a slightly different gray. */
-  --background: #08090b;
-  --panel: #171b21;
-  --foreground: #d4d8e0;
-  --text-bright: #ffffff;
-  --text-muted: #a1a29b;
-  /* The dim gray before this one measured 3.76 against the ground, below the
-     4.5 floor. This one measures 5.6 on #08090b, and is still clearly quieter
-     than muted. */
-  --text-dim: #8a887f;
-  --card: #171b21;
-  --card-foreground: #d4d8e0;
-  --popover: #171b21;
-  --popover-foreground: #d4d8e0;
-  --primary: #3b82f6;
-  /* Dark text on the blue fill: white measured 3.68 against #3b82f6, below
-     the 4.5 accessibility floor. The near-ground dark measures 5.19 and keeps
-     the brand hue untouched. */
-  --primary-foreground: #0b0e13;
-  --secondary: #1f242c;
-  --secondary-foreground: #d4d8e0;
-  --muted: #1f242c;
-  --muted-foreground: #a1a29b;
-  --accent: #262d37;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #1f242c;
-  --border-strong: #262d37;
-  --input: #1f242c;
-  --ring: #3b82f6;
-  --rating: #9fe6a0;
-  --media-movie: #e8b552;
-  --media-tv: #6fa8dc;
-  --media-book: #8fbf86;
-  --media-podcast: #e08aa4;
+  /* Colour Shelf: a white ground, ink type, and flat saturated tiles painted
+     from each poster. The page chrome stays black and white so the only
+     colour on screen is the poster's.
+
+     The five base values. Every semantic token below points at one of them,
+     so the ground can be read off in one place. */
+  --paper: #ffffff; /* the page ground */
+  --ink: #111114; /* headings, numbers, the focus ring */
+  --ink-muted: #55555e; /* secondary text: 7.47 on paper, 6.80 on the wash */
+  --ink-dim: #6b6b74; /* tertiary text: 5.28 on paper, 4.80 on the wash */
+  --line: #e9e9ee; /* hairlines between rows and around panels */
+  --line-strong: #d4d4dc; /* a border that has to read as a control edge */
+  --wash: #f4f4f6; /* a panel, a chip, a resting control */
+  --wash-strong: #ececf0; /* the same surface under the pointer */
+
+  --background: var(--paper);
+  --panel: var(--wash);
+  --foreground: #26262c;
+  --text-bright: var(--ink);
+  --text-muted: var(--ink-muted);
+  --text-dim: var(--ink-dim);
+  --popover: var(--paper);
+  --popover-foreground: var(--foreground);
+  /* Selected and primary controls are ink, as the Home pill is: a coloured
+     accent would compete with the poster colour on every tile. */
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--wash-strong);
+  --muted: var(--wash);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--wash-strong);
+  --accent-foreground: var(--ink);
+  --destructive: #b42323;
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --input: var(--line-strong);
+  --ring: var(--ink);
+  /* Text-weight accents, each measured against paper and the wash in
+     src/lib/palette.test.ts. They were pale on the dark ground; on white the
+     same hues need their darker step to stay readable. */
+  --rating: #146c2c;
+  --media-movie: #8a5a00;
+  --media-tv: #1f5fa8;
+  --media-book: #2f7d32;
+  --media-podcast: #b0306a;
+  /* A timer in its last quarter. */
+  --warn: #a8380a;
+
+  /* A title's state in the visitor's library, as text, icons and edges. Each
+     also reads on its own 15% tint, which is how an active control is filled. */
+  --status-watchlist: #8a5a00;
+  --status-seen: #1f5fa8;
+  --status-loved: var(--rating);
+  --status-skip: var(--ink-dim);
+  --status-disliked: #b0306a;
+  --status-never: #b3263e;
+
+  /* The score sticker: white, a black border, a black number. No tier colour:
+     the tile under it already carries the poster's colour. */
+  --sticker: var(--paper);
+  --sticker-ink: var(--ink);
+
+  /* The 14 poster swatches. A poster is snapped to one of these, never shown
+     as its raw colour, which is mostly brown and grey. Each fill has the ink
+     that reads on it at 4.5:1 or better; src/lib/palette.test.ts measures
+     every pair and checks this table against src/lib/posterSwatch.ts.
+     Departures from the prototype, all to pass 4.5:1 for body text:
+       red, green and pink take the dark ink (white measured 4.01, 2.70, 3.22);
+       rust is darkened from #C9521D to #C6501C (white measured 4.46, dark
+       ink 4.23, so no ink passed on the original fill). */
+  --swatch-red: #ec3b2f;
+  --swatch-red-ink: #16110c;
+  --swatch-orange: #ff7b1c;
+  --swatch-orange-ink: #16110c;
+  --swatch-gold: #ffc52e;
+  --swatch-gold-ink: #16110c;
+  --swatch-lime: #bceb3c;
+  --swatch-lime-ink: #121a06;
+  --swatch-green: #1fb466;
+  --swatch-green-ink: #16110c;
+  --swatch-teal: #17bfae;
+  --swatch-teal-ink: #06201d;
+  --swatch-sky: #43b9ff;
+  --swatch-sky-ink: #06192a;
+  --swatch-blue: #2f5cff;
+  --swatch-blue-ink: #ffffff;
+  --swatch-violet: #8048f5;
+  --swatch-violet-ink: #ffffff;
+  --swatch-pink: #f4519f;
+  --swatch-pink-ink: #16110c;
+  --swatch-wine: #a3173d;
+  --swatch-wine-ink: #ffffff;
+  --swatch-rust: #c6501c;
+  --swatch-rust-ink: #ffffff;
+  --swatch-navy: #1c2f86;
+  --swatch-navy-ink: #ffffff;
+  --swatch-noir: #1a1a1f;
+  --swatch-noir-ink: #ffffff;
+
   /* Arcade hues, one per game (src/lib/arcade/games.ts maps slug to hue).
      Each has an ink: the text color that reads on top of it. Components
      never name a hue; the game root sets --game and --game-ink from these
-     and everything below paints with var(--game). */
+     and everything below paints with var(--game). Seven inks were white and
+     measured 1.86 to 3.76 on their hue; all now take the dark ink. */
   --hue-blue: #3b82f6;
-  --hue-blue-ink: #ffffff;
+  --hue-blue-ink: #0b0d10;
   --hue-ice: #22d3ee;
   --hue-ice-ink: #0b0d10;
   --hue-crimson: #ef4444;
-  --hue-crimson-ink: #ffffff;
+  --hue-crimson-ink: #0b0d10;
   --hue-magenta: #e879f9;
-  --hue-magenta-ink: #ffffff;
+  --hue-magenta-ink: #0b0d10;
   --hue-gold: #f5b82e;
   --hue-gold-ink: #0b0d10;
   --hue-teal: #2dd4bf;
-  --hue-teal-ink: #ffffff;
+  --hue-teal-ink: #0b0d10;
   --hue-violet: #a78bfa;
-  --hue-violet-ink: #ffffff;
+  --hue-violet-ink: #0b0d10;
   --hue-ruby: #f43f5e;
-  --hue-ruby-ink: #ffffff;
+  --hue-ruby-ink: #0b0d10;
   --hue-sun: #fde047;
   --hue-sun-ink: #0b0d10;
   --hue-lime: #a3e635;
   --hue-lime-ink: #0b0d10;
   --hue-orange: #fb923c;
-  --hue-orange-ink: #ffffff;
-  /* A timer in its last quarter. */
-  --warn: #fb923c;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #171b21;
-  --sidebar-foreground: #d4d8e0;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1f242c;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #1f242c;
-  --sidebar-ring: #3b82f6;
-}
+  --hue-orange-ink: #0b0d10;
 
-.dark {
-  /* Balasaur is dark-only; keep .dark equivalent to :root. */
+  color-scheme: light;
 }
 
 @layer base {
@@ -256,30 +321,24 @@
   }
 }
 
-/* Keyboard focus: one consistent, visible ring everywhere (the browser default
-   is nearly invisible on the dark panels). Mouse clicks don't trigger it.
-   This sits outside every cascade layer on purpose, so it beats any utility;
-   the one exception is `.arcade-focus`, which a hue-colored control (the
-   Play pill, the Share button) wears so its ring follows the control's own
-   radius in the game's hue instead of a site-blue rectangle. */
+/* Keyboard focus: one ring everywhere, ink with a white gap. Ink alone
+   vanishes on the navy and noir tiles and a blue ring vanishes on the blue
+   one; the white band between the element and the ink keeps the ring visible
+   on every swatch and on the paper. Mouse clicks do not trigger it. This sits
+   outside every cascade layer on purpose, so it beats any utility; the one
+   exception is `.arcade-focus`, which a hue-colored control (the Play pill,
+   the Share button) wears so its ring follows the control's own radius in the
+   game's hue. */
 :focus-visible:not(.arcade-focus) {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--paper);
   border-radius: 4px;
 }
 
 .arcade-focus:focus-visible {
   outline: 2px solid var(--game, var(--primary));
   outline-offset: 3px;
-}
-
-/* A raised surface catches light along its top edge. One step brighter than the
-   rest of the frame is the whole trick, and it only works against a near-black
-   ground. Color only, on a border the element already has, so nothing moves.
-   Unlayered for the same reason the focus ring is: `border-border` is a utility
-   and would otherwise repaint this edge back to flat. */
-.specular-top {
-  border-top-color: rgba(255, 255, 255, 0.06);
 }
 
 /* Self-hosted webfonts (latin subset, variable weight). Served from our own
@@ -298,6 +357,21 @@
   font-stretch: 100%;
   font-display: swap;
   src: url("./fonts/archivo-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* The display cut. A static instance (width 75, weight 800) from the Archivo
+   variable font on Google Fonts, latin subset: 14.6 KB. The full variable
+   file with a width axis is 90 KB, which would more than double the font
+   bytes. Only weight 800 is declared, so a heavier or lighter request gets
+   this face rather than a synthesized one. */
+@font-face {
+  font-family: "Archivo Condensed";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./fonts/archivo-condensed-800-latin.woff2") format("woff2");
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
@@ -322,6 +396,18 @@
   size-adjust: 100.5%;
   ascent-override: 88%;
   descent-override: 22%;
+  line-gap-override: 0%;
+}
+/* Measured in Chrome against Liberation Sans Bold, which shares Arial Bold's
+   widths: a 31-character heading set 81.5% as wide in the display face. The
+   ascent and descent are scaled back up by the same factor so the line box
+   matches. */
+@font-face {
+  font-family: "Archivo Condensed Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold");
+  size-adjust: 81.5%;
+  ascent-override: 108%;
+  descent-override: 27%;
   line-gap-override: 0%;
 }
 @font-face {

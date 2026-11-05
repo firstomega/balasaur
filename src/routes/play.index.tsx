@@ -254,11 +254,6 @@ function TileSlot({
   );
 }
 
-const HERO_GLOW: CSSProperties = {
-  backgroundImage:
-    "radial-gradient(60% 80% at 8% 0%, color-mix(in oklab, var(--hue-blue) 26%, transparent), transparent 70%), radial-gradient(45% 70% at 60% 100%, color-mix(in oklab, var(--hue-ruby) 18%, transparent), transparent 70%), radial-gradient(40% 60% at 100% 10%, color-mix(in oklab, var(--hue-ice) 16%, transparent), transparent 70%)",
-};
-
 /** Every game's mark scattered over the hero's right half at lg. Positions
  *  are percentages of that half; sizes 48 to 72; opacity 70 to 90 percent.
  *  Each drifts on its own period so the cluster never moves as one. Fixed
@@ -296,10 +291,9 @@ function Hero({ mounted, best }: { mounted: boolean; best: Personal["best"] }) {
   return (
     <section
       aria-label="Movie games"
-      className="relative overflow-hidden rounded-[6px] border border-white/10 bg-[#0b0d10] px-5 py-7 text-white sm:px-8 sm:py-9 lg:px-10 lg:py-12"
+      className="relative overflow-hidden rounded-[6px] border border-border bg-panel px-5 py-7 text-text-bright sm:px-8 sm:py-9 lg:px-10 lg:py-12"
     >
       <style>{FLOAT_CSS}</style>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={HERO_GLOW} />
       {/* the landing hero's grid texture */}
       <div
         aria-hidden="true"
@@ -338,22 +332,24 @@ function Hero({ mounted, best }: { mounted: boolean; best: Personal["best"] }) {
       </div>
 
       <div className="relative lg:w-1/2">
-        <h1 className="max-w-[12ch] text-[40px] font-black leading-[0.98] tracking-[-0.02em] text-white lg:text-[64px]">
+        <h1 className="max-w-[12ch] text-[40px] font-black leading-[0.98] tracking-[-0.02em] text-text-bright lg:text-[64px]">
           Eleven movie games. New at midnight.
         </h1>
-        <p className="mt-3 max-w-[40ch] text-[15px] leading-relaxed text-white/70 lg:text-[17px]">
+        <p className="mt-3 max-w-[40ch] text-[15px] leading-relaxed text-text-muted lg:text-[17px]">
           Same board for everyone. Share without spoiling.
         </p>
 
         {/* Personal row: reserved height, filled after mount. */}
-        <div className="mt-5 flex min-h-[32px] flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-white/70">
+        <div className="mt-5 flex min-h-[32px] flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-text-muted">
           {mounted && (
             <>
               <CometChip />
               {best && (
                 <span className="inline-flex items-center gap-1.5">
                   <Flame className="h-4 w-4 text-[var(--hue-orange)]" aria-hidden="true" />
-                  <span className="font-mono tabular-nums text-white">Streak {best.streak}</span>
+                  <span className="font-mono tabular-nums text-text-bright">
+                    Streak {best.streak}
+                  </span>
                   {best.keptToday ? (
                     <span>Kept for today</span>
                   ) : (
@@ -361,7 +357,7 @@ function Hero({ mounted, best }: { mounted: boolean; best: Personal["best"] }) {
                       Play{" "}
                       <Link
                         to={GAMES[best.slug].path}
-                        className="text-white underline decoration-white/40 underline-offset-2 hover:decoration-white"
+                        className="text-text-bright underline decoration-text-bright/40 underline-offset-2 hover:decoration-text-bright"
                       >
                         {GAMES[best.slug].name}
                       </Link>{" "}

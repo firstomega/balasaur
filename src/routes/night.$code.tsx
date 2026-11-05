@@ -354,7 +354,7 @@ function JoinGate({
         maxLength={24}
         className="w-full rounded-[5px] border border-border bg-panel px-3 py-2 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
       />
-      {error && <p className="mt-2 text-[13px] text-[#e08aa4]">{error}</p>}
+      {error && <p className="mt-2 text-[13px] text-status-disliked">{error}</p>}
       <button
         type="button"
         disabled={busy}
@@ -448,8 +448,8 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
               />
               {m.display_name}
               {m.is_you && <span className="text-text-dim">(you)</span>}
-              {m.is_host && <Crown className="h-3 w-3 text-[#e8b84b]" aria-label="Host" />}
-              {m.ready && <Check className="h-3 w-3 text-[#9fe6a0]" aria-label="Ready" />}
+              {m.is_host && <Crown className="h-3 w-3 text-status-watchlist" aria-label="Host" />}
+              {m.ready && <Check className="h-3 w-3 text-rating" aria-label="Ready" />}
             </span>
           ))}
         </div>
@@ -542,7 +542,7 @@ function Lobby({
               onClick={() => void write(() => saveNightPrefs(token, { ready: !you.ready }))}
               className={`cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
                 you.ready
-                  ? "border-[#9fe6a0] bg-[#9fe6a0]/10 text-[#9fe6a0]"
+                  ? "border-rating bg-rating/10 text-rating"
                   : "border-border-strong bg-background text-text-bright hover:border-primary"
               }`}
             >
@@ -873,7 +873,7 @@ function Wizard({
                 onClick={() => setReady(!you.ready)}
                 className={`cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
                   you.ready
-                    ? "border-[#9fe6a0] bg-[#9fe6a0]/10 text-[#9fe6a0]"
+                    ? "border-rating bg-rating/10 text-rating"
                     : "border-border-strong bg-background text-text-bright hover:border-primary"
                 }`}
               >
@@ -1164,7 +1164,7 @@ function Results({
   return (
     <div className="mb-4 space-y-3">
       {winner && (
-        <div className="rounded-[6px] border border-[#9fe6a0]/60 bg-[#9fe6a0]/10 px-4 py-3">
+        <div className="rounded-[6px] border border-rating/60 bg-rating/10 px-4 py-3">
           <p className="text-[13.5px] text-text-bright">
             Tonight: <span className="font-semibold">{winner.title}</span>
             {/* Naming the picker only means something when there is more than
@@ -1270,7 +1270,7 @@ function ResultCard({
   return (
     <div
       className={`flex gap-3 rounded-[6px] border bg-panel p-3 ${
-        isWinner ? "border-[#9fe6a0]/60" : "border-border"
+        isWinner ? "border-rating/60" : "border-border"
       }`}
     >
       <a href={href} target="_blank" rel="noopener" className="shrink-0">
@@ -1310,9 +1310,9 @@ function ResultCard({
               key={i}
               className={`rounded-[4px] border px-1.5 py-0.5 text-[12px] ${
                 c.tone === "want"
-                  ? "border-[#9fe6a0]/50 text-[#9fe6a0]"
+                  ? "border-rating/50 text-rating"
                   : c.tone === "held"
-                    ? "border-[#e08aa4]/50 text-[#e08aa4]"
+                    ? "border-status-disliked/50 text-status-disliked"
                     : "border-border text-text-muted"
               }`}
             >

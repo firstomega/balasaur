@@ -32,7 +32,7 @@ export function TimerBar({
   const seconds = Math.ceil(Math.max(0, remaining));
   const low = frac < ARCADE_TIMER_LOW;
   const last = seconds <= 5;
-  const color = low ? "var(--warn, #fb923c)" : "var(--game, var(--primary))";
+  const color = low ? "var(--warn)" : "var(--game, var(--primary))";
 
   return (
     <div

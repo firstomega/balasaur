@@ -1,10 +1,10 @@
 {
   "totals": {
-    "fontSize": 880,
+    "fontSize": 879,
     "radius": 329,
     "duration": 4,
     "easing": 8,
-    "hex": 381,
+    "hex": 241,
     "containerWidth": 76
   },
   "files": {
@@ -93,12 +93,10 @@
       "radius": 1
     },
     "src/components/arcade/TimerBar.tsx": {
-      "fontSize": 3,
-      "hex": 1
+      "fontSize": 3
     },
     "src/components/arcade/TimerRing.tsx": {
-      "fontSize": 1,
-      "hex": 1
+      "fontSize": 1
     },
     "src/components/arcade/WeeklyBoard.tsx": {
       "fontSize": 5
@@ -141,7 +139,7 @@
     "src/components/balasaur/EpisodeHeatmap.tsx": {
       "fontSize": 10,
       "radius": 3,
-      "hex": 10,
+      "hex": 9,
       "containerWidth": 3
     },
     "src/components/balasaur/FilterRail.tsx": {
@@ -159,13 +157,11 @@
     "src/components/balasaur/LibraryDeck.tsx": {
       "fontSize": 30,
       "radius": 16,
-      "hex": 6,
       "containerWidth": 4
     },
     "src/components/balasaur/MediaCard.tsx": {
       "fontSize": 9,
-      "radius": 8,
-      "hex": 11
+      "radius": 8
     },
     "src/components/balasaur/MediaCardSkeleton.tsx": {
       "radius": 1
@@ -173,7 +169,6 @@
     "src/components/balasaur/MediaDetail.tsx": {
       "fontSize": 40,
       "radius": 17,
-      "hex": 1,
       "containerWidth": 6
     },
     "src/components/balasaur/MediaTypeSwitch.tsx": {
@@ -225,8 +220,7 @@
     },
     "src/components/balasaur/WatchlistNudge.tsx": {
       "fontSize": 2,
-      "radius": 1,
-      "hex": 5
+      "radius": 1
     },
     "src/components/balasaur/WhereToWatch.tsx": {
       "fontSize": 6,
@@ -239,7 +233,7 @@
       "hex": 22
     },
     "src/lib/arcade/shareImage.ts": {
-      "hex": 29
+      "hex": 7
     },
     "src/lib/arcade/useArcadeGame.ts": {
       "hex": 1
@@ -258,9 +252,6 @@
     },
     "src/lib/tasteCard.ts": {
       "hex": 8
-    },
-    "src/lib/userStatus.ts": {
-      "hex": 5
     },
     "src/router.tsx": {
       "hex": 1
@@ -293,7 +284,7 @@
     "src/routes/collections.tsx": {
       "fontSize": 33,
       "radius": 20,
-      "hex": 12
+      "hex": 11
     },
     "src/routes/contact.tsx": {
       "fontSize": 7
@@ -316,15 +307,14 @@
       "hex": 1
     },
     "src/routes/library.tsx": {
-      "fontSize": 33,
+      "fontSize": 32,
       "radius": 14,
-      "hex": 105,
+      "hex": 39,
       "containerWidth": 2
     },
     "src/routes/lists.tsx": {
       "fontSize": 6,
-      "radius": 1,
-      "hex": 2
+      "radius": 1
     },
     "src/routes/methodology.tsx": {
       "fontSize": 14,
@@ -336,13 +326,11 @@
     },
     "src/routes/night.$code.tsx": {
       "fontSize": 49,
-      "radius": 30,
-      "hex": 16
+      "radius": 30
     },
     "src/routes/night.index.tsx": {
       "fontSize": 13,
       "radius": 6,
-      "hex": 1,
       "containerWidth": 1
     },
     "src/routes/person.$id.tsx": {
@@ -368,7 +356,6 @@
     "src/routes/play.index.tsx": {
       "fontSize": 10,
       "radius": 2,
-      "hex": 1,
       "containerWidth": 3
     },
     "src/routes/play.leaderboard.tsx": {

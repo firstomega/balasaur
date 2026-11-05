@@ -41,9 +41,9 @@ import {
   recordForWant,
   recordForWatched,
   sentimentOf,
-  PRIMARY_HEX,
+  PRIMARY_COLOR,
   PRIMARY_LABEL,
-  SENTIMENT_HEX,
+  SENTIMENT_COLOR,
   SENTIMENT_LABEL,
   type PrimaryKey,
   type SentimentKey,
@@ -166,9 +166,9 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
             ? "border-border-strong bg-background text-text-bright"
             : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
         }
-        style={active ? { borderColor: PRIMARY_HEX[key] } : undefined}
+        style={active ? { borderColor: PRIMARY_COLOR[key] } : undefined}
       >
-        <span style={active ? { color: PRIMARY_HEX[key] } : undefined}>{icon}</span>
+        <span style={active ? { color: PRIMARY_COLOR[key] } : undefined}>{icon}</span>
         {PRIMARY_LABEL[key]}
       </button>
     );
@@ -203,7 +203,9 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
                       : "border-border bg-transparent text-text-muted hover:border-border-strong hover:text-text-bright")
                   }
                   style={
-                    active ? { borderColor: SENTIMENT_HEX[s], color: SENTIMENT_HEX[s] } : undefined
+                    active
+                      ? { borderColor: SENTIMENT_COLOR[s], color: SENTIMENT_COLOR[s] }
+                      : undefined
                   }
                 >
                   {s === "liked" ? (
@@ -226,7 +228,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
           aria-pressed={rejected}
           className={
             "cursor-pointer text-[12px] font-semibold tracking-[-0.01em] transition-colors " +
-            (rejected ? "text-[#c75d6e]" : "text-text-dim hover:text-text-muted")
+            (rejected ? "text-status-never" : "text-text-dim hover:text-text-muted")
           }
         >
           {rejected ? "✕ Never show this (undo)" : "Never show this"}
@@ -355,7 +357,7 @@ function DetailInner({
             className="bottom-0 top-[120px] h-auto md:top-[190px]"
           />
           <div className="flex flex-col gap-5 md:flex-row md:items-end">
-            <div className="w-[160px] shrink-0 overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)] md:w-[220px]">
+            <div className="w-[160px] shrink-0 overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.35)] md:w-[220px]">
               <div className="aspect-[2/3] w-full">
                 {detail.posterUrl ? (
                   <img
@@ -388,7 +390,7 @@ function DetailInner({
                     score drops under it; above md they share a line and the
                     title absorbs whatever width the score leaves. */}
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-3">
-                  <h1 className="basis-full text-[30px] font-black leading-[1.08] tracking-[-0.02em] text-text-bright md:basis-auto md:text-[44px] [text-shadow:_0_1px_3px_rgba(0,0,0,0.55)]">
+                  <h1 className="basis-full text-[30px] font-black leading-[1.08] tracking-[-0.02em] text-text-bright md:basis-auto md:text-[44px]">
                     {detail.title}
                   </h1>
                   {/* No score, no lockup. A title with nothing to blend says so
@@ -912,7 +914,7 @@ function ShelfRail({ mediaId, title }: { mediaId: string; title: string }) {
                   aria-hidden="true"
                   className={
                     "font-mono text-2xl font-bold tabular-nums leading-none [text-shadow:0_2px_10px_rgba(0,0,0,0.95)] " +
-                    (slot.rank === shelf.rank ? "text-primary" : "text-white/95")
+                    (slot.rank === shelf.rank ? "text-swatch-gold" : "text-white/95")
                   }
                 >
                   {slot.rank}
@@ -1009,7 +1011,7 @@ function BackBar() {
         <button
           type="button"
           onClick={goBack}
-          className="pointer-events-auto inline-flex items-center gap-1.5 rounded-[5px] border border-white/20 bg-background/60 px-2.5 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright backdrop-blur-md transition-colors hover:border-primary hover:text-primary"
+          className="pointer-events-auto inline-flex items-center gap-1.5 rounded-[5px] border border-border bg-background/80 px-2.5 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright backdrop-blur-md transition-colors hover:border-primary hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to browse

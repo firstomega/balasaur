@@ -120,12 +120,12 @@ function Section({
   children: React.ReactNode;
   tone?: "default" | "danger";
 }) {
-  const border = tone === "danger" ? "border-red-500/60" : "border-border";
+  const border = tone === "danger" ? "border-destructive/60" : "border-border";
   return (
     <section className={`rounded-[6px] border ${border} bg-panel/40 p-5`}>
       <h2
         className={`mb-4 text-[19px] font-black tracking-[-0.02em] ${
-          tone === "danger" ? "text-red-400" : "text-text-bright"
+          tone === "danger" ? "text-destructive" : "text-text-bright"
         }`}
       >
         {title}
@@ -165,12 +165,12 @@ const btnSecondary =
   "cursor-pointer rounded-[5px] border border-border bg-background px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed";
 
 const btnDanger =
-  "cursor-pointer rounded-[5px] border border-red-500/60 bg-red-500/10 px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-red-300 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed";
+  "cursor-pointer rounded-[5px] border border-destructive/60 bg-destructive/10 px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-destructive hover:bg-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed";
 
 function Status({ msg }: { msg: { kind: "ok" | "err"; text: string } | null }) {
   if (!msg) return null;
   return (
-    <p className={`text-[13px] ${msg.kind === "ok" ? "text-emerald-400" : "text-red-400"}`}>
+    <p className={`text-[13px] ${msg.kind === "ok" ? "text-rating" : "text-destructive"}`}>
       {msg.text}
     </p>
   );
@@ -592,9 +592,9 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
           if (!v) setConfirmText("");
         }}
       >
-        <DialogContent className="border-red-500/60 bg-panel text-foreground sm:max-w-[460px]">
+        <DialogContent className="border-destructive/60 bg-panel text-foreground sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-[19px] font-black tracking-[-0.02em] text-red-300">
+            <DialogTitle className="text-[19px] font-black tracking-[-0.02em] text-destructive">
               Delete account permanently
             </DialogTitle>
             <DialogDescription className="text-[13px] leading-relaxed text-text-dim">

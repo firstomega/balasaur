@@ -27,10 +27,10 @@ type Bucket = "watchlist" | "favorites" | "history" | "notInterested";
 const BUCKET_ORDER: Bucket[] = ["watchlist", "favorites", "history", "notInterested"];
 
 const BUCKET_META: Record<Bucket, { label: string; Icon: typeof Bookmark; iconClass: string }> = {
-  watchlist: { label: "Watchlist", Icon: Bookmark, iconClass: "text-[#e8b84b]" },
+  watchlist: { label: "Watchlist", Icon: Bookmark, iconClass: "text-status-watchlist" },
   favorites: { label: "Favorites", Icon: Heart, iconClass: "text-rating" },
   history: { label: "History", Icon: Check, iconClass: "text-primary" },
-  notInterested: { label: "Never", Icon: EyeOff, iconClass: "text-[#c75d6e]" },
+  notInterested: { label: "Never", Icon: EyeOff, iconClass: "text-status-never" },
 };
 
 // Empty states that point somewhere: the grid for saving, the deck for rating.

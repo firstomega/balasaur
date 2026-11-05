@@ -1,8 +1,10 @@
 import { cn } from "@/lib/utils";
 
-// The Balasaur Score badge. Accessible by design: the number is always shown as
-// text, color is a *supplementary* cue, and the two extremes get a dinosaur-themed
-// icon (a non-color second cue) — an asteroid below 60, a bite mark at 85+.
+// The Balasaur Score badge: a black number on a white sticker with a black
+// edge, the same at every score. The tile under it carries the poster's colour,
+// so a tier colour here would be a second colour system on the same card. The
+// two extremes still get a dinosaur-themed icon: an asteroid below 60, a bite
+// mark at 85+.
 
 /** Named tiers make the score quotable. The title page prints the tier next to
  *  the number at size "lg"; at the smaller sizes it rides in the tooltip and the
@@ -15,13 +17,6 @@ export function tierName(score: number): string {
   if (score >= 60) return "Mixed";
   if (score >= 40) return "Rough";
   return "Extinction event";
-}
-
-function tierClasses(score: number): { text: string; ring: string } {
-  if (score >= 85) return { text: "text-emerald-300", ring: "ring-emerald-400/40" };
-  if (score >= 70) return { text: "text-lime-200", ring: "ring-lime-400/40" };
-  if (score >= 60) return { text: "text-amber-200", ring: "ring-amber-400/40" };
-  return { text: "text-orange-300", ring: "ring-orange-400/40" };
 }
 
 /** A rough space rock — shown when the score is low (it bombed). */
@@ -54,7 +49,6 @@ export function ScoreBadge({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const t = tierClasses(score);
   const dino = score >= 85 ? "bite" : score < 60 ? "asteroid" : null;
   const iconCls =
     size === "sm" ? "h-2.5 w-2.5" : size === "md" ? "h-3.5 w-3.5" : "h-5 w-5 md:h-6 md:w-6";
@@ -75,7 +69,7 @@ export function ScoreBadge({
           : `${score}/100 · ${tierName(score)}${score >= 90 ? " · Balasaur Approved" : ""}`
       }
       className={cn(
-        "inline-flex items-center gap-1 rounded-[4px] bg-background/90 font-mono font-semibold tabular-nums ring-1 backdrop-blur-sm",
+        "inline-flex items-center gap-1 rounded-[4px] bg-sticker font-mono font-semibold tabular-nums text-sticker-ink ring-1 ring-sticker-ink",
         size === "sm" && "h-[20px] px-1.5 text-[11px]",
         size === "md" && "px-2 py-1 text-[14px]",
         // leading-none keeps the box height a function of the font size and the
@@ -83,8 +77,6 @@ export function ScoreBadge({
         // webfont swaps in.
         size === "lg" &&
           "gap-2 rounded-[6px] px-2.5 py-1.5 text-[30px] leading-none md:text-[38px]",
-        t.text,
-        t.ring,
         className,
       )}
     >

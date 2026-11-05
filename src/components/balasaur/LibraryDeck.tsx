@@ -43,11 +43,11 @@ const ACTION_LABEL: Record<Dir, string> = {
   down: "Not now",
 };
 
-const ACTION_HEX: Record<Dir, string> = {
-  up: "#9fe6a0", // favorites
-  right: "#3b82f6", // history
-  left: "#e8b84b", // watchlist
-  down: "#9aa2b1", // not now (neutral grey)
+const ACTION_COLOR: Record<Dir, string> = {
+  up: "var(--status-loved)",
+  right: "var(--status-seen)",
+  left: "var(--status-watchlist)",
+  down: "var(--status-skip)",
 };
 
 const ACTION_SUBLABEL: Record<Dir, string> = {
@@ -493,10 +493,10 @@ function CardFace({
   chomp?: boolean;
 }) {
   const score = trustedScore(item);
-  const cueColor = cue ? ACTION_HEX[cue] : null;
+  const cueColor = cue ? ACTION_COLOR[cue] : null;
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]">
+    <div className="relative h-full w-full overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.35)]">
       <div className="flex h-full">
         {/* Poster — full card on mobile, left pane on md+. */}
         <div className="relative h-full w-full md:w-[45%] md:shrink-0">
@@ -544,9 +544,9 @@ function CardFace({
 
           {/* Mobile tap-to-reveal detail overlay. */}
           {infoOpen && (
-            <div className="absolute inset-0 flex flex-col gap-2.5 overflow-hidden bg-black/95 p-4 md:hidden">
+            <div className="absolute inset-0 flex flex-col gap-2.5 overflow-hidden bg-background/95 p-4 md:hidden">
               <DeckInfo item={item} />
-              <p className="text-[13px] text-white/50">Tap to close</p>
+              <p className="text-[13px] text-text-dim">Tap to close</p>
             </div>
           )}
         </div>
@@ -576,7 +576,7 @@ function CardFace({
             style={{
               borderColor: cueColor!,
               color: cueColor!,
-              backgroundColor: "rgba(0,0,0,0.55)",
+              backgroundColor: "color-mix(in srgb, var(--paper) 88%, transparent)",
               opacity: 0.4 + cueIntensity * 0.6,
             }}
           >
@@ -608,7 +608,7 @@ function Legend() {
           >
             <span
               className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px]"
-              style={{ backgroundColor: ACTION_HEX[r.dir], color: "#0b0d10" }}
+              style={{ backgroundColor: ACTION_COLOR[r.dir], color: "var(--paper)" }}
             >
               {r.icon}
             </span>
@@ -637,11 +637,11 @@ function LibrarySummary({
   onSignIn: () => void;
 }) {
   const lines: { label: string; value: number; color: string }[] = [
-    { label: "Loved it", value: summary.liked, color: ACTION_HEX.up },
-    { label: "Watched", value: summary.watched, color: ACTION_HEX.right },
-    { label: "Want to Watch", value: summary.want, color: ACTION_HEX.left },
-    { label: "Not now", value: summary.skip, color: ACTION_HEX.down },
-    { label: "Never", value: summary.notInterested, color: "#c75d6e" },
+    { label: "Loved it", value: summary.liked, color: ACTION_COLOR.up },
+    { label: "Watched", value: summary.watched, color: ACTION_COLOR.right },
+    { label: "Want to Watch", value: summary.want, color: ACTION_COLOR.left },
+    { label: "Not now", value: summary.skip, color: ACTION_COLOR.down },
+    { label: "Never", value: summary.notInterested, color: "var(--status-never)" },
   ];
 
   return (

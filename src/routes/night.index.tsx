@@ -77,27 +77,7 @@ function NightEntry() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* The room, not a form on a void. Movie Night and My Library are the
-          site's two personal spaces, so they share one warm treatment: a lit
-          pool on a dim wall. The catalog stays a terminal; these two rooms do
-          not. Drawn in CSS, so the page still ships no images of its own. */}
       <div className="relative flex-1 overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(130% 60% at 50% -10%, rgba(214,166,96,.13), transparent 62%), radial-gradient(90% 45% at 50% 4%, rgba(190,142,80,.09), transparent 70%)",
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(120% 80% at 50% 26%, transparent 52%, rgba(0,0,0,.5) 100%)",
-          }}
-        />
         <main id="main" className="relative mx-auto w-full max-w-[560px] px-4 pb-16 pt-10 sm:pt-14">
           <h1 className="text-[32px] font-black leading-[1.03] tracking-[-0.02em] text-text-bright sm:text-[38px]">
             Movie Night
@@ -173,7 +153,7 @@ function NightEntry() {
             </button>
           </div>
 
-          {error && <p className="mt-4 text-[13.5px] text-[#e08aa4]">{error}</p>}
+          {error && <p className="mt-4 text-[13.5px] text-status-disliked">{error}</p>}
         </main>
       </div>
       <Footer />

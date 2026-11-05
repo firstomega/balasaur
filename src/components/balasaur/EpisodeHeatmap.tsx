@@ -58,7 +58,7 @@ function rampHex(lo: number): string[] {
 const RAMP_CLASS = ["r0", "r1", "r2", "r3", "r4", "r5", "r6"] as const;
 const NO_RATING_CLASS = "rx";
 const CELL_STYLE =
-  "[&_.r0]:bg-[var(--c0)] [&_.r1]:bg-[var(--c1)] [&_.r2]:bg-[var(--c2)] [&_.r3]:bg-[var(--c3)] [&_.r4]:bg-[var(--c4)] [&_.r5]:bg-[var(--c5)] [&_.r6]:bg-[var(--c6)] [&_.rx]:bg-[#1f242c] [&_span:hover]:ring-1 [&_span:hover]:ring-white/70 [&_span]:block [&_span]:h-[var(--cell-h)] [&_span]:rounded-[1px]";
+  "[&_.r0]:bg-[var(--c0)] [&_.r1]:bg-[var(--c1)] [&_.r2]:bg-[var(--c2)] [&_.r3]:bg-[var(--c3)] [&_.r4]:bg-[var(--c4)] [&_.r5]:bg-[var(--c5)] [&_.r6]:bg-[var(--c6)] [&_.rx]:bg-border-strong [&_span:hover]:ring-1 [&_span:hover]:ring-white/70 [&_span]:block [&_span]:h-[var(--cell-h)] [&_span]:rounded-[1px]";
 
 /** The seven window colours as custom properties, set once on the grid. */
 function rampVars(lo: number): Record<string, string> {

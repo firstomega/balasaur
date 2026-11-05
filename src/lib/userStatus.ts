@@ -25,9 +25,10 @@ export const PRIMARY_LABEL: Record<PrimaryKey, string> = {
   watched: "Watched",
 };
 
-export const PRIMARY_HEX: Record<PrimaryKey, string> = {
-  want: "#e8b84b", // amber — watchlist
-  watched: "#3b82f6", // blue — history
+/** CSS colours, for inline styles. The values live in src/styles.css. */
+export const PRIMARY_COLOR: Record<PrimaryKey, string> = {
+  want: "var(--status-watchlist)",
+  watched: "var(--status-seen)",
 };
 
 export const SENTIMENT_LABEL: Record<SentimentKey, string> = {
@@ -35,12 +36,10 @@ export const SENTIMENT_LABEL: Record<SentimentKey, string> = {
   disliked: "Not for me",
 };
 
-export const SENTIMENT_HEX: Record<SentimentKey, string> = {
-  liked: "#9fe6a0", // green — favorites
-  disliked: "#e08aa4", // muted red — negative signal
+export const SENTIMENT_COLOR: Record<SentimentKey, string> = {
+  liked: "var(--status-loved)",
+  disliked: "var(--status-disliked)",
 };
-
-export const NOT_INTERESTED_HEX = "#c75d6e";
 
 export function recordForWant(): UserStatusRecord {
   return { status: "unseen", intent: "want", ts: Date.now() };

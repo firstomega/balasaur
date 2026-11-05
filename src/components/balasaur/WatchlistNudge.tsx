@@ -26,9 +26,9 @@ export function WatchlistNudge({ wantIds, region }: { wantIds: Set<string>; regi
   return (
     <Link
       to="/lists"
-      className="mb-4 flex items-center gap-2.5 rounded-[5px] border border-[#e8b84b]/40 bg-[#e8b84b]/10 px-3 py-2.5 transition-colors hover:border-[#e8b84b]/70"
+      className="mb-4 flex items-center gap-2.5 rounded-[5px] border border-status-watchlist/40 bg-status-watchlist/10 px-3 py-2.5 transition-colors hover:border-status-watchlist/70"
     >
-      <Play className="h-3.5 w-3.5 shrink-0 text-[#e8b84b]" />
+      <Play className="h-3.5 w-3.5 shrink-0 text-status-watchlist" />
       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold tabular-nums text-text-bright">
         {data.total === 1
           ? `${shown} from your watchlist is streaming now`
@@ -37,7 +37,7 @@ export function WatchlistNudge({ wantIds, region }: { wantIds: Set<string>; regi
           <span className="ml-1.5 text-text-muted">on {providers.join(", ")}</span>
         )}
       </span>
-      <span className="shrink-0 text-[13px] font-bold tracking-[-0.01em] text-[#e8b84b]">
+      <span className="shrink-0 text-[13px] font-bold tracking-[-0.01em] text-status-watchlist">
         View →
       </span>
     </Link>

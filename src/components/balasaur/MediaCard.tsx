@@ -119,8 +119,8 @@ export function MediaCard({
               className={cn(
                 "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] transition-opacity duration-base",
                 saved
-                  ? "border-[#e8b84b]/70 bg-[#40351b] text-[#e8b84b] opacity-100"
-                  : "border-white/30 bg-background text-white opacity-0 hover:border-[#e8b84b] hover:bg-[#e8b84b] hover:text-black group-hover:opacity-100",
+                  ? "border-status-watchlist bg-status-watchlist text-background opacity-100"
+                  : "border-border-strong bg-background text-text-bright opacity-0 hover:border-status-watchlist hover:bg-status-watchlist hover:text-background group-hover:opacity-100",
               )}
             >
               <Bookmark className="h-3 w-3" />
@@ -139,8 +139,8 @@ export function MediaCard({
               className={cn(
                 "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] transition-opacity duration-base",
                 watched
-                  ? "border-rating/60 bg-[#2e4030] text-rating opacity-100"
-                  : "border-white/30 bg-background text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
+                  ? "border-status-loved bg-status-loved text-background opacity-100"
+                  : "border-border-strong bg-background text-text-bright opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
               )}
             >
               <Check className="h-3 w-3" />
@@ -159,8 +159,8 @@ export function MediaCard({
               className={cn(
                 "flex items-center rounded-[5px] border p-1 transition-opacity duration-base",
                 rejected
-                  ? "border-[#c75d6e]/70 bg-[#381e24] text-[#c75d6e] opacity-100"
-                  : "border-white/30 bg-background text-white opacity-0 hover:border-[#c75d6e] hover:bg-[#c75d6e] hover:text-white group-hover:opacity-100",
+                  ? "border-status-never bg-status-never text-background opacity-100"
+                  : "border-border-strong bg-background text-text-bright opacity-0 hover:border-status-never hover:bg-status-never hover:text-background group-hover:opacity-100",
               )}
             >
               <EyeOff className="h-3 w-3" />
@@ -270,7 +270,7 @@ function CardArt({
     // painted a color its poster does not have. `group-hover` compiles inside
     // `@media (hover: hover)`, so none of this exists on a touch device.
     <div
-      className="specular-top relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-[transform,border-color,box-shadow] duration-base group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_var(--poster-light,rgba(0,0,0,0.8)),0_0_20px_3px_var(--poster-halo,transparent)]"
+      className="relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-[transform,border-color,box-shadow] duration-base group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_var(--poster-light,rgba(0,0,0,0.8)),0_0_20px_3px_var(--poster-halo,transparent)]"
       style={(light ?? undefined) as React.CSSProperties | undefined}
     >
       <div

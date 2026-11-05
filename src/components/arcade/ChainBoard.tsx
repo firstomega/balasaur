@@ -320,7 +320,7 @@ export function ChainBoard({
                         <span className="absolute inset-0 border border-border" />
                       )}
                       {dead && (
-                        <span className="absolute inset-x-1 top-1 rounded-[3px] bg-black/80 px-1 py-0.5 text-center font-mono text-[9.5px] uppercase tracking-wider text-warn">
+                        <span className="absolute inset-x-1 top-1 rounded-[3px] bg-background/90 px-1 py-0.5 text-center font-mono text-[9.5px] uppercase tracking-wider text-warn">
                           Dead end
                         </span>
                       )}

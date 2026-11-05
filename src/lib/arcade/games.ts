@@ -229,19 +229,21 @@ export const HUE_HEX: Record<ArcadeHue, string> = {
   orange: "#fb923c",
 };
 
-/** Readable text on the hue, mirroring --hue-<name>-ink. */
+/** Readable text on the hue, mirroring --hue-<name>-ink. Every hue takes the
+ *  dark ink: white measured 1.86 (teal) to 3.76 (crimson) on the seven hues
+ *  that used it, and src/lib/palette.test.ts holds each pair at 4.5:1. */
 export const HUE_INK: Record<ArcadeHue, string> = {
-  blue: "#ffffff",
+  blue: "#0b0d10",
   ice: "#0b0d10",
-  crimson: "#ffffff",
-  magenta: "#ffffff",
+  crimson: "#0b0d10",
+  magenta: "#0b0d10",
   gold: "#0b0d10",
-  teal: "#ffffff",
-  violet: "#ffffff",
-  ruby: "#ffffff",
+  teal: "#0b0d10",
+  violet: "#0b0d10",
+  ruby: "#0b0d10",
   sun: "#0b0d10",
   lime: "#0b0d10",
-  orange: "#ffffff",
+  orange: "#0b0d10",
 };
 
 /** The style object a game root (or hub tile) sets so everything beneath

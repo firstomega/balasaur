@@ -59,33 +59,13 @@ const BAYTEX =
 const BOARDTEX =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='460' height='60'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.3' numOctaves='2' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.2 0.08 0 0'/%3E%3C/filter%3E%3Crect width='460' height='60' filter='url(%23g)'/%3E%3C/svg%3E\")";
 
-// The room's stylesheet. Scoped under .libroom so the rest of the site keeps
-// its terminal palette; the reading room is one warm island.
-//
-// The light is wired to the shelves. `.lit` is the room proper, warm wood and
-// lamp spill, and it only comes on once there is something on a shelf to light.
-// Before that (a first visit, and the served shell everyone gets) the ground is
-// the site's own black with one low pool over the top of the column: the same
-// wash over an empty page is a brown stain across half a screen, and it ended
-// in a hard horizontal edge where the content stopped. The room now runs to the
-// footer as well, so nothing terminates mid-page.
+// The room's stylesheet, scoped under .libroom. The page around the bookcase
+// is the site's light ground; the case itself keeps its wood, and the lamps
+// inside it are wired to the shelves. `.lit` comes on once there is something
+// on a shelf to light, and "Late" turns the lamps up and the room to the wash.
 const ROOM_CSS = `
-.libroom{position:relative; overflow:hidden;
-  background:
-    radial-gradient(620px 300px at 26% 120px, rgba(214,166,96,.10), transparent 70%),
-    #08090b;
-}
-.libroom.lit{
-  background:
-    radial-gradient(120% 70% at 50% -4%, rgba(214,166,96,.13), transparent 60%),
-    radial-gradient(90% 55% at 50% 8%, rgba(190,142,80,.09), transparent 70%),
-    #15100c;
-}
-.libroom.lit.late{background:
-    radial-gradient(120% 70% at 50% -4%, rgba(214,166,96,.07), transparent 60%),
-    #0e0b08;}
-.libroom .vig{position:absolute; inset:0; pointer-events:none; z-index:30;
-  background:radial-gradient(130% 90% at 50% 30%, transparent 55%, rgba(0,0,0,.5) 100%);}
+.libroom{position:relative; overflow:hidden; background:var(--paper);}
+.libroom.lit.late{background:var(--wash);}
 .libroom{--lampglow:.17}
 .libroom.lit.late{--lampglow:.27}
 .libcase{position:relative; border-radius:8px; padding:14px 14px 18px;
@@ -159,7 +139,7 @@ const ROOM_CSS = `
 /** A count inside a sentence. Mono is for the figure only: the words beside it
  *  are prose and set in the body face like the rest of the page. */
 function Num({ children }: { children: React.ReactNode }) {
-  return <span className="font-mono tabular-nums text-[#e4d8c0]">{children}</span>;
+  return <span className="font-mono tabular-nums text-text-bright">{children}</span>;
 }
 
 function LibraryPage() {
@@ -601,11 +581,10 @@ function LibraryPage() {
     <div className="flex flex-col bg-background text-foreground">
       <style>{ROOM_CSS}</style>
       <div className={"libroom grow" + (lit ? " lit" : "") + (lit && late ? " late" : "")}>
-        {lit && <div className="vig" aria-hidden="true" />}
         <main id="main" className="relative z-10 mx-auto w-full max-w-content px-4 py-7 sm:px-5">
           <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-[#f7f2e7]">
+              <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
                 My Library
               </h1>
               {/* Three zeros over an empty room said nothing the empty state
@@ -614,7 +593,7 @@ function LibraryPage() {
                   once it is nothing. "0 waiting" is a number nobody wanted.
                   Numbers keep the mono face; the words around them do not. */}
               {lit && countParts.length > 0 && (
-                <p className="mt-0.5 text-[12.5px] text-[#bdb29c]">
+                <p className="mt-0.5 text-[12.5px] text-text-muted">
                   {countParts.map((part, i) => (
                     <span key={part.key}>
                       {i > 0 && " · "}
@@ -627,7 +606,7 @@ function LibraryPage() {
             <div className="flex items-center gap-2">
               <Link
                 to="/lists"
-                className="text-[13px] font-semibold text-[#8d8472] underline-offset-2 hover:text-[#f7f2e7] hover:underline"
+                className="text-[13px] font-semibold text-text-dim underline-offset-2 hover:text-text-bright hover:underline"
               >
                 My lists
               </Link>
@@ -635,18 +614,18 @@ function LibraryPage() {
                   nothing to act on, so it arrives with the shelves. */}
               {lit && (
                 <>
-                  <span className="text-[12px] font-semibold text-[#8d8472]">Lights</span>
+                  <span className="text-[12px] font-semibold text-text-dim">Lights</span>
                   <button
                     type="button"
                     onClick={() => toggleLight(false)}
-                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${!late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${!late ? "border-text-bright bg-panel text-text-bright" : "border-border-strong text-text-muted hover:text-text-bright"}`}
                   >
                     Evening
                   </button>
                   <button
                     type="button"
                     onClick={() => toggleLight(true)}
-                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${late ? "border-[#8a6a30] bg-[#241b10] text-[#d3aa5e]" : "border-[#3d3325] text-[#bdb29c] hover:text-[#f7f2e7]"}`}
+                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${late ? "border-text-bright bg-panel text-text-bright" : "border-border-strong text-text-muted hover:text-text-bright"}`}
                   >
                     Late
                   </button>
@@ -656,7 +635,7 @@ function LibraryPage() {
           </header>
 
           {!ready ? (
-            <div className="h-64 animate-pulse rounded-[8px] border border-[#231d16] bg-[#12100d]" />
+            <div className="h-64 animate-pulse rounded-[8px] border border-border bg-panel" />
           ) : empty ? (
             /* On the dark ground this is the same dead end the rest of the site
                shows, on the column's own left edge. Given its own panel it was
@@ -752,7 +731,7 @@ function LibraryPage() {
                   <button
                     type="button"
                     onClick={() => setNaming(true)}
-                    className="cursor-pointer rounded-[5px] border border-[#3d3325] bg-[#221c15] px-3 py-2 text-[13px] font-medium text-[#e2dccf] hover:border-primary hover:text-[#f7f2e7]"
+                    className="cursor-pointer rounded-[5px] border border-border-strong bg-panel px-3 py-2 text-[13px] font-medium text-foreground hover:border-primary hover:text-text-bright"
                   >
                     + New shelf
                   </button>
@@ -774,19 +753,19 @@ function LibraryPage() {
                       maxLength={SHELF_NAME_MAX}
                       onChange={(e) => setNewName(e.target.value)}
                       placeholder="Name the shelf"
-                      className="w-[230px] max-w-[60vw] rounded-[5px] border border-[#3d3325] bg-[#120e09] px-3 py-2 text-[14px] text-[#f7f2e7] placeholder:text-[#8d8472] focus:border-primary focus:outline-none"
+                      className="w-[230px] max-w-[60vw] rounded-[5px] border border-border-strong bg-background px-3 py-2 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
                     />
                     <button
                       type="submit"
                       disabled={!newName.trim()}
-                      className="cursor-pointer rounded-[5px] border border-[#3d3325] bg-[#221c15] px-3 py-2 text-[13px] font-medium text-[#e2dccf] hover:border-primary disabled:opacity-40"
+                      className="cursor-pointer rounded-[5px] border border-border-strong bg-panel px-3 py-2 text-[13px] font-medium text-foreground hover:border-primary disabled:opacity-40"
                     >
                       Create
                     </button>
                     <button
                       type="button"
                       onClick={() => setNaming(false)}
-                      className="cursor-pointer px-2 py-2 text-[13px] text-[#8d8472] hover:text-[#bdb29c]"
+                      className="cursor-pointer px-2 py-2 text-[13px] text-text-dim hover:text-text-muted"
                     >
                       Cancel
                     </button>
@@ -797,9 +776,9 @@ function LibraryPage() {
               {unshelved.length > 0 && (
                 <section className="mt-9">
                   <div className="flex flex-wrap items-baseline gap-3">
-                    <span className="text-[17px] font-black tracking-[-0.02em] text-[#e4d8c0]">
+                    <span className="text-[17px] font-black tracking-[-0.02em] text-text-bright">
                       Not on a shelf yet{" "}
-                      <span className="font-mono text-[13px] tabular-nums text-[#8d8472]">
+                      <span className="font-mono text-[13px] tabular-nums text-text-dim">
                         {q ? `${unshelvedShown.length} of ${unshelved.length}` : unshelved.length}
                       </span>
                     </span>
@@ -809,10 +788,10 @@ function LibraryPage() {
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Find a title"
                       aria-label="Find a title that is not on a shelf"
-                      className="ml-auto w-[190px] rounded-[5px] border border-[#3d3325] bg-[#1b1712] px-3 py-1.5 text-[13px] text-[#f7f2e7] placeholder:text-[#8d8472] focus:border-primary focus:outline-none"
+                      className="ml-auto w-[190px] rounded-[5px] border border-border-strong bg-background px-3 py-1.5 text-[13px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
                     />
                   </div>
-                  <div className="libwall mt-2 border-b-2 border-dashed border-[#3d3325] pb-2">
+                  <div className="libwall mt-2 border-b-2 border-dashed border-border-strong pb-2">
                     <div
                       className="librow"
                       data-container="unshelved"
@@ -831,7 +810,7 @@ function LibraryPage() {
                         />
                       ))}
                       {unshelvedShown.length === 0 && (
-                        <div className="m-auto self-center text-[13px] text-[#8d8472]">
+                        <div className="m-auto self-center text-[13px] text-text-dim">
                           No title here matches.
                         </div>
                       )}
@@ -841,11 +820,6 @@ function LibraryPage() {
               )}
             </>
           )}
-          {/* The room carries its own attribution only while it is lit, when
-              the warm ground hides the site footer's palette a screen below.
-              On the dark empty room the footer is right there, so this line
-              was the same credit twice with a void between them. */}
-          {lit && <p className="mt-10 text-[12px] text-[#8d8472]">Title data from TMDB and OMDb</p>}
         </main>
       </div>
 
@@ -1040,7 +1014,7 @@ function Plaque({
     state.qp && qpShelf ? itemFor(qpShelf.items[(state.qp.lo + state.qp.hi) >> 1]) : null;
 
   const btn =
-    "cursor-pointer rounded-[5px] border border-[#3d3325] bg-[#221c15] px-3 py-2 text-left text-[13px] text-[#e2dccf] hover:border-primary hover:text-[#f7f2e7] disabled:cursor-default disabled:opacity-40";
+    "cursor-pointer rounded-[5px] border border-border-strong bg-panel px-3 py-2 text-left text-[13px] text-foreground hover:border-primary hover:text-text-bright disabled:cursor-default disabled:opacity-40";
 
   return (
     <div
@@ -1049,31 +1023,31 @@ function Plaque({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="absolute inset-x-3 bottom-3 mx-auto max-w-[340px] rounded-[6px] border border-[#3d3325] bg-[#1b1712] p-3.5 shadow-[0_14px_34px_rgba(0,0,0,.7)] sm:inset-x-auto sm:right-6 sm:top-24 sm:bottom-auto sm:w-[300px]">
+      <div className="absolute inset-x-3 bottom-3 mx-auto max-w-[340px] rounded-[6px] border border-border-strong bg-background p-3.5 shadow-[0_14px_34px_rgba(0,0,0,.18)] sm:inset-x-auto sm:right-6 sm:top-24 sm:bottom-auto sm:w-[300px]">
         <div className="flex items-start gap-2">
-          <p className="flex-1 text-[15px] font-semibold leading-tight text-[#f7f2e7]">
+          <p className="flex-1 text-[15px] font-semibold leading-tight text-text-bright">
             {it.title}
           </p>
           <button
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="h-6 w-6 cursor-pointer rounded-[5px] text-[15px] text-[#8d8472] hover:text-[#f7f2e7]"
+            className="h-6 w-6 cursor-pointer rounded-[5px] text-[15px] text-text-dim hover:text-text-bright"
           >
             ×
           </button>
         </div>
-        <p className="mt-0.5 font-mono text-[12px] tabular-nums text-[#bdb29c]">
+        <p className="mt-0.5 font-mono text-[12px] tabular-nums text-text-muted">
           {it.mediaType === "tv" ? "TV · " : ""}
           {it.year}
         </p>
 
         {state.qp && qpShelf && pivot ? (
           <div className="mt-3">
-            <p className="text-center text-[14px] text-[#e2dccf]">
-              On <b className="text-[#f7f2e7]">{qpShelf.name}</b>, above or below this one?
+            <p className="text-center text-[14px] text-foreground">
+              On <b className="text-text-bright">{qpShelf.name}</b>, above or below this one?
             </p>
-            <div className="mx-auto my-2.5 flex h-[74px] w-[120px] items-center justify-center overflow-hidden rounded-[5px] border border-[#3d3325] bg-[#241d15]">
+            <div className="mx-auto my-2.5 flex h-[74px] w-[120px] items-center justify-center overflow-hidden rounded-[5px] border border-border-strong bg-panel">
               {pivot.posterUrl ? (
                 <img
                   src={tmdbImage(pivot.posterUrl, "w185")}
@@ -1081,12 +1055,12 @@ function Plaque({
                   className="h-full w-full object-cover object-top"
                 />
               ) : (
-                <span className="px-2 text-center text-[11px] font-bold uppercase text-[#e2dccf]">
+                <span className="px-2 text-center text-[11px] font-bold uppercase text-foreground">
                   {pivot.title}
                 </span>
               )}
             </div>
-            <p className="mb-2 text-center text-[12px] text-[#8d8472]">{pivot.title}</p>
+            <p className="mb-2 text-center text-[12px] text-text-dim">{pivot.title}</p>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1106,7 +1080,7 @@ function Plaque({
             <button
               type="button"
               onClick={() => onPlaceEnd(qpShelf.id, state.id)}
-              className="mt-2 w-full cursor-pointer py-1 text-center text-[12px] text-[#8d8472] hover:text-[#bdb29c]"
+              className="mt-2 w-full cursor-pointer py-1 text-center text-[12px] text-text-dim hover:text-text-muted"
             >
               Just add it to the end
             </button>
@@ -1114,7 +1088,7 @@ function Plaque({
         ) : (
           <>
             {shelf && idx >= 0 && (
-              <p className="mt-1 font-mono text-[11.5px] tabular-nums text-[#8d8472]">
+              <p className="mt-1 font-mono text-[11.5px] tabular-nums text-text-dim">
                 Placed {idx + 1} of {shelf.items.length}
                 {others.length > 0 && (
                   <>
@@ -1155,7 +1129,7 @@ function Plaque({
                   </button>
                   <button
                     type="button"
-                    className={btn + " text-[#e08aa4]"}
+                    className={btn + " text-status-disliked"}
                     onClick={() => onRemove(shelf.id, state.id)}
                   >
                     Take off this shelf
@@ -1164,7 +1138,7 @@ function Plaque({
               )}
               {targets.length > 0 && (
                 <>
-                  <p className="mt-1 text-[12px] font-bold tracking-[-0.01em] text-[#8d8472]">
+                  <p className="mt-1 text-[12px] font-bold tracking-[-0.01em] text-text-dim">
                     {onAShelf ? "Also place on" : "Place on"}
                   </p>
                   {targets.map((s) => (

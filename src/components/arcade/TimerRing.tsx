@@ -27,7 +27,7 @@ export function TimerRing({ timer, className }: { timer: ArcadeTimer | null; cla
   const low = frac < ARCADE_TIMER_LOW;
   const seconds = Math.ceil(timer.remaining);
   const last = seconds <= 5;
-  const color = low ? "var(--warn, #fb923c)" : "var(--game, var(--primary))";
+  const color = low ? "var(--warn)" : "var(--game, var(--primary))";
 
   return (
     <div
