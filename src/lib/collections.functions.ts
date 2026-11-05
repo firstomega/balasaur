@@ -9,6 +9,7 @@ import { pickRanksOn, type Placement } from "./ranksOn";
 import type { MediaItem } from "@/types/media";
 import { asSwatchKey, type SwatchKey } from "./posterSwatch";
 import { leadOfItems, type TileLead } from "./tileLead";
+import { trustedScore } from "./trust";
 
 export type { TileLead } from "./tileLead";
 
@@ -48,6 +49,9 @@ interface PosterRef {
   poster: string;
   swatch: SwatchKey | null;
   swatchAlt: SwatchKey | null;
+  title: string;
+  /** Trusted Balasaur Score, or null when the trust rule hides it. */
+  score: number | null;
 }
 
 async function postersByIds(ids: string[]): Promise<Map<string, PosterRef>> {
@@ -57,7 +61,9 @@ async function postersByIds(ids: string[]): Promise<Map<string, PosterRef>> {
     const slice = ids.slice(i, i + CHUNK);
     const { data, error } = await loose(supabaseAdmin)
       .from("media")
-      .select("media_id, poster_url, swatch, swatch_alt")
+      .select(
+        "media_id, poster_url, swatch, swatch_alt, title, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count",
+      )
       .in("media_id", slice)
       .limit(slice.length);
     if (error) {
@@ -69,12 +75,29 @@ async function postersByIds(ids: string[]): Promise<Map<string, PosterRef>> {
       poster_url: string | null;
       swatch: string | null;
       swatch_alt: string | null;
+      title: string;
+      rating_imdb: number | null;
+      rating_rotten_tomatoes: number | null;
+      rating_metacritic: number | null;
+      rating_tmdb: number | null;
+      vote_count: number | null;
     }[]) {
       if (!p.poster_url) continue;
+      const score = trustedScore({
+        ratings: {
+          imdb: p.rating_imdb,
+          rottenTomatoes: p.rating_rotten_tomatoes,
+          metacritic: p.rating_metacritic,
+          tmdb: p.rating_tmdb,
+        },
+        voteCount: p.vote_count,
+      });
       out.set(p.media_id, {
         poster: p.poster_url,
         swatch: asSwatchKey(p.swatch),
         swatchAlt: asSwatchKey(p.swatch_alt),
+        title: p.title,
+        score: typeof score === "number" ? score : null,
       });
     }
   }
@@ -88,9 +111,18 @@ function postersOf(ids: string[], byId: Map<string, PosterRef>): string[] {
 
 /** The first title in list order that has a poster, as a tile lead. */
 function leadOf(ids: string[], byId: Map<string, PosterRef>): TileLead | null {
-  for (const id of ids) {
-    const p = byId.get(id);
-    if (p) return { id, posterUrl: p.poster, swatch: p.swatch, swatchAlt: p.swatchAlt };
+  for (let i = 0; i < ids.length; i++) {
+    const p = byId.get(ids[i]);
+    if (p)
+      return {
+        id: ids[i],
+        posterUrl: p.poster,
+        swatch: p.swatch,
+        swatchAlt: p.swatchAlt,
+        title: p.title,
+        score: p.score,
+        first: i === 0,
+      };
   }
   return null;
 }

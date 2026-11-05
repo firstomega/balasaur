@@ -4,15 +4,21 @@ import { cn } from "@/lib/utils";
 
 /**
  * Horizontal scroller with hover arrow buttons and a hidden native scrollbar.
- * Replaces the bare `overflow-x-auto` rows (the "ugly scrollbar"). Touch and
- * trackpad swipe still work; arrows appear on hover (desktop) and only when
- * there is more to scroll in that direction. Whichever edge has more behind
- * it fades out over 48px, so the card cut off at the edge reads as "more
- * this way" instead of a word sliced in half, and a 24px end pad keeps the
- * last card off the edge. Pass gap/snap utilities via `className`.
+ * Touch and trackpad swipe work, and each child snaps its start edge into place
+ * when a swipe ends. Arrows appear on hover (desktop) and only when there is
+ * more to scroll in that direction. Whichever edge has more behind it fades
+ * out over 24px, so the card cut off at the edge reads as "more this way", and
+ * a 24px end pad keeps the last card off the edge.
+ *
+ * Keyboard: every card inside is a link, and tabbing to one scrolls it into
+ * view clear of the fade (scroll-padding). With a `label` the rail itself is a
+ * named, focusable region, so arrow keys scroll it too.
+ *
+ * Spacing is the Colour Shelf rail: 10px between cards on a phone, 14px from
+ * md up. A caller's own gap utility replaces it.
  */
 
-const FADE = 48;
+const FADE = 24;
 
 /** The scroller's mask for the edges that have more content behind them. */
 function edgeMask(left: boolean, right: boolean): string | undefined {
@@ -24,9 +30,12 @@ function edgeMask(left: boolean, right: boolean): string | undefined {
 export function ScrollRail({
   children,
   className,
+  label,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Names the rail as a region and makes it focusable for arrow-key scrolling. */
+  label?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
@@ -60,9 +69,12 @@ export function ScrollRail({
     <div className="group/rail relative">
       <div
         ref={ref}
+        role={label ? "region" : undefined}
+        aria-label={label}
+        tabIndex={label ? 0 : undefined}
         style={{ maskImage: mask, WebkitMaskImage: mask }}
         className={cn(
-          "flex overflow-x-auto scroll-smooth pb-2 pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "flex snap-x snap-proximity scroll-px-6 gap-2.5 overflow-x-auto scroll-smooth pb-2 pr-6 pt-1 md:gap-3.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:snap-start",
           className,
         )}
       >

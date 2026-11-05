@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { MediaCard } from "./MediaCard";
 import { EpisodeHeatmap } from "./EpisodeHeatmap";
-import { ScoreBadge, tierName } from "./ScoreBadge";
+import { ScoreBadge } from "./ScoreBadge";
 import { AmbientGlow } from "./AmbientGlow";
 import { ScrollRail } from "./ScrollRail";
 import { isRankable, trustedScore } from "@/lib/trust";
@@ -398,13 +398,8 @@ function DetailInner({
                   {balasaur !== undefined && (
                     <div className="flex shrink-0 items-center gap-2.5">
                       <ScoreBadge score={balasaur} size="lg" />
-                      <div>
-                        <div className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                          Balasaur Score
-                        </div>
-                        <div className="mt-0.5 text-[15px] font-black leading-none tracking-[-0.02em] text-text-bright md:text-[17px]">
-                          {tierName(balasaur)}
-                        </div>
+                      <div className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                        Balasaur Score
                       </div>
                     </div>
                   )}

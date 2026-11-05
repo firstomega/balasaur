@@ -1,83 +1,45 @@
 import { Link } from "@tanstack/react-router";
-import { Layers } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { homeCollectionsOptions } from "@/hooks/useCatalog";
-import { tmdbImage } from "@/lib/tmdbImage";
+import { paintTiles } from "@/lib/paintWall";
+import { ListTile } from "./ListTile";
 import { ScrollRail } from "./ScrollRail";
 
-// A rail of COLLECTIONS, not titles: the answer to "what am I in the mood
-// for" sits above the answer to "what is popular". Each card fans three
-// posters from the list it links to, so the shelf reads as a place to go
-// rather than another row of movies.
+// A rail of COLLECTIONS, not titles, above the catalog. Each tile is painted
+// in the colour of the poster that leads its list.
 //
 // Ordering is handled server-side: any collection whose season covers the
 // current month leads, so October opens with the Halloween list without
 // anyone touching it.
 
-function PosterFan({ posters, title }: { posters: string[]; title: string }) {
-  if (posters.length === 0) {
-    return <div className="h-[104px] w-full rounded-[5px] border border-border bg-background" />;
-  }
-  return (
-    <div className="flex h-[104px] items-stretch gap-1 overflow-hidden rounded-[5px]">
-      {posters.slice(0, 3).map((p, i) => (
-        <img
-          key={i}
-          src={tmdbImage(p, "w185")}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          className="h-full w-1/3 object-cover"
-        />
-      ))}
-      <span className="sr-only">{title}</span>
-    </div>
-  );
-}
-
 export function CollectionRail() {
   const { data } = useQuery(homeCollectionsOptions());
   if (!data || data.length === 0) return null;
+  const paint = paintTiles(data.map((c) => c.lead));
 
   return (
-    <section aria-label="Collections">
-      <h2 className="mb-2.5 flex items-center gap-1.5 text-[19px] font-black tracking-[-0.02em] text-text-bright">
-        <Layers className="h-4 w-4 text-primary" aria-hidden="true" />
-        What are you in the mood for
+    <section aria-labelledby="collection-rail-h">
+      <h2
+        id="collection-rail-h"
+        className="mb-3 font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl"
+      >
+        Ranked lists
       </h2>
-      <ScrollRail className="gap-3">
-        {data.map((c) => (
-          <Link
+      <ScrollRail label="Ranked lists">
+        {data.map((c, i) => (
+          <ListTile
             key={c.slug}
-            to="/best/$slug"
-            params={{ slug: c.slug }}
-            className="group w-[188px] shrink-0 rounded-[6px] border border-border bg-panel p-2 transition-colors hover:border-primary sm:w-[210px]"
-          >
-            <PosterFan posters={c.posters} title={c.title} />
-            <div className="mt-2 flex items-start justify-between gap-2">
-              <span className="text-[13px] font-semibold leading-tight text-text-bright group-hover:text-primary">
-                {c.title}
-              </span>
-              {c.inSeason && (
-                <span className="mt-0.5 shrink-0 rounded-[3px] bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">
-                  Now
-                </span>
-              )}
-            </div>
-            <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] tabular-nums text-text-dim">
-              {c.media_type && (
-                <span className={c.media_type === "tv" ? "text-media-tv" : "text-media-movie"}>
-                  {c.media_type === "tv" ? "Shows" : "Movies"}
-                </span>
-              )}
-              <span>{c.item_count.toLocaleString("en-US")} titles</span>
-            </div>
-          </Link>
+            slug={c.slug}
+            title={c.title}
+            itemCount={c.item_count}
+            lead={c.lead}
+            swatch={paint[i]}
+            className="w-[168px] shrink-0 md:w-[220px]"
+          />
         ))}
         <Link
           to="/collections"
-          className="flex w-[140px] shrink-0 items-center justify-center rounded-[6px] border border-dashed border-border text-[13px] font-bold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
+          className="flex w-[140px] shrink-0 items-end rounded-xl bg-text-bright p-3 font-display text-xl font-extrabold leading-none tracking-tight text-background transition-transform duration-base motion-safe:hover:-translate-y-0.5 md:rounded-2xl md:p-4 md:text-2xl"
         >
           All collections
         </Link>

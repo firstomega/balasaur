@@ -286,9 +286,6 @@ function HomePage() {
   // ranking already does well, so it went and the boost stayed.
   const effectiveBoost = boostCountry;
 
-  // Mobile bottom action sheet for a card (hover quick-actions don't exist on touch).
-  const [actionItem, setActionItem] = useState<MediaItem | null>(null);
-
   // The taste ramp is opt-in now. It used to open itself 1.2s after load for
   // anyone with an empty library, which interrupted first-time visitors from
   // search before they had been given anything, and put a pop-up over the
@@ -368,7 +365,6 @@ function HomePage() {
                 boostCountry={effectiveBoost}
                 onOpenMobileFilters={() => setMobileOpen(true)}
                 onQuickAction={handleQuickAction}
-                onOpenActions={setActionItem}
                 startOffset={pageOffset(search.page)}
                 pageNo={pageNumber(search.page)}
               />
@@ -376,52 +372,6 @@ function HomePage() {
           </div>
         </main>
       </div>
-
-      {/* Mobile card actions: one tap on the caption's ⋯ opens this. */}
-      <Sheet open={actionItem !== null} onOpenChange={(v) => !v && setActionItem(null)}>
-        <SheetContent side="bottom" className="border-border bg-panel">
-          {actionItem && (
-            <>
-              <SheetHeader className="pb-2">
-                <SheetTitle className="text-[17px] font-black leading-tight tracking-[-0.02em] text-text-bright">
-                  {actionItem.title}
-                </SheetTitle>
-              </SheetHeader>
-              <div className="grid gap-2 pb-4">
-                {(
-                  [
-                    { action: "want", label: "Want to Watch", active: wantIds.has(actionItem.id) },
-                    { action: "watched", label: "Watched", active: seenIds.has(actionItem.id) },
-                    {
-                      action: "notInterested",
-                      label: "Never show this",
-                      active: rejectedIds.has(actionItem.id),
-                    },
-                  ] as const
-                ).map((a) => (
-                  <button
-                    key={a.action}
-                    type="button"
-                    onClick={() => {
-                      handleQuickAction(actionItem, a.action);
-                      setActionItem(null);
-                    }}
-                    className={
-                      "w-full cursor-pointer rounded-[5px] border px-3 py-2.5 text-left text-[14px] font-bold tracking-[-0.01em] transition-colors " +
-                      (a.active
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border bg-background text-text-bright hover:border-border-strong")
-                    }
-                  >
-                    {a.active ? "✓ " : ""}
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
 
       <AuthDialog
         open={authOpen}
@@ -667,7 +617,6 @@ function GridWithControls({
   boostCountry,
   onOpenMobileFilters,
   onQuickAction,
-  onOpenActions,
   startOffset,
   pageNo,
 }: {
@@ -681,7 +630,6 @@ function GridWithControls({
   /** The viewer's detected country (pre-toggle) for the geo indicator label. */
   onOpenMobileFilters: () => void;
   onQuickAction: (item: MediaItem, action: QuickAction) => void;
-  onOpenActions: (item: MediaItem) => void;
   /** Row offset from a crawlable ?page=N URL. */
   startOffset: number;
   /** Current 1-based page, for the pagination trail. */
@@ -837,7 +785,6 @@ function GridWithControls({
               <MediaGrid
                 items={slice}
                 onQuickAction={onQuickAction}
-                onOpenActions={onOpenActions}
                 savedIds={wantIds}
                 watchedIds={seenIds}
                 rejectedIds={rejectedIds}

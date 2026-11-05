@@ -4,7 +4,6 @@ import { MediaCard, type QuickAction } from "./MediaCard";
 export function MediaGrid({
   items,
   onQuickAction,
-  onOpenActions,
   savedIds,
   watchedIds,
   rejectedIds,
@@ -12,7 +11,6 @@ export function MediaGrid({
 }: {
   items: MediaItem[];
   onQuickAction?: (item: MediaItem, action: QuickAction) => void;
-  onOpenActions?: (item: MediaItem) => void;
   savedIds?: Set<string>;
   watchedIds?: Set<string>;
   rejectedIds?: Set<string>;
@@ -33,7 +31,6 @@ export function MediaGrid({
           item={item}
           eager={i < 4}
           onQuickAction={onQuickAction}
-          onOpenActions={onOpenActions}
           saved={savedIds?.has(item.id)}
           watched={watchedIds?.has(item.id)}
           rejected={rejectedIds?.has(item.id)}

@@ -1,43 +1,10 @@
 import { cn } from "@/lib/utils";
 
-// The Balasaur Score badge: a black number on a white sticker with a black
+// The Balasaur Score sticker: a black number on a white sticker with a black
 // edge, the same at every score. The tile under it carries the poster's colour,
-// so a tier colour here would be a second colour system on the same card. The
-// two extremes still get a dinosaur-themed icon: an asteroid below 60, a bite
-// mark at 85+.
-
-/** Named tiers make the score quotable. The title page prints the tier next to
- *  the number at size "lg"; at the smaller sizes it rides in the tooltip and the
- *  aria-label, so a screen reader hears "92, Apex" where a sighted reader has
- *  the color. */
-export function tierName(score: number): string {
-  if (score >= 90) return "Apex";
-  if (score >= 85) return "Balasaur Approved";
-  if (score >= 70) return "Worth a look";
-  if (score >= 60) return "Mixed";
-  if (score >= 40) return "Rough";
-  return "Extinction event";
-}
-
-/** A rough space rock — shown when the score is low (it bombed). */
-function Asteroid({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-      <path d="M11.6 2.6c2.2-.5 4.2.5 5.8 1.9 1.8 1.6 3 3.6 2.4 5.9-.4 1.7.5 2.7-.6 4.4-1.2 1.9-3.4 3-5.7 3.1-2.6.1-5.2-1-6.6-3.2-1.3-2-1.4-4.5-.5-6.7.9-2.2 2.9-4.8 5.2-5.4Z" />
-      <circle cx="9.5" cy="9" r="1.4" className="text-background" fill="currentColor" />
-      <circle cx="14" cy="13.5" r="1" className="text-background" fill="currentColor" />
-    </svg>
-  );
-}
-
-/** A bite taken out of a circle — shown when the score is high (it's tasty). */
-function BiteMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-      <path d="M12 2a10 10 0 1 0 9.7 12.4 3.6 3.6 0 0 1-4.6-4.6A3.6 3.6 0 0 1 12 5.1 10 10 0 0 0 12 2Z" />
-    </svg>
-  );
-}
+// so a tier colour here would be a second colour system on the same card, and
+// a tier name or icon would restate the number. Callers decide whether a score
+// is shown at all (src/lib/trust.ts); this only draws one.
 
 export function ScoreBadge({
   score,
@@ -45,43 +12,30 @@ export function ScoreBadge({
   className,
 }: {
   score: number;
-  /** "lg" is the title-page hero, where the tier is printed beside the badge. */
+  /** "sm" sits on cards, rows and search hits; "md" in a panel; "lg" is the
+   *  title-page hero, where "Balasaur Score" is printed beside it. */
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const dino = score >= 85 ? "bite" : score < 60 ? "asteroid" : null;
-  const iconCls =
-    size === "sm" ? "h-2.5 w-2.5" : size === "md" ? "h-3.5 w-3.5" : "h-5 w-5 md:h-6 md:w-6";
+  const label = `Balasaur Score ${score} out of 100`;
   return (
     <span
-      // At "lg" the score name and its tier are printed next to the badge, so
-      // the badge is just the number and everyone gets the same words in the
-      // same order. At the smaller sizes there is nowhere to print them, so the
-      // label and the tooltip carry them.
-      aria-label={
-        size === "lg"
-          ? undefined
-          : `Balasaur Score ${score} out of 100. ${tierName(score)}${score >= 90 ? ". Balasaur Approved" : ""}`
-      }
-      title={
-        size === "lg"
-          ? undefined
-          : `${score}/100 · ${tierName(score)}${score >= 90 ? " · Balasaur Approved" : ""}`
-      }
+      // At "lg" the score's name is printed next to the sticker, so the
+      // sticker is just the number. At the smaller sizes there is nowhere to
+      // print it, so the label and the tooltip carry it.
+      aria-label={size === "lg" ? undefined : label}
+      title={size === "lg" ? undefined : label}
       className={cn(
-        "inline-flex items-center gap-1 rounded-[4px] bg-sticker font-mono font-semibold tabular-nums text-sticker-ink ring-1 ring-sticker-ink",
-        size === "sm" && "h-[20px] px-1.5 text-[11px]",
-        size === "md" && "px-2 py-1 text-[14px]",
-        // leading-none keeps the box height a function of the font size and the
-        // padding alone, so the hero row does not change height when the
-        // webfont swaps in.
+        // leading-none keeps the box height a function of the explicit height
+        // alone, so a row does not change height when the webfont swaps in.
+        "inline-flex shrink-0 items-center justify-center border-2 border-sticker-ink bg-sticker font-display font-extrabold tabular-nums leading-none text-sticker-ink",
+        size === "sm" && "h-7 min-w-8 rounded-lg px-1 text-lg",
+        size === "md" && "h-9 min-w-10 rounded-lg px-1.5 text-xl",
         size === "lg" &&
-          "gap-2 rounded-[6px] px-2.5 py-1.5 text-[30px] leading-none md:text-[38px]",
+          "h-12 min-w-14 rounded-xl border-[3px] px-2 text-3xl md:h-16 md:min-w-[4.5rem] md:text-4xl",
         className,
       )}
     >
-      {dino === "asteroid" && <Asteroid className={iconCls} />}
-      {dino === "bite" && <BiteMark className={iconCls} />}
       {score}
     </span>
   );

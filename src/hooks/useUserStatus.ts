@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { MediaItem } from "@/types/media";
+import { STATUS_WRITTEN_EVENT } from "@/hooks/useWatchlistCount";
+
+/** Tells the header's Watchlist count to read itself again. */
+function announceWrite() {
+  window.dispatchEvent(new Event(STATUS_WRITTEN_EVENT));
+}
 
 const KEY = "balasaur:userStatus";
 /** Rows per sign-in migration request; see the migration effect. */
@@ -326,6 +332,7 @@ export function useUserStatus() {
             .eq("media_id", id)
             .then(({ error }) => {
               if (error) console.error("[userStatus] delete failed:", error.message);
+              else announceWrite();
             });
         } else {
           const snap = item
@@ -342,7 +349,10 @@ export function useUserStatus() {
             .from("user_media_status")
             .upsert(row, { onConflict: "user_id,media_id" })
             .then(async ({ error }) => {
-              if (!error) return;
+              if (!error) {
+                announceWrite();
+                return;
+              }
               console.error("[userStatus] upsert failed, retrying manually:", error.message);
               // Replace by hand so a missing/altered conflict constraint can't block the save.
               await supabase
@@ -356,6 +366,7 @@ export function useUserStatus() {
                 cacheLocally(id, recWithSnap);
               } else {
                 uncacheLocally(id);
+                announceWrite();
               }
             });
         }

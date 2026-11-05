@@ -1,10 +1,10 @@
 {
   "totals": {
-    "fontSize": 879,
-    "radius": 329,
+    "fontSize": 839,
+    "radius": 303,
     "duration": 4,
     "easing": 8,
-    "hex": 260,
+    "hex": 249,
     "containerWidth": 76
   },
   "files": {
@@ -119,10 +119,6 @@
     "src/components/balasaur/ChompMask.tsx": {
       "easing": 1
     },
-    "src/components/balasaur/CollectionRail.tsx": {
-      "fontSize": 5,
-      "radius": 5
-    },
     "src/components/balasaur/CookieBanner.tsx": {
       "fontSize": 4,
       "radius": 2,
@@ -147,7 +143,6 @@
       "radius": 11
     },
     "src/components/balasaur/Footer.tsx": {
-      "fontSize": 2,
       "containerWidth": 1
     },
     "src/components/balasaur/LandingHero.tsx": {
@@ -159,15 +154,11 @@
       "radius": 16,
       "containerWidth": 4
     },
-    "src/components/balasaur/MediaCard.tsx": {
-      "fontSize": 9,
-      "radius": 8
-    },
     "src/components/balasaur/MediaCardSkeleton.tsx": {
       "radius": 1
     },
     "src/components/balasaur/MediaDetail.tsx": {
-      "fontSize": 40,
+      "fontSize": 38,
       "radius": 17,
       "containerWidth": 6
     },
@@ -189,10 +180,6 @@
       "radius": 2,
       "hex": 19
     },
-    "src/components/balasaur/ScoreBadge.tsx": {
-      "fontSize": 4,
-      "radius": 2
-    },
     "src/components/balasaur/ScrollRail.tsx": {
       "hex": 4
     },
@@ -210,8 +197,7 @@
       "containerWidth": 2
     },
     "src/components/balasaur/TopBar.tsx": {
-      "fontSize": 15,
-      "radius": 5,
+      "fontSize": 7,
       "containerWidth": 1
     },
     "src/components/balasaur/TopBarSearch.tsx": {
@@ -285,9 +271,8 @@
       "radius": 3
     },
     "src/routes/collections.tsx": {
-      "fontSize": 33,
-      "radius": 20,
-      "hex": 11
+      "fontSize": 25,
+      "radius": 15
     },
     "src/routes/contact.tsx": {
       "fontSize": 7
@@ -305,8 +290,8 @@
       "hex": 38
     },
     "src/routes/index.tsx": {
-      "fontSize": 22,
-      "radius": 11,
+      "fontSize": 20,
+      "radius": 10,
       "hex": 1
     },
     "src/routes/library.tsx": {

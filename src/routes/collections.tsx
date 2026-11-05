@@ -6,17 +6,18 @@ import {
   EMPTY_ACTION_QUIET_CLASS,
 } from "@/components/balasaur/EmptyState";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
+import { ListTile } from "@/components/balasaur/ListTile";
+import { paintTiles } from "@/lib/paintWall";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
 import { useCollectionOverlap } from "@/hooks/useCollectionOverlap";
-import { collectionProgressLine, collectionCountLine } from "@/lib/collectionProgress";
-import { tmdbImage } from "@/lib/tmdbImage";
+import { collectionProgressLine } from "@/lib/collectionProgress";
 import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 
 // /collections — three tiers, priorities in this order: seduction, navigation,
 // completeness.
 // Tier 1  Featured: four flagship lists picked by rule (biggest service,
-//         latest year, top award, one discovery) as large poster-fan cards.
+//         latest year, top award, one discovery) as list tiles.
 // Tier 2  Shelves by intent (streaming / genre / decades / acclaim) on the
 //         same ScrollRail pattern Browse uses.
 // Tier 3  The full index at the bottom: plain text links, grouped, carrying
@@ -53,28 +54,7 @@ export const Route = createFileRoute("/collections")({
   component: CollectionsPage,
 });
 
-// Deterministic brand chips for service cards (no logo fetch, no CLS).
-const PROVIDER_CHIP: { name: string; label: string; className: string }[] = [
-  { name: "Netflix", label: "N", className: "bg-[#e50914] text-white" },
-  { name: "Max", label: "max", className: "bg-[#2723a6] text-white" },
-  { name: "Prime", label: "prime", className: "bg-[#0f79af] text-white" },
-  { name: "Disney+", label: "D+", className: "bg-[#0e2a72] text-white" },
-  { name: "Apple TV+", label: "tv+", className: "border border-[#3a3a3a] bg-black text-white" },
-  { name: "Hulu", label: "hulu", className: "bg-[#1ce783] text-[#04210f]" },
-  { name: "Paramount+", label: "P+", className: "bg-[#0064ff] text-white" },
-  {
-    name: "Peacock",
-    label: "pck",
-    className: "bg-gradient-to-br from-[#7b2ff7] to-[#f107a3] text-white",
-  },
-  { name: "Tubi", label: "tubi", className: "bg-[#fa382f] text-white" },
-];
-
-function providerChip(title: string) {
-  return PROVIDER_CHIP.find((p) => title.includes(p.name));
-}
-
-/** Big-numeral overlay for decade cards ("The Best of the 1990s" -> "1990s"). */
+/** The decade a decade list covers ("The Best of the 1990s" -> "1990s"). */
 function decadeWord(title: string): string | null {
   return title.match(/\d{4}s/)?.[0] ?? null;
 }
@@ -113,144 +93,36 @@ function pickFeatured(all: CollectionSummary[]): CollectionSummary[] {
   return picks.slice(0, 4);
 }
 
-// Hover spread per fan position (Tailwind needs literal class names).
-const SPREAD = [
-  "",
-  "group-hover:translate-x-[6px]",
-  "group-hover:translate-x-[12px]",
-  "group-hover:translate-x-[18px]",
-  "group-hover:translate-x-[24px]",
-];
+/** A row of list tiles, painted together so neighbours do not repeat a colour
+ *  (src/lib/paintWall.ts). Rendered as siblings, so a rail snaps each one. */
+/** A list tile's width inside a rail. */
+const RAIL_TILE = "w-[168px] shrink-0 md:w-[220px]";
 
-function Fan({
-  posters,
-  count,
-  width,
-  height,
-  overlap,
-  size,
+function ShelfTiles({
+  items,
+  progressFor,
+  className,
 }: {
-  posters: string[];
-  count: number;
-  width: string;
-  height: string;
-  overlap: string;
-  size: string;
+  items: CollectionSummary[];
+  progressFor?: (c: CollectionSummary) => string | null;
+  className?: string;
 }) {
+  const paint = paintTiles(items.map((c) => c.lead));
   return (
-    <span className="flex">
-      {posters.slice(0, count).map((p, i) => (
-        <img
-          key={i}
-          src={tmdbImage(p, size)}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className={`${width} ${height} flex-none rounded-[5px] object-cover shadow-[-14px_0_22px_-12px_rgba(0,0,0,0.85)] ring-1 ring-white/10 transition-transform duration-150 ${
-            i > 0 ? overlap : ""
-          } ${SPREAD[i]}`}
+    <>
+      {items.map((c, i) => (
+        <ListTile
+          key={c.slug}
+          slug={c.slug}
+          title={c.title}
+          itemCount={c.item_count}
+          lead={c.lead}
+          swatch={paint[i]}
+          progress={progressFor?.(c)}
+          className={className}
         />
       ))}
-    </span>
-  );
-}
-
-function FeaturedCard({ c }: { c: CollectionSummary }) {
-  const chip = c.kind === "service" ? providerChip(c.title) : null;
-  return (
-    <Link
-      to="/best/$slug"
-      params={{ slug: c.slug }}
-      // overflow-hidden: on narrow phones the five-poster fan is wider than the
-      // card, so the deck clips at the edge instead of widening the layout.
-      className="group block overflow-hidden rounded-[8px] bg-gradient-to-b from-panel to-panel/40 p-4 transition-colors hover:bg-secondary sm:p-5"
-    >
-      <span className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-        <span className="shrink-0">
-          <Fan
-            posters={c.posters}
-            count={5}
-            width="w-[86px] sm:w-[96px]"
-            height="h-[129px] sm:h-[144px]"
-            overlap="ml-[-36px] sm:ml-[-40px]"
-            size="w342"
-          />
-        </span>
-        {/* The leaders fill what used to be dead space, and let you judge the
-            list before clicking it. */}
-        <span className="min-w-0 flex-1 self-stretch sm:flex sm:flex-col sm:justify-center">
-          {c.top_titles.slice(0, 3).map((t, i) => (
-            <span
-              key={i}
-              className="flex items-baseline gap-2.5 border-b border-border/60 py-2 text-[13px] last:border-b-0"
-            >
-              <span className="w-3 shrink-0 font-mono tabular-nums text-text-dim">{i + 1}</span>
-              <span className="truncate text-text">{t.title}</span>
-              {typeof t.score === "number" && (
-                <span className="ml-auto shrink-0 pl-2 font-mono tabular-nums text-rating">
-                  {t.score}
-                </span>
-              )}
-            </span>
-          ))}
-        </span>
-      </span>
-      <span className="mt-3.5 block text-[19px] font-semibold leading-tight tracking-tight text-text-bright group-hover:text-primary sm:text-[21px]">
-        {chip && (
-          <span
-            className={`mr-2 inline-grid h-5 place-items-center rounded-[4px] px-1.5 align-[2px] text-[11px] font-black tracking-[-0.01em] ${chip.className}`}
-          >
-            {chip.label}
-          </span>
-        )}
-        {c.title}
-      </span>
-    </Link>
-  );
-}
-
-function ShelfCard({ c, progress }: { c: CollectionSummary; progress?: string | null }) {
-  const chip = c.kind === "service" ? providerChip(c.title) : null;
-  const era = c.kind === "decade" ? decadeWord(c.title) : null;
-  return (
-    <Link
-      to="/best/$slug"
-      params={{ slug: c.slug }}
-      className="group block w-[196px] flex-none rounded-[7px] p-3 transition-colors hover:bg-panel"
-    >
-      <span className="relative block w-max">
-        {chip && (
-          <span
-            className={`absolute -left-1.5 -top-1.5 z-10 grid h-6 min-w-6 place-items-center rounded-[5px] px-1.5 text-[11px] font-black tracking-[-0.01em] shadow-[0_3px_10px_rgba(0,0,0,0.6)] ${chip.className}`}
-          >
-            {chip.label}
-          </span>
-        )}
-        <Fan
-          posters={c.posters}
-          count={3}
-          width="w-[78px]"
-          height="h-[117px]"
-          overlap="ml-[-33px]"
-          size="w185"
-        />
-        {era && (
-          <span className="absolute bottom-2 left-2.5 z-10 font-mono text-[22px] font-bold tabular-nums tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.95)]">
-            {era}
-          </span>
-        )}
-      </span>
-      <span className="mt-2.5 block text-[14px] font-semibold leading-snug text-text-bright group-hover:text-primary">
-        {c.title}
-      </span>
-      {/* Where the visitor stands in this shelf, which is what a person wants
-          before opening one. Quality is taken on trust; the old "top 92" was
-          a verdict nobody asked for and, at a standard deviation of 4.1
-          across 673 shelves, one that could not separate them anyway. */}
-      <span className="mt-0.5 block font-mono text-[11px] tabular-nums text-text-dim">
-        {progress ?? collectionCountLine(c.item_count)}
-      </span>
-    </Link>
+    </>
   );
 }
 
@@ -270,7 +142,7 @@ function Shelf({
         {meta && <span className="font-mono text-[12px] tabular-nums text-text-dim">{meta}</span>}
       </div>
       <div className="mt-3.5">
-        <ScrollRail className="gap-2">{children}</ScrollRail>
+        <ScrollRail label={title}>{children}</ScrollRail>
       </div>
     </section>
   );
@@ -796,47 +668,41 @@ function CollectionsPage() {
 
         <div className={matches || none ? "hidden" : undefined}>
           {/* Tier 1: featured */}
-          <div className="mt-7 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {featured.map((c) => (
-              <FeaturedCard key={c.slug} c={c} />
-            ))}
+          <div className="mt-7 grid grid-cols-2 gap-2.5 md:gap-4 lg:grid-cols-4">
+            <ShelfTiles items={featured} className="md:min-h-48" />
           </div>
 
           {/* Tier 2: shelves. Occasions lead: they answer "what should I put on
               tonight", which is the question people actually arrive with. */}
           {occasions.length > 0 && (
             <Shelf
-              title="What are you in the mood for"
+              title="Occasions"
               meta={
                 inSeason.length > 0
                   ? `${occasions.length} lists · ${inSeason.length} in season`
                   : `${occasions.length} lists`
               }
             >
-              {[...inSeason, ...everyday].map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
-              ))}
+              <ShelfTiles
+                items={[...inSeason, ...everyday]}
+                progressFor={progressFor}
+                className={RAIL_TILE}
+              />
             </Shelf>
           )}
           {services.length > 0 && (
             <Shelf title="Streaming now" meta={`${services.length} services · updated nightly`}>
-              {services.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
-              ))}
+              <ShelfTiles items={services} progressFor={progressFor} className={RAIL_TILE} />
             </Shelf>
           )}
           {genres.length > 0 && (
             <Shelf title="By genre" meta={`${genres.length} lists`}>
-              {genres.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
-              ))}
+              <ShelfTiles items={genres} progressFor={progressFor} className={RAIL_TILE} />
             </Shelf>
           )}
           {origins.length > 0 && (
             <Shelf title="By country" meta={`${origins.length} lists`}>
-              {origins.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
-              ))}
+              <ShelfTiles items={origins} progressFor={progressFor} className={RAIL_TILE} />
             </Shelf>
           )}
           {decades.length > 0 && (
@@ -844,16 +710,12 @@ function CollectionsPage() {
               title="Through the decades"
               meta={`${new Set(decades.map((c: CollectionSummary) => decadeWord(c.title))).size} decades · ${new Set(years.map((c: CollectionSummary) => c.slug.match(/-of-(\d{4})$/)?.[1])).size} years`}
             >
-              {decades.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
-              ))}
+              <ShelfTiles items={decades} progressFor={progressFor} className={RAIL_TILE} />
             </Shelf>
           )}
           {acclaim.length > 0 && (
             <Shelf title="Awards & discovery" meta={`${acclaim.length} lists`}>
-              {acclaim.map((c: CollectionSummary) => (
-                <ShelfCard key={c.slug} c={c} progress={progressFor(c)} />
-              ))}
+              <ShelfTiles items={acclaim} progressFor={progressFor} className={RAIL_TILE} />
             </Shelf>
           )}
           {people.length > 0 && (

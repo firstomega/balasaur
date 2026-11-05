@@ -23,7 +23,12 @@
      cannot come back; rounded-full covers pills on its own. */
   --radius-*: initial;
   --radius-sm: 4px; /* chips, badges, inputs, small buttons */
-  --radius-md: 6px; /* cards, posters, panels, dialogs, popovers */
+  --radius-md: 6px; /* panels, dialogs, popovers, a peeking poster */
+  /* Colour Shelf surfaces: the poster inside a painted card and the score
+     sticker; the painted card and the phone list tile; the desktop list tile. */
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
 
   /* Type. Eight steps measured off what ships: 31 distinct arbitrary sizes in
      src, of which 11, 12 and 13 carry 489 of the ~900 uses. The half-pixel
