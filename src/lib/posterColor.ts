@@ -11,10 +11,17 @@
  * management. That is honest decoding of the file, not a guess: the numbers it
  * returns are the encoder's own block averages.
  *
- * What it refuses: progressive JPEG (SOF2), arithmetic coding, CMYK, and
- * anything that is not a JPEG. Those return null and the caller stores no color,
- * which is the same path a failed download takes. TMDB serves baseline JPEG at
- * /t/p/w92.
+ * Progressive JPEG (SOF2) sends the picture in several passes, and its first
+ * pass for each component is the DC coefficients alone, optionally with the low
+ * Al bits held back for a later refinement pass. That pass is the same block
+ * average at slightly coarser precision, so the decoder reads it and stops. The
+ * refinement and AC passes after it are never needed. TMDB serves a mix of
+ * baseline and progressive files at /t/p/w92.
+ *
+ * What it refuses: arithmetic coding, lossless and hierarchical JPEG, CMYK, a
+ * progressive file whose first pass for a component is missing, malformed or
+ * cut short, and anything that is not a JPEG. Those return null and the caller
+ * stores no color, which is the same path a failed download takes.
  */
 
 export interface PosterColors {
@@ -44,8 +51,12 @@ const DHT = 0xc4;
 
 /** Start-of-frame markers this decoder accepts: baseline and extended sequential. */
 const SUPPORTED_SOF = new Set([0xc0, 0xc1]);
-/** Every other SOF is progressive, lossless, or arithmetic-coded. */
-const UNSUPPORTED_SOF = new Set([0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
+/** Progressive, Huffman-coded. Only its first DC pass is read. */
+const PROGRESSIVE_SOF = 0xc2;
+/** Every other SOF is lossless, hierarchical, or arithmetic-coded. */
+const UNSUPPORTED_SOF = new Set([0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
+/** Largest point transform (Al) the JPEG spec allows in a progressive pass. */
+const MAX_DC_SHIFT = 13;
 
 interface HuffTable {
   mincode: Int32Array;
@@ -118,6 +129,9 @@ function decodeUnsafe(data: Uint8Array): BlockImage | null {
     components: FrameComponent[];
   } | null = null;
   let restartInterval = 0;
+  let progressive = false;
+  /** Progressive only: components whose first DC pass has been read in full. */
+  const dcRead = new Set<FrameComponent>();
 
   let p = 2;
   while (p < data.length) {
@@ -159,7 +173,10 @@ function decodeUnsafe(data: Uint8Array): BlockImage | null {
       }
     } else if (UNSUPPORTED_SOF.has(marker)) {
       return null;
-    } else if (SUPPORTED_SOF.has(marker)) {
+    } else if (SUPPORTED_SOF.has(marker) || marker === PROGRESSIVE_SOF) {
+      progressive = marker === PROGRESSIVE_SOF;
+      // A 12-bit progressive file would need a different level shift.
+      if (progressive && data[segStart] !== 8) return null;
       const height = (data[segStart + 1] << 8) | data[segStart + 2];
       const width = (data[segStart + 3] << 8) | data[segStart + 4];
       const count = data[segStart + 5];
@@ -217,6 +234,54 @@ function decodeUnsafe(data: Uint8Array): BlockImage | null {
       }
     } else if (marker === DRI) {
       restartInterval = (data[segStart] << 8) | data[segStart + 1];
+    } else if (marker === SOS && progressive && frame) {
+      // Progressive: read each component's first DC pass, skip everything else,
+      // and stop as soon as every component has its block averages.
+      const scanCount = data[segStart];
+      if (scanCount < 1 || length < 6 + scanCount * 2) return null;
+      const scan: FrameComponent[] = [];
+      for (let i = 0; i < scanCount; i++) {
+        const comp = frame.components.find((c) => c.id === data[segStart + 1 + i * 2]);
+        if (!comp || scan.includes(comp)) return null;
+        scan.push(comp);
+      }
+      const o = segStart + 1 + scanCount * 2;
+      const ss = data[o];
+      const se = data[o + 1];
+      const ah = data[o + 2] >> 4;
+      const al = data[o + 2] & 15;
+      const isFirstDcPass = ss === 0 && se === 0 && ah === 0;
+      if (!isFirstDcPass) {
+        // An AC pass (ss > 0) or a DC refinement (ah > 0). Neither is needed,
+        // but the spec puts the first DC pass before both, so one arriving
+        // ahead of it means a file this decoder does not understand.
+        if ((ss === 0 && se !== 0) || scan.some((c) => !dcRead.has(c))) return null;
+        p = nextMarker(data, segEnd);
+        continue;
+      }
+      if (al > MAX_DC_SHIFT || scan.some((c) => dcRead.has(c))) return null;
+      for (let i = 0; i < scanCount; i++) {
+        const comp = scan[i];
+        comp.dcTable = data[segStart + 2 + i * 2] >> 4;
+        if (!dcTables[comp.dcTable] || !quant[comp.quantId]) return null;
+        comp.pred = 0;
+      }
+      const read = decodeScan(
+        data,
+        segEnd,
+        frame,
+        scan,
+        dcTables,
+        acTables,
+        quant,
+        restartInterval,
+        al,
+      );
+      if (!read.complete) return null;
+      for (const c of scan) dcRead.add(c);
+      if (dcRead.size === frame.components.length) return compose(frame);
+      p = read.next;
+      continue;
     } else if (marker === SOS) {
       if (!frame) return null;
       const scanCount = data[segStart];
@@ -230,17 +295,27 @@ function decodeUnsafe(data: Uint8Array): BlockImage | null {
         comp.acTable = tables & 15;
         scan.push(comp);
       }
-      p = decodeScan(data, segEnd, frame, scan, dcTables, acTables, quant, restartInterval);
+      p = decodeScan(data, segEnd, frame, scan, dcTables, acTables, quant, restartInterval).next;
       continue;
     }
     p = segEnd;
   }
 
   if (!frame) return null;
+  // A progressive file that ended before every component's DC pass has
+  // nothing honest to report.
+  if (progressive) return null;
   return compose(frame);
 }
 
-/** Decode one entropy-coded scan, DC only. Returns the offset of the next marker. */
+/**
+ * Decode one entropy-coded scan, DC only. Returns the offset of the next marker,
+ * and whether every block of the scan was read before the data ran out.
+ *
+ * `dcShift` is -1 for a baseline scan, which also carries the AC coefficients
+ * to skip. For the first DC pass of a progressive file it is that pass's Al:
+ * the pass holds DC >> Al and nothing else.
+ */
 function decodeScan(
   data: Uint8Array,
   start: number,
@@ -258,7 +333,8 @@ function decodeScan(
   acTables: (HuffTable | null)[],
   quant: (Int32Array | null)[],
   restartInterval: number,
-): number {
+  dcShift = -1,
+): { next: number; complete: boolean } {
   let pos = start;
   let bitBuf = 0;
   let bitCount = 0;
@@ -321,8 +397,10 @@ function decodeScan(
     comp.pred += diff;
     const q = quant[comp.quantId]?.[0] ?? 1;
     if (row < comp.blocksPerColumn && col < comp.blocksPerLine) {
-      comp.plane[row * comp.blocksPerLine + col] = comp.pred * q;
+      const dc = dcShift > 0 ? comp.pred * (1 << dcShift) : comp.pred;
+      comp.plane[row * comp.blocksPerLine + col] = dc * q;
     }
+    if (dcShift >= 0) return;
     // Skip the 63 AC coefficients. They still have to be Huffman-decoded to
     // advance the bit stream, but nothing is kept.
     const ac = acTables[comp.acTable];
@@ -389,7 +467,12 @@ function decodeScan(
   }
 
   // Walk to the next real marker so the segment loop can carry on.
-  let q = Math.max(pos, start);
+  return { next: nextMarker(data, Math.max(pos, start)), complete: !hitMarker };
+}
+
+/** Offset of the next marker that is not a restart marker, or the end of the data. */
+function nextMarker(data: Uint8Array, from: number): number {
+  let q = from;
   while (q + 1 < data.length) {
     if (data[q] === 0xff && data[q + 1] !== 0x00 && !(data[q + 1] >= 0xd0 && data[q + 1] <= 0xd7)) {
       return q;
