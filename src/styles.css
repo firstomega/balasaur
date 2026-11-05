@@ -341,6 +341,13 @@
   border-radius: 4px;
 }
 
+/* The condensed display cut sets words close; without a little air "Ranked
+   lists" reads as one word. Outside the layers so every display heading
+   gets it without a class of its own. */
+.font-display {
+  word-spacing: 0.06em;
+}
+
 .arcade-focus:focus-visible {
   outline: 2px solid var(--game, var(--primary));
   outline-offset: 3px;

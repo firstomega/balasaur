@@ -42,7 +42,7 @@ export function ListTile({
         className,
       )}
     >
-      <span className="relative z-10 max-w-[68%] text-balance font-display text-xl font-extrabold leading-none tracking-tight [word-spacing:0.04em] md:text-2xl">
+      <span className="relative z-10 max-w-[68%] text-balance font-display text-xl font-extrabold leading-none tracking-tight md:text-2xl">
         {title}
       </span>
       <span className="relative z-10 mt-auto max-w-[68%] pt-2 text-sm font-semibold leading-tight">

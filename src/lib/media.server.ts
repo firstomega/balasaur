@@ -2628,6 +2628,13 @@ export async function fetchMediaDetail(
           if (cached.relatedVersion !== RELATED_ENGINE_VERSION) {
             await attachRelatedRails(cached);
             await writeDetailCache(cacheId, type, id, cached);
+          } else {
+            // Rails cached before tile swatches existed carry none, and the
+            // cards would all render on the paper surface. One lookup paints
+            // them; a rail that already has its swatches skips it.
+            await attachSwatches([...(cached.related ?? []), ...(cached.relatedCross ?? [])]).catch(
+              () => undefined,
+            );
           }
           return cached;
         }

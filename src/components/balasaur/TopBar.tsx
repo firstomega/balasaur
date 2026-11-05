@@ -83,8 +83,8 @@ export function TopBar() {
         {/* Wordmark */}
         <Link to="/" className="flex shrink-0 items-center gap-2 text-text-bright">
           <DinoMark className="h-6 w-6 text-primary" />
-          {/* On very narrow phones the glyph carries the brand alone, so the
-              bar never outgrows the screen. */}
+          {/* Below 400px the glyph carries the brand alone, so the bar never
+              outgrows the screen. */}
           <span className="font-display text-2xl font-extrabold lowercase leading-none tracking-tight max-[399px]:hidden">
             balasaur
           </span>

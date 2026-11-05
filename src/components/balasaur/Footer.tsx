@@ -11,7 +11,7 @@ export function Footer() {
           {/* The site's one tagline, held in src/lib/seo.ts so the footer, the
               signed-out hero, the share card and the meta description cannot
               say four different things again. */}
-          <p className="pb-1 font-display text-xl font-extrabold leading-tight tracking-tight text-text-bright md:text-2xl">
+          <p className="pb-1 font-display text-xl font-extrabold leading-tight text-text-bright md:text-2xl">
             {SITE_TAGLINE}.
           </p>
           <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>

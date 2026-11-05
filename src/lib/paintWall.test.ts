@@ -36,13 +36,14 @@ describe("paintTiles", () => {
     ).toEqual(["gold", "sky", "pink"]);
   });
 
-  it("keeps the repeat when the leader has no second swatch", () => {
+  it("puts a repeat with no second swatch on paper, which breaks the run", () => {
     expect(
       paintTiles([
         { swatch: "noir", swatchAlt: null },
         { swatch: "noir", swatchAlt: null },
+        { swatch: "noir", swatchAlt: null },
       ]),
-    ).toEqual(["noir", "noir"]);
+    ).toEqual(["noir", null, "noir"]);
   });
 
   it("gives a leader with no swatch, or no leader, the paper tile", () => {

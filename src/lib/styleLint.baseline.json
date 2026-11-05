@@ -1,7 +1,7 @@
 {
   "totals": {
     "fontSize": 839,
-    "radius": 303,
+    "radius": 302,
     "duration": 4,
     "easing": 8,
     "hex": 249,
@@ -153,9 +153,6 @@
       "fontSize": 30,
       "radius": 16,
       "containerWidth": 4
-    },
-    "src/components/balasaur/MediaCardSkeleton.tsx": {
-      "radius": 1
     },
     "src/components/balasaur/MediaDetail.tsx": {
       "fontSize": 38,
