@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "bun test src",
     "style:baseline": "STYLE_BASELINE=write bun test src/lib/styleLint.test.ts",
+    "copy:baseline": "COPY_BASELINE=write bun test src/lib/copyLint.test.ts",
     "typecheck": "tsc --noEmit",
     "layout": "bun scripts/layout-check.ts",
     "format": "prettier --write ."

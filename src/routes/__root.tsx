@@ -23,7 +23,13 @@ import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
 import { Toaster } from "@/components/ui/sonner";
 import { DinoMark } from "@/components/balasaur/DinoMark";
 import { DinoRun } from "@/components/balasaur/DinoRun";
-import { SITE_ORIGIN, SITE_NAME, SITE_TAGLINE, DEFAULT_OG_IMAGE, jsonLdScript } from "@/lib/seo";
+import {
+  SITE_ORIGIN,
+  SITE_NAME,
+  SITE_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  jsonLdScript,
+} from "@/lib/seo";
 
 // The top bar belongs to the shell, not to each page. One route refuses it:
 // /watched is a full-viewport rating deck that draws its own header with an
@@ -117,23 +123,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Balasaur" },
       {
         name: "description",
-        content:
-          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+        content: SITE_DESCRIPTION,
       },
       { name: "author", content: "Balasaur" },
       { property: "og:title", content: "Balasaur" },
       {
         property: "og:description",
-        content:
-          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+        content: SITE_DESCRIPTION,
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Balasaur" },
       {
         name: "twitter:description",
-        content:
-          "Your personal entertainment database. Discover, track, and rate movies and TV all in one place.",
+        content: SITE_DESCRIPTION,
       },
       { property: "og:image", content: DEFAULT_OG_IMAGE },
       { name: "twitter:image", content: DEFAULT_OG_IMAGE },
@@ -144,7 +147,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         "@context": "https://schema.org",
         "@type": "WebSite",
         name: SITE_NAME,
-        description: `${SITE_TAGLINE}. Discover, track, and rate movies and TV.`,
+        description: SITE_DESCRIPTION,
         url: SITE_ORIGIN,
       }),
     ],

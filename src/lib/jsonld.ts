@@ -2,7 +2,7 @@
 // rich results and make pages citable by AI answer engines. All fields are
 // optional-safe — missing data is simply omitted.
 import type { MediaDetail, PersonDetail } from "@/types/media";
-import { SITE_NAME, SITE_ORIGIN, SITE_TAGLINE } from "./seo";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_ORIGIN } from "./seo";
 
 function dropEmpty<T extends Record<string, unknown>>(obj: T): T {
   for (const k of Object.keys(obj)) {
@@ -84,7 +84,7 @@ export function websiteJsonLd(): Record<string, unknown> {
     "@type": "WebSite",
     name: SITE_NAME,
     url: SITE_ORIGIN,
-    description: `${SITE_TAGLINE}. Discover, track, and rate movies and TV.`,
+    description: SITE_DESCRIPTION,
     publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_ORIGIN },
   };
 }

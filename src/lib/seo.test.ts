@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { clampDescription, composeTitle, detailMeta, personMeta } from "./seo";
+import { clampDescription, composeTitle, detailMeta, personMeta, SITE_DESCRIPTION } from "./seo";
 import type { PersonCatalog } from "@/types/media";
 
 describe("composeTitle", () => {
@@ -60,8 +60,11 @@ describe("clampDescription", () => {
     expect(clampDescription(t, 40)).toBe("Short one.");
   });
 
-  it("falls back to the tagline with no text", () => {
-    expect(clampDescription(undefined)).toContain("Discover, track, and rate");
+  it("falls back to the tagline and its backing with no text", () => {
+    expect(clampDescription(undefined)).toBe(SITE_DESCRIPTION);
+    expect(SITE_DESCRIPTION.length).toBeLessThanOrEqual(160);
+    // The fallback is returned as is, so it has to survive its own clamp.
+    expect(clampDescription(SITE_DESCRIPTION)).toBe(SITE_DESCRIPTION);
   });
 });
 

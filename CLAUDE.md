@@ -110,6 +110,36 @@ problem here; it is an existential one, because thin derivative content is
 exactly what gets a database site rejected by ad networks and demoted by
 search.
 
+Punchy and quippy are the same failure: a slogan or a joke standing where a
+fact should be. It happens when copy is written to fill a slot, a big heading
+over every section and a line under every heading, rather than because there
+is something to say. The house generators avoid it because a sentence exists
+only when its fact is notable, and is left out otherwise.
+
+**Check:** Is this line a plain label for what sits below it, or a fact that
+would change if the data changed? If neither, delete it, and delete the slot
+if nothing else is in it.
+
+**Check:** Is the subject a title, a person, a list, or a number about them?
+Never the site, the interface, or the reader. "You" may own data ("You have
+seen 12 of these 60") but is never told who they are or what they want.
+About, Methodology and the legal pages may describe the mechanism; that is
+their job.
+
+**Check:** Is it free of questions in headings, runs of short fragments,
+wordplay, and figurative verbs ("says," "wears," "folds")? The verbs are
+plain: leads, scores, streams on, is from.
+
+**Check:** Can I name the field or query behind every count and claim? Counts
+are rendered from the data, never typed by hand.
+
+_The Colour Shelf prototype gave every section a label and a big heading, so
+most headings had to be slogans: "Is it worth two hours? One number says.",
+"Tap a colour, get a ranked list", "Quick games for people who watch a lot."
+Its confident lines were also its wrong ones: "16 ranked lists" (there are 782) and "What everyone is looking up" (the rail is sorted by TMDB
+popularity). The voice to copy was already on the site: "Spider-Man: Into the
+Spider-Verse leads at 87, ahead of Aliens (85) and Top Gun: Maverick (84)."_
+
 ### 5. Judge the rendered page, not the component
 
 Correct code and a good page are different achievements. Density, grouping,
@@ -254,9 +284,10 @@ Run through this before saying a change is done.
 2. **Subtraction.** What did I remove?
 3. **Rendered check.** Seen at 390px and 1440px with real data, or explicitly
    stated as unverified and why.
-4. **Copy pass.** No em-dashes, no mechanism-explaining, no adjective padding
-   in any user-visible string, including empty states, tooltips, aria-labels,
-   page titles, and meta descriptions.
+4. **Copy pass.** No em-dashes, no mechanism-explaining, no adjective padding,
+   and every line passes the four Principle 4 voice checks (label or fact,
+   subject, shape, source), in any user-visible string, including empty
+   states, tooltips, aria-labels, page titles, and meta descriptions.
 5. **Number check.** Every visible number is reconstructable from the page.
 6. **Data check.** Looked at actual output rows, not just the query. Ranked
    output was eyeballed for titles a real person would recognize. **When the
