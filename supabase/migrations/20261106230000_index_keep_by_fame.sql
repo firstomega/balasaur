@@ -1,4 +1,8 @@
--- NOT APPLIED: apply in Supabase before merging this PR
+-- Applied live on 2026-11-06 (Supabase migration "index_keep_by_fame"), before
+-- this PR merged. Read back: 5,028 titles in index_kept_media, and both IMDb
+-- conditions answered by index-only scans. The begin/commit below are the
+-- record of the transaction; the live apply ran the same statements as one
+-- migration.
 --
 -- Offer Google the titles people know by name, not only the ones TMDB users
 -- happen to rate. Additive: every title kept today stays kept.
