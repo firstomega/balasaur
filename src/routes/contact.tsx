@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SITE_ORIGIN, canonicalLink, buildMeta, cacheSsrResponse } from "@/lib/seo";
+import { ReadingPage, ReadingSection, READING_LINK } from "@/components/balasaur/ReadingPage";
 
 const CONTACT_EMAIL = "baladan@sentire-labs.com";
 
@@ -23,44 +24,29 @@ export const Route = createFileRoute("/contact")({
 
 function ContactPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <main id="main" className="mx-auto w-full max-w-article flex-1 px-4 py-12">
-        <h1 className="text-[28px] font-bold tracking-tight text-text-bright">Contact</h1>
-        <p className="mt-2 text-[15px] text-text-muted">
-          Balasaur is run by one person, and that person reads this inbox.
+    <ReadingPage
+      title="Contact"
+      dek="Balasaur is run by one person, and that person reads this inbox."
+    >
+      <ReadingSection title="Email">
+        <p>
+          <a href={`mailto:${CONTACT_EMAIL}`} className={`${READING_LINK} break-all`}>
+            {CONTACT_EMAIL}
+          </a>
         </p>
+        <p>Expect a reply within a few days.</p>
+      </ReadingSection>
 
-        <div className="mt-10 space-y-12">
-          <section>
-            <h2 className="text-[18px] font-semibold text-text-bright">Email</h2>
-            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
-              <p>
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="text-[16px] font-semibold text-text-bright underline underline-offset-2"
-                >
-                  {CONTACT_EMAIL}
-                </a>
-              </p>
-              <p>Expect a reply within a few days.</p>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-[18px] font-semibold text-text-bright">Worth writing about</h2>
-            <div className="mt-3 space-y-4 text-[15px] leading-relaxed text-text">
-              <p>
-                A wrong or stale fact. Scores and streaming availability refresh on a rolling
-                nightly cycle that works through the catalog oldest first, so a correction made
-                upstream reaches the page on its own. When the source is still wrong, say what is
-                wrong and on which page, and it gets fixed at the source.
-              </p>
-              <p>Licensing, data, and press inquiries.</p>
-              <p>Anything broken. A page that scrolls sideways, a ranking that makes no sense.</p>
-            </div>
-          </section>
-        </div>
-      </main>
-    </div>
+      <ReadingSection title="Worth writing about">
+        <p>
+          A wrong or stale fact. Scores and streaming availability refresh on a rolling nightly
+          cycle that works through the catalog oldest first, so a correction made upstream reaches
+          the page on its own. When the source is still wrong, say what is wrong and on which page,
+          and it gets fixed at the source.
+        </p>
+        <p>Licensing, data, and press inquiries.</p>
+        <p>Anything broken. A page that scrolls sideways, a ranking that makes no sense.</p>
+      </ReadingSection>
+    </ReadingPage>
   );
 }

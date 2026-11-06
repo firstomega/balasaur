@@ -1,11 +1,11 @@
 {
   "totals": {
-    "fontSize": 565,
+    "fontSize": 528,
     "radius": 214,
     "duration": 4,
     "easing": 8,
     "hex": 243,
-    "containerWidth": 66
+    "containerWidth": 65
   },
   "files": {
     "src/components/arcade/BinSort.tsx": {
@@ -227,9 +227,6 @@
       "fontSize": 10,
       "radius": 6
     },
-    "src/routes/about.tsx": {
-      "fontSize": 10
-    },
     "src/routes/account.tsx": {
       "fontSize": 30,
       "radius": 8,
@@ -245,9 +242,6 @@
     },
     "src/routes/collections.tsx": {
       "fontSize": 1
-    },
-    "src/routes/contact.tsx": {
-      "fontSize": 7
     },
     "src/routes/dev.arcade.tsx": {
       "fontSize": 33,
@@ -269,10 +263,6 @@
     },
     "src/routes/lists.tsx": {
       "fontSize": 1
-    },
-    "src/routes/methodology.tsx": {
-      "fontSize": 14,
-      "containerWidth": 1
     },
     "src/routes/night.$code.tsx": {
       "fontSize": 49,
@@ -339,18 +329,12 @@
       "fontSize": 3,
       "containerWidth": 3
     },
-    "src/routes/privacy.tsx": {
-      "fontSize": 3
-    },
     "src/routes/profile.tsx": {
       "fontSize": 24,
       "radius": 5
     },
     "src/routes/taste.tsx": {
       "fontSize": 7
-    },
-    "src/routes/terms.tsx": {
-      "fontSize": 3
     }
   }
 }
