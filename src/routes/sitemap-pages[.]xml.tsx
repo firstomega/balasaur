@@ -37,6 +37,7 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
           "/contact",
         ];
         const urls: SitemapUrl[] = staticPaths.map((p) => ({ loc: `${SITE_ORIGIN}${p}` }));
+        let partial = false;
 
         try {
           // Paged, like the people and title sitemaps: PostgREST clamps any
@@ -68,9 +69,14 @@ export const Route = createFileRoute("/sitemap-pages.xml")({
         } catch (err) {
           // A DB hiccup shouldn't 500 the sitemap — ship the static section.
           console.error("[sitemap] collections load failed:", err);
+          partial = true;
         }
 
-        return xmlResponse(urlsetXml(urls));
+        // A sitemap missing its lists is sent uncached, so the next fetch
+        // tries again instead of a cache keeping the short one for six hours.
+        const res = xmlResponse(urlsetXml(urls));
+        if (partial) res.headers.set("Cache-Control", "no-store");
+        return res;
       },
     },
   },

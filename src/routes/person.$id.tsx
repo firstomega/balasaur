@@ -14,6 +14,7 @@ import {
   absoluteUrl,
   jsonLdScript,
   cacheSsrResponse,
+  noStoreSsrResponse,
   noindexMeta,
 } from "@/lib/seo";
 import { personJsonLd } from "@/lib/jsonld";
@@ -21,8 +22,6 @@ import { isIndexablePerson } from "@/lib/indexKeep";
 
 export const Route = createFileRoute("/person/$id")({
   loader: async ({ context, params }) => {
-    // Six-hour CDN cache on the SSR'd HTML (person pages are user-agnostic).
-    await cacheSsrResponse();
     // A segment that is not a person id can never resolve. Without this the
     // server function's validator throws and the route answers 500, the same
     // way /movie/$id did before its guard. A bad URL is a 404. The test
@@ -36,7 +35,12 @@ export const Route = createFileRoute("/person/$id")({
     // real TMDB outage, still raises: turning an outage into 404s would invite
     // Google to drop pages that do exist.
     try {
-      return await context.queryClient.ensureQueryData(personDetailQueryOptions(params.id));
+      const d = await context.queryClient.ensureQueryData(personDetailQueryOptions(params.id));
+      // Six-hour CDN cache on the SSR'd HTML (person pages are user-agnostic),
+      // once the reads have answered. A failed kept-set lookup renders the
+      // default (noindex) and is sent uncached, so it is not kept.
+      await (d.incomplete ? noStoreSsrResponse() : cacheSsrResponse());
+      return d;
     } catch (e) {
       if (/\b404\b/.test(e instanceof Error ? e.message : String(e))) throw notFound();
       throw e;

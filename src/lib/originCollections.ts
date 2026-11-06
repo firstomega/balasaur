@@ -1,5 +1,6 @@
 import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { dataUnavailable } from "./dataError";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
 import type { CollectionDetail, CollectionSummary } from "./collections.functions";
@@ -102,8 +103,9 @@ const POOL_HEADROOM = 20;
 async function fetchOriginPool(
   def: OriginDef,
   mediaType: "movie" | "tv",
-): Promise<{ rows: OriginCandidate[]; total: number } | null> {
-  let q = loose(supabaseAdmin)
+  db: unknown = supabaseAdmin,
+): Promise<{ rows: OriginCandidate[]; total: number }> {
+  let q = loose(db)
     .from("media")
     .select(`${CARD_COLS},overview,rating_balasaur,quality_score,film_length_minutes`, {
       count: "exact",
@@ -127,10 +129,9 @@ async function fetchOriginPool(
   const { data, error, count } = await q
     .order("quality_score", { ascending: false })
     .limit(60 + POOL_HEADROOM);
-  if (error) {
-    console.error(`[origin-collections] pool failed for ${def.slug}:`, error.message);
-    return null;
-  }
+  // A failed read throws: a real country shelf must not answer 404 because
+  // the database blinked.
+  if (error) throw dataUnavailable(`[origin-collections] pool failed for ${def.slug}`, error);
   const fetched = (data ?? []) as unknown as OriginCandidate[];
   const rows = fetched.filter((r) => isRankable(candidateTrustInput(r)));
   return {
@@ -225,11 +226,14 @@ function buildRow(
  * shelf or the gate refuses it. The gate refusing is the feature: a country
  * with fewer than MIN_ITEMS eligible titles gets a 404, not a thin page.
  */
-export async function buildOriginCollection(slug: string): Promise<CollectionDetail | null> {
+export async function buildOriginCollection(
+  slug: string,
+  db: unknown = supabaseAdmin,
+): Promise<CollectionDetail | null> {
   const parsed = parseOriginSlug(slug);
   if (!parsed) return null;
-  const pool = await fetchOriginPool(parsed.def, parsed.mediaType);
-  if (!pool || pool.total < MIN_ITEMS) return null;
+  const pool = await fetchOriginPool(parsed.def, parsed.mediaType, db);
+  if (pool.total < MIN_ITEMS) return null;
   const ranked = displaySort(pool.rows);
   return {
     row: buildRow(parsed.def, parsed.mediaType, ranked, pool.total),
@@ -244,8 +248,9 @@ export async function buildOriginCollection(slug: string): Promise<CollectionDet
 /**
  * Every country shelf that passes the gate, for the hub and the sitemap.
  * Runs the fourteen pools concurrently; each is one indexed read. Shelves
- * that fail or fall under the gate simply do not appear, which is the same
- * "the gate is the curator" posture as the materialized matrix.
+ * that fall under the gate simply do not appear, which is the same "the gate
+ * is the curator" posture as the materialized matrix. A pool that fails to
+ * read throws, so the hub is never cached with shelves quietly missing.
  */
 export async function listOriginCollections(): Promise<CollectionSummary[]> {
   const combos = ORIGIN_DEFS.flatMap(
@@ -258,7 +263,7 @@ export async function listOriginCollections(): Promise<CollectionSummary[]> {
   const built = await Promise.all(
     combos.map(async ({ def, mediaType }): Promise<CollectionSummary | null> => {
       const pool = await fetchOriginPool(def, mediaType);
-      if (!pool || pool.total < MIN_ITEMS) return null;
+      if (pool.total < MIN_ITEMS) return null;
       const ranked = displaySort(pool.rows);
       const row = buildRow(def, mediaType, ranked, pool.total);
       return {

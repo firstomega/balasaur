@@ -18,6 +18,7 @@ import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
 import { bestDecadeOf, pickTopCredits, rankedPool, type PersonCreditFacts } from "./personRanking";
 import { personListTitles } from "./personLists";
+import { dataUnavailable } from "./dataError";
 import { RANKED_MIN_VOTES } from "./trust";
 import { upsertInChunks } from "./chunkedUpsert";
 import {
@@ -2431,10 +2432,9 @@ async function fetchRelatedRail(
     p_media_id: anchorId,
     p_target_type: targetType,
   });
-  if (error) {
-    console.error("[detail] related_titles failed:", error.message);
-    return undefined;
-  }
+  // A failed read throws so attachRelatedRails can tell it from a rail the
+  // gate refused, which returns undefined below.
+  if (error) throw dataUnavailable("[detail] related_titles failed", error);
   const rows = ((data ?? []) as unknown as RelatedRow[]).filter(isStrongMatch);
   if (rows.length < MIN_RELATED_MATCHES) return undefined;
   return rows.slice(0, 12).map((r) => {
@@ -2449,20 +2449,52 @@ async function fetchRelatedRail(
 async function attachRelatedRails(detail: MediaDetail): Promise<void> {
   if (detail.mediaType !== "movie" && detail.mediaType !== "tv") return;
   const other = detail.mediaType === "tv" ? "movie" : "tv";
-  const [own, cross, ctx] = await Promise.all([
+  const reads = await Promise.allSettled([
     fetchRelatedRail(detail.id, detail.mediaType),
     fetchRelatedRail(detail.id, other),
     loose(supabaseAdmin)
       .rpc("title_context", { p_media_id: detail.id })
-      .then(
-        (r) => (r.error ? null : (r.data?.[0] ?? null)),
-        () => null,
-      ),
+      .then((r) => {
+        if (r.error) throw dataUnavailable("[detail] title_context failed", r.error);
+        return (r.data?.[0] ?? null) as TitleContextRow | null;
+      }),
   ]);
+  settleRelatedRails(detail, reads);
+}
+
+interface TitleContextRow {
+  cohort_label?: string | null;
+  percentile?: number | null;
+  cohort_size?: number | null;
+  franchise_rank?: number | null;
+  franchise_size?: number | null;
+}
+
+/**
+ * Writes the rail reads onto the detail. The engine version is stamped only
+ * when all three reads answered, because the stamp is what keeps the payload
+ * for seven days: a timed-out read left unstamped is retried on the next view
+ * instead of serving "no rail" for a week. A read that failed leaves no rail,
+ * as before: what the field held may be TMDB's unfiltered list or an older
+ * engine's rail, and neither may render. A rail the gate refused (fewer than 6
+ * real matches) is an answer, not a failure, and is stamped like any other.
+ */
+export function settleRelatedRails(
+  detail: MediaDetail,
+  [own, cross, ctxRead]: [
+    PromiseSettledResult<MediaItem[] | undefined>,
+    PromiseSettledResult<MediaItem[] | undefined>,
+    PromiseSettledResult<TitleContextRow | null>,
+  ],
+): void {
   // No weak rail: fewer than 6 real matches means no rail at all. This also
   // drops TMDB's raw recommendation list, which had no content filters.
-  detail.related = own;
-  detail.relatedCross = cross;
+  detail.related = own.status === "fulfilled" ? own.value : undefined;
+  detail.relatedCross = cross.status === "fulfilled" ? cross.value : undefined;
+  if (own.status === "rejected" || cross.status === "rejected" || ctxRead.status === "rejected") {
+    return;
+  }
+  const ctx = ctxRead.value;
   // Cohort percentile + franchise standing for the data-prose layer.
   if (ctx) {
     const cohort =
@@ -3010,6 +3042,7 @@ async function attachPersonLists(detail: PersonDetail): Promise<void> {
  *  same answer the sitemap gives a person it cannot confirm. */
 async function attachPersonIndexable(detail: PersonDetail): Promise<void> {
   delete detail.indexable;
+  delete detail.incomplete;
   const personId = Number.parseInt(detail.id, 10);
   if (!Number.isFinite(personId)) return;
   try {
@@ -3020,11 +3053,13 @@ async function attachPersonIndexable(detail: PersonDetail): Promise<void> {
       .maybeSingle();
     if (error) {
       console.error("[person] kept-set lookup failed:", error.message);
+      detail.incomplete = true;
       return;
     }
     detail.indexable = Boolean(data);
   } catch (e) {
     console.error("[person] kept-set lookup failed:", e);
+    detail.incomplete = true;
   }
 }
 

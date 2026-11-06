@@ -149,6 +149,9 @@ export interface PersonDetail {
    *  (person_index_kept, see src/lib/indexKeep.ts). Read on every request,
    *  never trusted from the cache; absent when the lookup failed. */
   indexable?: boolean;
+  /** Set when that lookup failed: the page renders its default (noindex) but
+   *  is sent uncached, so the guess is never kept. Cleared on every read. */
+  incomplete?: true;
   /** Leading and directing credits, from person_stats(). Never rendered: this
    *  is the index gate only, and it counts a person only where they are
    *  top-billed or directing, which is the wrong number to print. The numbers
