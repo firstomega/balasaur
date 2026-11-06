@@ -146,6 +146,12 @@ export interface MediaDetail extends MediaItem {
 export interface PersonCredit extends MediaItem {
   role?: string;
   episodes?: number;
+  /** Whether the catalog holds this title, set on every read by the catalog
+   *  join. False means the row is printed without a link: a title outside
+   *  the catalog has no page worth sending anyone to, and each such link was
+   *  a door crawlers walked through into a live TMDB call. Absent means the
+   *  join did not run or failed, and the row keeps its link. */
+  inCatalog?: boolean;
 }
 
 export interface PersonCreditGroup {
