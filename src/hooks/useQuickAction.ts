@@ -16,7 +16,8 @@ import {
  * What the "more" menu's three entries do: Watchlist and Seen toggle, Hide
  * toggles with an undo. Saving works signed out; useUserStatus keeps the pick
  * locally and moves it into the account on sign-in. The toast names the entry
- * the visitor chose, in the menu's own words. Cards, the home page and the
+ * the visitor chose, in the menu's own words, with the title as the subject:
+ * "Inception added to Watchlist". Cards, the home page and the
  * title page's status buttons all go through this one handler.
  *
  * A Watchlist save carries a View button to /lists, which opens on the
@@ -44,10 +45,9 @@ export function useQuickAction(statuses: StatusMap, recordStatus: RecordStatusFn
       const current = primaryOf(rec);
       if (current === action) {
         recordStatus(item.id, null);
-        toast(
-          action === "want" ? `${item.title} removed from Watchlist` : `Removed · ${item.title}`,
-          { duration: 1400 },
-        );
+        toast(`${item.title} removed from ${action === "want" ? "Watchlist" : "Seen"}`, {
+          duration: 1400,
+        });
       } else if (action === "want") {
         recordStatus(item.id, recordForWant(), item);
         // As long as Hide's Undo, so there is time to reach the button.
@@ -57,7 +57,7 @@ export function useQuickAction(statuses: StatusMap, recordStatus: RecordStatusFn
         });
       } else {
         recordStatus(item.id, recordForWatched(rec), item);
-        toast.success(`Seen · ${item.title}`, { duration: 1400 });
+        toast.success(`${item.title} marked Seen`, { duration: 1400 });
       }
     },
     [statuses, recordStatus, navigate],
