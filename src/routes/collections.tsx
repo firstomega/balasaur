@@ -30,12 +30,15 @@ import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 
 export const Route = createFileRoute("/collections")({
   loader: async () => {
+    // Cached only once the lists have been read. A failed read throws to the
+    // dead end below, which is sent no-store (src/server.ts).
+    const collections = await listCollections();
     await cacheSsrResponse();
     // The month decides which occasions lead. Decided here, once, in UTC, so
     // the cached page and every client's first render agree. Read from the
     // viewer's clock it differed across the month boundary and the server
     // and client rendered different sections.
-    return { collections: await listCollections(), month: new Date().getUTCMonth() + 1 };
+    return { collections, month: new Date().getUTCMonth() + 1 };
   },
   head: () => ({
     meta: buildMeta({

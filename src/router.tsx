@@ -51,6 +51,11 @@ export const getRouter = () => {
     // reads the swap as instant and a flash of loading state is worse than
     // none, so nothing is shown. Once shown it stays 300ms so a load that
     // resolves right after the threshold cannot strobe.
+    // A route without its own error page (the calendar, a list) gets the
+    // root's, which never prints the raw error. The framework's fallback has
+    // a "Show Error" button that prints it, database message and all.
+    defaultErrorComponent: routeTree.options.errorComponent || undefined,
+
     defaultPendingComponent: PendingPage,
     defaultPendingMs: 150,
     defaultPendingMinMs: 300,

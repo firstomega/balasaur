@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { dataUnavailable } from "./dataError";
 import { CARD_COLS, rowToCardItem, type CardRow } from "./catalog.functions";
 import type { CollectionRow } from "./collectionsProse";
 import { buildOriginCollection, listOriginCollections } from "./originCollections";
@@ -130,16 +131,7 @@ function leadOf(ids: string[], byId: Map<string, PosterRef>): TileLead | null {
 
 export const listCollections = createServerFn({ method: "GET" }).handler(
   async (): Promise<CollectionSummary[]> => {
-    const { data, error } = await loose(supabaseAdmin)
-      .from("collections")
-      .select(
-        "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids, top_titles, season_months, media_type",
-      )
-      .order("item_count", { ascending: false });
-    if (error || !data) {
-      if (error) console.error("[collections] list failed:", error.message);
-      return [];
-    }
+    const data = await readCollectionRows(supabaseAdmin);
     const rows = data as unknown as (CollectionRow & {
       poster_ids: string[];
       top_titles: TopTitle[] | null;
@@ -243,6 +235,19 @@ export const listHomeCollections = createServerFn({ method: "GET" }).handler(
   },
 );
 
+/** Every materialized list for the hub. A failed read throws; an empty
+ *  table is an empty hub. `db` is passed in so a test can stub it. */
+export async function readCollectionRows(db: unknown): Promise<unknown[]> {
+  const { data, error } = await loose(db)
+    .from("collections")
+    .select(
+      "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, poster_ids, top_titles, season_months, media_type",
+    )
+    .order("item_count", { ascending: false });
+  if (error) throw dataUnavailable("[collections] list failed", error);
+  return data ?? [];
+}
+
 /** Where a retired collection slug now points, or null if it was never used. */
 export const getCollectionRedirect = createServerFn({ method: "GET" })
   .inputValidator((p: { slug: string }) => p)
@@ -254,7 +259,10 @@ export const getCollectionRedirect = createServerFn({ method: "GET" })
       .select("to_slug")
       .eq("from_slug", slug)
       .maybeSingle();
-    if (error || !data) return null;
+    // A failed read is not "never used": answering 404 would tell Google a
+    // retired slug with a live 301 is gone.
+    if (error) throw dataUnavailable("[collections] redirect lookup failed", error);
+    if (!data) return null;
     return (data as { to_slug: string }).to_slug;
   });
 
@@ -267,6 +275,9 @@ export interface CollectionDetail {
    *  country shelf that passed its own gate. Absent when the lookup failed,
    *  which the page treats as not kept. See src/lib/indexKeep.ts. */
   indexable?: boolean;
+  /** A secondary read failed (the kept-set lookup or the person backlink), so
+   *  the page renders with its default and must not be cached. */
+  incomplete?: true;
 }
 
 /**
@@ -275,23 +286,27 @@ export interface CollectionDetail {
  * which is the id the person page is served under. Nothing when the roster
  * row has no id: a name match alone could point at a namesake.
  */
-async function personForList(title: string): Promise<CollectionDetail["person"]> {
+async function personForList(
+  title: string,
+  db: unknown,
+): Promise<CollectionDetail["person"] | "failed"> {
   const name = personNameFromListTitle(title);
   if (!name) return undefined;
-  const { data, error } = await loose(supabaseAdmin)
+  const { data, error } = await loose(db)
     .from("person_collection_roster")
     .select("person_name, person_id")
     .eq("person_name", name)
     .not("person_id", "is", null)
     .limit(1);
   const r = (data as { person_name: string; person_id: number }[] | null)?.[0];
-  if (error || !r) return undefined;
+  if (error) return "failed";
+  if (!r) return undefined;
   return { id: r.person_id, name: r.person_name };
 }
 
 /** Is this materialized list in the kept set? undefined when the read fails. */
-async function listIsKept(slug: string): Promise<boolean | undefined> {
-  const { data, error } = await loose(supabaseAdmin)
+async function listIsKept(slug: string, db: unknown): Promise<boolean | undefined> {
+  const { data, error } = await loose(db)
     .from("collection_index_kept")
     .select("kept")
     .eq("slug", slug)
@@ -305,45 +320,58 @@ async function listIsKept(slug: string): Promise<boolean | undefined> {
 
 export const getCollection = createServerFn({ method: "GET" })
   .inputValidator((p: { slug: string }) => p)
-  .handler(async ({ data: p }): Promise<CollectionDetail | null> => {
-    const slug = (p.slug ?? "").toLowerCase();
-    if (!/^[a-z0-9-]{3,80}$/.test(slug)) return null;
+  .handler(({ data: p }) => readCollection(p.slug, supabaseAdmin));
 
-    const { data: row, error } = await loose(supabaseAdmin)
-      .from("collections")
-      .select(
-        "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, updated_at",
-      )
+/** One list and its ranked titles, or null when no such list exists. A failed
+ *  read of the list or its titles throws, so a database blip is an error page
+ *  rather than a 404 or an empty list. `db` is passed in so a test can stub it. */
+export async function readCollection(
+  rawSlug: string,
+  db: unknown,
+): Promise<CollectionDetail | null> {
+  const slug = (rawSlug ?? "").toLowerCase();
+  if (!/^[a-z0-9-]{3,80}$/.test(slug)) return null;
+
+  const { data: row, error } = await loose(db)
+    .from("collections")
+    .select(
+      "slug, kind, title, item_count, top_score, median_score, newest_title, newest_date, updated_at",
+    )
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw dataUnavailable("[collections] list read failed", error);
+  if (!row) {
+    // Not in the materialized matrix: try the request-time country shelves
+    // (best-japanese-movies and kin). Returns null, and the route 404s,
+    // when the slug is not a country shelf or the quality gate refuses it.
+    return buildOriginCollection(slug, db);
+  }
+
+  const [{ data: itemRows, error: itemsErr }, indexable] = await Promise.all([
+    loose(db)
+      .from("collection_items")
+      .select(`rank, media:media_id ( ${CARD_COLS} )`)
       .eq("slug", slug)
-      .maybeSingle();
-    if (error) return null;
-    if (!row) {
-      // Not in the materialized matrix: try the request-time country shelves
-      // (best-japanese-movies and kin). Returns null, and the route 404s,
-      // when the slug is not a country shelf or the quality gate refuses it.
-      return buildOriginCollection(slug);
-    }
+      .order("rank", { ascending: true }),
+    listIsKept(slug, db),
+  ]);
+  if (itemsErr) throw dataUnavailable("[collections] items failed", itemsErr);
 
-    const [{ data: itemRows, error: itemsErr }, indexable] = await Promise.all([
-      loose(supabaseAdmin)
-        .from("collection_items")
-        .select(`rank, media:media_id ( ${CARD_COLS} )`)
-        .eq("slug", slug)
-        .order("rank", { ascending: true }),
-      listIsKept(slug),
-    ]);
-    if (itemsErr) {
-      console.error("[collections] items failed:", itemsErr.message);
-      return { row: row as CollectionRow, items: [], indexable: false };
-    }
-
-    const items = ((itemRows ?? []) as unknown as { rank: number; media: CardRow | null }[])
-      .filter((r) => r.media)
-      .map((r) => rowToCardItem(r.media as CardRow));
-    const collection = row as CollectionRow;
-    const person = collection.kind === "person" ? await personForList(collection.title) : undefined;
-    return { row: collection, items, indexable, ...(person ? { person } : {}) };
-  });
+  const items = ((itemRows ?? []) as unknown as { rank: number; media: CardRow | null }[])
+    .filter((r) => r.media)
+    .map((r) => rowToCardItem(r.media as CardRow));
+  const collection = row as CollectionRow;
+  const person =
+    collection.kind === "person" ? await personForList(collection.title, db) : undefined;
+  const incomplete = indexable === undefined || person === "failed";
+  return {
+    row: collection,
+    items,
+    indexable,
+    ...(person && person !== "failed" ? { person } : {}),
+    ...(incomplete ? { incomplete: true as const } : {}),
+  };
+}
 
 /** One slot on a shelf: the rank and the card that holds it. */
 export interface ShelfSlot {
@@ -705,9 +733,10 @@ export const getRelatedCollections = createServerFn({ method: "GET" })
         if (originPart === "korean" && suffix === "shows") {
           res = [...(await fetchSlugs(["best-k-dramas"])), ...res];
         }
+        // A failed read of the sibling costs one link, not the page.
         const sibling = await buildOriginCollection(
           `best-${originPart}-${suffix === "movies" ? "shows" : "movies"}`,
-        );
+        ).catch(() => null);
         if (sibling) {
           res = [
             ...res,
