@@ -1,35 +1,37 @@
 import { useCallback, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bookmark, Check, EyeOff, MoreHorizontal, Trophy } from "lucide-react";
-import type { MediaItem, MediaType } from "@/types/media";
+import { Bookmark, Check, MoreHorizontal, Trophy } from "lucide-react";
+import type { MediaItem } from "@/types/media";
 import { cn } from "@/lib/utils";
 import { displayYear } from "@/lib/mediaFormat";
 import { mediaSlug } from "@/lib/slug";
 import { trustedScore } from "@/lib/trust";
+import { swatchSurface } from "@/lib/swatchSurface";
 import { ScoreBadge } from "./ScoreBadge";
+import { MetaLine } from "./MetaLine";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
-import { posterLightVars, safeHex } from "@/lib/posterLight";
-
-const TYPE_LABEL: Record<MediaType, string> = {
-  movie: "MOVIE",
-  tv: "TV",
-  book: "BOOK",
-  podcast: "POD",
-};
-
-const TYPE_COLOR_CLASS: Record<MediaType, string> = {
-  movie: "text-media-movie",
-  tv: "text-media-tv",
-  book: "text-media-book",
-  podcast: "text-media-podcast",
-};
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type QuickAction = "want" | "watched" | "notInterested";
 
+/**
+ * A title as a Colour Shelf card: the poster on a card painted in the poster's
+ * own swatch, the title and year in that swatch's ink, and the score sticker on
+ * the poster. A title whose poster has no swatch yet gets the same card on the
+ * neutral paper surface.
+ *
+ * Personal state (Watchlist, Seen, Hide) arrives through props that callers
+ * fill from client-only state, so the server HTML is the same for everyone and
+ * the state appears after mount.
+ */
 export function MediaCard({
   item,
   onQuickAction,
-  onOpenActions,
   saved = false,
   watched = false,
   rejected = false,
@@ -37,33 +39,26 @@ export function MediaCard({
   imgSizes,
   eager = false,
   showVotes = false,
-  tint,
 }: {
   item: MediaItem;
-  /** When provided, shows desktop hover quick actions on the poster: save to
-   *  Watchlist (primary — the high-intent action while browsing) and Watched. */
+  /** When provided, the card carries one "more" control holding Watchlist,
+   *  Seen and Hide. */
   onQuickAction?: (item: MediaItem, action: QuickAction) => void;
-  /** Mobile: opens the bottom action sheet for this title (hover doesn't exist
-   *  on touch, so saving from the grid needs an explicit affordance). */
-  onOpenActions?: (item: MediaItem) => void;
-  /** Current watchlist state, to style the save button as active. */
+  /** Current watchlist state. */
   saved?: boolean;
-  /** Current watched state, to style the watched button as active. */
+  /** Current seen state. */
   watched?: boolean;
-  /** Current not-interested state, to style the hide button as active. */
+  /** Current hidden state. */
   rejected?: boolean;
   /** Rendered bottom-left on the poster (rail rank numerals, date chips, …). */
   posterOverlay?: React.ReactNode;
   /** Override the responsive `sizes` hint (rails render at a fixed width). */
   imgSizes?: string;
-  /** Load the poster eagerly with high priority — for above-the-fold cards
+  /** Load the poster eagerly with high priority, for above-the-fold cards
    *  (the LCP element on grid-heavy pages). */
   eager?: boolean;
-  /** Show vote counts under the Balasaur score. */
+  /** Show the rating count under the score sticker. */
   showVotes?: boolean;
-  /** The poster's dominant color (media.color_a), painted behind the image so a
-   *  lazy poster arrives out of its own color instead of a gray hole. */
-  tint?: string | null;
 }) {
   const rawId = item.id.replace(/^(movie|tv)-/, "");
   // An id-less item must not render a link: an empty route param leaves the
@@ -71,184 +66,186 @@ export function MediaCard({
   // server error from.
   const isLinkable = (item.mediaType === "movie" || item.mediaType === "tv") && /^\d+$/.test(rawId);
   const slug = mediaSlug(rawId, item.title);
+  // A score from one source or a handful of votes is not shown at all.
+  const score = trustedScore(item);
+  const to = item.mediaType === "movie" ? "/movie/$id" : "/tv/$id";
+
+  const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
+  // No year prints nothing rather than a dash standing in for one.
+  const meta = [
+    item.year ? displayYear(item) : "",
+    seasons > 0 ? `${seasons} Season${seasons === 1 ? "" : "s"}` : "",
+  ];
+  const reasons = item.matchReasons ?? [];
 
   return (
-    <article className="group flex flex-col">
+    <article
+      className={cn(
+        // h-full: in a rail or a grid row every card ends at the same height,
+        // whatever its title wraps to.
+        "group relative flex h-full flex-col rounded-xl p-1.5 pb-2 transition-transform duration-base motion-safe:hover:-translate-y-0.5 md:p-2 md:pb-2.5",
+        swatchSurface(item.swatch),
+      )}
+    >
       <div className="relative">
         {isLinkable ? (
-          <Link
-            to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
-            params={{ id: slug }}
-            className="block"
-          >
-            <CardArt
-              item={item}
-              posterOverlay={posterOverlay}
-              imgSizes={imgSizes}
-              eager={eager}
-              showVotes={showVotes}
-              tint={tint}
-            />
+          <Link to={to} params={{ id: slug }} className="block rounded-lg">
+            <CardArt item={item} imgSizes={imgSizes} eager={eager} />
           </Link>
         ) : (
-          <CardArt
-            item={item}
-            posterOverlay={posterOverlay}
-            imgSizes={imgSizes}
-            eager={eager}
-            showVotes={showVotes}
-            tint={tint}
-          />
+          <CardArt item={item} imgSizes={imgSizes} eager={eager} />
+        )}
+
+        {/* One score format everywhere: the sticker or nothing. */}
+        {typeof score === "number" && (
+          <div className="pointer-events-none absolute left-1 top-1 flex flex-col items-start gap-1">
+            <ScoreBadge score={score} className="-rotate-6" />
+            {showVotes && item.voteCount != null && (
+              <span className="rounded-sm bg-background px-1 py-0.5 font-mono text-xs tabular-nums text-text-bright">
+                {Intl.NumberFormat("en-US", { notation: "compact" }).format(item.voteCount)} ratings
+              </span>
+            )}
+          </div>
         )}
 
         {onQuickAction && (
-          // Desktop-only quick actions; mobile uses the swipe deck / detail page.
-          // Want to Watch leads — while browsing, "save for later" is the
-          // high-intent action; Watched is what you do after.
-          <div className="absolute bottom-2 left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onQuickAction(item, "want");
-              }}
-              aria-label={saved ? "On your watchlist (click to remove)" : "Save to watchlist"}
-              aria-pressed={saved}
-              title={saved ? "On your watchlist" : "Want to Watch"}
-              className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] transition-opacity duration-base",
-                saved
-                  ? "border-[#e8b84b]/70 bg-[#40351b] text-[#e8b84b] opacity-100"
-                  : "border-white/30 bg-background text-white opacity-0 hover:border-[#e8b84b] hover:bg-[#e8b84b] hover:text-black group-hover:opacity-100",
+          <CardMore
+            item={item}
+            saved={saved}
+            watched={watched}
+            rejected={rejected}
+            onQuickAction={onQuickAction}
+            className="card-more absolute right-1 top-1"
+          />
+        )}
+
+        {/* The awards pipeline earns a pixel: winners get a small trophy. */}
+        {item.awardWinner && (
+          <span
+            title="Major award winner"
+            className="absolute bottom-1 right-1 rounded-sm bg-background p-1"
+          >
+            <Trophy className="h-3 w-3 text-rating" aria-label="Award winner" />
+          </span>
+        )}
+        {posterOverlay ? (
+          <div className="pointer-events-none absolute bottom-1.5 left-1.5">{posterOverlay}</div>
+        ) : (
+          (watched || saved) && (
+            <span className="pointer-events-none absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-full bg-text-bright py-0.5 pl-1 pr-2 text-xs font-bold text-background">
+              {watched ? (
+                <Check className="h-3 w-3" aria-hidden="true" />
+              ) : (
+                <Bookmark className="h-3 w-3" aria-hidden="true" />
               )}
-            >
-              <Bookmark className="h-3 w-3" />
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onQuickAction(item, "watched");
-              }}
-              aria-label={watched ? "Watched (click to remove)" : "Mark as watched"}
-              aria-pressed={watched}
-              title={watched ? "Watched" : "Mark as watched"}
-              className={cn(
-                "flex items-center gap-1 rounded-[5px] border px-2 py-1 text-[11px] font-bold tracking-[-0.01em] transition-opacity duration-base",
-                watched
-                  ? "border-rating/60 bg-[#2e4030] text-rating opacity-100"
-                  : "border-white/30 bg-background text-white opacity-0 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100",
-              )}
-            >
-              <Check className="h-3 w-3" />
-              Seen
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onQuickAction(item, "notInterested");
-              }}
-              aria-label={rejected ? "Never show this (click to undo)" : "Never show this"}
-              aria-pressed={rejected}
-              title={rejected ? "Never show this (click to undo)" : "Never show this"}
-              className={cn(
-                "flex items-center rounded-[5px] border p-1 transition-opacity duration-base",
-                rejected
-                  ? "border-[#c75d6e]/70 bg-[#381e24] text-[#c75d6e] opacity-100"
-                  : "border-white/30 bg-background text-white opacity-0 hover:border-[#c75d6e] hover:bg-[#c75d6e] hover:text-white group-hover:opacity-100",
-              )}
-            >
-              <EyeOff className="h-3 w-3" />
-            </button>
-          </div>
+              {watched ? "Seen" : "Watchlist"}
+            </span>
+          )
         )}
       </div>
 
-      <div className="mt-2 flex items-start gap-1 px-0.5">
-        <div className="min-w-0 flex-1">
-          {isLinkable ? (
-            <Link
-              to={item.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
-              params={{ id: slug }}
-              className="block"
-            >
-              <h3 className="line-clamp-2 text-[13px] font-semibold leading-tight text-text-bright hover:text-primary">
-                {item.title}
-              </h3>
-            </Link>
-          ) : (
-            <h3 className="line-clamp-2 text-[13px] font-semibold leading-tight text-text-bright">
+      <div className="mt-2 min-w-0 px-0.5">
+        {isLinkable ? (
+          <Link to={to} params={{ id: slug }} className="block">
+            <h3 className="line-clamp-2 text-base font-bold leading-tight hover:underline">
               {item.title}
             </h3>
-          )}
-          <p className="mt-1 font-mono text-[12px] tabular-nums text-text-muted">
-            {displayYear(item)}
-            {(() => {
-              // Media type already shown as the tag on the poster, so the caption only
-              // adds the season count for TV (spelled out, e.g. "2 Seasons").
-              if (item.mediaType !== "tv") return "";
-              const seasons = item.seasonCount ?? item.seasons?.length ?? 0;
-              return seasons > 0 ? ` · ${seasons} Season${seasons === 1 ? "" : "s"}` : "";
-            })()}
+          </Link>
+        ) : (
+          <h3 className="line-clamp-2 text-base font-bold leading-tight">{item.title}</h3>
+        )}
+        <MetaLine bits={meta} className="mt-0.5 font-mono text-sm" />
+        {/* Why this card sits in a "like this" rail. The two strongest shared
+            facts print whole and wrap: a name cut mid-word explains nothing.
+            Cards in a rail stretch to the tallest, so a third line costs no
+            ragged edge. */}
+        {reasons.length > 0 && (
+          <p className="mt-1.5 break-words border-t border-current/30 pt-1.5 text-sm leading-tight">
+            {reasons[0] === "Same series" ? "" : "Shares: "}
+            {/* A no-break space ties each dot to the word before it, so a
+                wrapped line never starts with a separator. */}
+            {reasons.slice(0, 2).join("\u00a0· ")}
           </p>
-          {item.matchReasons && item.matchReasons.length > 0 && (
-            <p className="mt-0.5 line-clamp-2 text-[12px] leading-tight text-text-dim">
-              {item.matchReasons[0] === "Same series"
-                ? item.matchReasons.join(" · ")
-                : `Shares: ${item.matchReasons.join(" · ")}`}
-            </p>
-          )}
-        </div>
-        {onOpenActions && (
-          <button
-            type="button"
-            onClick={() => onOpenActions(item)}
-            aria-label={`Actions for ${item.title}`}
-            className="shrink-0 cursor-pointer rounded-[4px] p-1 text-text-dim hover:text-text-bright md:hidden"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
         )}
       </div>
     </article>
   );
 }
 
-function CardArt({
+/** The one "more" control: Watchlist, Seen and Hide in one menu, so a card or
+ *  a ranked row carries one button instead of three, at every width. The
+ *  caller places it with `className`. On a card it carries .card-more (see
+ *  styles.css): with a mouse it shows on hover or focus, so a small poster is
+ *  not mostly badges; on touch it is always there. */
+export function CardMore({
   item,
-  posterOverlay,
-  imgSizes,
-  eager = false,
-  showVotes = false,
-  tint,
+  saved,
+  watched,
+  rejected,
+  onQuickAction,
+  className,
 }: {
   item: MediaItem;
-  posterOverlay?: React.ReactNode;
+  saved: boolean;
+  watched: boolean;
+  rejected: boolean;
+  onQuickAction: (item: MediaItem, action: QuickAction) => void;
+  className?: string;
+}) {
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Actions for ${item.title}`}
+          className={cn(
+            "inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-text-bright bg-background text-text-bright transition duration-fast hover:bg-text-bright hover:text-background data-[state=open]:bg-text-bright data-[state=open]:text-background",
+            className,
+          )}
+        >
+          <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-40 text-base">
+        <DropdownMenuCheckboxItem
+          checked={saved}
+          onCheckedChange={() => onQuickAction(item, "want")}
+          className="cursor-pointer"
+        >
+          Watchlist
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={watched}
+          onCheckedChange={() => onQuickAction(item, "watched")}
+          className="cursor-pointer"
+        >
+          Seen
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={rejected}
+          onCheckedChange={() => onQuickAction(item, "notInterested")}
+          className="cursor-pointer"
+        >
+          Hide
+        </DropdownMenuCheckboxItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function CardArt({
+  item,
+  imgSizes,
+  eager = false,
+}: {
+  item: MediaItem;
   imgSizes?: string;
   eager?: boolean;
-  showVotes?: boolean;
-  tint?: string | null;
 }) {
-  // The color rides on the item once the catalog query selects it; the prop is
-  // for callers that fetched it separately. Anything that is not a plain hex is
-  // dropped, because it lands in a style attribute.
-  const raw = tint ?? (item as { colorA?: string | null }).colorA ?? null;
-  const placeholder = safeHex(raw);
-  // The same stored color, floored into something that can act as a light
-  // rather than a ground, then handed to the hover shadow below. Null for a
-  // black-and-white poster, and that card keeps the plain shadow.
-  const light = posterLightVars(placeholder);
-  // A score from one source or a handful of votes is not shown at all.
-  const score = trustedScore(item);
-  // A lazy poster fades up out of its stored color instead of cutting to the
-  // photograph. Eager cards start visible: they are the largest thing painted
-  // above the fold, and hiding them until React hydrates would push that paint
-  // back by however long the bundle takes.
+  // A lazy poster fades up out of the card's own colour instead of cutting to
+  // the photograph. Eager cards start visible: they are the largest thing
+  // painted above the fold, and hiding them until React hydrates would push
+  // that paint back by however long the bundle takes.
   const [revealed, setRevealed] = useState(eager);
   // A cached poster finishes loading before React attaches onLoad, so that
   // event never fires. Reading `complete` when the node mounts catches it, in
@@ -257,97 +254,39 @@ function CardArt({
     if (node?.complete) setRevealed(true);
   }, []);
   return (
-    // One duration for the whole hover gesture: the lift, the border, the
-    // shadow and the poster zoom below all run at --transition-duration-base.
-    // The lift used to run at 150 and the zoom at 200, which read as one
-    // gesture at two speeds.
-    //
-    // The shadow is the card's own poster color. Two layers, both plain
-    // box-shadows so the compositor draws them: a drop shadow under the card
-    // and a small spread around it. The color arrives as two custom properties
-    // set below, and each falls back to what the card looked like before, so a
-    // card with no usable color keeps the black shadow and a grey one is not
-    // painted a color its poster does not have. `group-hover` compiles inside
-    // `@media (hover: hover)`, so none of this exists on a touch device.
-    <div
-      className="specular-top relative overflow-hidden rounded-[5px] border border-border bg-panel shadow-sm transition-[transform,border-color,box-shadow] duration-base group-hover:-translate-y-0.5 group-hover:border-border-strong group-hover:shadow-[0_8px_24px_-12px_var(--poster-light,rgba(0,0,0,0.8)),0_0_20px_3px_var(--poster-halo,transparent)]"
-      style={(light ?? undefined) as React.CSSProperties | undefined}
-    >
-      <div
-        className="aspect-[2/3] w-full"
-        style={placeholder ? { backgroundColor: placeholder } : undefined}
-      >
-        {item.posterUrl ? (
-          <img
-            src={tmdbImage(item.posterUrl, "w342")}
-            srcSet={tmdbSrcSet(item.posterUrl, [
-              { w: 185, size: "w185" },
-              { w: 342, size: "w342" },
-              { w: 500, size: "w500" },
-            ])}
-            sizes={
-              imgSizes ??
-              "(max-width: 640px) 46vw, (max-width: 768px) 30vw, (max-width: 1280px) 23vw, 200px"
-            }
-            alt={item.title}
-            width={342}
-            height={513}
-            loading={eager ? "eager" : "lazy"}
-            fetchPriority={eager ? "high" : undefined}
-            decoding="async"
-            ref={catchCached}
-            onLoad={() => setRevealed(true)}
-            // A poster that fails to load still shows: otherwise the alt text
-            // would sit at opacity 0 forever.
-            onError={() => setRevealed(true)}
-            // Subtle inner zoom on hover (the container clips it): signals
-            // interactivity without the layout shift a card-scale would cause.
-            className={cn(
-              "h-full w-full object-cover transition-[opacity,transform] duration-base ease-out group-hover:scale-[1.045] motion-reduce:transition-none motion-reduce:group-hover:scale-100",
-              revealed ? "opacity-100" : "opacity-0",
-            )}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-accent text-text-dim">
-            <span className="text-[12px] font-semibold">No art</span>
-          </div>
-        )}
-      </div>
-      <div className="absolute left-1.5 top-1.5 flex h-[18px] items-center gap-1 rounded-[4px] bg-background px-1.5">
-        <span
-          className={`inline-block h-1.5 w-1.5 rounded-full bg-current ${TYPE_COLOR_CLASS[item.mediaType]}`}
-          aria-hidden="true"
-        />
-        <span
-          className={`font-mono text-[11px] font-medium uppercase tracking-wider ${TYPE_COLOR_CLASS[item.mediaType]}`}
-        >
-          {TYPE_LABEL[item.mediaType]}
-        </span>
-      </div>
-      {/* One score format everywhere: the Balasaur badge or nothing. (The old
-          "★ 7.0" raw-IMDb/TMDB fallback is gone — with TMDB in the blend, a
-          card without a badge genuinely has no rating data.) */}
-      {typeof score === "number" && (
-        <div className="absolute right-1.5 top-1.5 flex flex-col items-end gap-1">
-          <ScoreBadge score={score} />
-          {showVotes && item.voteCount != null && (
-            <span className="rounded-[4px] bg-background px-1 py-0.5 font-mono text-[11px] tabular-nums text-text-muted">
-              {Intl.NumberFormat("en-US", { notation: "compact" }).format(item.voteCount)} ratings
-            </span>
+    <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-current/15 shadow-md">
+      {item.posterUrl ? (
+        <img
+          src={tmdbImage(item.posterUrl, "w342")}
+          srcSet={tmdbSrcSet(item.posterUrl, [
+            { w: 185, size: "w185" },
+            { w: 342, size: "w342" },
+            { w: 500, size: "w500" },
+          ])}
+          sizes={
+            imgSizes ??
+            "(max-width: 640px) 46vw, (max-width: 768px) 30vw, (max-width: 1280px) 23vw, 200px"
+          }
+          alt={item.title}
+          width={342}
+          height={513}
+          loading={eager ? "eager" : "lazy"}
+          fetchPriority={eager ? "high" : undefined}
+          decoding="async"
+          ref={catchCached}
+          onLoad={() => setRevealed(true)}
+          // A poster that fails to load still shows: otherwise the alt text
+          // would sit at opacity 0 forever.
+          onError={() => setRevealed(true)}
+          className={cn(
+            "h-full w-full object-cover transition-opacity duration-base ease-out motion-reduce:transition-none",
+            revealed ? "opacity-100" : "opacity-0",
           )}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <span className="text-sm font-semibold">No art</span>
         </div>
-      )}
-      {/* The awards pipeline earns a pixel: winners get a small trophy. */}
-      {item.awardWinner && (
-        <span
-          title="Major award winner"
-          className="absolute bottom-1.5 right-1.5 rounded-[4px] bg-background p-1"
-        >
-          <Trophy className="h-3 w-3 text-rating" aria-label="Award winner" />
-        </span>
-      )}
-      {posterOverlay && (
-        <div className="pointer-events-none absolute bottom-1.5 left-1.5">{posterOverlay}</div>
       )}
     </div>
   );

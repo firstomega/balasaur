@@ -197,32 +197,14 @@ async function main() {
     process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
   );
   const failures: string[] = [];
-  const skipped: string[] = [];
   let checkedRoutes = 0;
 
   try {
-    // Detail routes carry an id in the path, so pick real ones off the site
-    // rather than pinning ids that go stale.
-    const scout = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    const firstHref = async (from: string, prefix: string): Promise<string | null> => {
-      await gotoSettled(scout, `${url}${from}`);
-      // Budgeted loaders stream the shell first and fill in data client-side,
-      // and a cold dev server compiles on demand, so a link can legitimately
-      // take a while to exist. Wait for it rather than for a fixed pause.
-      const found = await scout
-        .waitForSelector(`a[href^="${prefix}"]`, { timeout: 30_000 })
-        .catch(() => null);
-      if (found) return found.getAttribute("href");
-      // Say what WAS there, so a miss in the log is diagnosable.
-      const sample = await scout.evaluate(() =>
-        Array.from(document.querySelectorAll("a[href]"), (a) => a.getAttribute("href"))
-          .filter((h): h is string => !!h)
-          .slice(0, 8),
-      );
-      console.log(`      ${from} rendered ${sample.length} link(s): ${sample.join(" ")}`);
-      return null;
-    };
-
+    // Fixed, real pages, so two runs screenshot the same thing and a change
+    // can be compared before and after. "The first link found" changed from
+    // run to run. Detail URLs are written in their canonical form (slug then
+    // TMDB id) because the bare id answers with a redirect. Person pages are
+    // canonical at the bare id.
     const routes = [
       "/",
       "/collections",
@@ -232,27 +214,27 @@ async function main() {
       "/calendar",
       "/play",
       "/watched",
+      "/movie/inception-27205",
+      "/tv/breaking-bad-1396",
+      // A title with no poster swatch (the paper band) and a long name on the
+      // red band, the two worst real rows for the title-page hero.
+      "/movie/x-760104",
+      "/movie/doctor-strange-in-the-multiverse-of-madness-453395",
+      "/person/31",
+      "/best/best-action-movies-on-netflix",
+      "/best/best-yuma-uchida-shows",
+      "/lists",
+      "/play/balasaurdle",
+      "/taste",
+      "/library",
+      "/night",
+      "/privacy",
+      // An invite link to a room this browser is not in, and the two pages
+      // every mistyped one-segment address lands on.
+      "/night/ZZZZZ",
+      "/no-such-page",
+      "/@nobody-here",
     ];
-    for (const [from, prefix] of [
-      ["/collections", "/best/"],
-      ["/", "/movie/"],
-      ["/", "/tv/"],
-    ] as const) {
-      const href = await firstHref(from, prefix);
-      if (href) routes.push(href);
-      else skipped.push(`no ${prefix}* link found on ${from}, that route was not checked`);
-    }
-    // Person pages hang off detail-page credits, so the crawl goes one hop
-    // deeper: home -> a movie -> a person.
-    const movieHref = routes.find((r) => r.startsWith("/movie/"));
-    if (movieHref) {
-      const personHref = await firstHref(movieHref, "/person/");
-      if (personHref) routes.push(personHref);
-      else skipped.push(`no /person/* link found on ${movieHref}, that route was not checked`);
-    } else {
-      skipped.push("no movie page reached, so no /person/* route was checked");
-    }
-    await scout.close();
 
     console.log(`Checking ${routes.length} routes at ${WIDTHS.length} widths\n`);
 
@@ -313,8 +295,6 @@ async function main() {
     stop();
   }
 
-  console.log("");
-  for (const s of skipped) console.log(`skip  ${s}`);
   console.log(`\nScreenshots in ${OUT_DIR}/`);
 
   if (failures.length > 0) {
@@ -322,17 +302,17 @@ async function main() {
     process.exit(1);
   }
 
-  // State coverage, never a bare pass. A green run that quietly checked five
-  // routes instead of eight reads as "everything is fine" and is not.
-  const planned = checkedRoutes + skipped.length;
+  // State coverage, never a bare pass. Catalog pages need a privileged
+  // database key: anon has no read grant on the media table, so without it
+  // the title, person and list pages render their not-found state and pass
+  // the overflow check by being nearly empty.
   console.log(
-    `\nNo page scrolls sideways. Checked ${checkedRoutes} of ${planned} routes at ${WIDTHS.length} widths.`,
+    `\nNo page scrolls sideways. Checked ${checkedRoutes} routes at ${WIDTHS.length} widths.`,
   );
-  if (skipped.length > 0) {
+  if (!process.env.APP_SUPABASE_SERVICE_ROLE_KEY) {
     console.log(
-      `${skipped.length} route(s) skipped, so this run did NOT cover them. ` +
-        `Catalog pages need a privileged database key: anon has no read grant on the media table, ` +
-        `so without APP_SUPABASE_SERVICE_ROLE_KEY the data-driven pages render empty and no detail links exist to follow.`,
+      "APP_SUPABASE_SERVICE_ROLE_KEY is not set, so the catalog pages rendered without data " +
+        "and this run did NOT check them with real rows.",
     );
   }
 }

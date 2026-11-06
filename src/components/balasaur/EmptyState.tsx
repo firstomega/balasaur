@@ -43,11 +43,11 @@ export interface EmptyStateProps {
 
 /** Filled control. Use for the single action that most people want. */
 export const EMPTY_ACTION_CLASS =
-  "inline-flex cursor-pointer items-center justify-center rounded-[5px] bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90";
+  "inline-flex cursor-pointer items-center justify-center rounded-full bg-text-bright px-4 py-2 text-base font-bold text-background transition-opacity duration-fast hover:opacity-90";
 
 /** Outlined control. Use for the alternative. */
 export const EMPTY_ACTION_QUIET_CLASS =
-  "inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-border-strong bg-background px-4 py-2 text-[13px] font-semibold text-text-bright transition-colors hover:border-primary hover:text-primary";
+  "inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-text-bright bg-background px-4 py-1.5 text-base font-bold text-text-bright transition-colors duration-fast hover:bg-text-bright hover:text-background";
 
 export function EmptyState({
   line,
@@ -93,8 +93,8 @@ export function EmptyState({
         <p
           className={
             inline
-              ? "text-[14px] font-bold leading-snug tracking-[-0.01em] text-text-bright"
-              : "text-[20px] font-black leading-[1.15] tracking-[-0.02em] text-text-bright sm:text-[26px]"
+              ? "text-lg font-bold leading-snug text-text-bright"
+              : "text-balance font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright sm:text-3xl"
           }
         >
           {line}
@@ -103,8 +103,8 @@ export function EmptyState({
           <p
             className={
               inline
-                ? "mt-1 text-[12.5px] leading-relaxed text-text-muted"
-                : "mt-2 text-[14px] leading-relaxed text-text-muted sm:text-[15px]"
+                ? "mt-1 text-sm leading-relaxed text-text-muted"
+                : "mt-2 text-lg leading-relaxed text-text-muted"
             }
           >
             {hint}

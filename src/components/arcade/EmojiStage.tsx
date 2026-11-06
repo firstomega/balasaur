@@ -172,7 +172,7 @@ export function EmojiStage({
 
       {!over && lifelines && lifelines.choices.length > 0 && (
         <div className="mt-3" aria-label="Last guess: one of these">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--game,var(--primary))]">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--game-text,var(--primary))]">
             Last guess. One of these.
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -188,7 +188,7 @@ export function EmojiStage({
                     "min-h-[36px] rounded-[5px] border px-3 py-1.5 text-[14px] transition-colors",
                     spent
                       ? "border-border text-text-dim line-through opacity-60"
-                      : "border-border-strong bg-panel text-text-bright hover:border-[var(--game,var(--primary))] hover:text-[var(--game,var(--primary))]",
+                      : "border-border-strong bg-panel text-text-bright hover:border-[var(--game,var(--primary))] hover:text-[var(--game-text,var(--primary))]",
                   )}
                 >
                   {c}

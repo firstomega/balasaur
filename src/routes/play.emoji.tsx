@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { GuessBox } from "@/components/arcade/GuessBox";
 import { EmojiStage } from "@/components/arcade/EmojiStage";
-import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import { MoreGames } from "@/components/arcade/MoreGames";
 import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
 import { emojiPayout, totalComets } from "@/lib/arcade/comets";
 import { shareEmoji } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, tierFor } from "@/lib/arcade/games";
+import { GAMES, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -98,7 +97,7 @@ function MediaLink({ media, className }: { media: SolvedMedia; className?: strin
       to={media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
       params={{ id: mediaSlug(media.id.replace(/^(movie|tv)-/, ""), media.title) }}
       className={
-        className ?? "font-semibold text-text-bright hover:text-[var(--game,var(--primary))]"
+        className ?? "font-semibold text-text-bright hover:text-[var(--game-text,var(--primary))]"
       }
     >
       {media.title}
@@ -110,15 +109,12 @@ function YesterdaySolved({ y }: { y: ArcadeYesterday | null }) {
   if (!y || y.entries.length === 0) return null;
   return (
     <section className="mt-10">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+      <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
         Yesterday's plots, solved
       </h2>
       <ul className="mt-2 space-y-1.5">
         {y.entries.map((e, i) => (
-          <li
-            key={i}
-            className="rounded-[5px] border border-border bg-panel px-3 py-2 text-[13px] leading-snug"
-          >
+          <li key={i} className="rounded-lg bg-panel px-3 py-2.5 text-base leading-snug">
             {e.prompt && <span className="text-text-muted">{e.prompt} </span>}
             {e.media ? (
               <MediaLink media={e.media} />
@@ -131,25 +127,6 @@ function YesterdaySolved({ y }: { y: ArcadeYesterday | null }) {
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-function MoreGames() {
-  return (
-    <section className="mt-8">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <ScrollRail className="mt-2 gap-2.5">
-        {ENABLED_SLUGS.filter((slug) => slug !== GAME.slug).map((slug) => (
-          <ArcadeTile key={slug} game={GAMES[slug]} className="w-[168px] shrink-0" />
-        ))}
-      </ScrollRail>
-      <Link
-        to="/play"
-        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
-      >
-        All games
-      </Link>
     </section>
   );
 }
@@ -378,12 +355,12 @@ function EmojiPage() {
                 ) : (
                   <div className="flex items-center gap-4 rounded-[6px] border border-[var(--game,var(--primary))] [background:color-mix(in_oklab,var(--game,var(--primary))_14%,var(--color-panel))] p-3.5">
                     <div className="min-w-0 flex-1">
-                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--game,var(--primary))]">
+                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--game-text,var(--primary))]">
                         {revealed.solved ? `Solved in ${revealed.guesses}` : "It was"}
                       </p>
                       <MediaLink
                         media={item.media}
-                        className="mt-1 block text-[20px] font-black leading-tight tracking-[-0.02em] text-text-bright hover:text-[var(--game,var(--primary))]"
+                        className="mt-1 block text-[20px] font-black leading-tight tracking-[-0.02em] text-text-bright hover:text-[var(--game-text,var(--primary))]"
                       />
                       <p className="mt-0.5 font-mono text-[11px] tabular-nums text-text-muted">
                         {item.media.year}
@@ -404,20 +381,20 @@ function EmojiPage() {
           </GameShell>
         ) : (
           <section>
-            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+            <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
               {GAME.name}
             </h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
-            <p className="mt-6 text-[14px] text-text-muted">
+            <p className="mt-2 text-lg text-text-muted">{GAME.hook}</p>
+            <p className="mt-6 text-lg text-text-muted">
               Today's puzzles did not load. Try again in a minute.
             </p>
           </section>
         )}
 
         <YesterdaySolved y={yesterday} />
-        {api.phase !== "ended" && <MoreGames />}
+        {api.phase !== "ended" && <MoreGames exclude={GAME.slug} />}
 
-        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
+        <p className="mt-10 text-sm text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );

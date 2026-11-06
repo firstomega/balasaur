@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
-  Link,
   createRootRouteWithContext,
   useMatches,
   useRouter,
@@ -13,7 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import archivoFontUrl from "../fonts/archivo-latin-var.woff2?url";
-import monoFontUrl from "../fonts/jetbrains-mono-latin-var.woff2?url";
+import displayFontUrl from "../fonts/archivo-condensed-800-latin.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Footer } from "@/components/balasaur/Footer";
@@ -21,7 +20,7 @@ import { TopBar } from "@/components/balasaur/TopBar";
 import { CookieBanner } from "@/components/balasaur/CookieBanner";
 import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
 import { Toaster } from "@/components/ui/sonner";
-import { DinoMark } from "@/components/balasaur/DinoMark";
+import { NotFoundPage } from "@/components/balasaur/NotFoundPage";
 import { DinoRun } from "@/components/balasaur/DinoRun";
 import {
   SITE_ORIGIN,
@@ -43,31 +42,10 @@ declare module "@tanstack/react-router" {
   }
 }
 
+// An address deeper than one segment with nothing behind it. One-segment
+// addresses reach the same page through the /$handle catch-all.
 function NotFoundComponent() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-[5px] border border-border bg-panel p-8 text-center">
-        <DinoMark className="mx-auto h-10 w-10 text-primary" />
-        <div className="mt-5 font-mono text-[64px] font-semibold tabular-nums leading-none tracking-tighter text-text-bright">
-          404
-        </div>
-        <p className="mt-3 text-[15px] font-black tracking-[-0.02em] text-text-dim">
-          Signal lost · route not found
-        </p>
-        <p className="mt-4 text-[13.5px] leading-relaxed text-text-muted">
-          This title isn't in our database. The page you tried doesn't exist or moved.
-        </p>
-        <div className="mt-6 flex justify-center">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Back to grid
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+  return <NotFoundPage title="Page not found" />;
 }
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
@@ -78,40 +56,32 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-[5px] border border-border bg-panel p-8 text-center">
-        <DinoMark className="mx-auto h-10 w-10 text-primary" />
-        <p className="mt-5 text-[15px] font-black tracking-[-0.02em] text-text-dim">
-          Process halted · error caught
-        </p>
-        <h1 className="mt-2 text-[24px] font-black tracking-[-0.02em] text-text-bright">
-          This page didn't load
-        </h1>
-        <p className="mt-3 text-[13.5px] leading-relaxed text-text-muted">
-          Something went wrong on our end. You can try again or head back home.
-        </p>
-        {/* Raw error.message is intentionally not rendered — it can leak
-            DB schema, API paths, or env var names. Full error is logged
-            server-side via console.error + reportLovableError above. */}
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-primary bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-[5px] border border-border-strong bg-background px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright transition-colors hover:border-primary hover:text-primary"
-          >
-            Go home
-          </a>
-        </div>
+    <main id="main" className="mx-auto w-full max-w-content px-4 pb-16 pt-10 md:pt-16">
+      <h1 className="font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
+        This page did not load
+      </h1>
+      {/* Raw error.message is intentionally not rendered: it can leak DB
+          schema, API paths, or env var names. The full error is logged
+          server-side via console.error and reportLovableError above. */}
+      <div className="mt-6 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
+          className="inline-flex cursor-pointer items-center rounded-full bg-text-bright px-4 py-2 text-base font-bold text-background hover:opacity-90"
+        >
+          Try again
+        </button>
+        <a
+          href="/"
+          className="inline-flex items-center rounded-full border-2 border-text-bright px-4 py-1.5 text-base font-bold text-text-bright hover:bg-text-bright hover:text-background"
+        >
+          Home
+        </a>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -120,6 +90,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // The page ground is white. Without these the browser chrome on phones
+      // and the form controls default to the system theme, which on a dark
+      // phone puts a black address bar and dark inputs on a white page.
+      { name: "theme-color", content: "white" },
+      { name: "color-scheme", content: "light" },
       { title: "Balasaur" },
       {
         name: "description",
@@ -165,7 +140,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://image.tmdb.org" },
       // Fonts are self-hosted (see styles.css). Preloading them here means the
       // real face is usually in place for first paint, so there is no swap and
-      // no layout shift from it.
+      // no layout shift from it. Two preloads, not three: the body face and
+      // the display face set the text that paints first. There is no third
+      // face: numbers are set in the body face with tabular figures.
       {
         rel: "preload",
         as: "font",
@@ -177,7 +154,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "preload",
         as: "font",
         type: "font/woff2",
-        href: monoFontUrl,
+        href: displayFontUrl,
         crossOrigin: "anonymous",
       },
     ],

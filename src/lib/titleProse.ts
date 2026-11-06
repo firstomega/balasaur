@@ -177,8 +177,10 @@ export function titleProse(d: TitleProseInput): string {
     parts.push(`A Balasaur Score of ${score} out of 100.`);
   }
 
-  const consensus = consensusNote(d.ratings, d.voteCount);
-  if (consensus) parts.push(consensus);
+  // The agreement sentence ("Every source lands within 5 points of the
+  // others") is not said here. It is about the sources, not the title, and
+  // the per-source table sits beside the paragraph. consensusNote stays for
+  // the meta description in seo.ts.
 
   // 2. How it sits next to the thing you already know. A series rank is a
   //    ranking by score, so it is never said about a title whose score the

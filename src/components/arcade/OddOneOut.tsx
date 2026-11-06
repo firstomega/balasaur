@@ -63,7 +63,12 @@ interface OddOneOutProps {
 
 /** Four tints, one per answer position, so the cards read as four choices
  *  and not four copies of one box. Tokens, never hex. */
-const TINTS = ["var(--hue-ruby)", "var(--hue-blue)", "var(--hue-sun)", "var(--hue-teal)"];
+const TINTS = [
+  "var(--swatch-red)",
+  "var(--swatch-blue)",
+  "var(--swatch-gold)",
+  "var(--swatch-teal)",
+];
 
 /** Where the pips count from when the route only passes a label. */
 function parseRound(label?: string): { round: number; rounds: number } | null {
@@ -211,7 +216,7 @@ export function OddOneOut({
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
             <span
-              className="arcade-stamp rounded-[6px] border-[3px] border-warn bg-black/55 px-3 py-1 text-[28px] font-black uppercase leading-none tracking-[0.08em] text-warn sm:text-[36px]"
+              className="arcade-stamp rounded-[6px] border-[3px] border-warn bg-background/90 px-3 py-1 text-[28px] font-black uppercase leading-none tracking-[0.08em] text-warn sm:text-[36px]"
               style={{ animationDuration: "200ms" }}
             >
               Time up

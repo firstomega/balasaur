@@ -268,7 +268,7 @@ function ExitCard({
             <span className="absolute inset-0 flex items-center justify-center">
               <span
                 className={cn(
-                  "arcade-stamp rounded-[6px] border-[3px] bg-black/55 px-3 py-1 text-[40px] font-black uppercase leading-none tracking-[0.08em]",
+                  "arcade-stamp rounded-[6px] border-[3px] bg-background/90 px-3 py-1 text-[40px] font-black uppercase leading-none tracking-[0.08em]",
                   verdict.stamp === "REAL" ? "border-rating text-rating" : "border-warn text-warn",
                 )}
               >
@@ -277,7 +277,7 @@ function ExitCard({
             </span>
           )}
           {!verdict && !exit.correct && (
-            <span className="absolute inset-x-3 top-3 rounded-[4px] border border-destructive/70 bg-black/80 px-2 py-1.5 text-center font-mono text-[11px] uppercase tracking-wider text-destructive">
+            <span className="absolute inset-x-3 top-3 rounded-[4px] border border-destructive/70 bg-background/90 px-2 py-1.5 text-center font-mono text-[11px] uppercase tracking-wider text-destructive">
               Goes {exit.correctLabel}
             </span>
           )}

@@ -138,7 +138,7 @@ export function AuthDialog({
               className="h-9 w-full rounded-[5px] border border-border bg-background px-2.5 text-[14px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
           )}
-          {error && <p className="text-[13px] text-red-400">{error}</p>}
+          {error && <p className="text-[13px] text-destructive">{error}</p>}
           {notice && <p className="text-[13px] text-primary">{notice}</p>}
           <button
             type="submit"

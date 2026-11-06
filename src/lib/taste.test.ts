@@ -2,14 +2,10 @@ import { describe, expect, it } from "bun:test";
 import type { StatusMap, UserStatusRecord } from "@/hooks/useUserStatus";
 import {
   ARCHETYPES,
-  HOUSE_TINT,
   MIN_BASIS_TITLES,
-  cardTint,
+  cardSwatch,
   computeTaste,
-  luminance,
-  parseHex,
   tasteReadiness,
-  tintAlpha,
   type CardPoster,
   type TitleFact,
 } from "./taste";
@@ -33,8 +29,7 @@ function fact(over: Partial<TitleFact> = {}): TitleFact {
     genres: over.genres ?? [],
     origins: over.origins ?? ["American"],
     posterUrl: "posterUrl" in over ? over.posterUrl : `/p${seq}.jpg`,
-    colorA: over.colorA,
-    colorB: over.colorB,
+    swatch: over.swatch,
     score: over.score,
   };
 }
@@ -534,79 +529,36 @@ describe("the real library on file", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The card's ground colour
+// The card's colour
 // ---------------------------------------------------------------------------
 
 function poster(over: Partial<CardPoster> & { id: string }): CardPoster {
   return { title: over.id, posterUrl: `/${over.id}.jpg`, ...over };
 }
 
-describe("cardTint", () => {
-  it("lights the card from the first two titles that have a colour", () => {
-    const t = cardTint([
-      poster({ id: "a", colorA: "#B03A2E", colorB: "#2E86C1" }),
-      poster({ id: "b", colorA: "#28B463" }),
-    ]);
-    expect(json(t)).toBe(json({ a: "#b03a2e", b: "#28b463" }));
+describe("cardSwatch", () => {
+  it("paints the card in the first printed title that has a swatch", () => {
+    expect(cardSwatch([poster({ id: "a" }), poster({ id: "b", swatch: "red" })])).toBe("red");
+    expect(
+      cardSwatch([poster({ id: "a", swatch: "navy" }), poster({ id: "b", swatch: "red" })]),
+    ).toBe("navy");
   });
 
-  it("uses one title's second colour when no other title has one", () => {
-    const t = cardTint([poster({ id: "a", colorA: "#b03a2e", colorB: "#2e86c1" })]);
-    expect(json(t)).toBe(json({ a: "#b03a2e", b: "#2e86c1" }));
+  it("falls back to the paper wash when no title has one", () => {
+    expect(cardSwatch([poster({ id: "a" })])).toBe(null);
+    expect(cardSwatch([])).toBe(null);
   });
 
-  it("skips titles whose colour is not a plain hex", () => {
-    const t = cardTint([
-      poster({ id: "a", colorA: "red; background:url(x)" }),
-      poster({ id: "b", colorA: "#28b463" }),
-    ]);
-    expect(t.a).toBe("#28b463");
-  });
-
-  it("falls back to the house pair when no title has a colour", () => {
-    expect(json(cardTint([poster({ id: "a" })]))).toBe(json(HOUSE_TINT));
-    expect(json(cardTint([]))).toBe(json(HOUSE_TINT));
-  });
-
-  it("carries the poster colours through computeTaste onto the card", () => {
+  it("carries the highest scorer's swatch through computeTaste onto the card", () => {
     const facts = [
-      fact({ id: "hot", score: 90, colorA: "#b03a2e", colorB: "#2e86c1" }),
-      ...Array.from({ length: 8 }, (_, i) => fact({ id: `x${i}`, score: 50 })),
+      fact({ id: "low", score: 50, swatch: "lime" }),
+      fact({ id: "hot", score: 90, swatch: "violet" }),
+      ...Array.from({ length: 8 }, (_, i) => fact({ id: `x${i}`, score: 40 })),
     ];
     const statuses: StatusMap = Object.fromEntries(facts.map((f) => [f.id, liked]));
     const p = computeTaste(statuses, facts);
     expect(p.posters[0].id).toBe("hot");
-    expect(json(cardTint(p.posters))).toBe(json({ a: "#b03a2e", b: "#2e86c1" }));
-  });
-});
-
-describe("tintAlpha", () => {
-  const ground = [8, 9, 11] as const;
-  const blend = (hex: string, alpha: number) => {
-    const c = parseHex(hex)!;
-    return [
-      c[0] * alpha + ground[0] * (1 - alpha),
-      c[1] * alpha + ground[1] * (1 - alpha),
-      c[2] * alpha + ground[2] * (1 - alpha),
-    ] as [number, number, number];
-  };
-
-  it("keeps every colour dark enough for white type to clear 6 to 1", () => {
-    for (const hex of ["#ffffff", "#fde68a", "#6ee7b7", "#3b82f6", "#b03a2e", "#101010"]) {
-      const a = tintAlpha(hex);
-      const l = luminance(blend(hex, a));
-      expect(l <= 0.1151).toBe(true);
-      expect(1.05 / (l + 0.05) >= 6).toBe(true);
-    }
-  });
-
-  it("burns a dark colour harder than a bright one", () => {
-    expect(tintAlpha("#3b0764") > tintAlpha("#fde68a")).toBe(true);
-    expect(tintAlpha("#fde68a") >= 0.1).toBe(true);
-  });
-
-  it("paints nothing at all for a value that is not a hex", () => {
-    expect(tintAlpha("rgb(1,2,3)")).toBe(0);
+    expect(cardSwatch(p.posters)).toBe("violet");
   });
 });
 

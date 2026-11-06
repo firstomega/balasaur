@@ -2,32 +2,21 @@
   "totals": {
     "H1": 0,
     "H2": 0,
-    "H3": 6,
-    "H4": 5,
+    "H3": 1,
+    "H4": 3,
     "H5": 0,
-    "H6": 6,
-    "H6b": 17,
-    "H7": 2
+    "H6": 0,
+    "H6b": 0,
+    "H7": 0
   },
   "patterns": {
     "H3": {
-      "src/lib/arcade/games.ts": 5,
       "src/routes/play.balasaurdle.tsx": 1
     },
     "H4": {
-      "src/lib/arcade/games.ts": 2,
       "src/routes/play.quote-match.tsx": 1,
       "src/routes/play.taglines.tsx": 1,
       "src/routes/play.timeline.tsx": 1
-    },
-    "H6": {
-      "src/lib/arcade/games.ts": 6
-    },
-    "H6b": {
-      "src/lib/arcade/games.ts": 17
-    },
-    "H7": {
-      "src/lib/arcade/games.ts": 2
     }
   }
 }

@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import { createNightRoom, setNightToken, getSavedNightName, setSavedNightName } from "@/lib/night";
 import { capturePostHogEvent } from "@/lib/posthog";
-import { Footer } from "@/components/balasaur/Footer";
 
 // Movie Night entry. Rooms are private and ephemeral, so everything under
 // /night carries noindex: a crawler has no business in someone's lobby, and
@@ -75,47 +74,29 @@ function NightEntry() {
     }
   };
 
+  // The root layout draws the footer. This page drew a second one of its own,
+  // so the attribution printed twice, one copy under the cookie banner.
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      {/* The room, not a form on a void. Movie Night and My Library are the
-          site's two personal spaces, so they share one warm treatment: a lit
-          pool on a dim wall. The catalog stays a terminal; these two rooms do
-          not. Drawn in CSS, so the page still ships no images of its own. */}
-      <div className="relative flex-1 overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(130% 60% at 50% -10%, rgba(214,166,96,.13), transparent 62%), radial-gradient(90% 45% at 50% 4%, rgba(190,142,80,.09), transparent 70%)",
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(120% 80% at 50% 26%, transparent 52%, rgba(0,0,0,.5) 100%)",
-          }}
-        />
-        <main id="main" className="relative mx-auto w-full max-w-[560px] px-4 pb-16 pt-10 sm:pt-14">
-          <h1 className="text-[32px] font-black leading-[1.03] tracking-[-0.02em] text-text-bright sm:text-[38px]">
+    <div className="bg-background text-foreground">
+      <main id="main" className="mx-auto w-full max-w-content px-4 pb-16 pt-6 md:pt-9">
+        <div className="max-w-[560px]">
+          <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
             Movie Night
           </h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-text-muted">
-            One title, agreed on, in about a minute.
+          <p className="mt-3 text-lg leading-relaxed text-text-muted">
+            Each person answers on their own device. The room gets one title.
           </p>
 
           {/* Two real choices with real weight, and the code as a line rather
-              than a third identical box. The old page made you pick a path and
-              THEN revealed a form, which was two taps to reach one field. */}
-          <div className="mt-8 space-y-3">
-            <div className="rounded-[8px] border border-primary/40 bg-primary/[0.07] p-4 sm:p-5">
-              <h2 className="text-[19px] font-black tracking-[-0.02em] text-text-bright">
+            than a third identical box. The old page made you pick a path and
+            THEN revealed a form, which was two taps to reach one field. */}
+          <div className="mt-6 space-y-3 md:mt-8">
+            <div className="rounded-2xl bg-panel p-4 sm:p-5">
+              <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
                 With friends
               </h2>
-              <label className="mt-3 block">
-                <span className="mb-1.5 block text-[13px] font-semibold text-text-muted">
+              <label className="mt-4 block">
+                <span className="mb-1.5 block text-base font-bold text-text-muted">
                   Your name in the room
                 </span>
                 <input
@@ -124,14 +105,14 @@ function NightEntry() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder={me?.username || "Anonymous Raptor"}
                   maxLength={24}
-                  className="w-full rounded-[5px] border border-border bg-background px-3 py-2.5 text-[15px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border-strong bg-background px-3.5 py-2.5 text-lg text-text-bright placeholder:text-text-dim focus:border-text-bright focus:outline-none"
                 />
               </label>
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => void start("group")}
-                className="mt-3 w-full cursor-pointer rounded-[5px] bg-primary px-4 py-2.5 text-[14px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                className="mt-3 w-full cursor-pointer rounded-full bg-text-bright px-4 py-3 text-lg font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {busy ? "One moment" : "Open the room"}
               </button>
@@ -141,42 +122,43 @@ function NightEntry() {
               type="button"
               disabled={busy}
               onClick={() => void start("solo")}
-              className="block w-full cursor-pointer rounded-[8px] border border-border bg-panel p-4 text-left transition-colors hover:border-border-strong disabled:opacity-60 sm:p-5"
+              className="block w-full cursor-pointer rounded-2xl border border-border-strong p-4 text-left transition-colors hover:border-text-bright disabled:opacity-60 sm:p-5"
             >
-              <span className="block text-[18px] font-semibold text-text-bright">Just me</span>
-              <span className="mt-0.5 block text-[13.5px] text-text-muted">No room, no code.</span>
+              <span className="block font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
+                Just me
+              </span>
+              <span className="mt-1.5 block text-base text-text-muted">On this device only.</span>
             </button>
           </div>
 
           <div className="mt-7 flex flex-wrap items-center gap-2 border-t border-border pt-5">
-            <span className="text-[14px] font-bold tracking-[-0.01em] text-text-dim">
-              Have a code?
-            </span>
+            <label htmlFor="night-code" className="text-lg font-bold text-text-bright">
+              Room code
+            </label>
             <input
+              id="night-code"
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
               placeholder="ABCDE"
               maxLength={5}
-              aria-label="Room code"
-              className="w-[110px] rounded-[5px] border border-border bg-background px-3 py-2 font-mono text-[15px] uppercase tracking-[0.2em] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
+              className="w-[120px] rounded-full border border-border-strong bg-background px-4 py-2 font-mono text-lg uppercase tracking-[0.2em] text-text-bright placeholder:text-text-dim focus:border-text-bright focus:outline-none"
             />
             {/* Disabled until it could possibly be a code, which deletes the
-                "that code looks too short" error instead of explaining it. */}
+              "that code looks too short" error instead of explaining it. */}
             <button
               type="button"
               disabled={code.length < 4 || busy}
               onClick={() => void navigate({ to: "/night/$code", params: { code } })}
-              className="cursor-pointer rounded-[5px] border border-border-strong bg-panel px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-text-bright transition-colors hover:border-primary disabled:opacity-40"
+              className="cursor-pointer rounded-full bg-text-bright px-4 py-2 text-lg font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-border-strong disabled:text-text-muted disabled:opacity-100"
             >
               Join
             </button>
           </div>
 
-          {error && <p className="mt-4 text-[13.5px] text-[#e08aa4]">{error}</p>}
-        </main>
-      </div>
-      <Footer />
+          {error && <p className="mt-4 text-base text-status-disliked">{error}</p>}
+        </div>
+      </main>
     </div>
   );
 }

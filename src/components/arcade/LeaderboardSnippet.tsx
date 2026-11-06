@@ -51,7 +51,7 @@ function BoardRow({
     <Link
       to="/$handle"
       params={{ handle }}
-      className="truncate hover:text-[var(--game,var(--primary))] hover:underline"
+      className="truncate hover:text-[var(--game-text,var(--primary))] hover:underline"
     >
       {label.name}
     </Link>
@@ -69,7 +69,7 @@ function BoardRow({
       <span
         className={cn(
           "w-5 shrink-0 font-mono text-[12px] tabular-nums",
-          you ? "text-[var(--game,var(--primary))]" : "text-text-dim",
+          you ? "text-[var(--game-text,var(--primary))]" : "text-text-dim",
         )}
       >
         {row.rank}
@@ -83,7 +83,7 @@ function BoardRow({
       <span className="flex min-w-0 flex-1 items-center gap-1.5">
         {name}
         {label.tag && (
-          <span className="shrink-0 rounded-full border border-[color-mix(in_oklab,var(--game,var(--primary))_50%,transparent)] px-1.5 font-mono text-[9.5px] uppercase tracking-wider text-[var(--game,var(--primary))]">
+          <span className="shrink-0 rounded-full border border-[color-mix(in_oklab,var(--game,var(--primary))_50%,transparent)] px-1.5 font-mono text-[9.5px] uppercase tracking-wider text-[var(--game-text,var(--primary))]">
             you
           </span>
         )}

@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ScrollRail } from "@/components/balasaur/ScrollRail";
+import { createFileRoute } from "@tanstack/react-router";
 import { GameShell } from "@/components/arcade/GameShell";
 import { BinSort, type BinCard, type BinDef } from "@/components/arcade/BinSort";
-import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import { MoreGames } from "@/components/arcade/MoreGames";
 import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
 import { sequelOrFakePayout, totalComets } from "@/lib/arcade/comets";
 import { shareSequelOrFake } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, tierFor } from "@/lib/arcade/games";
+import { GAMES, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,7 +88,7 @@ function StoryRow({
   called?: boolean;
 }) {
   return (
-    <li className="rounded-[5px] border border-border bg-panel px-3 py-2">
+    <li className="rounded-lg bg-panel px-3 py-2.5">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[13px] font-semibold leading-snug text-text-bright">{title}</span>
         <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider">
@@ -110,7 +109,7 @@ function YesterdaySolved({ y }: { y: ArcadeYesterday | null }) {
   if (!y || y.entries.length === 0) return null;
   return (
     <section className="mt-10">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+      <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
         Yesterday's ten, revealed
       </h2>
       <ul className="mt-2 space-y-1.5">
@@ -123,25 +122,6 @@ function YesterdaySolved({ y }: { y: ArcadeYesterday | null }) {
           />
         ))}
       </ul>
-    </section>
-  );
-}
-
-function MoreGames() {
-  return (
-    <section className="mt-8">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <ScrollRail className="mt-2 gap-2.5">
-        {ENABLED_SLUGS.filter((slug) => slug !== GAME.slug).map((slug) => (
-          <ArcadeTile key={slug} game={GAMES[slug]} className="w-[168px] shrink-0" />
-        ))}
-      </ScrollRail>
-      <Link
-        to="/play"
-        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
-      >
-        All games
-      </Link>
     </section>
   );
 }
@@ -314,11 +294,11 @@ function SequelOrFakePage() {
           </GameShell>
         ) : (
           <section>
-            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+            <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
               {GAME.name}
             </h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
-            <p className="mt-6 text-[14px] text-text-muted">
+            <p className="mt-2 text-lg text-text-muted">{GAME.hook}</p>
+            <p className="mt-6 text-lg text-text-muted">
               Today's deck did not load. Try again in a minute.
             </p>
           </section>
@@ -326,7 +306,7 @@ function SequelOrFakePage() {
 
         {api.phase === "ended" && calls.length > 0 && (
           <section className="mt-6">
-            <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+            <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
               The ten, revealed
             </h2>
             <ul className="mt-2 space-y-1.5">
@@ -344,9 +324,9 @@ function SequelOrFakePage() {
         )}
 
         <YesterdaySolved y={yesterday} />
-        <MoreGames />
+        <MoreGames exclude={GAME.slug} />
 
-        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
+        <p className="mt-10 text-sm text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );

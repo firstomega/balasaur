@@ -49,32 +49,32 @@ export const Route = createFileRoute("/taste")({
 
 function TastePage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main id="main" className="mx-auto w-full max-w-article px-5 py-10">
-        <h1 className="text-[32px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright sm:text-[40px]">
+    <div className="bg-background text-foreground">
+      <main id="main" className="mx-auto w-full max-w-article px-4 pb-12 pt-6 md:pt-9">
+        <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
           Taste Card
         </h1>
-        <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-text-muted">
+        <p className="mt-3 max-w-prose text-lg leading-relaxed text-text-muted">
           The name your list earns and the four highest-scoring titles on it.
         </p>
 
         <CardSection />
 
         <section className="mt-12 border-t border-border pt-8">
-          <h2 className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
+          <h2 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
             The names a card can take
           </h2>
-          <p className="mt-2 max-w-prose text-[14px] leading-relaxed text-text-muted">
+          <p className="mt-3 max-w-prose text-lg leading-relaxed text-text-muted">
             A card takes the name whose rule your list clears by the widest margin. Every rule is a
             share of one number, and that number is printed on the card.
           </p>
           <ul className="mt-5 divide-y divide-border border-y border-border">
             {ARCHETYPES.map((a) => (
-              <li key={a.key} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline">
-                <span className="w-[220px] shrink-0 text-[15px] font-black tracking-[-0.01em] text-text-bright">
+              <li key={a.key} className="flex flex-col gap-1 py-3.5 sm:flex-row sm:items-baseline">
+                <span className="w-[220px] shrink-0 font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
                   {a.name}
                 </span>
-                <span className="text-[14px] leading-relaxed text-text-muted">{a.rule}</span>
+                <span className="text-lg leading-relaxed text-foreground">{a.rule}</span>
               </li>
             ))}
           </ul>
@@ -173,12 +173,12 @@ function exampleLine(
   factsFailed: boolean,
   profile: TasteProfile | null,
 ): string {
-  if (factsFailed) return "The catalog did not answer, so reload to draw yours.";
-  if (!statusesReady || (enough && !profile)) return "Yours is on its way.";
+  if (factsFailed) return "The Taste Card did not load. Reload the page to try again.";
+  if (!statusesReady || (enough && !profile)) return "Loading your Taste Card.";
   if (!enough) {
     return needed === MIN_BASIS_TITLES
-      ? `Yours draws at ${MIN_BASIS_TITLES} rated titles.`
-      : `Yours draws at ${MIN_BASIS_TITLES} rated titles, and you are ${needed} short.`;
+      ? `A Taste Card needs ${MIN_BASIS_TITLES} rated titles.`
+      : `A Taste Card needs ${MIN_BASIS_TITLES} rated titles. You have rated ${MIN_BASIS_TITLES - needed}.`;
   }
-  return `Yours draws at ${MIN_BASIS_TITLES} rated titles the catalog knows, and it has ${profile?.total ?? 0} of yours.`;
+  return `A Taste Card needs ${MIN_BASIS_TITLES} rated titles from the catalog. ${profile?.total ?? 0} of yours are in it.`;
 }

@@ -66,42 +66,42 @@ function AccountPage() {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
-        <main id="main" className="mx-auto max-w-article px-5 py-12">
-          <p className="text-[14px] text-text-dim">Loading…</p>
+      <div className="bg-background text-foreground">
+        <main id="main" className="mx-auto max-w-article px-4 pb-12 pt-6 md:pt-9">
+          <p className="text-lg text-text-dim">Loading…</p>
         </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-article px-5 py-10">
-        <header className="mb-8 border-b border-border pb-5">
-          <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
-            Account
-          </h1>
-          <p className="mt-2 text-[14px] text-text-dim">
-            Signed in as{" "}
-            <span className="ph-no-capture font-mono text-[13px] text-text-muted">
-              {user.email}
-            </span>
-          </p>
-          <p className="mt-2 text-[14px] leading-relaxed text-text-dim">
-            Private settings. Only you can see this.{" "}
-            <Link to="/profile" className="text-primary hover:underline">
-              Manage your public profile →
-            </Link>
-          </p>
+    <div className="bg-background text-foreground">
+      <main id="main" className="mx-auto max-w-article px-4 pb-12 pt-6 md:pt-9">
+        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
+              Account
+            </h1>
+            <p className="mt-2 text-lg text-text-muted">
+              Signed in as{" "}
+              <span className="ph-no-capture font-mono text-base text-text-bright">
+                {user.email}
+              </span>
+            </p>
+          </div>
+          <Link
+            to="/profile"
+            className="rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
+          >
+            Public profile
+          </Link>
         </header>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <SecuritySection email={user.email ?? ""} />
           <PreferencesSection initial={(user.user_metadata?.region as string | undefined) ?? ""} />
           <ArcadeSection userId={user.id} />
-          <NotificationsSection />
           <PrivacySection />
-          <SubscriptionSection />
           <DangerZone email={user.email ?? ""} onDeleted={signOut} />
         </div>
       </main>
@@ -120,12 +120,13 @@ function Section({
   children: React.ReactNode;
   tone?: "default" | "danger";
 }) {
-  const border = tone === "danger" ? "border-red-500/60" : "border-border";
   return (
-    <section className={`rounded-[6px] border ${border} bg-panel/40 p-5`}>
+    <section
+      className={`rounded-2xl p-5 ${tone === "danger" ? "border-2 border-destructive" : "bg-panel"}`}
+    >
       <h2
-        className={`mb-4 text-[19px] font-black tracking-[-0.02em] ${
-          tone === "danger" ? "text-red-400" : "text-text-bright"
+        className={`mb-4 font-display text-2xl font-extrabold leading-none tracking-tight ${
+          tone === "danger" ? "text-destructive" : "text-text-bright"
         }`}
       >
         {title}
@@ -146,31 +147,29 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[14px] font-bold tracking-[-0.01em] text-text-bright">
-        {label}
-      </label>
+      <label className="block text-lg font-bold text-text-bright">{label}</label>
       {children}
-      {hint && <p className="text-[13px] text-text-dim">{hint}</p>}
+      {hint && <p className="text-base text-text-muted">{hint}</p>}
     </div>
   );
 }
 
 const inputCls =
-  "h-9 w-full rounded-[5px] border border-border bg-background px-2.5 text-[14px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50";
+  "h-10 w-full rounded-xl border border-border-strong bg-background px-3 text-lg text-foreground placeholder:text-text-dim focus:border-text-bright focus:outline-none disabled:opacity-50";
 
 const btnPrimary =
-  "cursor-pointer rounded-[5px] bg-primary px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed";
+  "cursor-pointer rounded-full bg-text-bright px-4 py-2 text-lg font-bold text-background hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed";
 
 const btnSecondary =
-  "cursor-pointer rounded-[5px] border border-border bg-background px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed";
+  "cursor-pointer rounded-full border border-border-strong bg-background px-4 py-2 text-lg font-bold text-text-bright hover:border-text-bright disabled:opacity-40 disabled:cursor-not-allowed";
 
 const btnDanger =
-  "cursor-pointer rounded-[5px] border border-red-500/60 bg-red-500/10 px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-red-300 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed";
+  "cursor-pointer rounded-full border-2 border-destructive bg-background px-4 py-2 text-lg font-bold text-destructive hover:bg-destructive hover:text-background disabled:opacity-40 disabled:cursor-not-allowed";
 
 function Status({ msg }: { msg: { kind: "ok" | "err"; text: string } | null }) {
   if (!msg) return null;
   return (
-    <p className={`text-[13px] ${msg.kind === "ok" ? "text-emerald-400" : "text-red-400"}`}>
+    <p className={`text-base ${msg.kind === "ok" ? "text-rating" : "text-destructive"}`}>
       {msg.text}
     </p>
   );
@@ -380,37 +379,6 @@ function ArcadeSection({ userId }: { userId: string }) {
   );
 }
 
-/* ---------- 3. Notifications & Email ---------- */
-
-function NotificationsSection() {
-  const rows = [
-    { label: "Product updates", desc: "Important changes to Balasaur." },
-    { label: "Weekly digest", desc: "A roundup of what's new." },
-    { label: "Marketing", desc: "Occasional news and offers." },
-  ];
-  return (
-    <Section title="Notifications & Email">
-      <p className="text-[13px] text-text-dim">Coming soon. No email system is wired up yet.</p>
-      <ul className="divide-y divide-border rounded-[5px] border border-border">
-        {rows.map((r) => (
-          <li
-            key={r.label}
-            className="flex items-center justify-between gap-4 px-3 py-2.5 opacity-60"
-          >
-            <div>
-              <p className="text-[14px] font-semibold text-text-bright">{r.label}</p>
-              <p className="text-[13px] text-text-dim">{r.desc}</p>
-            </div>
-            <label className="inline-flex cursor-not-allowed items-center">
-              <input type="checkbox" disabled className="h-4 w-4 accent-primary" />
-            </label>
-          </li>
-        ))}
-      </ul>
-    </Section>
-  );
-}
-
 /* ---------- 4. Privacy & Data ---------- */
 
 function PrivacySection() {
@@ -453,34 +421,13 @@ function PrivacySection() {
         </button>
         <Status msg={msg} />
       </div>
-      <div className="flex gap-4 text-[13px] font-semibold">
+      <div className="flex gap-4 text-base font-bold">
         <Link to="/privacy" className="text-text-muted hover:text-text-bright">
           Privacy policy
         </Link>
         <Link to="/terms" className="text-text-muted hover:text-text-bright">
           Terms
         </Link>
-      </div>
-    </Section>
-  );
-}
-
-/* ---------- 5. Subscription ---------- */
-
-function SubscriptionSection() {
-  return (
-    <Section title="Subscription">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="flex-1 rounded-[5px] border border-border bg-background p-3">
-          <p className="text-[13px] text-text-dim">Current plan</p>
-          <p className="mt-1 text-[20px] font-black tracking-[-0.02em] text-text-bright">Free</p>
-        </div>
-        <div className="flex-1 rounded-[5px] border border-dashed border-border bg-background p-3 opacity-70">
-          <p className="text-[13px] text-text-dim">Balasaur Pro</p>
-          <p className="mt-1 text-[20px] font-black tracking-[-0.02em] text-text-bright">
-            Coming soon
-          </p>
-        </div>
       </div>
     </Section>
   );
@@ -538,8 +485,8 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[14px] font-semibold text-text-bright">Clear my activity</p>
-            <p className="text-[13px] leading-relaxed text-text-dim">
+            <p className="text-lg font-bold text-text-bright">Clear my activity</p>
+            <p className="text-base leading-relaxed text-text-muted">
               Removes everything you've marked (seen, want, liked, disliked). Keeps your account.
             </p>
           </div>
@@ -550,10 +497,8 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
         <div className="h-px bg-border" />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[14px] font-semibold text-text-bright">
-              Delete my account permanently
-            </p>
-            <p className="text-[13px] text-text-dim">This cannot be undone.</p>
+            <p className="text-lg font-bold text-text-bright">Delete my account permanently</p>
+            <p className="text-base text-text-muted">This cannot be undone.</p>
           </div>
           <button onClick={() => setDelOpen(true)} className={btnDanger}>
             Delete account
@@ -564,12 +509,12 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
 
       {/* Clear confirm */}
       <Dialog open={clearOpen} onOpenChange={setClearOpen}>
-        <DialogContent className="border-border bg-panel text-foreground sm:max-w-[420px]">
+        <DialogContent className="rounded-2xl border-2 border-text-bright bg-background text-foreground sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="text-[19px] font-black tracking-[-0.02em] text-text-bright">
+            <DialogTitle className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
               Clear all activity?
             </DialogTitle>
-            <DialogDescription className="text-[13px] leading-relaxed text-text-dim">
+            <DialogDescription className="text-base leading-relaxed text-text-muted">
               This permanently removes every title you've marked. Your account stays.
             </DialogDescription>
           </DialogHeader>
@@ -592,16 +537,16 @@ function DangerZone({ email, onDeleted }: { email: string; onDeleted: () => Prom
           if (!v) setConfirmText("");
         }}
       >
-        <DialogContent className="border-red-500/60 bg-panel text-foreground sm:max-w-[460px]">
+        <DialogContent className="rounded-2xl border-2 border-destructive bg-background text-foreground sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-[19px] font-black tracking-[-0.02em] text-red-300">
+            <DialogTitle className="font-display text-2xl font-extrabold leading-none tracking-tight text-destructive">
               Delete account permanently
             </DialogTitle>
-            <DialogDescription className="text-[13px] leading-relaxed text-text-dim">
+            <DialogDescription className="text-base leading-relaxed text-text-muted">
               This will remove:
             </DialogDescription>
           </DialogHeader>
-          <ul className="list-disc space-y-1 pl-5 text-[13px] text-text-muted marker:text-text-dim">
+          <ul className="list-disc space-y-1 pl-5 text-base text-text-muted marker:text-text-dim">
             <li>
               Your account (<span className="ph-no-capture">{email}</span>)
             </li>

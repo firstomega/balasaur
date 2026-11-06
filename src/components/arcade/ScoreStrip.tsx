@@ -53,7 +53,7 @@ const FLOAT_MS = 720;
 const TIERS: [Tier, Tier, Tier] = [
   {
     className:
-      "border-[color-mix(in_oklab,var(--game,var(--primary))_50%,transparent)] bg-[color-mix(in_oklab,var(--game,var(--primary))_12%,transparent)] text-[var(--game,var(--primary))]",
+      "border-[color-mix(in_oklab,var(--game,var(--primary))_50%,transparent)] bg-[color-mix(in_oklab,var(--game,var(--primary))_12%,transparent)] text-[var(--game-text,var(--primary))]",
     word: null,
   },
   { className: "border-rating/60 bg-rating/10 text-rating", word: "on a roll" },
@@ -65,7 +65,7 @@ const TIERS: [Tier, Tier, Tier] = [
 // lose to the colour.
 const FLOAT_BASE =
   "arcade-rise-fade pointer-events-none absolute -top-1 whitespace-nowrap font-mono text-[13px] font-semibold tabular-nums";
-const SCORE_FLOAT = `${FLOAT_BASE} left-full ml-1 text-[var(--game,var(--primary))]`;
+const SCORE_FLOAT = `${FLOAT_BASE} left-full ml-1 text-[var(--game-text,var(--primary))]`;
 // Bright, not the game hue: the chip already carries the tier colour, this
 // carries the amount.
 const COMBO_FLOAT = `${FLOAT_BASE} right-0 text-text-bright`;

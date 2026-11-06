@@ -18,20 +18,21 @@ export type GameSlug =
   | "sequel-or-fake"
   | "poster-reveal";
 
-/** One named hue per game. The hex lives in src/styles.css as --hue-<name>
- *  with a matching --hue-<name>-ink; games.ts maps slug to hue. */
+/** One poster swatch per game, so the play page uses the same 14 colours as
+ *  every list tile. The fill and ink live in src/styles.css as
+ *  --swatch-<name> and --swatch-<name>-ink; games.ts maps slug to swatch. */
 export type ArcadeHue =
   | "blue"
-  | "ice"
-  | "crimson"
-  | "magenta"
-  | "gold"
-  | "teal"
-  | "violet"
-  | "ruby"
-  | "sun"
+  | "sky"
+  | "red"
   | "lime"
-  | "orange";
+  | "gold"
+  | "pink"
+  | "orange"
+  | "teal"
+  | "wine"
+  | "violet"
+  | "green";
 
 export interface GameDef {
   slug: GameSlug;

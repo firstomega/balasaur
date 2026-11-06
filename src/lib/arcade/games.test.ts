@@ -5,12 +5,16 @@ import {
   HUB_SECTIONS,
   GUESS_COUNT_GAMES,
   NEW_RIBBON_CAP,
+  GAME_TEXT_HUE_PCT,
+  HUE_HEX,
   TILE_HOOK_MAX,
   isNewGame,
   newGames,
   tierFor,
-  tileHook,
 } from "./games";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -31,21 +35,59 @@ describe("NEW ribbon", () => {
   });
 });
 
-describe("tile hooks", () => {
-  it("fit two lines at 13px in a 129px column and end a sentence", () => {
+describe("hooks", () => {
+  it("fit two lines at 13px in the narrowest tile and end a sentence", () => {
     for (const slug of ENABLED_SLUGS) {
-      const hook = tileHook(GAMES[slug]);
+      const hook = GAMES[slug].hook;
       expect(hook.length).toBeLessThanOrEqual(TILE_HOOK_MAX);
-      expect(/[.?!]$/.test(hook)).toBe(true);
+      expect(/[.!]$/.test(hook)).toBe(true);
       expect(hook).not.toContain("—");
+      expect(hook).not.toContain("?");
     }
   });
+});
 
-  it("Tonight hooks fit the hero slot: two lines at 14.5px in 197px, the md width", () => {
-    for (const slug of HUB_SECTIONS[0].slugs) {
-      expect(GAMES[slug].hook.length).toBeLessThanOrEqual(48);
-      expect(GAMES[slug].hook).not.toContain("—");
+// --game-text: the hue mixed into ink in sRGB, as color-mix(in srgb, ...)
+// computes it. It is the hue as text on the light ground, so it must read on
+// paper, on the wash, and on the 16 percent hue tint the game band uses.
+function rgb(hex: string): number[] {
+  return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+}
+function luminance(c: number[]): number {
+  const [r, g, b] = c.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(a: number[], b: number[]): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+const mix = (a: number[], b: number[], p: number) => a.map((v, i) => v * p + b[i] * (1 - p));
+
+describe("--game-text", () => {
+  const css = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../../styles.css"),
+    "utf8",
+  );
+  const token = (name: string) => {
+    const m = css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`));
+    if (!m) throw new Error(`no --${name} in styles.css`);
+    return rgb(m[1]);
+  };
+  const ink = token("ink");
+  const paper = token("paper");
+  const wash = token("wash");
+
+  it("reads at 4.5:1 on paper, the wash and a 16% hue tint for every hue", () => {
+    const low: string[] = [];
+    for (const [hue, hex] of Object.entries(HUE_HEX)) {
+      const text = mix(rgb(hex), ink, GAME_TEXT_HUE_PCT / 100);
+      const grounds = { paper, wash, tint: mix(rgb(hex), paper, 0.16) };
+      for (const [name, ground] of Object.entries(grounds)) {
+        const c = contrast(text, ground);
+        if (c < 4.5) low.push(`${hue} on ${name}: ${c.toFixed(2)}`);
+      }
     }
+    expect(low.join("\n")).toBe("");
   });
 });
 

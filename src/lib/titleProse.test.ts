@@ -59,32 +59,15 @@ describe("titleProse", () => {
     );
   });
 
-  it("says the sources agree only when they are genuinely tight", () => {
-    // 81, 96, 74 spans 22 points. Not agreement, so: nothing.
-    expect(titleProse(movie)).not.toContain("Every source");
-
-    const tight = titleProse({
-      ...movie,
-      ratings: { balasaur: 78, imdb: 7.8, rottenTomatoes: 80, metacritic: 75 },
-    });
-    expect(tight).toContain("Every source lands within 5 points of the others");
-  });
-
-  it("attaches the vote count to the agreement claim, not as its own sentence", () => {
+  it("never says whether the sources agree", () => {
+    // 78, 80, 75 spans 5 points: tight, and still not said on the page.
     const tight = titleProse({
       ...movie,
       voteCount: 3641,
       ratings: { balasaur: 78, imdb: 7.8, rottenTomatoes: 80, metacritic: 75 },
     });
-    // 3,641 rounds to 3,600, not 4,000: a reader can check this in one click.
-    expect(tight).toContain("across 3,600 audience votes.");
-    expect(
-      titleProse({
-        ...movie,
-        voteCount: 12,
-        ratings: { balasaur: 78, imdb: 7.8, rottenTomatoes: 80, metacritic: 75 },
-      }),
-    ).not.toContain("votes");
+    expect(tight).not.toContain("Every source");
+    expect(tight).not.toContain("votes");
   });
 
   it("mentions runtime only at the extremes", () => {

@@ -5,32 +5,34 @@ import { SITE_TAGLINE } from "@/lib/seo";
 export function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-border bg-background">
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-6 text-[12px] leading-relaxed text-text-dim md:flex-row md:items-start md:justify-between">
+    <footer className="bg-panel">
+      <div className="mx-auto flex max-w-content flex-col gap-5 px-4 py-8 text-sm leading-relaxed text-text-muted md:flex-row md:items-start md:justify-between md:py-10">
         <div className="space-y-1">
           {/* The site's one tagline, held in src/lib/seo.ts so the footer, the
               signed-out hero, the share card and the meta description cannot
               say four different things again. */}
-          <p className="text-[13px] font-semibold text-text-muted">{SITE_TAGLINE}.</p>
+          <p className="pb-1 font-display text-xl font-extrabold leading-tight text-text-bright md:text-2xl">
+            {SITE_TAGLINE}.
+          </p>
           <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
           <p>Streaming availability data provided by JustWatch.</p>
           <p>Ratings via OMDb (IMDb, Rotten Tomatoes, Metacritic).</p>
         </div>
         <div className="flex flex-col gap-2 md:items-end">
-          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-text-muted">
-            <Link to="/about" className="hover:text-text-bright">
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-base font-semibold text-text-bright">
+            <Link to="/about" className="hover:underline">
               About
             </Link>
-            <Link to="/contact" className="hover:text-text-bright">
+            <Link to="/contact" className="hover:underline">
               Contact
             </Link>
-            <Link to="/privacy" className="hover:text-text-bright">
+            <Link to="/privacy" className="hover:underline">
               Privacy
             </Link>
-            <Link to="/terms" className="hover:text-text-bright">
+            <Link to="/terms" className="hover:underline">
               Terms
             </Link>
-            <button type="button" onClick={openCookieSettings} className="hover:text-text-bright">
+            <button type="button" onClick={openCookieSettings} className="hover:underline">
               Cookie settings
             </button>
           </nav>
