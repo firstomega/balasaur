@@ -14,6 +14,7 @@ import {
   canonicalLink,
   buildMeta,
   cacheSsrResponse,
+  noStoreSsrResponse,
   jsonLdScript,
   composeTitle,
   clampDescription,
@@ -35,7 +36,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/best/$slug")({
   loader: async ({ params }) => {
-    await cacheSsrResponse();
+    // A failed read throws to the error page, which is sent no-store
+    // (src/server.ts), so a list that exists never caches as a 404.
     const data = await getCollection({ data: { slug: params.slug } });
     if (!data) {
       // The v8 media-type split renamed ~200 slugs that Google already knows.
@@ -48,6 +50,9 @@ export const Route = createFileRoute("/best/$slug")({
     const related = await getRelatedCollections({
       data: { slug: params.slug, kind: data.row.kind },
     });
+    // Cached only once the reads have answered. A failed kept-set lookup
+    // renders the default (noindex) and is sent uncached, so it is not kept.
+    await (data.incomplete ? noStoreSsrResponse() : cacheSsrResponse());
     return { ...data, related };
   },
   head: ({ loaderData, params }) => {

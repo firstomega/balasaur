@@ -180,6 +180,19 @@ export async function cacheSsrResponse(seconds = 21600, swrSeconds = 86400): Pro
   );
 }
 
+/**
+ * Keep the current SSR response out of every cache: for a page that rendered
+ * but whose noindex decision is a guess because its lookup failed. A guess
+ * served to Googlebot for six hours is worse than one more read.
+ *
+ * Only a 2xx response carries a header set here; the server drops it on a
+ * 404, a redirect or a 500. A failed read therefore throws to the error page,
+ * and src/server.ts marks every 5xx no-store on its way out.
+ */
+export async function noStoreSsrResponse(): Promise<void> {
+  await setSsrCacheControl("no-store");
+}
+
 /** Meta tag asking crawlers to skip this page (tiered indexation). */
 export function noindexMeta(): MetaTag {
   return { name: "robots", content: "noindex, follow" };
