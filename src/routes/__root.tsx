@@ -22,13 +22,7 @@ import { AnalyticsManager } from "@/components/balasaur/AnalyticsManager";
 import { Toaster } from "@/components/ui/sonner";
 import { NotFoundPage } from "@/components/balasaur/NotFoundPage";
 import { DinoRun } from "@/components/balasaur/DinoRun";
-import {
-  SITE_ORIGIN,
-  SITE_NAME,
-  SITE_DESCRIPTION,
-  DEFAULT_OG_IMAGE,
-  jsonLdScript,
-} from "@/lib/seo";
+import { SITE_NAME, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from "@/lib/seo";
 
 // The top bar belongs to the shell, not to each page. One route refuses it:
 // /watched is a full-viewport rating deck that draws its own header with an
@@ -117,15 +111,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: DEFAULT_OG_IMAGE },
       { property: "og:site_name", content: SITE_NAME },
     ],
-    scripts: [
-      jsonLdScript({
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: SITE_NAME,
-        description: SITE_DESCRIPTION,
-        url: SITE_ORIGIN,
-      }),
-    ],
+    // No WebSite block here. The home page carries the one WebSite block
+    // (src/lib/jsonld.ts websiteJsonLd), which is where Google reads the site
+    // name. A copy on the root put two on the home page and one on every
+    // other page, where it describes nothing about that page.
     links: [
       {
         rel: "stylesheet",

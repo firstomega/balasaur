@@ -27,6 +27,7 @@ import { dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectionComposition, collectionDek } from "./collectionsProse";
 import { SITE_DESCRIPTION } from "./seo";
+import { HOME_TITLE, homeDescription } from "./homeSnippet";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -479,6 +480,15 @@ const MUST_PASS: string[] = [
   "Crime, mystery and thriller cover 88% of what you Loved.",
   "It runs long at 2h 48m.",
   SITE_DESCRIPTION,
+  HOME_TITLE,
+  // The home page's search result, from the live Top rated leaders on 2026-11-06.
+  homeDescription({
+    movies: [
+      { title: "The Godfather", score: 94 },
+      { title: "12 Angry Men", score: 93 },
+    ],
+    shows: [{ title: "Breaking Bad", score: 94 }],
+  }),
 ];
 
 // ---------------------------------------------------------------------------

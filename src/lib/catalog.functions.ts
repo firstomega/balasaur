@@ -14,6 +14,7 @@ import { trustedScore } from "@/lib/trust";
 import { asSwatchKey } from "@/lib/posterSwatch";
 import { originsForCountry } from "@/lib/origins";
 import type { MediaItem, MediaPerson, MediaSeason } from "@/types/media";
+import type { HomeLeader, HomeLeaders } from "@/lib/homeSnippet";
 
 // Server-side catalog browsing. Replaces shipping the entire catalog to the
 // browser: the homepage asks for one page at a time, filtered + sorted in Postgres.
@@ -371,6 +372,43 @@ export const queryCatalog = createServerFn({ method: "GET" })
     }
     return { items, total };
   });
+
+/**
+ * The first few movies and shows on the home grid's "Top rated" sort, for the
+ * home page's search-result description (src/lib/homeSnippet.ts). Same
+ * filters and the same order as that sort with no other filter set, so the
+ * names in the description are the first cards a visitor sees after picking
+ * Top rated. Takes no input, so the output is identical for every visitor.
+ *
+ * Fails soft to empty lists: the description then falls back to the site
+ * description rather than taking the home page down. Measured 2.5ms per
+ * type against the live catalog (index on quality_score).
+ */
+export const getHomeLeaders = createServerFn({ method: "GET" }).handler(
+  async (): Promise<HomeLeaders> => {
+    const top = async (type: "movie" | "tv"): Promise<HomeLeader[]> => {
+      const { data, error } = await applyOrder(
+        buildBase().eq("sensitive", false).eq("media_type", type),
+        "topRated",
+      ).range(0, 2);
+      if (error || !data) {
+        if (error) console.error("[catalog] home leaders failed:", error.message);
+        return [];
+      }
+      // The unbroken run of scored cards from the top. A card with no sticker
+      // ends it: naming the title after it as the leader would skip a card
+      // the visitor can see.
+      const out: HomeLeader[] = [];
+      for (const m of (data as unknown as CardRow[]).map(rowToCardItem)) {
+        if (typeof m.ratings.balasaur !== "number") break;
+        out.push({ title: m.title, score: m.ratings.balasaur });
+      }
+      return out;
+    };
+    const [movies, shows] = await Promise.all([top("movie"), top("tv")]);
+    return { movies, shows };
+  },
+);
 
 /**
  * The rate-deck query. Separate from queryCatalog for two reasons: the deck

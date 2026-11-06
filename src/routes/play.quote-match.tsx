@@ -60,7 +60,7 @@ export const Route = createFileRoute("/play/quote-match")({
       meta: buildMeta({
         title: "Movie Quote Game: Match the Quote to the Movie",
         description:
-          "Five famous lines, five movies, one board a day. Match each quote to the movie it comes from. May the Force be with you. You know where that one goes.",
+          "Five famous lines, five movies, one board a day. Match each quote to the movie it comes from. Same board for everyone, new at midnight.",
         url,
         image: `${SITE_ORIGIN}/og-play-quote-match.jpg`,
       }),

@@ -22,6 +22,7 @@ import {
   catalogInfiniteOptions,
   catalogFacetsOptions,
   homeCollectionsOptions,
+  homeLeadersOptions,
   filtersToParams,
   withBoost,
 } from "@/hooks/useCatalog";
@@ -56,12 +57,13 @@ import { Switch } from "@/components/ui/switch";
 import { SITE_ORIGIN, canonicalLink, jsonLdScript, noindexMeta } from "@/lib/seo";
 import { MAX_PAGE, canonicalPath, homeIsIndexable, isFiltered, pageNumber } from "@/lib/homePaging";
 import { websiteJsonLd } from "@/lib/jsonld";
+import { HOME_TITLE, homeDescription, type HomeLeaders } from "@/lib/homeSnippet";
 
 function pageOffset(raw: string | undefined): number {
   return (pageNumber(raw) - 1) * PAGE_SIZE;
 }
 
-const BASE_TITLE = "Balasaur: Stop Scrolling, Start Watching";
+const BASE_TITLE = HOME_TITLE;
 
 /** Page 2 and beyond say so, rather than 400 URLs sharing one title. */
 function pageTitle(search: FilterSearch | undefined): string {
@@ -103,6 +105,7 @@ export const Route = createFileRoute("/")({
           catalogInfiniteOptions(withBoost(params, boost), pageOffset(deps.page)),
         ),
         context.queryClient.ensureQueryData(homeCollectionsOptions()),
+        context.queryClient.ensureQueryData(homeLeadersOptions()),
       ]),
       1500,
     );
@@ -111,21 +114,20 @@ export const Route = createFileRoute("/")({
     // preloaded as the LCP element. The rail is gone (it ran the grid's exact
     // query), and the grid's own first card is rendered from data the loader
     // does not hold, so there is nothing to preload here any more.
+
+    // The search-result description names the Top rated leaders. Read from
+    // the cache the prefetch above filled: null when that read failed or ran
+    // past the budget, and the description falls back to the site's own.
+    const leaders: HomeLeaders | null =
+      context.queryClient.getQueryData(homeLeadersOptions().queryKey) ?? null;
+    return { leaders };
   },
-  head: ({ match }) => ({
+  head: ({ match, loaderData }) => ({
     meta: [
       { title: pageTitle(match?.search as FilterSearch | undefined) },
-      {
-        name: "description",
-        content:
-          "Movies and TV scored 0 to 100 by blending IMDb, Rotten Tomatoes, Metacritic and TMDB. Filter by service, genre, year or score to find what to watch tonight.",
-      },
+      { name: "description", content: homeDescription(loaderData?.leaders) },
       { property: "og:title", content: pageTitle(match?.search as FilterSearch | undefined) },
-      {
-        property: "og:description",
-        content:
-          "Movies and TV scored 0 to 100 by blending IMDb, Rotten Tomatoes, Metacritic and TMDB. Filter by service, genre, year or score to find what to watch tonight.",
-      },
+      { property: "og:description", content: homeDescription(loaderData?.leaders) },
       { property: "og:url", content: SITE_ORIGIN + "/" },
       ...(homeIsIndexable(match?.search as FilterSearch | undefined) ? [] : [noindexMeta()]),
     ],

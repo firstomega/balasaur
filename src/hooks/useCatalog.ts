@@ -9,6 +9,7 @@ import {
   queryCatalog,
   queryDeck,
   getCatalogFacets,
+  getHomeLeaders,
   getViewerCountry,
   type CatalogQueryParams,
 } from "@/lib/catalog.functions";
@@ -125,6 +126,16 @@ export function homeCollectionsOptions() {
   return queryOptions({
     queryKey: ["home-collections"] as const,
     queryFn: () => listHomeCollections(),
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+/** The first movies and shows on Top rated, for the home page's search-result
+ *  description. No region or boost input: one cache entry for everyone. */
+export function homeLeadersOptions() {
+  return queryOptions({
+    queryKey: ["home-leaders"] as const,
+    queryFn: () => getHomeLeaders(),
     staleTime: 30 * 60 * 1000,
   });
 }
