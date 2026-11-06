@@ -16,7 +16,8 @@ import { ScrollRail } from "./ScrollRail";
 // a phone. From 1280px the same rail lays out as a five-column wall: 14 tiles
 // plus the "All collections" tile fill three rows. Same markup and links at
 // every width, and paintTiles takes no width, so the colours never change with
-// the layout.
+// the layout. The "All collections" tile is outlined rather than filled, so it
+// never reads as one more list beside a black (noir) tile.
 
 export function CollectionRail() {
   const { data } = useQuery(homeCollectionsOptions());
@@ -48,7 +49,7 @@ export function CollectionRail() {
         ))}
         <Link
           to="/collections"
-          className="flex min-h-28 w-[140px] shrink-0 items-end xl:w-auto rounded-xl bg-text-bright p-3 font-display text-xl font-extrabold leading-none tracking-tight text-background transition-transform duration-base motion-safe:hover:-translate-y-0.5 md:rounded-2xl md:p-4 md:text-2xl"
+          className="flex min-h-28 w-[140px] shrink-0 items-end rounded-xl border-2 border-text-bright bg-background p-3 font-display text-xl font-extrabold leading-none tracking-tight text-text-bright transition-transform duration-base motion-safe:hover:-translate-y-0.5 md:rounded-2xl md:p-4 md:text-2xl xl:w-auto"
         >
           All collections
         </Link>
