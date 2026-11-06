@@ -270,13 +270,6 @@ async function main() {
 
     for (const route of routes) {
       checkedRoutes++;
-      // Recorded, never asserted: a failed read is noted in the file and the
-      // overflow check carries on.
-      try {
-        heads.push(await readHead(`${url}${route}`, route));
-      } catch (e) {
-        console.log(`      ${route}: could not read head tags (${String(e)})`);
-      }
       for (const { w, h, label } of WIDTHS) {
         const page = await browser.newPage({
           viewport: { width: w, height: h },
@@ -327,9 +320,19 @@ async function main() {
         }
       }
     }
-    // Pages whose head tags are worth a record but whose layout is the same
-    // game board as /play/balasaurdle: read, not screenshotted.
-    for (const route of ["/play/emoji", "/play/quote-match", "/play/taglines", "/play/timeline"]) {
+    // Head tags, read after every screenshot so these requests cannot change
+    // when the cold dev server settles under the browser. Recorded, never
+    // asserted: a failed read is noted in the log and the check carries on.
+    // The four extra game pages share /play/balasaurdle's board, so they are
+    // read here but not screenshotted.
+    const headRoutes = [
+      ...routes,
+      "/play/emoji",
+      "/play/quote-match",
+      "/play/taglines",
+      "/play/timeline",
+    ];
+    for (const route of headRoutes) {
       try {
         heads.push(await readHead(`${url}${route}`, route));
       } catch (e) {
