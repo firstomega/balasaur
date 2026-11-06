@@ -88,6 +88,11 @@ export interface MediaItem {
 }
 
 export interface MediaDetail extends MediaItem {
+  /**
+   * IMDb vote count, from the stored OMDb payload. Read by the kept-set rule
+   * (src/lib/indexKeep.ts); never displayed.
+   */
+  imdbVotes?: number;
   backdropUrl?: string;
   tagline?: string;
   runtime?: number;
