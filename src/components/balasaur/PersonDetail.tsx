@@ -97,7 +97,7 @@ function CreditRow({ item }: { item: MediaItem }) {
 
   const body = (
     <>
-      <span className="block h-[60px] w-10 shrink-0 overflow-hidden rounded-md bg-current/10 md:h-[72px] md:w-12">
+      <span className="block h-[60px] w-10 shrink-0 overflow-hidden rounded-md bg-current/10">
         {item.posterUrl && (
           <img
             src={tmdbImage(item.posterUrl, "w92")}
@@ -105,10 +105,10 @@ function CreditRow({ item }: { item: MediaItem }) {
               { w: 92, size: "w92" },
               { w: 154, size: "w154" },
             ])}
-            sizes="48px"
+            sizes="40px"
             alt=""
-            width={48}
-            height={72}
+            width={40}
+            height={60}
             loading="lazy"
             decoding="async"
             className="h-full w-full object-cover"
@@ -137,10 +137,15 @@ function CreditRow({ item }: { item: MediaItem }) {
   );
 
   return (
-    <li className={cn("flex items-stretch overflow-hidden rounded-xl", swatchTint(sw))}>
+    <li
+      className={cn(
+        "mb-1.5 flex break-inside-avoid items-stretch overflow-hidden rounded-xl",
+        swatchTint(sw),
+      )}
+    >
       <span
         className={cn(
-          "flex w-14 shrink-0 items-center justify-center font-display text-xl font-extrabold tabular-nums leading-none md:w-20 md:text-2xl",
+          "flex w-14 shrink-0 items-center justify-center font-display text-xl font-extrabold tabular-nums leading-none md:w-16",
           sw ? swatchSurface(sw) : "bg-secondary text-text-bright",
         )}
       >
@@ -262,61 +267,64 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
           </p>
         )}
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-14">
-          {(lists.length > 0 || detail.biography) && (
-            <aside className="flex flex-col gap-8 lg:col-start-2 lg:row-start-1">
-              {/* The /best list for this person, which links back here. */}
-              {lists.length > 0 && (
-                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1">
-                  {lists.map(({ list, lead }, i) => (
-                    <ListTile
-                      key={list.slug}
-                      slug={list.slug}
-                      title={list.title}
-                      itemCount={list.itemCount}
-                      lead={lead}
-                      swatch={listPaint[i]}
-                    />
-                  ))}
-                </div>
-              )}
-              {detail.biography && <Bio text={detail.biography} />}
-            </aside>
-          )}
-
-          {/* Works grouped by role, each a timeline, newest first: the order
-              someone looking up a filmography expects to find it in. */}
-          <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-1">
-            {detail.groups.map((g) => (
-              <section key={g.department}>
-                <SectionHeading>
-                  {g.department}{" "}
-                  <span className="font-mono text-lg font-semibold tabular-nums text-text-muted">
-                    {g.items.length}
-                  </span>
-                </SectionHeading>
-                <div className="space-y-4">
-                  {decadeRuns(g.items).map((run) => (
-                    <div key={run.decade ?? "undated"}>
-                      <p className="mb-1.5 font-display text-lg font-extrabold leading-none text-text-muted">
-                        {run.decade ?? "No release date"}
-                      </p>
-                      <ol className="flex flex-col gap-1.5">
-                        {run.items.map((it) => (
-                          <CreditRow key={it.id} item={it} />
-                        ))}
-                      </ol>
-                    </div>
-                  ))}
-                </div>
-              </section>
+        {/* The /best list for this person, which links back here. */}
+        {lists.length > 0 && (
+          <div className="mt-8 grid gap-2.5 sm:grid-cols-2 md:gap-3.5 lg:grid-cols-3">
+            {lists.map(({ list, lead }, i) => (
+              <ListTile
+                key={list.slug}
+                slug={list.slug}
+                title={list.title}
+                itemCount={list.itemCount}
+                lead={lead}
+                swatch={listPaint[i]}
+              />
             ))}
-            {detail.groups.length === 0 && (
-              <p className="text-lg text-text-muted">
-                No catalogued movies or TV for this person yet.
-              </p>
-            )}
           </div>
+        )}
+
+        {detail.biography && (
+          <div className="mt-10 max-w-article">
+            <Bio text={detail.biography} />
+          </div>
+        )}
+
+        {/* Works grouped by role, each a timeline, newest first: the order
+            someone looking up a filmography expects to find it in. */}
+        <div className="mt-12 space-y-12">
+          {detail.groups.map((g) => (
+            <section key={g.department}>
+              <SectionHeading>
+                {g.department}{" "}
+                <span className="font-mono text-lg font-semibold tabular-nums text-text-muted">
+                  {g.items.length}
+                </span>
+              </SectionHeading>
+              <div className="space-y-5">
+                {decadeRuns(g.items).map((run) => (
+                  <div key={run.decade ?? "undated"}>
+                    {/* The decade divider: the label and a rule to the edge. */}
+                    <p className="mb-2 flex items-center gap-3 font-display text-xl font-extrabold leading-none text-text-bright">
+                      {run.decade ?? "No release date"}
+                      <span aria-hidden="true" className="h-0.5 flex-1 bg-text-bright" />
+                    </p>
+                    {/* Two columns on wide screens, read down then across,
+                        so years still run in order within each column. */}
+                    <ol className="lg:columns-2 lg:gap-x-3.5">
+                      {run.items.map((it) => (
+                        <CreditRow key={it.id} item={it} />
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+          {detail.groups.length === 0 && (
+            <p className="text-lg text-text-muted">
+              No catalogued movies or TV for this person yet.
+            </p>
+          )}
         </div>
       </div>
     </article>
