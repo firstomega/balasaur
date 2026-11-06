@@ -1,18 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
+import { floorLabel } from "@/lib/catalogCount";
+import { liveCatalogCount } from "@/lib/catalogCount.server";
 import { SITE_ORIGIN } from "@/lib/seo";
 
 // Served at /llms.txt — the convention for telling AI answer engines what a
 // site is and which URLs hold the substance. Written for a machine deciding
 // whether this source is worth quoting, so it leads with the one thing here
 // that cannot be found on a dozen other sites: a single blended score.
+//
+// The title count is read live on each request (the response is cached for a
+// day), never typed: this file once said 104,000 against a catalog of 117,829.
+// If the read fails the sentence drops the count instead of guessing one.
 export const Route = createFileRoute("/llms.txt")({
   server: {
     handlers: {
-      GET: () => {
+      GET: async () => {
+        const count = await liveCatalogCount();
+        const size = count ? ` of more than ${floorLabel(count)} titles` : "";
         const body = `# Balasaur
 
-> A movie and TV database of more than ${CATALOG_FLOOR_LABEL} titles. Scored
+> A movie and TV database${size}. Scored
 > titles carry a Balasaur Score, a 0 to 100 blend of IMDb, Rotten Tomatoes,
 > Metacritic, and TMDB ratings, so titles rated on four different scales can
 > be compared directly. Scores and streaming availability are rebuilt nightly.

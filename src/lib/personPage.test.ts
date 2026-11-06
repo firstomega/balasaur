@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import type { MediaItem, PersonCredit, PersonCreditGroup } from "@/types/media";
-import { decadeRuns, personListLead, splitSelfCredits } from "./personPage";
+import {
+  creditLinks,
+  decadeRuns,
+  joinCatalogCredits,
+  personListLead,
+  splitSelfCredits,
+} from "./personPage";
 
 function item(id: string, year: string, extra: Partial<MediaItem> = {}): MediaItem {
   return {
@@ -119,5 +125,102 @@ describe("splitSelfCredits", () => {
     const { roles, self } = splitSelfCredits([credit("a"), credit("b", "Selfridge")]);
     expect(roles.map((i) => i.id)).toEqual(["a", "b"]);
     expect(self).toEqual([]);
+  });
+});
+
+// The shapes below are the real ones: a person record's credit as
+// buildPersonFromRaw stores it (TMDB card, "movie-<id>", role, no score), and
+// a catalog row as the join maps it (Balasaur Score, swatch).
+function tmdbCredit(id: string, extra: Partial<PersonCredit> = {}): PersonCredit {
+  return { ...item(id, "2004"), ratings: { tmdb: 6.9 }, role: "Viktor Navorski", ...extra };
+}
+
+describe("joinCatalogCredits", () => {
+  const groups: PersonCreditGroup[] = [
+    {
+      department: "Acting",
+      items: [
+        tmdbCredit("movie-594", { title: "The Terminal" }),
+        tmdbCredit("tv-113667", {
+          title: "Scene by Scene",
+          mediaType: "tv",
+          role: "Self",
+          episodes: 1,
+        }),
+      ],
+    },
+    {
+      department: "Directing",
+      items: [tmdbCredit("movie-594", { title: "The Terminal", role: undefined })],
+    },
+  ];
+  const rows = new Map([["movie-594", { media_id: "movie-594", score: 71 }]]);
+  const toItem = (r: { media_id: string; score: number }): MediaItem =>
+    item(r.media_id, "2004", {
+      title: "The Terminal",
+      ratings: { balasaur: r.score },
+      swatch: "sky",
+    });
+
+  it("marks catalog credits in and keeps what they did on it", () => {
+    const [acting] = joinCatalogCredits(groups, rows, toItem);
+    const { id, inCatalog, role, ratings, swatch } = acting.items[0];
+    expect({ id, inCatalog, role, ratings, swatch }).toEqual({
+      id: "movie-594",
+      inCatalog: true,
+      role: "Viktor Navorski",
+      ratings: { balasaur: 71 },
+      swatch: "sky",
+    });
+  });
+
+  it("marks every credit without a catalog row out, keeping its TMDB card", () => {
+    const [acting] = joinCatalogCredits(groups, rows, toItem);
+    const { id, title, role, episodes, inCatalog } = acting.items[1];
+    expect({ id, title, role, episodes, inCatalog }).toEqual({
+      id: "tv-113667",
+      title: "Scene by Scene",
+      role: "Self",
+      episodes: 1,
+      inCatalog: false,
+    });
+    expect(acting.items[1].ratings.balasaur).toBeUndefined();
+  });
+
+  it("marks the same title the same way in every department", () => {
+    const out = joinCatalogCredits(groups, rows, toItem);
+    expect(out[1].items[0].inCatalog).toBe(true);
+  });
+
+  it("marks everything out when a successful lookup found nothing", () => {
+    const out = joinCatalogCredits(groups, new Map(), toItem);
+    expect(out.flatMap((g) => g.items.map((i) => i.inCatalog))).toEqual([false, false, false]);
+  });
+
+  it("leaves the input untouched, so a cached record is never altered", () => {
+    joinCatalogCredits(groups, rows, toItem);
+    expect(groups[0].items.every((i) => i.inCatalog === undefined)).toBe(true);
+  });
+});
+
+describe("creditLinks", () => {
+  it("links a credit the catalog holds", () => {
+    expect(creditLinks(tmdbCredit("movie-594", { inCatalog: true }))).toBe(true);
+  });
+
+  it("prints a credit outside the catalog without a link", () => {
+    expect(creditLinks(tmdbCredit("movie-15673", { inCatalog: false }))).toBe(false);
+    expect(creditLinks(tmdbCredit("tv-113667", { mediaType: "tv", inCatalog: false }))).toBe(false);
+  });
+
+  it("keeps the link when the join never marked the credit", () => {
+    // A failed lookup, or a record served before the join ran.
+    expect(creditLinks(tmdbCredit("movie-15673"))).toBe(true);
+    expect(creditLinks(tmdbCredit("tv-113667", { mediaType: "tv" }))).toBe(true);
+  });
+
+  it("never links an id that is not a TMDB number", () => {
+    expect(creditLinks(tmdbCredit("movie-", { inCatalog: true }))).toBe(false);
+    expect(creditLinks(tmdbCredit("tv-abc", { mediaType: "tv" }))).toBe(false);
   });
 });

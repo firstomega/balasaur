@@ -1,24 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ReadingPage, ReadingSection } from "@/components/balasaur/ReadingPage";
+import { SITE_ORIGIN, buildMeta, canonicalLink } from "@/lib/seo";
 
 export const Route = createFileRoute("/terms")({
-  head: () => ({
-    meta: [
-      { title: "Terms and Conditions of Use for Balasaur.com" },
-      {
-        name: "description",
-        content:
+  head: () => {
+    const url = `${SITE_ORIGIN}/terms`;
+    return {
+      meta: buildMeta({
+        title: "Terms and Conditions of Use for Balasaur.com",
+        description:
           "The terms that govern your use of balasaur.com, including acceptable use, accounts, and third-party data.",
-      },
-      { property: "og:title", content: "Terms and Conditions of Use for Balasaur.com" },
-      {
-        property: "og:description",
-        content:
-          "The terms that govern your use of balasaur.com, including acceptable use, accounts, and third-party data.",
-      },
-    ],
-    links: [{ rel: "canonical", href: "https://balasaur.com/terms" }],
-  }),
+        url,
+      }),
+      links: [canonicalLink(url)],
+    };
+  },
   component: TermsPage,
 });
 

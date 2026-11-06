@@ -86,7 +86,7 @@ export const Route = createFileRoute("/play/balasaurdle")({
       meta: buildMeta({
         title: "Balasaurdle: The Daily Movie and TV Guessing Game",
         description:
-          "One title a day, six clues. How few do you need? The same clues for everyone, new at midnight.",
+          "One movie or show a day, six clues, six guesses. Each wrong guess opens the next clue. The same clues for everyone, new at midnight.",
         url,
         image: `${SITE_ORIGIN}/og-play-balasaurdle.jpg`,
       }),

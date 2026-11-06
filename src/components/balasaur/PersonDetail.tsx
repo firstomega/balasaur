@@ -8,7 +8,7 @@ import { usePersonDetail } from "@/hooks/usePersonDetail";
 import type { PersonCredit, PersonDetail as PersonDetailType } from "@/types/media";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { personProse } from "@/lib/personProse";
-import { decadeRuns, personListLead, splitSelfCredits } from "@/lib/personPage";
+import { creditLinks, decadeRuns, personListLead, splitSelfCredits } from "@/lib/personPage";
 import { paintTiles } from "@/lib/paintWall";
 import { swatchSurface } from "@/lib/swatchSurface";
 import { swatchTint } from "@/lib/swatchTint";
@@ -88,21 +88,68 @@ function rowMeta(item: PersonCredit): string[] {
   return bits;
 }
 
+/** The role line under a credit's title. The dot travels with the bit
+ *  before it, so a wrapped line starts on a word, never a separator, and
+ *  "2 Seasons" holds. */
+function MetaLine({ bits }: { bits: string[] }) {
+  return (
+    <p className="mt-0.5 line-clamp-2 text-sm text-text-muted md:text-base">
+      {bits.map((bit, i) => (
+        <Fragment key={i}>
+          <span className="whitespace-nowrap">
+            {bit}
+            {i < bits.length - 1 && " ·"}
+          </span>
+          {i < bits.length - 1 && " "}
+        </Fragment>
+      ))}
+    </p>
+  );
+}
+
+/** The year cell, printed only on the first row of that year. */
+function YearCell({ year }: { year: string | false | undefined }) {
+  return (
+    <span className="flex w-12 shrink-0 items-center justify-center font-display text-lg font-extrabold tabular-nums leading-none text-text-bright md:w-14 md:text-xl">
+      {year || ""}
+    </span>
+  );
+}
+
 /**
  * One credit on the timeline: the year in plain type, printed only on the
  * first row of that year; the poster, the title and what they did on it; and
  * the score sticker when the score is trusted. The row behind the text is the
  * poster's swatch tinted light, so the text stays ink. A title with no swatch
  * gets the same row on paper.
+ *
+ * A title outside the catalog is a plain line: no poster, no tint, no link.
+ * Its title stays in line with the titles around it, so the timeline keeps
+ * one left edge.
  */
 function CreditRow({ item, showYear }: { item: PersonCredit; showYear: boolean }) {
+  const meta = rowMeta(item);
+  if (!creditLinks(item)) {
+    return (
+      <li className="mb-1.5 flex break-inside-avoid items-center">
+        <YearCell year={showYear && item.year} />
+        <div className="flex min-w-0 flex-1 gap-2.5 py-1 pr-2.5 md:gap-4 md:pr-4">
+          <span aria-hidden="true" className="w-10 shrink-0" />
+          <div className="min-w-0">
+            <p className="line-clamp-2 text-base font-semibold leading-tight text-text-bright md:text-lg">
+              {item.title}
+            </p>
+            <MetaLine bits={meta} />
+          </div>
+        </div>
+      </li>
+    );
+  }
+
   const rawId = item.id.replace(/^(movie|tv)-/, "");
-  // An id-less item renders no link: an empty param leaves "/tv/$id" in the href.
-  const isLinkable = (item.mediaType === "movie" || item.mediaType === "tv") && /^\d+$/.test(rawId);
   const to = item.mediaType === "movie" ? "/movie/$id" : "/tv/$id";
   const score = trustedScore(item);
   const sw = item.swatch ?? null;
-  const meta = rowMeta(item);
 
   const body = (
     <>
@@ -128,19 +175,7 @@ function CreditRow({ item, showYear }: { item: PersonCredit; showYear: boolean }
         <h3 className="line-clamp-2 text-lg font-bold leading-tight text-text-bright group-hover:underline">
           {item.title}
         </h3>
-        <p className="mt-0.5 line-clamp-2 text-sm text-text-muted md:text-base">
-          {/* The dot travels with the bit before it, so a wrapped line
-              starts on a word, never a separator, and "2 Seasons" holds. */}
-          {meta.map((bit, i) => (
-            <Fragment key={i}>
-              <span className="whitespace-nowrap">
-                {bit}
-                {i < meta.length - 1 && " ·"}
-              </span>
-              {i < meta.length - 1 && " "}
-            </Fragment>
-          ))}
-        </p>
+        <MetaLine bits={meta} />
       </div>
     </>
   );
@@ -152,21 +187,15 @@ function CreditRow({ item, showYear }: { item: PersonCredit; showYear: boolean }
         swatchTint(sw),
       )}
     >
-      <span className="flex w-12 shrink-0 items-center justify-center font-display text-lg font-extrabold tabular-nums leading-none text-text-bright md:w-14 md:text-xl">
-        {showYear ? item.year : ""}
-      </span>
+      <YearCell year={showYear && item.year} />
       <div className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-2.5 md:gap-4 md:pr-4">
-        {isLinkable ? (
-          <Link
-            to={to}
-            params={{ id: mediaSlug(rawId, item.title) }}
-            className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg md:gap-4"
-          >
-            {body}
-          </Link>
-        ) : (
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 md:gap-4">{body}</div>
-        )}
+        <Link
+          to={to}
+          params={{ id: mediaSlug(rawId, item.title) }}
+          className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg md:gap-4"
+        >
+          {body}
+        </Link>
         {typeof score === "number" && <ScoreBadge score={score} />}
       </div>
     </li>

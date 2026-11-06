@@ -64,7 +64,7 @@ export const Route = createFileRoute("/play/emoji")({
       meta: buildMeta({
         title: "Emoji Movie Game: Guess the Movie from Emoji",
         description:
-          "A movie plot told in emoji, five puzzles a day. Three guesses each, then the answer. Yesterday's set stays up so you can settle arguments.",
+          "A movie plot told in emoji, five puzzles a day. Three guesses each, then the answer. Yesterday's five stay up with their answers.",
         url,
         image: `${SITE_ORIGIN}/og-play-emoji.jpg`,
       }),

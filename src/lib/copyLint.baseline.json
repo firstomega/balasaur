@@ -2,21 +2,12 @@
   "totals": {
     "H1": 0,
     "H2": 0,
-    "H3": 1,
-    "H4": 3,
+    "H3": 0,
+    "H4": 0,
     "H5": 0,
     "H6": 0,
     "H6b": 0,
     "H7": 0
   },
-  "patterns": {
-    "H3": {
-      "src/routes/play.balasaurdle.tsx": 1
-    },
-    "H4": {
-      "src/routes/play.quote-match.tsx": 1,
-      "src/routes/play.taglines.tsx": 1,
-      "src/routes/play.timeline.tsx": 1
-    }
-  }
+  "patterns": {}
 }
