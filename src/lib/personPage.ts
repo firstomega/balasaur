@@ -92,3 +92,38 @@ export function splitSelfCredits<T extends PersonCredit>(
   for (const it of items) (isSelfCredit(it) ? self : roles).push(it);
   return { roles, self };
 }
+
+/**
+ * Whether a filmography row links to its title page. Only a credit the
+ * catalog join marked as missing goes unlinked; a credit it never reached
+ * (the join failed, or the record predates it) keeps its link, so a failed
+ * lookup can only leave the page as it was. An id that is not a TMDB number
+ * never links, because an empty param leaves "/tv/$id" in the href.
+ */
+export function creditLinks(item: PersonCredit): boolean {
+  if (item.inCatalog === false) return false;
+  if (item.mediaType !== "movie" && item.mediaType !== "tv") return false;
+  return /^\d+$/.test(item.id.replace(/^(movie|tv)-/, ""));
+}
+
+/**
+ * Join a person's credits against the catalog rows found for them. A credit
+ * the catalog holds becomes its catalog item, which carries the score, and
+ * keeps what they did on it; every other credit keeps its TMDB card and is
+ * marked as outside the catalog. Call it only after a lookup that succeeded:
+ * an empty map means "none of these are in the catalog", not "unknown".
+ */
+export function joinCatalogCredits<R>(
+  groups: readonly PersonCreditGroup[],
+  rowsById: ReadonlyMap<string, R>,
+  toItem: (row: R) => MediaItem,
+): PersonCreditGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.map((item): PersonCredit => {
+      const row = rowsById.get(item.id);
+      if (!row) return { ...item, inCatalog: false };
+      return { ...toItem(row), role: item.role, episodes: item.episodes, inCatalog: true };
+    }),
+  }));
+}

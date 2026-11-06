@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { breadcrumbJsonLd, movieJsonLd, tvJsonLd } from "./jsonld";
-import type { MediaDetail } from "@/types/media";
+import { breadcrumbJsonLd, movieJsonLd, personJsonLd, tvJsonLd } from "./jsonld";
+import type { MediaDetail, PersonCredit, PersonDetail } from "@/types/media";
 
 /** Inception's real row, trimmed to what the builders read. */
 const base = {
@@ -90,5 +90,34 @@ describe("breadcrumbJsonLd", () => {
     );
     expect(trail.itemListElement.map((i) => i.position).join(",")).toBe("1,2");
     for (const i of trail.itemListElement) expect(i.item).not.toContain("?");
+  });
+});
+
+describe("personJsonLd", () => {
+  it("lists no title URLs, so no off-catalog title is offered through it", () => {
+    const credit = {
+      id: "movie-15673",
+      mediaType: "movie",
+      title: "Connie and Carla",
+      year: "2004",
+      overview: "",
+      posterUrl: "",
+      ratings: {},
+      genres: [],
+      streaming: [],
+      lengthLabel: "",
+      people: [],
+      inCatalog: false,
+    } as PersonCredit;
+    const d: PersonDetail = {
+      id: "31",
+      name: "Tom Hanks",
+      imdbId: "nm0000158",
+      groups: [{ department: "Acting", items: [credit] }],
+    };
+    const json = JSON.stringify(personJsonLd(d, "https://balasaur.com/person/31"));
+    expect(json).not.toContain("/movie/");
+    expect(json).not.toContain("/tv/");
+    expect(json).not.toContain("Connie and Carla");
   });
 });

@@ -19,6 +19,7 @@ import { deriveSensitive } from "./contentSafety";
 import { mediaSlug } from "./slug";
 import { bestDecadeOf, pickTopCredits, rankedPool, type PersonCreditFacts } from "./personRanking";
 import { personListTitles } from "./personLists";
+import { joinCatalogCredits } from "./personPage";
 import { dataUnavailable } from "./dataError";
 import { RANKED_MIN_VOTES } from "./trust";
 import { parseImdbVotes } from "./indexKeep";
@@ -3049,10 +3050,12 @@ async function attachTmdbGenres(rows: PersonCreditRow[]): Promise<void> {
  * Replace every credit the catalog knows with its catalog row, so the card
  * carries a Balasaur Score, and derive the page's printed numbers from the
  * same rows. Credits the catalog does not hold keep their TMDB payload and
- * simply render without a badge, which is honest: there is no score for them.
+ * are marked `inCatalog: false`, so the page prints them as plain rows with
+ * no score and no link. One batched lookup by id serves both.
  *
- * Additive and fail-soft, like the stats call beside it. If this throws, the
- * page renders exactly as it did before.
+ * Additive and fail-soft, like the stats call beside it. If this throws, no
+ * credit is marked and the page renders exactly as it did before, every row
+ * linked.
  */
 async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
   try {
@@ -3060,7 +3063,6 @@ async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
     if (ids.length === 0) return;
 
     const rows = await fetchPersonCreditRows(ids);
-    if (rows.length === 0) return;
 
     const byId = new Map<string, PersonCreditRow>();
     for (const r of rows) byId.set(r.media_id, r);
@@ -3078,13 +3080,13 @@ async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
       return item;
     };
 
-    for (const group of detail.groups) {
-      group.items = group.items.map((item) => {
-        const row = byId.get(item.id);
-        // The catalog row replaces the TMDB card; what they did on it stays.
-        return row ? { ...toItem(row), role: item.role, episodes: item.episodes } : item;
-      });
-    }
+    // The catalog row replaces the TMDB card; what they did on it stays. A
+    // credit with no row is marked, and the page prints it without a link.
+    // Marked here, on every read, rather than in the cached record, so a
+    // title that joins the catalog tonight is linked tomorrow, and a record
+    // cached before the marker existed needs no rebuild.
+    detail.groups = joinCatalogCredits(detail.groups, byId, toItem);
+    if (rows.length === 0) return;
 
     detail.catalog = {
       titles: rows.length,
