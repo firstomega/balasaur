@@ -218,12 +218,6 @@ function HomePage() {
   const homeCountry = (user?.user_metadata?.region as string | undefined) || ipCountry || "";
   const boostCountry = boostBucketsForCountry(homeCountry).length > 0 ? homeCountry : "";
 
-  const gridRef = useRef<HTMLDivElement>(null);
-
-  const scrollToGrid = () => {
-    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   // Card quick actions (desktop hover): Save-to-watchlist (primary while
   // browsing) and Watched. Each toggles its own state; Watched preserves any
   // sentiment already on the record.
@@ -295,7 +289,7 @@ function HomePage() {
             gone and the tiles and grid speak for themselves, so the heading is
             for screen readers and crawlers only. Exactly one either way. */}
         {user && <h1 className="sr-only">Movies and TV ranked by the Balasaur Score</h1>}
-        {!user && <LandingHero onBrowse={scrollToGrid} />}
+        {!user && <LandingHero />}
         <WatchlistNudge wantIds={wantIds} region={region} />
 
         {/* The list tiles sit above the catalog and stay put while filtering.
@@ -347,7 +341,7 @@ function HomePage() {
           {/* No tabIndex here. Nothing ever moved focus to this container, but a
               click anywhere in it did, and the next key pressed lit a
               full-width focus ring around the whole results region. */}
-          <div ref={gridRef} className="min-w-0 flex-1 scroll-mt-16">
+          <div className="min-w-0 flex-1 scroll-mt-16">
             <Suspense fallback={<MediaGridSkeleton />}>
               <GridWithControls
                 filters={filters}

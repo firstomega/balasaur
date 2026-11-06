@@ -37,7 +37,7 @@ export function SortControl({
     <Select value={current} onValueChange={(v) => onChange(v as SortKey)}>
       <SelectTrigger
         aria-label="Sort"
-        className="h-8 w-[136px] rounded-full border-border bg-panel px-3 text-base font-semibold text-text-bright"
+        className="h-8 w-[136px] rounded-full border-2 border-text-bright bg-background px-3 text-base font-bold text-text-bright"
       >
         <SelectValue>{label}</SelectValue>
       </SelectTrigger>

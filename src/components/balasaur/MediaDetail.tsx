@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Fragment, Suspense, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Play, ThumbsDown, ThumbsUp } from "lucide-react";
@@ -16,7 +16,7 @@ import { ScoreBadge } from "./ScoreBadge";
 import { ScrollRail } from "./ScrollRail";
 import { ListTile } from "./ListTile";
 import { isRankable, trustedScore } from "@/lib/trust";
-import { displayYear } from "@/lib/mediaFormat";
+import { displayYear, longDate } from "@/lib/mediaFormat";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { WhereToWatch } from "./WhereToWatch";
 import { titleProse, runtimeLabel } from "@/lib/titleProse";
@@ -271,7 +271,7 @@ function BackButton() {
     <button
       type="button"
       onClick={goBack}
-      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-base font-bold text-text-bright transition-colors hover:border-primary"
+      className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border-2 border-text-bright bg-background px-3 text-base font-bold text-text-bright transition-colors duration-fast hover:bg-text-bright hover:text-background"
     >
       <ArrowLeft className="h-3.5 w-3.5" />
       Back to browse
@@ -294,18 +294,19 @@ function DetailInner({
   const typeLabel = detail.mediaType === "movie" ? "Movie" : "TV";
   const length =
     detail.mediaType === "movie"
-      ? detail.runtime
-        ? runtimeLabel(detail.runtime)
-        : undefined
+      ? [detail.runtime ? runtimeLabel(detail.runtime) : undefined]
       : detail.numberOfSeasons
-        ? `${detail.numberOfSeasons} season${detail.numberOfSeasons === 1 ? "" : "s"}${
+        ? [
+            `${detail.numberOfSeasons} season${detail.numberOfSeasons === 1 ? "" : "s"}`,
             detail.numberOfEpisodes
-              ? ` · ${detail.numberOfEpisodes} episode${detail.numberOfEpisodes === 1 ? "" : "s"}`
-              : ""
-          }`
-        : undefined;
+              ? `${detail.numberOfEpisodes} episode${detail.numberOfEpisodes === 1 ? "" : "s"}`
+              : undefined,
+          ]
+        : [];
 
-  const meta = [displayYear(detail), typeLabel, length, detail.certification].filter(Boolean);
+  const meta = [displayYear(detail), typeLabel, ...length, detail.certification].filter(
+    (bit): bit is string => Boolean(bit),
+  );
   // Derived from language alone (no ISO country codes available on the client-fetched
   // detail payload). Covers the distinctive, language-first buckets (Korean, Japanese,
   // Chinese, Indian, Spanish, French); English-language titles resolve to no bucket here.
@@ -337,6 +338,7 @@ function DetailInner({
     franchise: detail.context?.franchise,
   });
   const rows = sourceRows(ratings, balasaur);
+  const crew = mergeCrew(detail.crew);
   const showShares = rows.some((r) => r.share !== null);
   // A list position is a promise the title belongs there. One that no longer
   // passes the trust rule (one source, a handful of votes, a trailer) keeps
@@ -432,7 +434,20 @@ function DetailInner({
                 {detail.title}
               </h1>
               {meta.length > 0 && (
-                <p className="mt-3 text-lg font-semibold tabular-nums">{meta.join(" · ")}</p>
+                <p className="mt-3 text-lg font-semibold tabular-nums">
+                  {/* Each bit holds together and the dot travels with the bit
+                      after it, so a wrap never splits "TV-MA" or "5 seasons"
+                      and never starts a line with a separator. */}
+                  {meta.map((bit, i) => (
+                    <Fragment key={i}>
+                      {i > 0 && " "}
+                      <span className="whitespace-nowrap">
+                        {i > 0 && "· "}
+                        {bit}
+                      </span>
+                    </Fragment>
+                  ))}
+                </p>
               )}
               {detail.genres.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -530,7 +545,7 @@ function DetailInner({
                       >
                         {r.label}
                       </th>
-                      <td className="py-2 pr-3 text-right font-mono tabular-nums text-text-bright">
+                      <td className="py-2 pr-3 text-right tabular-nums text-text-bright">
                         {r.shown}
                         {r.key === "tmdb" &&
                           typeof detail.voteCount === "number" &&
@@ -541,9 +556,7 @@ function DetailInner({
                           )}
                       </td>
                       {showShares && (
-                        <td className="py-2 text-right font-mono tabular-nums text-text-muted">
-                          {r.share}%
-                        </td>
+                        <td className="py-2 text-right tabular-nums text-text-muted">{r.share}%</td>
                       )}
                     </tr>
                   ))}
@@ -554,12 +567,10 @@ function DetailInner({
                       <th scope="row" className="py-2 pr-3 text-left font-bold text-text-bright">
                         Balasaur Score
                       </th>
-                      <td className="py-2 pr-3 text-right font-mono font-bold tabular-nums text-text-bright">
+                      <td className="py-2 pr-3 text-right font-bold tabular-nums text-text-bright">
                         {balasaur}
                       </td>
-                      <td className="py-2 text-right font-mono tabular-nums text-text-muted">
-                        100%
-                      </td>
+                      <td className="py-2 text-right tabular-nums text-text-muted">100%</td>
                     </tr>
                   </tfoot>
                 )}
@@ -584,13 +595,13 @@ function DetailInner({
                           key={sn.seasonNumber}
                           className="border-b border-border last:border-b-0"
                         >
-                          <td className="w-10 px-3 py-2 font-mono text-sm tabular-nums text-text-dim">
+                          <td className="w-10 px-3 py-2 text-sm tabular-nums text-text-dim">
                             {sn.seasonNumber}
                           </td>
                           <td className="min-w-0 px-1 py-2 text-base font-semibold text-text-bright">
                             <span className="block truncate">{sn.name}</span>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right font-mono text-xs tabular-nums text-text-muted">
+                          <td className="whitespace-nowrap px-3 py-2 text-right text-xs tabular-nums text-text-muted">
                             {sn.episodeCount > 0 && `${sn.episodeCount} ep`}
                             {sn.airDate && (
                               <span className="ml-2 text-text-dim">{sn.airDate.slice(0, 4)}</span>
@@ -604,13 +615,13 @@ function DetailInner({
             </section>
           )}
 
-          {detail.crew.length > 0 && (
+          {crew.length > 0 && (
             <section>
               <SectionHeading>Key crew</SectionHeading>
               <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-                {detail.crew.map((p, i) => (
+                {crew.map((p, i) => (
                   <li
-                    key={`${p.name}-${p.role}-${i}`}
+                    key={`${p.name}-${i}`}
                     className="flex justify-between gap-3 border-b border-border pb-2 text-base"
                   >
                     <PersonName name={p.name} personId={p.personId} />
@@ -757,7 +768,7 @@ function DetailInner({
               {facts.status && facts.status !== "Released" && facts.status !== "Ended" && (
                 <FactRow k="Status" v={facts.status} />
               )}
-              {facts.releaseDate && <FactRow k="Released" v={facts.releaseDate} mono />}
+              {facts.releaseDate && <FactRow k="Released" v={longDate(facts.releaseDate)} />}
             </dl>
           </div>
 
@@ -883,7 +894,7 @@ function ShelfRail({ mediaId, title }: { mediaId: string; title: string }) {
       </SectionHeading>
       <p className="mb-3 text-lg text-text-muted">
         {title} is{" "}
-        <span className="font-mono font-bold tabular-nums text-text-bright">
+        <span className="font-bold tabular-nums text-text-bright">
           #{shelf.rank} of {shelf.item_count}
         </span>
       </p>
@@ -900,7 +911,7 @@ function ShelfRail({ mediaId, title }: { mediaId: string; title: string }) {
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 font-mono text-base font-bold tabular-nums leading-none",
+                    "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 font-display text-base font-extrabold tabular-nums leading-none",
                     slot.rank === shelf.rank
                       ? "bg-swatch-gold text-swatch-gold-ink"
                       : "bg-text-bright text-background",
@@ -917,20 +928,33 @@ function ShelfRail({ mediaId, title }: { mediaId: string; title: string }) {
   );
 }
 
-// `mono` marks a value that is a number, a sum of money, or a date. Words
-// (language, status) render in Archivo like everything else a person reads.
+/** One row per person: "Christopher Nolan, Director, Writer", not two rows
+ *  with the writing credit first. Director leads; the other jobs keep the
+ *  order the payload gave them. */
+function mergeCrew(crew: MediaDetailType["crew"]): MediaDetailType["crew"] {
+  const byPerson = new Map<string, { person: MediaDetailType["crew"][number]; roles: string[] }>();
+  for (const p of crew) {
+    const key = p.personId != null ? `id:${p.personId}` : `name:${p.name}`;
+    const hit = byPerson.get(key);
+    if (!hit) byPerson.set(key, { person: p, roles: p.role ? [p.role] : [] });
+    else if (p.role && !hit.roles.includes(p.role)) hit.roles.push(p.role);
+  }
+  return [...byPerson.values()].map(({ person, roles }) => {
+    const sorted = [
+      ...roles.filter((r) => r === "Director"),
+      ...roles.filter((r) => r !== "Director"),
+    ];
+    return { ...person, role: sorted.join(", ") };
+  });
+}
+
+// `mono` marks a value that is a number or a sum of money: its figures line up
+// (tabular), in the same Archivo as everything else a person reads.
 function FactRow({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
     <div className="flex justify-between gap-3">
       <dt className="text-text-muted">{k}</dt>
-      <dd
-        className={cn(
-          "truncate font-semibold text-text-bright",
-          mono && "font-mono text-sm tabular-nums",
-        )}
-      >
-        {v}
-      </dd>
+      <dd className={cn("truncate font-semibold text-text-bright", mono && "tabular-nums")}>{v}</dd>
     </div>
   );
 }

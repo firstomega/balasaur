@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { MediaItem, PersonCreditGroup } from "@/types/media";
-import { decadeRuns, personListLead } from "./personPage";
+import type { MediaItem, PersonCredit, PersonCreditGroup } from "@/types/media";
+import { decadeRuns, personListLead, splitSelfCredits } from "./personPage";
 
 function item(id: string, year: string, extra: Partial<MediaItem> = {}): MediaItem {
   return {
@@ -82,5 +82,42 @@ describe("personListLead", () => {
   it("hides an untrusted score but keeps the poster", () => {
     const lead = personListLead({ slug: "s", title: "t", itemCount: 3, leadId: "movie-2" }, groups);
     expect(lead?.score).toBe(null);
+  });
+});
+
+describe("splitSelfCredits", () => {
+  const credit = (id: string, role?: string) =>
+    ({
+      id,
+      mediaType: "tv",
+      title: id,
+      year: "2020",
+      overview: "",
+      posterUrl: "",
+      ratings: {},
+      genres: [],
+      streaming: [],
+      lengthLabel: "",
+      people: [],
+      role,
+    }) as PersonCredit;
+
+  it("moves appearances as themselves to their own list, in order", () => {
+    const items = [
+      credit("a", "Woody (voice)"),
+      credit("b", "Self"),
+      credit("c", "Himself - Guest"),
+      credit("d", "Narrator"),
+      credit("e", "Captain Richard Phillips"),
+    ];
+    const { roles, self } = splitSelfCredits(items);
+    expect(roles.map((i) => i.id)).toEqual(["a", "e"]);
+    expect(self.map((i) => i.id)).toEqual(["b", "c", "d"]);
+  });
+
+  it("leaves a credit with no role, or a character that only starts like one, with the roles", () => {
+    const { roles, self } = splitSelfCredits([credit("a"), credit("b", "Selfridge")]);
+    expect(roles.map((i) => i.id)).toEqual(["a", "b"]);
+    expect(self).toEqual([]);
   });
 });

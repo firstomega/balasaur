@@ -5,16 +5,17 @@ import { MediaCard } from "./MediaCard";
 import { ListTile } from "./ListTile";
 import { ScoreBadge } from "./ScoreBadge";
 import { usePersonDetail } from "@/hooks/usePersonDetail";
-import type { MediaItem, PersonDetail as PersonDetailType } from "@/types/media";
+import type { PersonCredit, PersonDetail as PersonDetailType } from "@/types/media";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { personProse } from "@/lib/personProse";
-import { decadeRuns, personListLead } from "@/lib/personPage";
+import { decadeRuns, personListLead, splitSelfCredits } from "@/lib/personPage";
 import { paintTiles } from "@/lib/paintWall";
 import { swatchSurface } from "@/lib/swatchSurface";
 import { swatchTint } from "@/lib/swatchTint";
 import { trustedScore } from "@/lib/trust";
 import { rankByShownScore } from "@/lib/sharedRank";
 import { mediaSlug } from "@/lib/slug";
+import { longDate } from "@/lib/mediaFormat";
 import { cn } from "@/lib/utils";
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
@@ -29,7 +30,7 @@ function lifeLine(d: PersonDetailType): string | null {
   const parts: string[] = [];
   if (d.birthday) {
     const born = d.birthday.slice(0, 4);
-    parts.push(d.deathday ? `${born}–${d.deathday.slice(0, 4)}` : `Born ${d.birthday}`);
+    parts.push(d.deathday ? `${born}–${d.deathday.slice(0, 4)}` : `Born ${longDate(d.birthday)}`);
   }
   if (d.placeOfBirth) parts.push(d.placeOfBirth);
   return parts.length ? parts.join(" · ") : null;
@@ -70,9 +71,15 @@ function Bio({ text }: { text: string }) {
   );
 }
 
-/** The meta line of a filmography row: what kind of title it is, and its
- *  genres where the catalog has them. */
-function rowMeta(item: MediaItem): string[] {
+/** The meta line of a filmography row: what they did on it ("Woody (voice)",
+ *  "Self", "Director, Writer") and, for a TV cast credit, how many episodes.
+ *  A payload cached before roles were kept falls back to the kind of title
+ *  and its genres. */
+function rowMeta(item: PersonCredit): string[] {
+  if (item.role) {
+    const n = item.episodes ?? 0;
+    return n > 0 ? [item.role, `${n} episode${n === 1 ? "" : "s"}`] : [item.role];
+  }
   const bits: string[] = [];
   const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
   bits.push(item.mediaType === "tv" ? "TV" : "Movie");
@@ -82,12 +89,13 @@ function rowMeta(item: MediaItem): string[] {
 }
 
 /**
- * One credit on the timeline: the year in a cell painted with the poster's
- * swatch, the poster, the title and a meta line, and the score sticker when
- * the score is trusted. The row behind the text is the swatch tinted light,
- * so the text stays ink. A title with no swatch gets the same row on paper.
+ * One credit on the timeline: the year in plain type, printed only on the
+ * first row of that year; the poster, the title and what they did on it; and
+ * the score sticker when the score is trusted. The row behind the text is the
+ * poster's swatch tinted light, so the text stays ink. A title with no swatch
+ * gets the same row on paper.
  */
-function CreditRow({ item }: { item: MediaItem }) {
+function CreditRow({ item, showYear }: { item: PersonCredit; showYear: boolean }) {
   const rawId = item.id.replace(/^(movie|tv)-/, "");
   // An id-less item renders no link: an empty param leaves "/tv/$id" in the href.
   const isLinkable = (item.mediaType === "movie" || item.mediaType === "tv") && /^\d+$/.test(rawId);
@@ -120,7 +128,7 @@ function CreditRow({ item }: { item: MediaItem }) {
         <h3 className="line-clamp-2 text-lg font-bold leading-tight text-text-bright group-hover:underline">
           {item.title}
         </h3>
-        <p className="mt-0.5 text-sm text-text-muted md:text-base">
+        <p className="mt-0.5 line-clamp-2 text-sm text-text-muted md:text-base">
           {/* The dot travels with the bit after it, so a wrap never strands a
               separator or splits "2 Seasons". */}
           {meta.map((bit, i) => (
@@ -144,15 +152,10 @@ function CreditRow({ item }: { item: MediaItem }) {
         swatchTint(sw),
       )}
     >
-      <span
-        className={cn(
-          "flex w-14 shrink-0 items-center justify-center font-display text-xl font-extrabold tabular-nums leading-none md:w-16",
-          sw ? swatchSurface(sw) : "bg-secondary text-text-bright",
-        )}
-      >
-        {item.year}
+      <span className="flex w-12 shrink-0 items-center justify-center font-display text-lg font-extrabold tabular-nums leading-none text-text-bright md:w-14 md:text-xl">
+        {showYear ? item.year : ""}
       </span>
-      <div className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-2.5 pr-2.5 md:gap-4 md:pl-4 md:pr-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-2.5 md:gap-4 md:pr-4">
         {isLinkable ? (
           <Link
             to={to}
@@ -167,6 +170,34 @@ function CreditRow({ item }: { item: MediaItem }) {
         {typeof score === "number" && <ScoreBadge score={score} />}
       </div>
     </li>
+  );
+}
+
+/** Credits newest first, split at each decade, the year printed once. */
+function Timeline({ items }: { items: PersonCredit[] }) {
+  return (
+    <div className="space-y-5">
+      {decadeRuns(items).map((run) => (
+        <div key={run.decade ?? "undated"}>
+          {/* The decade divider: the label and a rule to the edge. */}
+          <p className="mb-2 flex items-center gap-3 font-display text-xl font-extrabold leading-none text-text-bright">
+            {run.decade ?? "No release date"}
+            <span aria-hidden="true" className="h-0.5 flex-1 bg-text-bright" />
+          </p>
+          {/* Two columns on wide screens, read down then across, so years
+              still run in order within each column. */}
+          <ol className="lg:columns-2 lg:gap-x-3.5">
+            {run.items.map((it, i) => (
+              <CreditRow
+                key={it.id}
+                item={it}
+                showYear={i === 0 || it.year !== run.items[i - 1].year}
+              />
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -296,34 +327,40 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
         {/* Works grouped by role, each a timeline, newest first: the order
             someone looking up a filmography expects to find it in. */}
         <div className="mt-12 space-y-12">
-          {detail.groups.map((g) => (
-            <section key={g.department}>
-              <SectionHeading>
-                {g.department}{" "}
-                <span className="font-mono text-lg font-semibold tabular-nums text-text-muted">
-                  {g.items.length}
-                </span>
-              </SectionHeading>
-              <div className="space-y-5">
-                {decadeRuns(g.items).map((run) => (
-                  <div key={run.decade ?? "undated"}>
-                    {/* The decade divider: the label and a rule to the edge. */}
-                    <p className="mb-2 flex items-center gap-3 font-display text-xl font-extrabold leading-none text-text-bright">
-                      {run.decade ?? "No release date"}
+          {detail.groups.map((g) => {
+            // Talk shows, award broadcasts and documentaries where they appear
+            // as themselves follow the roles, closed, instead of filling the
+            // timeline between them.
+            const { roles, self } =
+              g.department === "Acting"
+                ? splitSelfCredits(g.items)
+                : { roles: g.items, self: [] as PersonCredit[] };
+            return (
+              <section key={g.department}>
+                <SectionHeading>
+                  {g.department}{" "}
+                  <span className="text-lg font-semibold tabular-nums text-text-muted">
+                    {g.items.length}
+                  </span>
+                </SectionHeading>
+                <Timeline items={roles} />
+                {self.length > 0 && (
+                  <details className="mt-5">
+                    <summary className="flex cursor-pointer list-none items-center gap-3 font-display text-xl font-extrabold leading-none text-text-bright [&::-webkit-details-marker]:hidden">
+                      <span className="inline-flex h-8 items-center gap-2 rounded-full border-2 border-text-bright px-3.5">
+                        Appearances as self
+                        <span className="tabular-nums">{self.length}</span>
+                      </span>
                       <span aria-hidden="true" className="h-0.5 flex-1 bg-text-bright" />
-                    </p>
-                    {/* Two columns on wide screens, read down then across,
-                        so years still run in order within each column. */}
-                    <ol className="lg:columns-2 lg:gap-x-3.5">
-                      {run.items.map((it) => (
-                        <CreditRow key={it.id} item={it} />
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
+                    </summary>
+                    <div className="mt-3">
+                      <Timeline items={self} />
+                    </div>
+                  </details>
+                )}
+              </section>
+            );
+          })}
           {detail.groups.length === 0 && (
             <p className="text-lg text-text-muted">
               No catalogued movies or TV for this person yet.

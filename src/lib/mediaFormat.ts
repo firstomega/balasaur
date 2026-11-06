@@ -17,3 +17,34 @@ export function displayYear(item: MediaItem): string {
   }
   return item.year || "—";
 }
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/**
+ * An ISO date as a person writes it: "2010-07-15" becomes "July 15, 2010".
+ * Read from the string, never through Date, so the server and every browser
+ * print the same thing whatever their time zone. A year-only or year-month
+ * value prints what it has; anything unreadable comes back unchanged.
+ */
+export function longDate(iso: string): string {
+  const m = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?/.exec(iso);
+  if (!m) return iso;
+  const [, y, mo, d] = m;
+  const month = mo ? MONTHS[Number(mo) - 1] : undefined;
+  if (!month) return y;
+  if (!d || Number(d) < 1) return `${month} ${y}`;
+  return `${month} ${Number(d)}, ${y}`;
+}

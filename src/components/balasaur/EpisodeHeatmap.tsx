@@ -15,35 +15,37 @@ import { cn } from "@/lib/utils";
 // Nothing here animates, so there is nothing for prefers-reduced-motion to
 // turn off.
 
-/** Seven steps, dark to bright. The lightness climbs about ten points a step,
- *  which is what makes a 9.3 season read as the strongest column instead of
- *  another patch of yellow-green; it also survives being seen in grey.
+/** One hue, the blue swatch, at stepped strengths: pale tints of it on the
+ *  white ground for the weaker episodes, the full swatch, then two shades
+ *  toward the navy swatch for the strongest. Strength alone carries the
+ *  rating, so it reads the same in grey, and no colour outside the fourteen
+ *  swatches' family appears on the page. Darker is better.
  *  These paint the legend. The cells are painted by the `[&_.r0]:bg-[…]` rules
  *  below, which have to spell each hex out literally for Tailwind to see it.
  *  Change a colour in both places. Doing it this way keeps a cell down to
  *  `<span class="r3"></span>`: The Simpsons is 792 cells, and an inline style
  *  on each one was 35 KB of HTML on a page Google is already slow to crawl. */
 const RAMP_MASTER = [
-  "#6b2f31",
-  "#8a4032",
-  "#a95c33",
-  "#c07f36",
-  "#cda63f",
-  "#c6cd5b",
-  "#a9f78b",
-  "#7fe08a",
-  "#5fd58c",
+  "#e2e8ff",
+  "#c9d5ff",
+  "#b0c1ff",
+  "#97aeff",
+  "#7c98ff",
+  "#5f81ff",
+  "#2f5cff",
+  "#2646c2",
+  "#1c2f86",
 ] as const;
 
 /**
- * Which seven of the nine the show gets. Hue has to mean the same thing on
- * every page: red is a bad episode, green is a great one. The first version
- * stretched the full red-to-green ramp across whatever range the show happened
- * to occupy, so a show whose worst season still averaged 7.2 was painted in
- * dark red and read as a disaster before the eye reached the legend. The
- * window is chosen from the show's own floor instead, so the seven steps carry
- * position within the show while the colours keep telling the truth about
- * quality. A show that really is bad still starts at red.
+ * Which seven of the nine the show gets. Strength has to mean the same thing
+ * on every page: the palest tint is a bad episode, the navy end a great one.
+ * The first version stretched the full ramp across whatever range the show
+ * happened to occupy, so a show whose worst season still averaged 7.2 was
+ * painted at the weakest step and read as a disaster before the eye reached
+ * the legend. The window is chosen from the show's own floor instead, so the
+ * seven steps carry position within the show while the strength keeps telling
+ * the truth about quality. A show that really is bad still starts pale.
  */
 export function rampWindow(lo: number): number {
   const start = Math.round(lo) - 3;
@@ -58,7 +60,7 @@ function rampHex(lo: number): string[] {
 const RAMP_CLASS = ["r0", "r1", "r2", "r3", "r4", "r5", "r6"] as const;
 const NO_RATING_CLASS = "rx";
 const CELL_STYLE =
-  "[&_.r0]:bg-[var(--c0)] [&_.r1]:bg-[var(--c1)] [&_.r2]:bg-[var(--c2)] [&_.r3]:bg-[var(--c3)] [&_.r4]:bg-[var(--c4)] [&_.r5]:bg-[var(--c5)] [&_.r6]:bg-[var(--c6)] [&_.rx]:bg-border-strong [&_span:hover]:ring-1 [&_span:hover]:ring-white/70 [&_span]:block [&_span]:h-[var(--cell-h)] [&_span]:rounded-[1px]";
+  "[&_.r0]:bg-[var(--c0)] [&_.r1]:bg-[var(--c1)] [&_.r2]:bg-[var(--c2)] [&_.r3]:bg-[var(--c3)] [&_.r4]:bg-[var(--c4)] [&_.r5]:bg-[var(--c5)] [&_.r6]:bg-[var(--c6)] [&_.rx]:bg-border-strong [&_span:hover]:ring-1 [&_span:hover]:ring-text-bright [&_span]:block [&_span]:h-[var(--cell-h)] [&_span]:rounded-[1px]";
 
 /** The seven window colours as custom properties, set once on the grid. */
 function rampVars(lo: number): Record<string, string> {
@@ -337,7 +339,7 @@ export function EpisodeHeatmap({ rows, seasons, className }: EpisodeHeatmapProps
                   </div>
                   <div
                     className={cn(
-                      "whitespace-nowrap font-mono text-[11px] leading-[15px] tabular-nums",
+                      "whitespace-nowrap text-[11px] leading-[15px] tabular-nums",
                       peak ? "font-bold text-text-bright" : "text-text-muted",
                     )}
                   >
@@ -356,15 +358,15 @@ export function EpisodeHeatmap({ rows, seasons, className }: EpisodeHeatmapProps
           <div className="min-h-[52px]">
             {ep ? (
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13px] text-text-bright">
-                <span className="font-mono text-[11px] tabular-nums text-text-dim">
+                <span className="text-[11px] tabular-nums text-text-dim">
                   S{ep.season}E{ep.episode}
                 </span>
                 <span>{episodeTitle(ep)}</span>
-                <span className="font-mono text-[11px] tabular-nums text-rating">
+                <span className="text-[11px] font-bold tabular-nums text-text-bright">
                   {ep.rating.toFixed(1)}
                 </span>
                 {ep.airDate ? (
-                  <span className="font-mono text-[11px] text-text-dim">
+                  <span className="text-[11px] tabular-nums text-text-dim">
                     {airDateLabel(ep.airDate)}
                   </span>
                 ) : null}
@@ -380,11 +382,11 @@ export function EpisodeHeatmap({ rows, seasons, className }: EpisodeHeatmapProps
                     />
                   ))}
                 </div>
-                <div className="mt-1 flex max-w-[220px] justify-between font-mono text-[11px] tabular-nums text-text-dim">
+                <div className="mt-1 flex max-w-[220px] justify-between text-[11px] tabular-nums text-text-dim">
                   <span>{model.scale.lo.toFixed(1)}</span>
                   <span>{model.scale.hi.toFixed(1)}</span>
                 </div>
-                <p className="mt-2 font-mono text-[11px] tabular-nums text-text-dim">
+                <p className="mt-2 text-[11px] tabular-nums text-text-dim">
                   {model.rated.toLocaleString("en-US")} of {model.expected.toLocaleString("en-US")}{" "}
                   episodes rated on TMDB
                 </p>

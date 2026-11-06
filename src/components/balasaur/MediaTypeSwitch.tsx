@@ -85,11 +85,11 @@ export function MediaTypeSwitch({
       onPointerCancel={() => {
         draggingRef.current = false;
       }}
-      className="relative h-9 w-full cursor-pointer touch-none select-none rounded-[6px] border border-border bg-background focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+      className="relative h-9 w-full cursor-pointer touch-none select-none rounded-full bg-panel"
     >
       {/* Sliding thumb (~1/3 width), positioned at the active stop. */}
       <div
-        className="pointer-events-none absolute top-[3px] bottom-[3px] rounded-[4px] border border-primary/50 bg-primary/15 transition-[left] duration-150 ease-out"
+        className="pointer-events-none absolute top-[3px] bottom-[3px] rounded-full bg-text-bright transition-[left] duration-150 ease-out"
         style={{
           width: "calc(33.333% - 4px)",
           left: `calc(${activeLeftPct}% + 2px)`,
@@ -108,8 +108,8 @@ export function MediaTypeSwitch({
               tabIndex={-1}
               onClick={() => onChange(s.mode)}
               className={
-                "z-10 flex items-center justify-center text-[13px] font-bold tracking-[-0.01em] transition-colors " +
-                (active ? "text-primary" : "text-text-muted hover:text-text-bright")
+                "z-10 flex items-center justify-center text-base font-bold transition-colors " +
+                (active ? "text-background" : "text-text-muted hover:text-text-bright")
               }
             >
               {s.label}

@@ -5,6 +5,7 @@ import type {
   MediaPerson,
   MediaSeason,
   PersonCatalog,
+  PersonCredit,
   PersonCreditGroup,
   PersonDetail,
   WatchProvidersAllRegions,
@@ -2822,6 +2823,8 @@ interface TmdbPersonCredit {
   overview?: string;
   department?: string;
   job?: string;
+  character?: string;
+  episode_count?: number;
 }
 
 interface TmdbPersonRaw {
@@ -2840,7 +2843,7 @@ interface TmdbPersonRaw {
 function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
   // Group every credited title under a department bucket, newest first,
   // deduping the same title within a group. Acting first, then the rest by size.
-  const buckets = new Map<string, Map<string, MediaItem>>();
+  const buckets = new Map<string, Map<string, PersonCredit>>();
 
   const add = (dept: string, c: TmdbPersonCredit) => {
     const t = c.media_type === "tv" ? "tv" : c.media_type === "movie" ? "movie" : null;
@@ -2849,13 +2852,21 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
     // it, so every credit's overview was being serialized into the HTML for
     // nothing: prolific filmographies measured 1.1MB of document, the heaviest
     // pages on the site, and person pages are the ones that rank best.
-    const item = { ...mapCardRaw(c as TmdbCardRaw, t), overview: "" };
+    // What they did on it: the character for cast, the job for crew. Two jobs
+    // on one title (Producer and Writer) become one credit naming both.
+    const role = (dept === "Acting" ? c.character : c.job)?.trim() || undefined;
+    const item: PersonCredit = { ...mapCardRaw(c as TmdbCardRaw, t), overview: "" };
+    if (role) item.role = role;
+    if (t === "tv" && dept === "Acting" && c.episode_count) item.episodes = c.episode_count;
     let g = buckets.get(dept);
     if (!g) {
-      g = new Map<string, MediaItem>();
+      g = new Map<string, PersonCredit>();
       buckets.set(dept, g);
     }
-    if (!g.has(item.id)) g.set(item.id, item);
+    const had = g.get(item.id);
+    if (!had) g.set(item.id, item);
+    else if (role && !had.role) had.role = role;
+    else if (role && had.role && !had.role.split(", ").includes(role)) had.role += `, ${role}`;
   };
 
   for (const c of raw.combined_credits?.cast ?? []) add("Acting", c);
@@ -2863,7 +2874,7 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
     add(c.department || c.job || "Other", c);
   }
 
-  const sortByDate = (a: MediaItem, b: MediaItem) =>
+  const sortByDate = (a: PersonCredit, b: PersonCredit) =>
     (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
 
   const groups: PersonCreditGroup[] = Array.from(buckets.entries())
@@ -2888,6 +2899,7 @@ function buildPersonFromRaw(raw: TmdbPersonRaw): PersonDetail {
     profileUrl: raw.profile_path ? `${PROFILE_BASE}${raw.profile_path}` : undefined,
     imdbId: raw.imdb_id || undefined,
     groups,
+    creditRoles: true,
   };
 }
 
@@ -3017,7 +3029,8 @@ async function attachCatalogFacts(detail: PersonDetail): Promise<void> {
     for (const group of detail.groups) {
       group.items = group.items.map((item) => {
         const row = byId.get(item.id);
-        return row ? toItem(row) : item;
+        // The catalog row replaces the TMDB card; what they did on it stays.
+        return row ? { ...toItem(row), role: item.role, episodes: item.episodes } : item;
       });
     }
 
@@ -3111,6 +3124,9 @@ export async function fetchPersonDetail(
   opts?: { fresh?: boolean },
 ): Promise<PersonDetail> {
   const personIdNum = Number.parseInt(id, 10);
+  // A cached payload from before credits carried their role, kept in case
+  // the rebuild from TMDB fails: the page then renders as it did before.
+  let olderShape: PersonDetail | null = null;
 
   if (!opts?.fresh && Number.isFinite(personIdNum)) {
     try {
@@ -3121,11 +3137,15 @@ export async function fetchPersonDetail(
         .maybeSingle();
       if (!error && data?.payload && data.fetched_at) {
         const age = Date.now() - new Date(data.fetched_at).getTime();
-        if (age < PERSON_TTL_MS) {
-          const cached = data.payload as unknown as PersonDetail;
+        const cached = data.payload as unknown as PersonDetail;
+        // A payload cached before credits carried their role is rebuilt once,
+        // unless there is no TMDB key to rebuild it with.
+        const current = cached.creditRoles === true || !process.env.TMDB_API_KEY;
+        if (age < PERSON_TTL_MS && current) {
           await attachReadTimeFacts(cached);
           return cached;
         }
+        if (age < PERSON_TTL_MS) olderShape = cached;
       }
     } catch (e) {
       console.error("[cache] person_cache read failed:", e);
@@ -3135,10 +3155,17 @@ export async function fetchPersonDetail(
   const tmdbKey = process.env.TMDB_API_KEY;
   if (!tmdbKey) throw new Error("TMDB_API_KEY is not configured");
 
-  const raw = await tmdb<TmdbPersonRaw>(`/person/${id}`, tmdbKey, {
-    append_to_response: "combined_credits,external_ids",
-    language: "en-US",
-  });
+  let raw: TmdbPersonRaw;
+  try {
+    raw = await tmdb<TmdbPersonRaw>(`/person/${id}`, tmdbKey, {
+      append_to_response: "combined_credits,external_ids",
+      language: "en-US",
+    });
+  } catch (e) {
+    if (!olderShape) throw e;
+    await attachReadTimeFacts(olderShape);
+    return olderShape;
+  }
   const detail = buildPersonFromRaw(raw);
 
   // Cache what TMDB gave us, before the catalog join mutates it. Scores and

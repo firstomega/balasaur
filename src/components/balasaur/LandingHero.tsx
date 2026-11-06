@@ -1,10 +1,7 @@
 import { SITE_PROOF, SITE_TAGLINE } from "@/lib/seo";
 
-interface Props {
-  onBrowse: () => void;
-}
-
-// The signed-out hero: the site's one tagline, its proof line, one button.
+// The signed-out hero: the site's one tagline and its proof line. No button:
+// the list wall and the catalog start directly below it.
 // Both sentences live in src/lib/seo.ts and are the same ones the footer, the
 // share card and the meta description carry, so the hero has no copy of its
 // own. No catalog count here: the grid's own counter is on this page, and a
@@ -33,7 +30,7 @@ function Tagline() {
   );
 }
 
-export function LandingHero({ onBrowse }: Props) {
+export function LandingHero() {
   return (
     <section aria-labelledby="home-h1" className="pb-6 pt-2 md:pb-10 md:pt-6">
       <h1
@@ -43,13 +40,6 @@ export function LandingHero({ onBrowse }: Props) {
         <Tagline />
       </h1>
       <p className="mt-3 max-w-xl text-lg text-text-muted md:mt-4 md:text-xl">{SITE_PROOF}</p>
-      <button
-        type="button"
-        onClick={onBrowse}
-        className="mt-4 cursor-pointer rounded-full bg-primary px-5 py-2.5 text-base font-bold text-primary-foreground transition-colors hover:bg-primary/85 md:mt-5"
-      >
-        Browse the catalog
-      </button>
     </section>
   );
 }

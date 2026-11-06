@@ -139,9 +139,18 @@ export interface MediaDetail extends MediaItem {
   providersAll?: WatchProvidersAllRegions;
 }
 
+/** A title on a person's page, with what they did on it: the character for a
+ *  cast credit ("Woody (voice)", "Self"), the job or jobs for a crew credit,
+ *  and for a TV cast credit the number of episodes. Both come from TMDB's
+ *  combined credits; a payload cached before they were kept has neither. */
+export interface PersonCredit extends MediaItem {
+  role?: string;
+  episodes?: number;
+}
+
 export interface PersonCreditGroup {
   department: string;
-  items: MediaItem[];
+  items: PersonCredit[];
 }
 
 export interface PersonDetail {
@@ -155,6 +164,9 @@ export interface PersonDetail {
   profileUrl?: string;
   imdbId?: string;
   groups: PersonCreditGroup[];
+  /** Set when the credits carry `role` and `episodes`. A cached payload
+   *  without it predates them and is rebuilt from TMDB on its next read. */
+  creditRoles?: boolean;
   /** Whether this person is in the kept set Google is offered
    *  (person_index_kept, see src/lib/indexKeep.ts). Read on every request,
    *  never trusted from the cache; absent when the lookup failed. */

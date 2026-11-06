@@ -146,7 +146,7 @@ function SectionHead({ title, count }: { title: string; count: number }) {
       <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
         {title}
       </h2>
-      <span className="font-mono text-sm tabular-nums text-text-dim">
+      <span className="text-sm tabular-nums text-text-dim">
         {count === 1 ? "1 list" : `${count} lists`}
       </span>
     </div>
@@ -288,7 +288,7 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
       <div className="space-y-1">
         {decades.map((dec) => (
           <div key={dec} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-            <span className="w-14 shrink-0 font-mono text-xs tabular-nums tracking-wider text-text-dim">
+            <span className="w-14 shrink-0 text-xs font-semibold tabular-nums tracking-wider text-text-dim">
               {dec}
             </span>
             <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -305,10 +305,10 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
                     params={{ slug: c.slug }}
                     aria-label={c.title}
                     title={c.title}
-                    className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-sm tabular-nums text-text-muted transition-colors hover:bg-panel hover:text-text-bright"
+                    className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-sm tabular-nums text-text-muted transition-colors hover:bg-panel hover:text-text-bright"
                   >
                     <span
-                      className={`h-1.5 w-1.5 rounded-full ${c.media_type === "tv" ? "bg-media-tv" : "bg-media-movie"}`}
+                      className={`h-1.5 w-1.5 rounded-full ${c.media_type === "tv" ? "bg-swatch-rust" : "bg-swatch-blue"}`}
                     />
                     {year}
                   </Link>
@@ -340,7 +340,7 @@ function PeopleIndex({ people }: { people: CollectionSummary[] }) {
     <div className="mt-3.5 space-y-1">
       {initials.map((letter) => (
         <div key={letter} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-          <span className="w-4 shrink-0 font-mono text-sm uppercase tracking-wider text-text-dim">
+          <span className="w-4 shrink-0 text-sm font-semibold uppercase tracking-wider text-text-dim">
             {letter}
           </span>
           <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -352,7 +352,7 @@ function PeopleIndex({ people }: { people: CollectionSummary[] }) {
                 className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-sm text-text-muted transition-colors hover:bg-panel hover:text-text-bright"
               >
                 {c.title.replace(/^The Best /, "")}
-                <span className="font-mono tabular-nums text-text-dim">{c.item_count}</span>
+                <span className="tabular-nums text-text-dim">{c.item_count}</span>
               </Link>
             ))}
           </div>
@@ -431,10 +431,10 @@ function DualIndexMatrix({
         <h3 className={INDEX_H3}>{label}</h3>
         <span className="flex items-center gap-3 text-sm font-semibold text-text-dim">
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-media-movie" /> Movies
+            <span className="h-2 w-2 rounded-full bg-swatch-blue" /> Movies
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-media-tv" /> Shows
+            <span className="h-2 w-2 rounded-full bg-swatch-rust" /> Shows
           </span>
         </span>
       </div>
@@ -469,7 +469,7 @@ function DualIndexMatrix({
                             title={cell.movie.title}
                             className="inline-flex h-6 w-7 items-center justify-center rounded-sm transition-colors hover:bg-panel"
                           >
-                            <span className="h-2 w-2 rounded-full bg-media-movie/80 transition-colors hover:bg-media-movie" />
+                            <span className="h-2 w-2 rounded-full bg-swatch-blue/80 transition-colors hover:bg-swatch-blue" />
                           </Link>
                         )}
                         {cell.tv && (
@@ -480,7 +480,7 @@ function DualIndexMatrix({
                             title={cell.tv.title}
                             className="inline-flex h-6 w-7 items-center justify-center rounded-sm transition-colors hover:bg-panel"
                           >
-                            <span className="h-2 w-2 rounded-full bg-media-tv/80 transition-colors hover:bg-media-tv" />
+                            <span className="h-2 w-2 rounded-full bg-swatch-rust/80 transition-colors hover:bg-swatch-rust" />
                           </Link>
                         )}
                       </span>

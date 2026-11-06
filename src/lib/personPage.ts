@@ -1,12 +1,12 @@
-import type { MediaItem, PersonCreditGroup, PersonList } from "@/types/media";
+import type { MediaItem, PersonCredit, PersonCreditGroup, PersonList } from "@/types/media";
 import type { TileLead } from "./tileLead";
 import { trustedScore } from "./trust";
 
 /** One decade of a filmography, newest title first. */
-export interface DecadeRun {
+export interface DecadeRun<T extends MediaItem = MediaItem> {
   /** "2020s", or null for credits with no release year yet. */
   decade: string | null;
-  items: MediaItem[];
+  items: T[];
 }
 
 function yearOf(item: MediaItem): number | null {
@@ -20,7 +20,7 @@ function yearOf(item: MediaItem): number | null {
  * stable, so titles within one year keep the order TMDB's full dates gave
  * them.
  */
-export function decadeRuns(items: readonly MediaItem[]): DecadeRun[] {
+export function decadeRuns<T extends MediaItem>(items: readonly T[]): DecadeRun<T>[] {
   const sorted = [...items].sort((a, b) => {
     const ya = yearOf(a);
     const yb = yearOf(b);
@@ -29,7 +29,7 @@ export function decadeRuns(items: readonly MediaItem[]): DecadeRun[] {
     if (yb === null) return -1;
     return yb - ya;
   });
-  const runs: DecadeRun[] = [];
+  const runs: DecadeRun<T>[] = [];
   for (const item of sorted) {
     const y = yearOf(item);
     const decade = y === null ? null : `${Math.floor(y / 10) * 10}s`;
@@ -67,4 +67,28 @@ export function personListLead(
     };
   }
   return null;
+}
+
+/** A cast credit where the person appears as themselves, hosts or narrates:
+ *  talk shows, award broadcasts, documentaries. Matched on the role TMDB
+ *  gives, from its start, so "Self - Host" and "Himself (archive footage)"
+ *  count and a character named "Selfridge" does not. */
+const SELF_ROLE = /^(self|himself|herself|themselves|host|narrator)\b/i;
+
+export function isSelfCredit(item: PersonCredit): boolean {
+  return !!item.role && SELF_ROLE.test(item.role.trim());
+}
+
+/**
+ * Split an acting timeline into the roles and the appearances as themselves,
+ * each keeping its order. A credit with no role (a payload cached before
+ * roles were kept) stays with the roles, so nothing moves on a guess.
+ */
+export function splitSelfCredits<T extends PersonCredit>(
+  items: readonly T[],
+): { roles: T[]; self: T[] } {
+  const roles: T[] = [];
+  const self: T[] = [];
+  for (const it of items) (isSelfCredit(it) ? self : roles).push(it);
+  return { roles, self };
 }
