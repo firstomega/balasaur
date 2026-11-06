@@ -58,7 +58,7 @@ export const Route = createFileRoute("/play/taglines")({
       meta: buildMeta({
         title: "Movie Tagline Game: Match the Tagline to the Movie",
         description:
-          "Five real taglines, five posters, one board a day. Pair each line with its movie. Sin is a choice. One man saw it coming. You know more of these than you think.",
+          "Five real taglines, five posters, one board a day. Pair each line with its movie. Same board for everyone, new at midnight.",
         url,
         image: `${SITE_ORIGIN}/og-play-taglines.jpg`,
       }),

@@ -1,24 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ReadingPage, ReadingSection } from "@/components/balasaur/ReadingPage";
+import { SITE_ORIGIN, buildMeta, canonicalLink } from "@/lib/seo";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({
-    meta: [
-      { title: "Privacy Policy: What Balasaur Stores and Why" },
-      {
-        name: "description",
-        content:
+  head: () => {
+    const url = `${SITE_ORIGIN}/privacy`;
+    return {
+      meta: buildMeta({
+        title: "Privacy Policy: What Balasaur Stores and Why",
+        description:
           "How Balasaur collects, uses, and protects your information when you use balasaur.com.",
-      },
-      { property: "og:title", content: "Privacy Policy · Balasaur" },
-      {
-        property: "og:description",
-        content:
-          "How Balasaur collects, uses, and protects your information when you use balasaur.com.",
-      },
-    ],
-    links: [{ rel: "canonical", href: "https://balasaur.com/privacy" }],
-  }),
+        url,
+      }),
+      links: [canonicalLink(url)],
+    };
+  },
   component: PrivacyPage,
 });
 

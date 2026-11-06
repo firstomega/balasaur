@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flame } from "lucide-react";
 import { ArcadeTile } from "@/components/arcade/ArcadeTile";
@@ -32,6 +31,9 @@ import { itemListJsonLd } from "@/lib/jsonld";
 
 const TONIGHT = HUB_SECTIONS[0].slugs;
 
+/** The title promises daily games, so it counts only the ones that are. */
+const DAILY_COUNT = ENABLED_SLUGS.filter((slug) => GAMES[slug].daily).length;
+
 export const Route = createFileRoute("/play/")({
   loader: async () => {
     // Same short cache window as the games: the tiles name daily games that
@@ -57,8 +59,11 @@ export const Route = createFileRoute("/play/")({
     const url = `${SITE_ORIGIN}/play`;
     return {
       meta: buildMeta({
-        title: "Movie Games: Eleven Daily Games, New at Midnight",
-        description: `Eleven movie games drawn from ${CATALOG_FLOOR_LABEL} titles and the Balasaur Score. Same board for everyone, new at midnight. No sign-up.`,
+        title: `Movie Games: ${DAILY_COUNT} Daily Games, New at Midnight`,
+        // No catalog count here. The games pick from a popular pool
+        // (ARCADE_POOL_MIN_VOTES in arcade.functions.ts), not the whole
+        // catalog, so "drawn from 117,000 titles" was not true.
+        description: `${ENABLED_SLUGS.length} movie and TV games, from naming a title in six clues to putting five movies in release order. Same board for everyone, new at midnight. No sign-up.`,
         url,
         image: `${SITE_ORIGIN}/og-play.jpg`,
       }),

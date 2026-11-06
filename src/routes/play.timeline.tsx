@@ -61,7 +61,7 @@ export const Route = createFileRoute("/play/timeline")({
       meta: buildMeta({
         title: "The Timeline Game: Put Movies in Release Order",
         description:
-          "Five titles, one correct order, thirty seconds. Place each movie by release year and find out which decade you have all wrong. Same five for everyone, new at midnight.",
+          "Five titles, one correct order, thirty seconds. Place each movie by release year. Same five for everyone, new at midnight.",
         url,
         image: `${SITE_ORIGIN}/og-play-${GAME.slug}.jpg`,
       }),
