@@ -162,7 +162,9 @@ export function MediaCard({
         {reasons.length > 0 && (
           <p className="mt-1.5 break-words border-t border-current/30 pt-1.5 text-sm leading-tight">
             {reasons[0] === "Same series" ? "" : "Shares: "}
-            {reasons.slice(0, 2).join(" · ")}
+            {/* A no-break space ties each dot to the word before it, so a
+                wrapped line never starts with a separator. */}
+            {reasons.slice(0, 2).join("\u00a0· ")}
           </p>
         )}
       </div>
