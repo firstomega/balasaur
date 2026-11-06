@@ -7,6 +7,7 @@ import type { CollectionRow } from "./collectionsProse";
 import { buildOriginCollection, listOriginCollections } from "./originCollections";
 import { personNameFromListTitle } from "./personLists";
 import { pickRanksOn, type Placement } from "./ranksOn";
+import { rankByShownScore } from "./sharedRank";
 import type { MediaItem } from "@/types/media";
 import { asSwatchKey, type SwatchKey } from "./posterSwatch";
 import { leadOfItems, type TileLead } from "./tileLead";
@@ -384,18 +385,19 @@ export interface AppearsIn {
   rank: number;
   item_count: number;
   /** The run of ranks around this title on the shelf, this title included and
-   *  in rank order. Empty when the neighbour read fails; the caller renders
-   *  nothing rather than a rail with no numerals to explain its order. */
+   *  in the order the list page prints. Empty when the neighbour read fails;
+   *  the caller renders nothing rather than a rail with no numerals to explain
+   *  its order. */
   neighbors: ShelfSlot[];
 }
 
 /** How many slots of the shelf the detail page shows. */
 const SHELF_WINDOW = 10;
 
-/** The run of ranks to show around `rank`, clamped to the ends of the shelf so
- *  a title at either end still gets a full window. */
-function shelfWindow(rank: number, size: number): { lo: number; hi: number } {
-  const lo = Math.max(1, rank - Math.floor((SHELF_WINDOW - 1) / 2));
+/** The run of positions to show around `at` (1-based), clamped to the ends of
+ *  the shelf so a title at either end still gets a full window. */
+function shelfWindow(at: number, size: number): { lo: number; hi: number } {
+  const lo = Math.max(1, at - Math.floor((SHELF_WINDOW - 1) / 2));
   const hi = lo + SHELF_WINDOW - 1;
   if (hi <= size) return { lo, hi };
   return { lo: Math.max(1, size - SHELF_WINDOW + 1), hi: size };
@@ -409,7 +411,8 @@ export interface RankedPlacement extends Placement {
 
 /** What a title page shows about the lists it ranks on. */
 export interface TitleShelves {
-  /** The shelf it ranks best on, with its neighbours, for the closing rail. */
+  /** The shelf it ranks best on, with its neighbours, for the closing rail.
+   *  Never one of the lists in `ranksOn`: the page names each list once. */
   shelf: AppearsIn | null;
   /** Up to three placements for the "ranks on" tiles, most specific first. */
   ranksOn: RankedPlacement[];
@@ -417,9 +420,94 @@ export interface TitleShelves {
 
 const NO_SHELVES: TitleShelves = { shelf: null, ranksOn: [] };
 
-/** Every list a title ranks on, read once: the best placement and its
- *  neighbours feed the closing rail, the most specific three feed the line
- *  under the read. */
+const SCORE_COLS =
+  "rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count";
+
+/** One row of a list as read for ranking: the saved position and the columns
+ *  the shown score is made from. */
+export interface ListScoreRow {
+  media_id: string;
+  rank: number;
+  media: {
+    rating_imdb: number | null;
+    rating_rotten_tomatoes: number | null;
+    rating_metacritic: number | null;
+    rating_tmdb: number | null;
+    vote_count: number | null;
+  } | null;
+}
+
+/** A list's titles in the order its page prints them, each with the rank the
+ *  page prints: the same rows the list page reads (saved order, rows whose
+ *  title is gone dropped) put through the same rankByShownScore over the same
+ *  trusted score. So "#2 of 60" here is the "#2" a reader finds there, ties
+ *  included: scores 90, 88, 88, 85 print #1, #2, #2, #4. */
+export function sharedRanks(rows: readonly ListScoreRow[]): { id: string; rank: number }[] {
+  const kept = rows.filter((r) => r.media).sort((a, b) => a.rank - b.rank);
+  return rankByShownScore(kept, (r) =>
+    trustedScore({
+      ratings: {
+        imdb: r.media!.rating_imdb,
+        rottenTomatoes: r.media!.rating_rotten_tomatoes,
+        metacritic: r.media!.rating_metacritic,
+        tmdb: r.media!.rating_tmdb,
+      },
+      voteCount: r.media!.vote_count,
+    }),
+  ).map((e) => ({ id: e.item.media_id, rank: e.rank }));
+}
+
+/** Rows per request when reading whole lists: under the REST layer's 1,000-row
+ *  cap with room for an item count that lags its rows. */
+const ROWS_PER_READ = 900;
+
+/** Every row of each list, score columns only, grouped by slug. A title page
+ *  asks for at most four lists of at most 60 rows, one request. A list whose
+ *  read failed is absent. */
+async function listScoreRows(
+  lists: { slug: string; item_count: number }[],
+): Promise<Map<string, ListScoreRow[]>> {
+  const chunks: string[][] = [];
+  let cur: string[] = [];
+  let curRows = 0;
+  for (const l of lists) {
+    const n = Math.max(1, l.item_count || 0);
+    if (cur.length > 0 && curRows + n > ROWS_PER_READ) {
+      chunks.push(cur);
+      cur = [];
+      curRows = 0;
+    }
+    cur.push(l.slug);
+    curRows += n;
+  }
+  if (cur.length > 0) chunks.push(cur);
+
+  const out = new Map<string, ListScoreRow[]>();
+  await Promise.all(
+    chunks.map(async (slugs) => {
+      const { data, error } = await loose(supabaseAdmin)
+        .from("collection_items")
+        .select(`slug, rank, media_id, media:media_id ( ${SCORE_COLS} )`)
+        .in("slug", slugs)
+        .limit(1000);
+      if (error) {
+        console.error("[collections] list rows failed:", error.message);
+        return;
+      }
+      for (const r of (data ?? []) as unknown as (ListScoreRow & { slug: string })[]) {
+        const list = out.get(r.slug);
+        if (list) list.push(r);
+        else out.set(r.slug, [r]);
+      }
+    }),
+  );
+  return out;
+}
+
+/** Every list a title ranks on: the most specific three feed the tiles under
+ *  the read, the best placement among the rest and its neighbours feed the
+ *  closing rail. Every printed rank is the shared rank the list page prints,
+ *  not the saved position, which can differ inside a tie. */
 export const getAppearsIn = createServerFn({ method: "GET" })
   .inputValidator((p: { mediaId: string }) => p)
   .handler(async ({ data: p }): Promise<TitleShelves> => {
@@ -441,39 +529,72 @@ export const getAppearsIn = createServerFn({ method: "GET" })
         } | null;
       }[]
     ).filter((r) => r.collections);
-    const placements: Placement[] = rows.map((r) => ({
+    if (rows.length === 0) return NO_SHELVES;
+
+    // Which lists to show is chosen on the saved positions, as before; only
+    // the chosen lists (three tiles and the rail, at most four) are read whole
+    // to print the shared rank. Reading every list the title is on cost 557ms
+    // for Inception's 12 lists on a cold database cache (11ms warm), against
+    // the page's 800ms budget for this lookup.
+    const saved: Placement[] = rows.map((r) => ({
       slug: r.collections!.slug,
       title: r.collections!.title,
       kind: r.collections!.kind,
       rank: r.rank,
       item_count: r.collections!.item_count,
     }));
+    const tilePicks = pickRanksOn(saved);
+    // Best placement first: high rank in a big shelf beats #1 of a tiny one;
+    // the slug settles a full tie, so every visitor gets the same rail.
+    // A list already shown as a tile is not shown again as the rail.
+    const onTiles = new Set(tilePicks.map((pl) => pl.slug));
+    const railPick = saved
+      .filter((pl) => !onTiles.has(pl.slug))
+      .sort(
+        (a, b) => a.rank - b.rank || b.item_count - a.item_count || a.slug.localeCompare(b.slug),
+      )[0];
+
     // Each tile is painted from its list's leader, the same lead the list's
     // tile carries everywhere else, so a list looks the same on every page.
-    const picked = pickRanksOn(placements);
     const leadIds = new Map(
       rows.map((r) => [r.collections!.slug, (r.collections!.poster_ids ?? []).slice(0, 3)]),
     );
-    // Read alongside the shelf neighbours below, not before them.
-    const leadsRead = postersByIds([
-      ...new Set(picked.flatMap((pl) => leadIds.get(pl.slug) ?? [])),
-    ]).then((byId): RankedPlacement[] =>
+    // Read alongside the list rows and the shelf neighbours, not before them.
+    // A failed read leaves the tiles unpainted rather than failing the page.
+    const leadsByIdRead = postersByIds([
+      ...new Set(tilePicks.flatMap((pl) => leadIds.get(pl.slug) ?? [])),
+    ]).catch(() => new Map<string, PosterRef>());
+
+    // Each chosen list in the order its page prints it. A list whose rows
+    // could not be read, or that no longer holds this title, makes no claim.
+    const chosen = railPick ? [...tilePicks, railPick] : tilePicks;
+    const orderOf = new Map<string, { id: string; rank: number }[]>();
+    const byList = await listScoreRows(chosen);
+    for (const [slug, listRows] of byList) orderOf.set(slug, sharedRanks(listRows));
+    const shared = (pl: Placement): Placement | null => {
+      const mine = orderOf.get(pl.slug)?.find((e) => e.id === p.mediaId);
+      return mine ? { ...pl, rank: mine.rank } : null;
+    };
+    const picked = tilePicks.flatMap((pl) => shared(pl) ?? []);
+    const leadsRead = leadsByIdRead.then((byId): RankedPlacement[] =>
       picked.map((pl) => ({ ...pl, lead: leadOf(leadIds.get(pl.slug) ?? [], byId) })),
     );
-    // Best placement first: high rank in a big shelf beats #1 of a tiny one.
-    const best = [...placements].sort((a, b) => a.rank - b.rank || b.item_count - a.item_count)[0];
+    const best = railPick ? shared(railPick) : null;
     if (!best) return { shelf: null, ranksOn: await leadsRead };
 
-    const size = Math.max(best.item_count || 0, best.rank);
-    const { lo, hi } = shelfWindow(best.rank, size);
+    const order = orderOf.get(best.slug) ?? [];
+    const at = order.findIndex((e) => e.id === p.mediaId) + 1;
+    const { lo, hi } = shelfWindow(at, order.length);
+    const slots = order.slice(lo - 1, hi);
     const [{ data: nearby, error: nearbyErr }, ranksOn] = await Promise.all([
       loose(supabaseAdmin)
-        .from("collection_items")
-        .select(`rank, media:media_id ( ${CARD_COLS} )`)
-        .eq("slug", best.slug)
-        .gte("rank", lo)
-        .lte("rank", hi)
-        .order("rank", { ascending: true }),
+        .from("media")
+        .select(CARD_COLS)
+        .in(
+          "media_id",
+          slots.map((s) => s.id),
+        )
+        .limit(slots.length),
       leadsRead,
     ]);
     const shelfOf = (neighbors: ShelfSlot[]): AppearsIn => ({
@@ -487,9 +608,11 @@ export const getAppearsIn = createServerFn({ method: "GET" })
       console.error("[collections] shelf neighbours failed:", nearbyErr.message);
       return { shelf: shelfOf([]), ranksOn };
     }
-    const neighbors = ((nearby ?? []) as unknown as { rank: number; media: CardRow | null }[])
-      .filter((r) => r.media)
-      .map((r) => ({ rank: r.rank, item: rowToCardItem(r.media as CardRow) }));
+    const cardById = new Map(((nearby ?? []) as unknown as CardRow[]).map((r) => [r.media_id, r]));
+    const neighbors = slots.flatMap((s) => {
+      const row = cardById.get(s.id);
+      return row ? [{ rank: s.rank, item: rowToCardItem(row) }] : [];
+    });
     return { shelf: shelfOf(neighbors), ranksOn };
   });
 
