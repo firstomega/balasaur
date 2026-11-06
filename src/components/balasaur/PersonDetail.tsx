@@ -13,6 +13,7 @@ import { paintTiles } from "@/lib/paintWall";
 import { swatchSurface } from "@/lib/swatchSurface";
 import { swatchTint } from "@/lib/swatchTint";
 import { trustedScore } from "@/lib/trust";
+import { rankByShownScore } from "@/lib/sharedRank";
 import { mediaSlug } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 
@@ -115,7 +116,7 @@ function CreditRow({ item }: { item: MediaItem }) {
           />
         )}
       </span>
-      <span className="min-w-0">
+      <div className="min-w-0">
         <h3 className="line-clamp-2 text-lg font-bold leading-tight text-text-bright group-hover:underline">
           {item.title}
         </h3>
@@ -132,7 +133,7 @@ function CreditRow({ item }: { item: MediaItem }) {
             </Fragment>
           ))}
         </p>
-      </span>
+      </div>
     </>
   );
 
@@ -174,9 +175,12 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
   const facts = [detail.knownForDepartment, life].filter(Boolean).join(" · ");
   const prose = detail.catalog ? personProse(detail.name, detail.catalog) : "";
   const top = detail.catalog?.top ?? [];
+  // Equal scores share a rank number: the order inside a tie rests on nothing
+  // the page shows, so no number should claim it.
+  const ranked = rankByShownScore(top, trustedScore);
   // The band takes the colour of the best-scored credit, the first card below
   // it, so the colour can be explained from the page.
-  const band = top[0]?.swatch ?? null;
+  const band = ranked[0]?.item.swatch ?? null;
   const lists = (detail.lists ?? []).map((l) => ({
     list: l,
     lead: personListLead(l, detail.groups),
@@ -239,7 +243,7 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
           <section className="mt-8 md:mt-12">
             <SectionHeading>Highest rated</SectionHeading>
             <div className="grid grid-cols-2 gap-x-2.5 gap-y-3 sm:grid-cols-3 md:grid-cols-6 md:gap-x-3.5">
-              {top.map((it, i) => (
+              {ranked.map(({ item: it, rank }, i) => (
                 <MediaCard
                   key={it.id}
                   item={it}
@@ -249,9 +253,9 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
                     // with a shadow vanished on bright posters.
                     <span
                       aria-hidden="true"
-                      className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-text-bright px-1.5 font-mono text-base font-bold tabular-nums leading-none text-background"
+                      className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-text-bright px-1.5 font-display text-base font-extrabold tabular-nums leading-none text-background"
                     >
-                      {i + 1}
+                      {rank}
                     </span>
                   }
                 />
