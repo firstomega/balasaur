@@ -20,6 +20,7 @@ import { bestDecadeOf, pickTopCredits, rankedPool, type PersonCreditFacts } from
 import { personListTitles } from "./personLists";
 import { dataUnavailable } from "./dataError";
 import { RANKED_MIN_VOTES } from "./trust";
+import { parseImdbVotes } from "./indexKeep";
 import { upsertInChunks } from "./chunkedUpsert";
 import {
   recordAvailabilityEvents,
@@ -46,7 +47,7 @@ type MediaRow = TablesInsert<"media"> & {
 
 /**
  * The sitemap protocol's ceiling on URLs per file. Not a budget: the title
- * sitemap lists exactly the kept set (index_kept_media, about 3,700 titles),
+ * sitemap lists exactly the kept set (index_kept_media, about 5,000 titles),
  * and which titles are kept is decided in src/lib/indexKeep.ts.
  */
 export const SITEMAP_URL_LIMIT = 50000;
@@ -422,6 +423,8 @@ function enrichFromDetails(item: MediaItem, d: TmdbDetails): string | undefined 
 interface OmdbResponse {
   Response: "True" | "False";
   imdbRating?: string;
+  /** "2,877,173", or "N/A". Read with parseImdbVotes. */
+  imdbVotes?: string;
   Metascore?: string;
   Ratings?: { Source: string; Value: string }[];
   Awards?: string;
@@ -2371,7 +2374,10 @@ function buildDetailFromRaw(
   }
 
   // OMDb enrichment from the supplied payload (no network call here).
-  if (rawOmdb) applyOmdbRatings(detail, rawOmdb);
+  if (rawOmdb) {
+    applyOmdbRatings(detail, rawOmdb);
+    detail.imdbVotes = parseImdbVotes(rawOmdb.imdbVotes);
+  }
 
   return detail;
 }
@@ -2570,11 +2576,12 @@ export async function fetchMediaDetail(
             [r?.imdb, r?.rottenTomatoes, r?.metacritic, r?.tmdb].filter(
               (v) => typeof v === "number",
             ).length;
-          // The vote count is always re-read, not only when missing. The kept
-          // set (src/lib/indexKeep.ts) draws a line on it, and the sitemap
-          // reads the catalog row's count; a payload up to seven days old
-          // would let a title near the line say noindex while the sitemap
-          // still lists it.
+          // Both vote counts are always re-read, not only when missing. The
+          // kept set (src/lib/indexKeep.ts) draws a line on each, and the
+          // sitemap reads the catalog row's counts; a payload up to seven days
+          // old would let a title near a line say noindex while the sitemap
+          // still lists it. The IMDb count is read as one field of the stored
+          // OMDb payload, not the whole payload.
           const needsScore = cached.ratings?.balasaur === undefined;
           const needsStreaming = (cached.streaming ?? []).length === 0;
           const needsSources = sourceCount(cached.ratings) < 2;
@@ -2582,13 +2589,14 @@ export async function fetchMediaDetail(
             const { data: row } = await loose(supabaseAdmin)
               .from("media")
               .select(
-                "vote_count, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
+                "vote_count, imdb_votes:raw_omdb->>imdbVotes, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
               )
               .eq("media_id", cacheId)
               .maybeSingle();
             if (typeof row?.vote_count === "number") {
               cached.voteCount = row.vote_count;
             }
+            if (row) cached.imdbVotes = parseImdbVotes(row.imdb_votes);
             if (needsScore && typeof row?.rating_balasaur === "number") {
               cached.ratings = { ...(cached.ratings ?? {}), balasaur: row.rating_balasaur };
             }
