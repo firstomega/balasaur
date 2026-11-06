@@ -5,6 +5,7 @@ import { ArrowLeft, Bookmark, Check, ExternalLink, Play, ThumbsDown, ThumbsUp } 
 import { ShareButton } from "./ShareButton";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
 import { useUserStatus } from "@/hooks/useUserStatus";
+import { useHydrated } from "@/hooks/useHydrated";
 import type { MediaDetail as MediaDetailType } from "@/types/media";
 import type { EpisodeRating } from "@/lib/episodes";
 import type { SwatchKey } from "@/lib/posterSwatch";
@@ -261,10 +262,15 @@ function titleSize(title: string): string {
 // from Google was offered a button that sent them back to Google. Without
 // in-app history there is nothing here: the logo already goes home. A true
 // back, not a link, so the filtered grid and its scroll position come back.
+// Read only after hydration: a reload or a return from another site restores
+// the in-app history, so the browser can know there is a back while the cached
+// HTML, rendered with none, cannot. Reading it during hydration would make the
+// two disagree.
 function BackButton() {
   const router = useRouter();
   const canGoBack = useCanGoBack();
-  if (!canGoBack) return null;
+  const hydrated = useHydrated();
+  if (!hydrated || !canGoBack) return null;
   return (
     <button
       type="button"
@@ -481,10 +487,20 @@ function DetailInner({
                 <a
                   href="#ratings"
                   onClick={(e) => {
+                    // A modified click (new tab, new window) keeps its own job.
+                    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                     const target = document.getElementById("ratings");
                     if (!target) return;
                     e.preventDefault();
                     target.scrollIntoView({ block: "start" });
+                    // Focus follows so a keyboard reader continues from the
+                    // table. Focusable only until it is left: a permanent
+                    // tabindex lets a click inside the table focus the whole
+                    // section and the next key press ring all of it.
+                    target.setAttribute("tabindex", "-1");
+                    target.addEventListener("blur", () => target.removeAttribute("tabindex"), {
+                      once: true,
+                    });
                     target.focus({ preventScroll: true });
                   }}
                   className="rounded-sm text-base font-bold leading-tight underline decoration-2 underline-offset-4"
@@ -531,8 +547,9 @@ function DetailInner({
           )}
 
           {/* The hero label's target. The margin keeps the heading clear of
-              the sticky header; focusable so a keyboard reader lands here. */}
-          <section id="ratings" tabIndex={-1} className="scroll-mt-16">
+              the sticky header: two rows on a phone (bar and search, 97px),
+              one from md up (57px). */}
+          <section id="ratings" className="scroll-mt-28 md:scroll-mt-16">
             <SectionHeading>Ratings</SectionHeading>
             {rows.length > 0 ? (
               <table className="w-full max-w-md border-collapse text-base">

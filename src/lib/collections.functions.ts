@@ -433,9 +433,9 @@ export function sharedRanks(rows: readonly ListScoreRow[]): { id: string; rank: 
  *  cap with room for an item count that lags its rows. */
 const ROWS_PER_READ = 900;
 
-/** Every row of each list, score columns only, grouped by slug. The most a
- *  title sits on is 28 lists and 1,611 rows (2026-11-06); Inception is on 12
- *  lists and 601 rows, one request. A list whose read failed is absent. */
+/** Every row of each list, score columns only, grouped by slug. A title page
+ *  asks for at most four lists of at most 60 rows, one request. A list whose
+ *  read failed is absent. */
 async function listScoreRows(
   lists: { slug: string; item_count: number }[],
 ): Promise<Map<string, ListScoreRow[]>> {
@@ -476,9 +476,9 @@ async function listScoreRows(
   return out;
 }
 
-/** Every list a title ranks on, read once: the most specific three feed the
- *  tiles under the read, the best placement among the rest and its neighbours
- *  feed the closing rail. Every rank is the shared rank the list page prints,
+/** Every list a title ranks on: the most specific three feed the tiles under
+ *  the read, the best placement among the rest and its neighbours feed the
+ *  closing rail. Every printed rank is the shared rank the list page prints,
  *  not the saved position, which can differ inside a tie. */
 export const getAppearsIn = createServerFn({ method: "GET" })
   .inputValidator((p: { mediaId: string }) => p)
@@ -503,43 +503,55 @@ export const getAppearsIn = createServerFn({ method: "GET" })
     ).filter((r) => r.collections);
     if (rows.length === 0) return NO_SHELVES;
 
-    // Each list in the order its page prints it. A list whose rows could not
-    // be read, or that no longer holds this title, makes no claim at all.
-    const orderOf = new Map<string, { id: string; rank: number }[]>();
-    const byList = await listScoreRows(rows.map((r) => r.collections!));
-    for (const [slug, listRows] of byList) orderOf.set(slug, sharedRanks(listRows));
-    const placements: Placement[] = [];
-    for (const r of rows) {
-      const c = r.collections!;
-      const mine = orderOf.get(c.slug)?.find((e) => e.id === p.mediaId);
-      if (!mine) continue;
-      placements.push({
-        slug: c.slug,
-        title: c.title,
-        kind: c.kind,
-        rank: mine.rank,
-        item_count: c.item_count,
-      });
-    }
+    // Which lists to show is chosen on the saved positions, as before; only
+    // the chosen lists (three tiles and the rail, at most four) are read whole
+    // to print the shared rank. Reading every list the title is on cost 557ms
+    // for Inception's 12 lists on a cold database cache (11ms warm), against
+    // the page's 800ms budget for this lookup.
+    const saved: Placement[] = rows.map((r) => ({
+      slug: r.collections!.slug,
+      title: r.collections!.title,
+      kind: r.collections!.kind,
+      rank: r.rank,
+      item_count: r.collections!.item_count,
+    }));
+    const tilePicks = pickRanksOn(saved);
+    // Best placement first: high rank in a big shelf beats #1 of a tiny one;
+    // the slug settles a full tie, so every visitor gets the same rail.
+    // A list already shown as a tile is not shown again as the rail.
+    const onTiles = new Set(tilePicks.map((pl) => pl.slug));
+    const railPick = saved
+      .filter((pl) => !onTiles.has(pl.slug))
+      .sort(
+        (a, b) => a.rank - b.rank || b.item_count - a.item_count || a.slug.localeCompare(b.slug),
+      )[0];
 
     // Each tile is painted from its list's leader, the same lead the list's
     // tile carries everywhere else, so a list looks the same on every page.
-    const picked = pickRanksOn(placements);
     const leadIds = new Map(
       rows.map((r) => [r.collections!.slug, (r.collections!.poster_ids ?? []).slice(0, 3)]),
     );
-    // Read alongside the shelf neighbours below, not before them.
-    const leadsRead = postersByIds([
-      ...new Set(picked.flatMap((pl) => leadIds.get(pl.slug) ?? [])),
-    ]).then((byId): RankedPlacement[] =>
+    // Read alongside the list rows and the shelf neighbours, not before them.
+    // A failed read leaves the tiles unpainted rather than failing the page.
+    const leadsByIdRead = postersByIds([
+      ...new Set(tilePicks.flatMap((pl) => leadIds.get(pl.slug) ?? [])),
+    ]).catch(() => new Map<string, PosterRef>());
+
+    // Each chosen list in the order its page prints it. A list whose rows
+    // could not be read, or that no longer holds this title, makes no claim.
+    const chosen = railPick ? [...tilePicks, railPick] : tilePicks;
+    const orderOf = new Map<string, { id: string; rank: number }[]>();
+    const byList = await listScoreRows(chosen);
+    for (const [slug, listRows] of byList) orderOf.set(slug, sharedRanks(listRows));
+    const shared = (pl: Placement): Placement | null => {
+      const mine = orderOf.get(pl.slug)?.find((e) => e.id === p.mediaId);
+      return mine ? { ...pl, rank: mine.rank } : null;
+    };
+    const picked = tilePicks.flatMap((pl) => shared(pl) ?? []);
+    const leadsRead = leadsByIdRead.then((byId): RankedPlacement[] =>
       picked.map((pl) => ({ ...pl, lead: leadOf(leadIds.get(pl.slug) ?? [], byId) })),
     );
-    // Best placement first: high rank in a big shelf beats #1 of a tiny one.
-    // A list already shown as a tile is not shown again as the rail.
-    const onTiles = new Set(picked.map((pl) => pl.slug));
-    const best = placements
-      .filter((pl) => !onTiles.has(pl.slug))
-      .sort((a, b) => a.rank - b.rank || b.item_count - a.item_count)[0];
+    const best = railPick ? shared(railPick) : null;
     if (!best) return { shelf: null, ranksOn: await leadsRead };
 
     const order = orderOf.get(best.slug) ?? [];
