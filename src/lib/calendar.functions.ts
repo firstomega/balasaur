@@ -3,6 +3,7 @@ import { loose } from "@/lib/supabaseLoose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CARD_COLS, rowToCardItem, type CardRow } from "@/lib/catalog.functions";
 import { listExclusion } from "@/lib/trust";
+import { dataUnavailable } from "@/lib/dataError";
 import type { MediaItem } from "@/types/media";
 
 // The release calendar: what comes out, day by day, one month per page.
@@ -55,32 +56,35 @@ export const getReleaseCalendar = createServerFn({ method: "GET" })
     if (!p || !MONTH_RE.test(p.month)) throw new Error("Invalid month");
     return { month: p.month };
   })
-  .handler(async ({ data: p }): Promise<CalendarMonth> => {
-    const start = `${p.month}-01`;
-    const end = `${nextMonth(p.month, 1)}-01`;
-    const { data, error } = await loose(supabaseAdmin)
-      .from("media")
-      .select(`${CARD_COLS},film_length_minutes`)
-      // The calendar is the site presenting premieres unprompted, so the whole
-      // fan-service tier (`suggestive`, superset of `sensitive`) stays out.
-      .eq("suggestive", false)
-      .not("poster_url", "is", null)
-      .gte("release_date", start)
-      .lt("release_date", end)
-      .order("release_date", { ascending: true })
-      .order("popularity", { ascending: false, nullsFirst: false })
-      // The busiest catalogued month holds 497 qualifying premieres; 300 was
-      // silently amputating the back half of such months while the header
-      // claimed a full count. 1000 is PostgREST's per-request ceiling and
-      // covers the maximum with headroom.
-      .limit(1000);
-    if (error) {
-      console.error("[calendar] query failed:", error.message);
-      return { month: p.month, days: [], total: 0 };
-    }
-    const days = calendarDays((data ?? []) as unknown as CalendarRow[]);
-    return { month: p.month, days, total: days.reduce((n, d) => n + d.items.length, 0) };
-  });
+  .handler(({ data: p }) => readReleaseCalendar(p.month, supabaseAdmin));
+
+/** One month of premieres. `db` is the service client in production and a
+ *  stub in tests; it is passed in, not imported, so this export never pulls
+ *  the service client into the browser bundle. A failed read throws: an
+ *  empty month is only ever a month the catalog really has nothing in. */
+export async function readReleaseCalendar(month: string, db: unknown): Promise<CalendarMonth> {
+  const start = `${month}-01`;
+  const end = `${nextMonth(month, 1)}-01`;
+  const { data, error } = await loose(db)
+    .from("media")
+    .select(`${CARD_COLS},film_length_minutes`)
+    // The calendar is the site presenting premieres unprompted, so the whole
+    // fan-service tier (`suggestive`, superset of `sensitive`) stays out.
+    .eq("suggestive", false)
+    .not("poster_url", "is", null)
+    .gte("release_date", start)
+    .lt("release_date", end)
+    .order("release_date", { ascending: true })
+    .order("popularity", { ascending: false, nullsFirst: false })
+    // The busiest catalogued month holds 497 qualifying premieres; 300 was
+    // silently amputating the back half of such months while the header
+    // claimed a full count. 1000 is PostgREST's per-request ceiling and
+    // covers the maximum with headroom.
+    .limit(1000);
+  if (error) throw dataUnavailable("[calendar] query failed", error);
+  const days = calendarDays((data ?? []) as unknown as CalendarRow[]);
+  return { month, days, total: days.reduce((n, d) => n + d.items.length, 0) };
+}
 
 /** Group a month's rows by release day, dropping what is not a premiere. */
 export function calendarDays(rows: CalendarRow[]): CalendarDay[] {

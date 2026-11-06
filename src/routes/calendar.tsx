@@ -54,9 +54,12 @@ export const Route = createFileRoute("/calendar")({
     typeof s.m === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(s.m) ? { m: s.m } : {},
   loaderDeps: ({ search }) => ({ m: search.m }),
   loader: async ({ deps }) => {
-    await cacheSsrResponse();
     const month = clampMonth(deps.m ?? currentMonth());
-    return getReleaseCalendar({ data: { month } });
+    // Cached only once the month has been read. A failed read throws to the
+    // error page, which is sent no-store (src/server.ts).
+    const data = await getReleaseCalendar({ data: { month } });
+    await cacheSsrResponse();
+    return data;
   },
   head: ({ loaderData }) => {
     const m = loaderData?.month ?? currentMonth();

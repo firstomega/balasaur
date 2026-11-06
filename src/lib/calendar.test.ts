@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { calendarDays, type CalendarRow } from "./calendar.functions";
+import { calendarDays, readReleaseCalendar, type CalendarRow } from "./calendar.functions";
+import { DataUnavailableError } from "./dataError";
+import { FAILED, rejectionOf, stubSupabase } from "./supabaseStub";
 
 function row(over: Partial<CalendarRow>): CalendarRow {
   return {
@@ -51,5 +53,31 @@ describe("calendarDays", () => {
       row({ media_id: "movie-2", release_date: "2026-10-02" }),
     ]);
     expect(days.map((d) => d.date).join(",")).toBe("2026-10-02,2026-10-09");
+  });
+});
+
+describe("readReleaseCalendar", () => {
+  it("throws on a failed read instead of returning an empty month", async () => {
+    // An empty month served for six hours is what the CDN would keep.
+    const db = stubSupabase({ media: FAILED });
+    expect(await rejectionOf(readReleaseCalendar("2026-10", db))).toBeInstanceOf(
+      DataUnavailableError,
+    );
+  });
+
+  it("returns an empty month when the read succeeds with no rows", async () => {
+    const db = stubSupabase({ media: { data: [] } });
+    expect(await readReleaseCalendar("2031-02", db)).toEqual({
+      month: "2031-02",
+      days: [],
+      total: 0,
+    });
+  });
+
+  it("groups the rows a successful read returns", async () => {
+    const db = stubSupabase({ media: { data: [row({}), row({ media_id: "movie-2" })] } });
+    const month = await readReleaseCalendar("2026-10", db);
+    expect(month.total).toBe(2);
+    expect(month.days.map((d) => d.date)).toEqual(["2026-10-02"]);
   });
 });
