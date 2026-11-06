@@ -250,9 +250,8 @@ describe("the SQL kept sets match the constants", () => {
       const oldArm = taggedLine(name).trim().replace(/;$/, "");
       expect(titleLine(name).trim().replace(/;$/, "")).toBe(oldArm);
     }
-    expect(TITLE_MIGRATION.split("\n")[0]).toBe(
-      "-- NOT APPLIED: apply in Supabase before merging this PR",
-    );
+    // The file is the record of a change applied live first (CLAUDE.md).
+    expect(TITLE_MIGRATION.startsWith("-- Applied live on 2026-11-06")).toBe(true);
   });
 
   it("people: same fame recipe and the same cut", () => {
