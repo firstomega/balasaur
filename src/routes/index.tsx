@@ -10,7 +10,6 @@ import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { SortControl } from "@/components/balasaur/SortControl";
 import { MobileFilterStrip } from "@/components/balasaur/MobileFilterStrip";
 import { LandingHero } from "@/components/balasaur/LandingHero";
-import { AmbientGlow } from "@/components/balasaur/AmbientGlow";
 import { EmptyState, EMPTY_ACTION_QUIET_CLASS } from "@/components/balasaur/EmptyState";
 import { AuthDialog } from "@/components/balasaur/AuthDialog";
 import { ShareButton } from "@/components/balasaur/ShareButton";
@@ -63,9 +62,6 @@ function pageOffset(raw: string | undefined): number {
 }
 
 const BASE_TITLE = "Balasaur: Stop Scrolling, Start Watching";
-
-/** The homepage's light is the brand's own blue. See the mount below. */
-const BRAND_GLOW = "#3b82f6";
 
 /** Page 2 and beyond say so, rather than 400 URLs sharing one title. */
 function pageTitle(search: FilterSearch | undefined): string {
@@ -241,7 +237,7 @@ function HomePage() {
         toast(`Restored · ${item.title}`, { duration: 1400 });
       } else {
         recordStatus(item.id, recordForNotInterested(), item);
-        toast(`Never · ${item.title}`, {
+        toast(`Hidden · ${item.title}`, {
           duration: 3500,
           action: { label: "Undo", onClick: () => recordStatus(item.id, null) },
         });
@@ -294,66 +290,64 @@ function HomePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex max-w-grid gap-5 px-4 py-5">
-        {/* Desktop rail (collapsible) */}
-        {!railCollapsed ? (
-          <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden">
-            <div className="mb-1 flex justify-end">
+      <main id="main" className="mx-auto max-w-grid px-4 py-5">
+        {/* Signed out, the hero carries the page heading. Signed in the hero is
+            gone and the tiles and grid speak for themselves, so the heading is
+            for screen readers and crawlers only. Exactly one either way. */}
+        {user && <h1 className="sr-only">Movies and TV ranked by the Balasaur Score</h1>}
+        {!user && <LandingHero onBrowse={scrollToGrid} />}
+        <WatchlistNudge wantIds={wantIds} region={region} />
+
+        {/* The list tiles sit above the catalog and stay put while filtering.
+            They used to live inside the grid column and fold away whenever a
+            filter was on, which moved everything under the visitor's pointer;
+            above the browse row they are not in the way of any result. */}
+        <div className="mb-8 md:mb-10">
+          <CollectionRail />
+        </div>
+
+        {/* The catalog: filters beside the grid on desktop, a drawer on phones. */}
+        <div className="flex gap-5">
+          {!railCollapsed ? (
+            <aside className="sticky top-12 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto border-r border-border pr-3 [-ms-overflow-style:none] [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden">
+              <div className="mb-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setRail(true)}
+                  aria-label="Collapse filters"
+                  title="Collapse filters"
+                  className="cursor-pointer rounded-full p-1.5 text-text-muted hover:bg-panel hover:text-text-bright"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+              </div>
+              <Suspense fallback={<div className="text-base text-text-dim">…</div>}>
+                <RailWithData
+                  filters={filters}
+                  setFilters={setFilters}
+                  region={region}
+                  onRequireAuth={() => setAuthOpen(true)}
+                />
+              </Suspense>
+            </aside>
+          ) : (
+            <div className="hidden shrink-0 md:block">
               <button
                 type="button"
-                onClick={() => setRail(true)}
-                aria-label="Collapse filters"
-                title="Collapse filters"
-                className="cursor-pointer rounded-[4px] p-1 text-text-muted hover:bg-panel hover:text-text-bright"
+                onClick={() => setRail(false)}
+                aria-label="Show filters"
+                title="Show filters"
+                className="sticky top-14 flex cursor-pointer items-center rounded-full border border-border-strong bg-background p-2 text-text-muted hover:border-text-bright hover:text-text-bright"
               >
-                <PanelLeftClose className="h-4 w-4" />
+                <PanelLeftOpen className="h-4 w-4" />
               </button>
             </div>
-            <Suspense fallback={<div className="text-[13px] text-text-dim">…</div>}>
-              <RailWithData
-                filters={filters}
-                setFilters={setFilters}
-                region={region}
-                onRequireAuth={() => setAuthOpen(true)}
-              />
-            </Suspense>
-          </aside>
-        ) : (
-          <div className="hidden shrink-0 md:block">
-            <button
-              type="button"
-              onClick={() => setRail(false)}
-              aria-label="Show filters"
-              title="Show filters"
-              className="sticky top-12 flex cursor-pointer items-center rounded-[4px] border border-border bg-panel px-2 py-2 text-text-muted hover:border-border-strong hover:text-text-bright"
-            >
-              <PanelLeftOpen className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        <main id="main" className="min-w-0 flex-1">
-          {/* Signed out, the hero carries the page heading. Signed in the hero is
-              gone and the grid speaks for itself, so the heading is for screen
-              readers and crawlers only. Exactly one either way. */}
-          {user && <h1 className="sr-only">Movies and TV ranked by the Balasaur Score</h1>}
-          {!user && (
-            // The hero panel is opaque, so the light has to be bigger than it
-            // is: the box reaches past the panel on every side and the panel
-            // sits in the middle of it. Signed out only, and the same blue for
-            // both lamps, because the homepage has no title of its own to take
-            // a color from and reading one out of the database would put a
-            // query in front of the slowest page on the site.
-            <div className="relative isolate">
-              <AmbientGlow colorA={BRAND_GLOW} className="-top-10 h-[calc(100%+5rem)]" />
-              <LandingHero onBrowse={scrollToGrid} />
-            </div>
           )}
-          <WatchlistNudge wantIds={wantIds} region={region} />
+
           {/* No tabIndex here. Nothing ever moved focus to this container, but a
               click anywhere in it did, and the next key pressed lit a
               full-width focus ring around the whole results region. */}
-          <div ref={gridRef} className="scroll-mt-16">
+          <div ref={gridRef} className="min-w-0 flex-1 scroll-mt-16">
             <Suspense fallback={<MediaGridSkeleton />}>
               <GridWithControls
                 filters={filters}
@@ -370,13 +364,13 @@ function HomePage() {
               />
             </Suspense>
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
 
       <AuthDialog
         open={authOpen}
         onOpenChange={setAuthOpen}
-        reason="Sign in to personalize your Balasaur database"
+        reason="Saved filters are kept with an account."
       />
 
       {/* Mobile drawer */}
@@ -387,12 +381,14 @@ function HomePage() {
         >
           <SheetHeader>
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-[18px] font-black tracking-[-0.02em]">Filters</SheetTitle>
+              <SheetTitle className="font-display text-2xl font-extrabold leading-none tracking-tight">
+                Filters
+              </SheetTitle>
               {countActive(filters) > 0 && (
                 <button
                   type="button"
                   onClick={() => setFilters(() => defaultFilterState())}
-                  className="cursor-pointer text-[13px] font-semibold text-text-muted underline hover:text-text-bright"
+                  className="cursor-pointer text-base font-semibold text-text-muted underline hover:text-text-bright"
                 >
                   Clear all
                 </button>
@@ -400,7 +396,7 @@ function HomePage() {
             </div>
           </SheetHeader>
           <div className="mt-3 pb-16">
-            <Suspense fallback={<div className="text-[13px] text-text-dim">…</div>}>
+            <Suspense fallback={<div className="text-base text-text-dim">…</div>}>
               <RailWithData
                 filters={filters}
                 setFilters={setFilters}
@@ -470,29 +466,24 @@ function CrawlTrail({
       className="mt-8 flex flex-wrap items-center justify-center gap-1.5 border-t border-border pt-5"
     >
       {page > 1 && (
-        <Link
-          to="/"
-          search={to(page - 1)}
-          rel="prev"
-          className="rounded-[4px] border border-border px-2.5 py-1 text-[13px] font-semibold text-text-muted hover:border-primary hover:text-primary"
-        >
+        <Link to="/" search={to(page - 1)} rel="prev" className={TRAIL_PILL}>
           Previous
         </Link>
       )}
       {shown.map((n, i) => (
         <span key={n} className="flex items-center gap-1.5">
           {i > 0 && shown[i - 1] !== n - 1 && (
-            <span className="font-mono text-[12px] text-text-dim">…</span>
+            <span className="font-mono text-sm text-text-dim">…</span>
           )}
           <Link
             to="/"
             search={to(n)}
             aria-current={n === page ? "page" : undefined}
             className={
-              "rounded-[4px] border px-2.5 py-1 font-mono text-[12px] tabular-nums " +
+              "rounded-full border px-3 py-1 font-mono text-sm tabular-nums " +
               (n === page
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border text-text-muted hover:border-primary hover:text-primary")
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border-strong text-text-muted hover:border-text-bright hover:text-text-bright")
             }
           >
             {n}
@@ -500,12 +491,7 @@ function CrawlTrail({
         </span>
       ))}
       {hasNext && page < lastPage && (
-        <Link
-          to="/"
-          search={to(page + 1)}
-          rel="next"
-          className="rounded-[4px] border border-border px-2.5 py-1 text-[13px] font-semibold text-text-muted hover:border-primary hover:text-primary"
-        >
+        <Link to="/" search={to(page + 1)} rel="next" className={TRAIL_PILL}>
           Next
         </Link>
       )}
@@ -513,13 +499,18 @@ function CrawlTrail({
   );
 }
 
+const TRAIL_PILL =
+  "rounded-full border border-border-strong px-3 py-1 text-base font-semibold text-text-muted hover:border-text-bright hover:text-text-bright";
+
 function BrowseBreak({
   browsed,
+  total,
   filters,
   setFilters,
   facetGenres,
 }: {
   browsed: number;
+  total: number;
   filters: FilterState;
   setFilters: (u: (p: FilterState) => FilterState) => void;
   facetGenres?: Record<string, number>;
@@ -532,19 +523,19 @@ function BrowseBreak({
     .map(([g]) => g);
 
   return (
-    <div className="my-5 flex flex-wrap items-center gap-2 rounded-[5px] border border-border bg-panel/60 px-3 py-2.5">
-      <span className="text-[13px] text-text-muted">
+    <div className="my-5 flex flex-wrap items-center gap-2 rounded-xl bg-panel px-3 py-2.5 md:px-4">
+      <span className="text-base text-text-muted">
         <span className="font-mono tabular-nums text-text-bright">
           {browsed.toLocaleString("en-US")}
         </span>{" "}
-        titles browsed. Narrow it down?
+        of {total.toLocaleString("en-US")} titles
       </span>
       {suggestions.map((g) => (
         <button
           key={g}
           type="button"
           onClick={() => setFilters((p) => ({ ...p, genres: new Set([...p.genres, g]) }))}
-          className="cursor-pointer rounded-[4px] border border-border bg-panel px-2 py-[3px] text-[13px] font-semibold tracking-[-0.01em] text-text-muted transition-colors hover:border-primary hover:text-primary"
+          className="cursor-pointer rounded-full border border-border-strong bg-background px-3 py-1 text-base font-semibold text-text-bright transition-colors hover:border-text-bright"
         >
           {g}
         </button>
@@ -552,7 +543,7 @@ function BrowseBreak({
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="ml-auto cursor-pointer text-[13px] font-semibold text-text-dim hover:text-text-bright"
+        className="ml-auto cursor-pointer text-base font-semibold text-text-muted hover:text-text-bright"
       >
         Back to top ↑
       </button>
@@ -575,7 +566,7 @@ function MobileResultsBar({
       <button
         type="button"
         onClick={onClose}
-        className="w-full cursor-pointer rounded-[5px] bg-primary px-3 py-2.5 text-[15px] font-bold tabular-nums tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+        className="w-full cursor-pointer rounded-full bg-primary px-3 py-2.5 text-lg font-bold tabular-nums text-primary-foreground hover:bg-primary/85"
       >
         {typeof facets?.total === "number"
           ? `Show ${facets.total.toLocaleString("en-US")} results`
@@ -685,41 +676,6 @@ function GridWithControls({
 
   return (
     <>
-      {/* Curated rails share the default view with the grid; while filtering
-          they collapse smoothly instead of popping out of existence — the
-          animation itself says where they went, and clearing filters animates
-          them back. (An explainer banner tried this job first: too much
-          chrome for too little message.) */}
-      {(filters.sort === "popular" || filters.sort === "trending") && (
-        <div
-          aria-hidden={activeCount > 0}
-          className={
-            "grid transition-all duration-300 ease-out " +
-            (activeCount === 0 ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")
-          }
-        >
-          <div
-            className={"min-h-0 overflow-hidden" + (activeCount > 0 ? " pointer-events-none" : "")}
-          >
-            {/* One rail: collections. "What am I in the mood for" is the
-                question people arrive with, and a collection is an answer the
-                grid cannot give.
-
-                A "Trending This Week" rail sat here and is gone. It ran the
-                grid's exact query, rank_score then popularity, so it was the
-                first two dozen rows of the grid directly below it, wearing
-                rank numerals. A first-time visitor read the same seven posters
-                twice and had to work out whether the site was broken. */}
-            {/* De-boxed: the bordered panel is gone so the page reads
-                boxed hero, open rail, boxed grid instead of three identical
-                crates in a row. */}
-            <div className="mb-6">
-              <CollectionRail />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* The mobile filter strip replaces the old Filters pill: chips wear
           their values, the first chip is the live count, and each opens a
           bottom sheet with just that control. Desktop keeps the sidebar. */}
@@ -731,15 +687,23 @@ function GridWithControls({
         onOpenAllFilters={onOpenMobileFilters}
       />
 
-      {/* Toolbar */}
+      {/* Toolbar. The count is the catalog's heading: a plain label that is
+          also the one figure the grid answers to. On a phone the filter strip
+          above already leads with the same count, so the heading is visible
+          from md up and read out at every width. */}
       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-2">
-        <span className="hidden text-[13px] text-text-muted md:inline">
-          <AnimatedCount value={total} className="font-mono tabular-nums text-text-bright" />{" "}
-          results
-        </span>
+        <h2 className="sr-only font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:not-sr-only md:text-3xl">
+          {isLoading ? (
+            "Titles"
+          ) : (
+            <>
+              <AnimatedCount value={total} className="tabular-nums" /> titles
+            </>
+          )}
+        </h2>
 
         {refreshing && (
-          <span role="status" className="animate-pulse text-[13px] font-semibold text-primary">
+          <span role="status" className="animate-pulse text-base font-semibold text-text-muted">
             Updating…
           </span>
         )}
@@ -752,7 +716,7 @@ function GridWithControls({
               checked={filters.hideSeen}
               onCheckedChange={(v) => setFilters((p) => ({ ...p, hideSeen: !!v }))}
             />
-            <span className="text-[13px] font-semibold text-text-muted">Hide seen</span>
+            <span className="text-base font-semibold text-text-muted">Hide seen</span>
           </label>
           <SortControl
             value={filters.sort}
@@ -796,6 +760,7 @@ function GridWithControls({
               {ci < arr.length - 1 && (
                 <BrowseBreak
                   browsed={(ci + 1) * BROWSE_BREAK_EVERY}
+                  total={total}
                   filters={filters}
                   setFilters={setFilters}
                   facetGenres={facets?.genres}
@@ -811,7 +776,7 @@ function GridWithControls({
             filters={filters}
           />
           {isFetchingNextPage && (
-            <div className="py-6 text-center text-[13px] text-text-dim">Loading more…</div>
+            <div className="py-6 text-center text-base text-text-dim">Loading more…</div>
           )}
         </>
       )}
@@ -820,11 +785,7 @@ function GridWithControls({
         <div className="mt-10">
           <EmptyState
             line="No title matches every filter at once."
-            hint={
-              suggestions.length > 0
-                ? "Drop one and see how many come back."
-                : "Loosen a filter, or clear them and start again."
-            }
+            hint={suggestions.length > 0 ? "Titles back with one filter removed:" : undefined}
             action={
               <>
                 {suggestions.length > 0 && (
@@ -834,13 +795,13 @@ function GridWithControls({
                         key={s.key}
                         type="button"
                         onClick={() => setFilters(() => s.next)}
-                        className="group flex cursor-pointer items-center justify-between gap-3 rounded-[5px] border border-border-strong bg-background px-3 py-2 text-left transition-colors hover:border-primary"
+                        className="group flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border-strong bg-background px-3 py-2 text-left transition-colors hover:border-text-bright"
                       >
-                        <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-text-bright">
-                          <X className="h-3.5 w-3.5 shrink-0 text-text-muted group-hover:text-primary" />
+                        <span className="flex min-w-0 items-center gap-1.5 text-base font-semibold text-text-bright">
+                          <X className="h-3.5 w-3.5 shrink-0 text-text-muted group-hover:text-text-bright" />
                           <span className="truncate">{s.label}</span>
                         </span>
-                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-primary">
+                        <span className="shrink-0 font-mono text-sm tabular-nums text-text-bright">
                           +{s.unlock.toLocaleString("en-US")}
                         </span>
                       </button>
@@ -868,13 +829,17 @@ function HomeError({ error }: ErrorComponentProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main id="main" className="mx-auto max-w-grid px-4 py-10">
-        <div className="rounded-[5px] border border-border bg-panel p-6">
-          <h2 className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
-            Couldn't load the firehose
+        <div className="rounded-2xl bg-panel p-6">
+          <h2 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
+            The catalog did not load
           </h2>
-          <p className="mt-2 text-[14px] leading-relaxed text-text-muted">
-            Something went wrong on our end. Try refreshing in a moment.
-          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-4 cursor-pointer rounded-full bg-primary px-5 py-2.5 text-base font-bold text-primary-foreground hover:bg-primary/85"
+          >
+            Reload
+          </button>
         </div>
       </main>
     </div>
