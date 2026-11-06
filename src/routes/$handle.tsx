@@ -66,7 +66,7 @@ const H1 =
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-grid px-4 pb-12 pt-6 md:pt-9">
+      <main id="main" className="mx-auto max-w-content px-4 pb-12 pt-6 md:pt-9">
         {children}
       </main>
     </div>
@@ -144,7 +144,7 @@ function CompareLine({ shared, tab }: { shared: number; tab: "watched" | "liked"
       <p className="text-lg font-bold text-text-bright">
         {tab === "liked"
           ? `You Loved ${shared} of these too.`
-          : `You have watched ${shared} of these too.`}
+          : `You have seen ${shared} of these too.`}
       </p>
       <Link
         to="/taste"
@@ -283,8 +283,8 @@ function ProfilePage() {
         </div>
         <div className="flex flex-wrap items-center gap-6 sm:flex-col sm:items-end sm:gap-4">
           <div className="flex gap-6">
-            <Stat n={data.stats?.watched ?? 0} label="Watched" />
-            <Stat n={data.stats?.liked ?? 0} label="Liked" />
+            <Stat n={data.stats?.watched ?? 0} label="Seen" />
+            <Stat n={data.stats?.liked ?? 0} label="Loved" />
             <Stat n={data.stats?.want ?? 0} label="Watchlist" />
           </div>
           {isOwner && (
@@ -316,7 +316,7 @@ function ProfilePage() {
                 : "bg-panel text-text-bright hover:bg-border")
             }
           >
-            {t === "watched" ? "Watched" : "Liked"}
+            {t === "watched" ? "Seen" : "Loved"}
           </button>
         ))}
       </nav>
@@ -330,16 +330,7 @@ function ProfilePage() {
           isOwner ? (
             <EmptyState
               variant="inline"
-              line={
-                tab === "watched"
-                  ? "You have not marked anything watched."
-                  : "You have not marked anything Loved."
-              }
-              hint={
-                tab === "watched"
-                  ? "Swipe right in the deck on what you have seen. It shows up here."
-                  : "Swipe up in the deck on the ones you loved. They show up here."
-              }
+              line={tab === "watched" ? "No Seen titles." : "No Loved titles."}
               action={
                 <Link to="/watched" className={EMPTY_ACTION_CLASS}>
                   Rate titles
@@ -351,13 +342,12 @@ function ProfilePage() {
               variant="inline"
               line={
                 tab === "watched"
-                  ? "This profile has nothing marked watched."
-                  : "This profile has nothing marked Loved."
+                  ? "This profile has no Seen titles."
+                  : "This profile has no Loved titles."
               }
-              hint="Rate a few titles and yours fills in."
               action={
                 <Link to="/watched" className={EMPTY_ACTION_CLASS}>
-                  Build your own
+                  Rate titles
                 </Link>
               }
             />

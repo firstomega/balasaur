@@ -247,7 +247,7 @@ function HomePage() {
       toast.success(`Watchlist · ${item.title}`, { duration: 1400 });
     } else {
       recordStatus(item.id, recordForWatched(rec), item);
-      toast.success(`Watched · ${item.title}`, { duration: 1400 });
+      toast.success(`Seen · ${item.title}`, { duration: 1400 });
     }
   };
 
@@ -284,7 +284,7 @@ function HomePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-grid px-4 py-5">
+      <main id="main" className="mx-auto max-w-content px-4 py-5">
         {/* Signed out, the hero carries the page heading. Signed in the hero is
             gone and the tiles and grid speak for themselves, so the heading is
             for screen readers and crawlers only. Exactly one either way. */}
@@ -822,7 +822,7 @@ function HomeError({ error }: ErrorComponentProps) {
   console.error(error);
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-grid px-4 py-10">
+      <main id="main" className="mx-auto max-w-content px-4 py-10">
         <div className="rounded-2xl bg-panel p-6">
           <h2 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
             The catalog did not load

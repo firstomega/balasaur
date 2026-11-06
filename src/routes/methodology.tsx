@@ -69,26 +69,25 @@ function MethodologyPage() {
           show one score instead of falling back to a raw star rating.
         </p>
         <p>
-          A worked example. Inception holds 8.8 on IMDb, 87 on Rotten Tomatoes, 74 on Metacritic and
-          8.4 on TMDB. The two ten-point scales become 88 and 84, then (88 times 0.25 plus 87 times
+          A worked example. Inception holds 8.8 on IMDb, 86 on Rotten Tomatoes, 74 on Metacritic and
+          8.4 on TMDB. The two ten-point scales become 88 and 84, then (88 times 0.25 plus 86 times
           0.125 plus 74 times 0.125 plus 84 times 0.10) divided by 0.60 gives 84.
         </p>
       </ReadingSection>
 
-      <ReadingSection title="Ranked Collections">
+      <ReadingSection title="Ranked lists">
         <p>
-          A collection only makes the cut when enough qualifying titles exist. A qualifying title
-          must have a poster, synopsis, score, and no flagged content.
+          A collection is published only when enough qualifying titles exist. A qualifying title has
+          a poster, a synopsis, a score, and no flagged content.
         </p>
         <p>
-          Membership in a ranked list favors titles with many ratings, utilizing a Bayesian vote
-          confidence adjustment. Display order within the collection is strictly determined by the
-          Balasaur Score.
+          Membership in a ranked list favors titles with many ratings, through a Bayesian adjustment
+          for vote count. Order within the collection is set by the Balasaur Score alone.
         </p>
         <p>
           A list ends where its quality falls off. Every collection keeps at least its top 12, no
           title makes the page scoring more than 25 points behind that collection's leader, and no
-          list runs past 60. Strong shelves run long, thin shelves stop short.
+          list runs past 60.
         </p>
       </ReadingSection>
 
@@ -96,8 +95,7 @@ function MethodologyPage() {
         <p>
           Titles refresh from TMDB and OMDb on a nightly sync that works through the catalog oldest
           first, so every title is re-checked on a rolling cycle. Every collection is rebuilt
-          nightly to ensure rankings reflect the latest data. Each collection page displays its own
-          rebuild date.
+          nightly from the latest scores. Each collection page shows its own rebuild date.
         </p>
       </ReadingSection>
 

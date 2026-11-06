@@ -92,7 +92,7 @@ function CalendarPage() {
 
   return (
     <div className="bg-background text-foreground">
-      <main id="main" className="mx-auto w-full max-w-grid px-4 pb-12 pt-6 md:pt-9">
+      <main id="main" className="mx-auto w-full max-w-content px-4 pb-12 pt-6 md:pt-9">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
@@ -162,7 +162,7 @@ function CalendarPage() {
                     </span>
                   </h2>
                 </div>
-                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 md:gap-3.5 lg:grid-cols-6 xl:grid-cols-7">
+                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 md:gap-3.5 lg:grid-cols-6">
                   {day.items.map((item) => (
                     <MediaCard key={item.id} item={item} />
                   ))}

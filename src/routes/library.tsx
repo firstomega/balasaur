@@ -562,8 +562,7 @@ function LibraryPage() {
             <div className="h-64 animate-pulse rounded-2xl bg-panel" />
           ) : empty ? (
             <EmptyState
-              line="Nothing on the shelves yet."
-              hint="Mark titles watched, or save them for later. They land here ready to arrange."
+              line="No saved or seen titles."
               action={
                 <>
                   <Link to="/watched" className={EMPTY_ACTION_CLASS}>

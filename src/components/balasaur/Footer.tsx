@@ -6,7 +6,7 @@ export function Footer() {
   const year = new Date().getFullYear();
   return (
     <footer className="bg-panel">
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-5 px-4 py-8 text-sm leading-relaxed text-text-muted md:flex-row md:items-start md:justify-between md:py-10">
+      <div className="mx-auto flex max-w-content flex-col gap-5 px-4 py-8 text-sm leading-relaxed text-text-muted md:flex-row md:items-start md:justify-between md:py-10">
         <div className="space-y-1">
           {/* The site's one tagline, held in src/lib/seo.ts so the footer, the
               signed-out hero, the share card and the meta description cannot

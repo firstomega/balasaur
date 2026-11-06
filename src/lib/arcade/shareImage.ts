@@ -95,17 +95,16 @@ function drawMark(
 
 async function ensureFonts() {
   try {
-    await Promise.all([
-      document.fonts.load("900 72px Archivo"),
-      document.fonts.load("600 32px 'JetBrains Mono'"),
-    ]);
+    await Promise.all([document.fonts.load("900 72px Archivo")]);
   } catch {
     // system fallback fonts draw instead
   }
 }
 
 const SANS = "Archivo, system-ui, sans-serif";
-const MONO = "'JetBrains Mono', ui-monospace, monospace";
+/** Numbers on the card: the body face, as on the page. The site no longer
+ *  ships a monospace file. */
+const MONO = SANS;
 
 /** Draw the card and return it as a PNG blob. */
 export async function renderShareCard(o: ShareCardOptions): Promise<Blob> {

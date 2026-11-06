@@ -38,10 +38,11 @@ const DIR_TO_RECORD: Record<FiledDir, () => UserStatusRecord> = {
   left: () => recordForWant(),
 };
 
+// The same four words as the card menu, the title page and /lists.
 const ACTION_LABEL: Record<Dir, string> = {
-  up: "Loved it",
-  right: "Watched",
-  left: "Want to Watch",
+  up: "Loved",
+  right: "Seen",
+  left: "Watchlist",
   down: "Not now",
 };
 
@@ -52,10 +53,11 @@ const ACTION_COLOR: Record<Dir, string> = {
   down: "var(--status-skip)",
 };
 
+// Only where the list a swipe files into is not the label itself.
 const ACTION_SUBLABEL: Record<Dir, string> = {
-  up: "Favorites + History",
-  right: "History",
-  left: "Watchlist",
+  up: "Also Seen",
+  right: "",
+  left: "",
   down: "Comes back later",
 };
 
@@ -324,11 +326,11 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         <button
           type="button"
           onClick={markNotInterested}
-          title="Never show this title again (key: X)"
+          title="Hide this title (key: X)"
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-muted hover:border-text-bright hover:text-text-bright"
         >
           <X className="h-3.5 w-3.5" />
-          Never
+          Hide
         </button>
       </div>
 
@@ -625,9 +627,11 @@ function Legend() {
               <span className="block truncate text-sm font-bold text-text-bright">
                 {ACTION_LABEL[r.dir]}
               </span>
-              <span className="block truncate text-sm text-text-muted">
-                {ACTION_SUBLABEL[r.dir]}
-              </span>
+              {ACTION_SUBLABEL[r.dir] && (
+                <span className="block truncate text-sm text-text-muted">
+                  {ACTION_SUBLABEL[r.dir]}
+                </span>
+              )}
             </span>
           </div>
         ))}
@@ -646,11 +650,11 @@ function LibrarySummary({
   onSignIn: () => void;
 }) {
   const lines: { label: string; value: number; color: string }[] = [
-    { label: "Loved it", value: summary.liked, color: ACTION_COLOR.up },
-    { label: "Watched", value: summary.watched, color: ACTION_COLOR.right },
-    { label: "Want to Watch", value: summary.want, color: ACTION_COLOR.left },
+    { label: "Loved", value: summary.liked, color: ACTION_COLOR.up },
+    { label: "Seen", value: summary.watched, color: ACTION_COLOR.right },
+    { label: "Watchlist", value: summary.want, color: ACTION_COLOR.left },
     { label: "Not now", value: summary.skip, color: ACTION_COLOR.down },
-    { label: "Never", value: summary.notInterested, color: "var(--status-never)" },
+    { label: "Hidden", value: summary.notInterested, color: "var(--status-never)" },
   ];
 
   return (

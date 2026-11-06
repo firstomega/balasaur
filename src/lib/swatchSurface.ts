@@ -29,3 +29,29 @@ export const PAPER_SURFACE = "bg-panel text-text-bright";
 export function swatchSurface(key: SwatchKey | null | undefined): string {
   return (key && SURFACE[key]) || PAPER_SURFACE;
 }
+
+/**
+ * A light row in a swatch: the fill at 13% over the white ground, the strength
+ * src/lib/palette.test.ts holds ink and muted ink to 4.5:1 on. Written out in
+ * full so Tailwind finds every class. No swatch is the wash.
+ */
+const TINT: Record<SwatchKey, string> = {
+  red: "bg-swatch-red/13",
+  orange: "bg-swatch-orange/13",
+  gold: "bg-swatch-gold/13",
+  lime: "bg-swatch-lime/13",
+  green: "bg-swatch-green/13",
+  teal: "bg-swatch-teal/13",
+  sky: "bg-swatch-sky/13",
+  blue: "bg-swatch-blue/13",
+  violet: "bg-swatch-violet/13",
+  pink: "bg-swatch-pink/13",
+  wine: "bg-swatch-wine/13",
+  rust: "bg-swatch-rust/13",
+  navy: "bg-swatch-navy/13",
+  noir: "bg-swatch-noir/13",
+};
+
+export function swatchTint(key: SwatchKey | null | undefined): string {
+  return (key && TINT[key]) || "bg-panel";
+}

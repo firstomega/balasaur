@@ -25,46 +25,24 @@ type Bucket = "watchlist" | "favorites" | "history" | "notInterested";
 
 const BUCKET_ORDER: Bucket[] = ["watchlist", "favorites", "history", "notInterested"];
 
-// The deck names these same four places when a card lands in one
-// (LibraryDeck: "Favorites + History", "Watchlist"), so the names match it.
+// One vocabulary for the four states everywhere: the card menu, the title
+// page, the rate deck and these tabs say Watchlist, Loved, Seen and Hide.
 const BUCKET_LABEL: Record<Bucket, string> = {
   watchlist: "Watchlist",
-  favorites: "Favorites",
-  history: "History",
-  notInterested: "Never",
+  favorites: "Loved",
+  history: "Seen",
+  notInterested: "Hidden",
 };
 
-// Empty states that point somewhere: the grid for saving, the deck for rating.
-// `to` is a literal union of real route paths so a dead target fails typecheck
-// instead of falling through to the /$handle catch-all at runtime.
-const BUCKET_EMPTY: Record<
-  Bucket,
-  { line: string; hint: string; cta: string; to: "/" | "/watched" }
-> = {
-  watchlist: {
-    line: "Nothing saved for later.",
-    hint: "Hit Watchlist in the menu on any poster, or swipe left in the deck.",
-    cta: "Browse the grid",
-    to: "/",
-  },
-  favorites: {
-    line: "Nothing marked Loved.",
-    hint: "Swipe up in the deck on a title you loved, or hit Liked it on its page.",
-    cta: "Rate titles",
-    to: "/watched",
-  },
-  history: {
-    line: "No watch history.",
-    hint: "Swipe right in the deck on anything you have already seen.",
-    cta: "Rate titles",
-    to: "/watched",
-  },
-  notInterested: {
-    line: "Nothing hidden.",
-    hint: "Press X in the deck on a title you never want to see again. It does not come back.",
-    cta: "Rate titles",
-    to: "/watched",
-  },
+// Empty states that point somewhere: the catalog for saving, the deck for
+// rating. Each states what is true; the button is the way out. `to` is a
+// literal union of real route paths so a dead target fails typecheck instead
+// of falling through to the /$handle catch-all at runtime.
+const BUCKET_EMPTY: Record<Bucket, { line: string; cta: string; to: "/" | "/watched" }> = {
+  watchlist: { line: "No titles on your Watchlist.", cta: "Browse the catalog", to: "/" },
+  favorites: { line: "No Loved titles.", cta: "Rate titles", to: "/watched" },
+  history: { line: "No Seen titles.", cta: "Rate titles", to: "/watched" },
+  notInterested: { line: "No hidden titles.", cta: "Rate titles", to: "/watched" },
 };
 
 function snapToItem(
@@ -134,7 +112,7 @@ function ListsPage() {
     // page exactly one footer taller than the window, so an empty list
     // scrolled 141px into nothing.
     <div className="bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-grid px-4 pb-10 pt-6 md:pt-9">
+      <main id="main" className="mx-auto max-w-content px-4 pb-10 pt-6 md:pt-9">
         <h1 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:mb-6 md:text-[64px]">
           My lists
         </h1>
@@ -159,7 +137,8 @@ function ListsPage() {
                 }
               >
                 {BUCKET_LABEL[b]}
-                {!showSkeleton && (
+                {/* A zero tells nobody anything, signed out least of all. */}
+                {!showSkeleton && grouped[b].length > 0 && (
                   <span
                     className={`font-mono text-sm tabular-nums ${selected ? "opacity-80" : "text-text-dim"}`}
                   >
@@ -180,7 +159,6 @@ function ListsPage() {
         ) : items.length === 0 ? (
           <EmptyState
             line={BUCKET_EMPTY[tab].line}
-            hint={BUCKET_EMPTY[tab].hint}
             action={
               <Link to={BUCKET_EMPTY[tab].to} className={EMPTY_ACTION_CLASS}>
                 {BUCKET_EMPTY[tab].cta}

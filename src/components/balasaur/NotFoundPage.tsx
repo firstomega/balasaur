@@ -9,7 +9,7 @@ import { Link } from "@tanstack/react-router";
  */
 export function NotFoundPage({ title, line }: { title: string; line?: ReactNode }) {
   return (
-    <main id="main" className="mx-auto w-full max-w-grid px-4 pb-16 pt-10 md:pt-16">
+    <main id="main" className="mx-auto w-full max-w-content px-4 pb-16 pt-10 md:pt-16">
       <h1 className="font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
         {title}
       </h1>

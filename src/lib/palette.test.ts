@@ -181,15 +181,6 @@ function pairs(): Pair[] {
     out.push({ what: `muted ink on the ${s} tint`, fg: token("ink-muted"), bg: tint, min: BODY });
   }
 
-  // Arcade hues: each game's ink on its own hue.
-  for (const h of Object.keys(HUE_HEX) as (keyof typeof HUE_HEX)[]) {
-    out.push({
-      what: `${h} game ink`,
-      fg: token(`hue-${h}-ink`),
-      bg: token(`hue-${h}`),
-      min: BODY,
-    });
-  }
   return out;
 }
 
@@ -218,10 +209,10 @@ describe("palette contrast", () => {
     expect(mix("#000000", 50, "#ffffff")).toBe("#808080");
   });
 
-  it("keeps the arcade table in games.ts equal to the CSS hues", () => {
+  it("keeps the arcade table in games.ts equal to the CSS swatches", () => {
     for (const h of Object.keys(HUE_HEX) as (keyof typeof HUE_HEX)[]) {
-      expect(`${h} ${HUE_HEX[h].toLowerCase()}`).toBe(`${h} ${token(`hue-${h}`)}`);
-      expect(`${h} ink ${HUE_INK[h].toLowerCase()}`).toBe(`${h} ink ${token(`hue-${h}-ink`)}`);
+      expect(`${h} ${HUE_HEX[h].toLowerCase()}`).toBe(`${h} ${token(`swatch-${h}`)}`);
+      expect(`${h} ink ${HUE_INK[h].toLowerCase()}`).toBe(`${h} ink ${token(`swatch-${h}-ink`)}`);
     }
   });
 

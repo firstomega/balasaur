@@ -223,9 +223,11 @@ export function TopBarSearch() {
                         <span className="truncate text-[13px] font-semibold text-text-bright">
                           {hit.title}
                         </span>
-                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-text-dim">
-                          {hit.year || "—"}
-                        </span>
+                        {hit.year && (
+                          <span className="shrink-0 font-mono text-[12px] tabular-nums text-text-dim">
+                            {hit.year}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 font-mono text-[11px] tabular-nums">
                         <span

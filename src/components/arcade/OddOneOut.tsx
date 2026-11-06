@@ -63,7 +63,12 @@ interface OddOneOutProps {
 
 /** Four tints, one per answer position, so the cards read as four choices
  *  and not four copies of one box. Tokens, never hex. */
-const TINTS = ["var(--hue-ruby)", "var(--hue-blue)", "var(--hue-sun)", "var(--hue-teal)"];
+const TINTS = [
+  "var(--swatch-red)",
+  "var(--swatch-blue)",
+  "var(--swatch-gold)",
+  "var(--swatch-teal)",
+];
 
 /** Where the pips count from when the route only passes a label. */
 function parseRound(label?: string): { round: number; rounds: number } | null {

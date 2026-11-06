@@ -1,42 +1,13 @@
-import { Fragment } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bookmark, Check, MoreHorizontal } from "lucide-react";
+import { Bookmark, Check } from "lucide-react";
 import type { MediaItem } from "@/types/media";
-import type { SwatchKey } from "@/lib/posterSwatch";
-import type { QuickAction } from "./MediaCard";
+import { CardMore, type QuickAction } from "./MediaCard";
+import { MetaLine } from "./MetaLine";
 import { ScoreBadge } from "./ScoreBadge";
 import { cn } from "@/lib/utils";
 import { mediaSlug } from "@/lib/slug";
-import { swatchSurface } from "@/lib/swatchSurface";
+import { swatchSurface, swatchTint } from "@/lib/swatchSurface";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-/**
- * The row's light tint: the swatch at 13% over the white ground, the strength
- * src/lib/palette.test.ts holds ink and muted ink to 4.5:1 on. Written out in
- * full so Tailwind finds every class.
- */
-const TINT: Record<SwatchKey, string> = {
-  red: "bg-swatch-red/13",
-  orange: "bg-swatch-orange/13",
-  gold: "bg-swatch-gold/13",
-  lime: "bg-swatch-lime/13",
-  green: "bg-swatch-green/13",
-  teal: "bg-swatch-teal/13",
-  sky: "bg-swatch-sky/13",
-  blue: "bg-swatch-blue/13",
-  violet: "bg-swatch-violet/13",
-  pink: "bg-swatch-pink/13",
-  wine: "bg-swatch-wine/13",
-  rust: "bg-swatch-rust/13",
-  navy: "bg-swatch-navy/13",
-  noir: "bg-swatch-noir/13",
-};
 
 /**
  * One place on a best-of list: the rank in a cell painted with the poster's
@@ -60,7 +31,8 @@ export function RankedRow({
 }: {
   item: MediaItem;
   rank: number;
-  /** The bits of the meta line, in order. Each bit never breaks inside. */
+  /** The bits of the meta line, in order. Each bit never breaks inside, and
+   *  no line starts with a separator. */
   meta: string[];
   eager?: boolean;
   saved?: boolean;
@@ -114,28 +86,13 @@ export function RankedRow({
         <h3 className="line-clamp-2 text-lg font-bold leading-tight text-text-bright group-hover:underline md:text-xl">
           {item.title}
         </h3>
-        {meta.length > 0 && (
-          <p className="mt-0.5 text-sm text-text-muted md:text-base">
-            {/* The dot travels with the bit after it, and the only break
-                opportunity is the plain space before the dot, so a wrap never
-                strands a separator or splits "2 Seasons". */}
-            {meta.map((bit, i) => (
-              <Fragment key={i}>
-                {i > 0 && " "}
-                <span className="whitespace-nowrap">
-                  {i > 0 && "· "}
-                  {bit}
-                </span>
-              </Fragment>
-            ))}
-          </p>
-        )}
+        <MetaLine bits={meta} className="mt-0.5 text-sm text-text-muted md:text-base" />
       </span>
     </>
   );
 
   return (
-    <li className={cn("flex items-stretch overflow-hidden rounded-xl", sw ? TINT[sw] : "bg-panel")}>
+    <li className={cn("flex items-stretch overflow-hidden rounded-xl", swatchTint(sw))}>
       <span
         className={cn(
           "flex w-11 shrink-0 items-center justify-center font-display text-2xl font-extrabold tabular-nums leading-none md:w-[76px] md:text-4xl",
@@ -161,7 +118,7 @@ export function RankedRow({
           <ScoreBadge score={score} className="md:h-9 md:min-w-10 md:px-1.5 md:text-xl" />
         )}
         {onQuickAction && (
-          <RowMore
+          <CardMore
             item={item}
             saved={saved}
             watched={watched}
@@ -171,57 +128,5 @@ export function RankedRow({
         )}
       </div>
     </li>
-  );
-}
-
-/** The row's "more" menu: Watchlist, Seen and Hide, as on the card. */
-function RowMore({
-  item,
-  saved,
-  watched,
-  rejected,
-  onQuickAction,
-}: {
-  item: MediaItem;
-  saved: boolean;
-  watched: boolean;
-  rejected: boolean;
-  onQuickAction: (item: MediaItem, action: QuickAction) => void;
-}) {
-  return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Actions for ${item.title}`}
-          className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-text-bright bg-background text-text-bright transition-colors duration-fast hover:bg-text-bright hover:text-background data-[state=open]:bg-text-bright data-[state=open]:text-background"
-        >
-          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-40 text-base">
-        <DropdownMenuCheckboxItem
-          checked={saved}
-          onCheckedChange={() => onQuickAction(item, "want")}
-          className="cursor-pointer"
-        >
-          Watchlist
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem
-          checked={watched}
-          onCheckedChange={() => onQuickAction(item, "watched")}
-          className="cursor-pointer"
-        >
-          Seen
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem
-          checked={rejected}
-          onCheckedChange={() => onQuickAction(item, "notInterested")}
-          className="cursor-pointer"
-        >
-          Hide
-        </DropdownMenuCheckboxItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

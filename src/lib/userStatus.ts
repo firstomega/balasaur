@@ -20,9 +20,11 @@ import type { UserStatusRecord } from "@/hooks/useUserStatus";
 export type PrimaryKey = "want" | "watched";
 export type SentimentKey = "liked" | "disliked";
 
+// The same words as the card menu, the rate deck and /lists: Watchlist, Seen,
+// Loved, Hide.
 export const PRIMARY_LABEL: Record<PrimaryKey, string> = {
-  want: "Want to Watch",
-  watched: "Watched",
+  want: "Watchlist",
+  watched: "Seen",
 };
 
 /** CSS colours, for inline styles. The values live in src/styles.css. */
@@ -32,7 +34,7 @@ export const PRIMARY_COLOR: Record<PrimaryKey, string> = {
 };
 
 export const SENTIMENT_LABEL: Record<SentimentKey, string> = {
-  liked: "Liked it",
+  liked: "Loved",
   disliked: "Not for me",
 };
 

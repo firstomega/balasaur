@@ -14,6 +14,9 @@ import { cn } from "@/lib/utils";
  * neighbours do not repeat a colour. Null is the neutral paper tile, same
  * layout. Width comes from the caller (a rail sets it, a grid stretches it).
  */
+/** A leader's name this short sits on one line with "leads at N". */
+const SHORT_LEAD = 14;
+
 export function ListTile({
   slug,
   title,
@@ -28,7 +31,9 @@ export function ListTile({
   itemCount: number;
   lead: TileLead | null;
   swatch: SwatchKey | null;
-  /** The visitor's own standing in this list, rendered client-side. */
+  /** One more line under the fact: the visitor's own standing in the list
+   *  (rendered client-side), or on a title page that title's place in it,
+   *  "#2 of 60". */
   progress?: string | null;
   className?: string;
 }) {
@@ -47,12 +52,19 @@ export function ListTile({
       </span>
       <span className="relative z-10 mt-auto max-w-[68%] pt-2 text-sm font-semibold leading-tight">
         {lead && lead.first && lead.score !== null ? (
-          // The leader's name may clamp; "leads at N" never does, so the
-          // number is always on the tile.
-          <>
-            <span className="line-clamp-2">{lead.title}</span>
-            <span className="block">leads at {lead.score}</span>
-          </>
+          lead.title.length <= SHORT_LEAD ? (
+            // A short name and its score share a line where the tile has room.
+            <span className="block">
+              {lead.title} <span className="whitespace-nowrap">leads at {lead.score}</span>
+            </span>
+          ) : (
+            // A long name may clamp; "leads at N" never does, so the number is
+            // always on the tile.
+            <>
+              <span className="line-clamp-2">{lead.title}</span>
+              <span className="block">leads at {lead.score}</span>
+            </>
+          )
         ) : (
           <span className="block">{tileFactLine(lead, itemCount)}</span>
         )}
@@ -67,7 +79,7 @@ export function ListTile({
           decoding="async"
           width={92}
           height={138}
-          className="absolute -bottom-2.5 -right-3.5 h-[99px] w-[66px] rotate-[24deg] rounded-md object-cover shadow-lg md:-bottom-4 md:-right-4 md:h-[138px] md:w-[92px]"
+          className="absolute -bottom-4 -right-5 h-[81px] w-[54px] rotate-[24deg] rounded-md object-cover shadow-lg md:-bottom-4 md:-right-4 md:h-[138px] md:w-[92px]"
         />
       )}
     </Link>

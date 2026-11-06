@@ -278,7 +278,7 @@ export function EndScreen({
           <button
             type="button"
             onClick={share}
-            className="arcade-focus inline-flex items-center gap-2 rounded-full border-2 border-text-bright bg-[var(--game,var(--primary))] px-5 py-2 text-lg font-bold text-[var(--game-ink,var(--primary-foreground))] hover:brightness-105"
+            className="inline-flex items-center gap-2 rounded-full border-2 border-text-bright bg-[var(--game,var(--primary))] px-5 py-2 text-lg font-bold text-[var(--game-ink,var(--primary-foreground))] hover:brightness-105"
           >
             {copied ? (
               <Check className="h-4 w-4" aria-hidden="true" />

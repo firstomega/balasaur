@@ -173,12 +173,12 @@ function exampleLine(
   factsFailed: boolean,
   profile: TasteProfile | null,
 ): string {
-  if (factsFailed) return "The catalog did not answer, so reload to draw yours.";
-  if (!statusesReady || (enough && !profile)) return "Yours is on its way.";
+  if (factsFailed) return "The Taste Card did not load. Reload the page to try again.";
+  if (!statusesReady || (enough && !profile)) return "Loading your Taste Card.";
   if (!enough) {
     return needed === MIN_BASIS_TITLES
-      ? `Yours draws at ${MIN_BASIS_TITLES} rated titles.`
-      : `Yours draws at ${MIN_BASIS_TITLES} rated titles, and you are ${needed} short.`;
+      ? `A Taste Card needs ${MIN_BASIS_TITLES} rated titles.`
+      : `A Taste Card needs ${MIN_BASIS_TITLES} rated titles. You have rated ${MIN_BASIS_TITLES - needed}.`;
   }
-  return `Yours draws at ${MIN_BASIS_TITLES} rated titles the catalog knows, and it has ${profile?.total ?? 0} of yours.`;
+  return `A Taste Card needs ${MIN_BASIS_TITLES} rated titles from the catalog. ${profile?.total ?? 0} of yours are in it.`;
 }

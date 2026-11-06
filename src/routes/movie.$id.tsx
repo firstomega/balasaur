@@ -22,6 +22,7 @@ import { isIndexableTitle } from "@/lib/indexKeep";
 import { breadcrumbJsonLd, movieJsonLd } from "@/lib/jsonld";
 import { mediaSlug, parseMediaId } from "@/lib/slug";
 import { ssrBudget } from "@/lib/ssrBudget";
+import { NotFoundPage } from "@/components/balasaur/NotFoundPage";
 import { getPosterColors } from "@/lib/posterColor.functions";
 
 export const Route = createFileRoute("/movie/$id")({
@@ -142,21 +143,7 @@ function DetailError({ reset }: ErrorComponentProps) {
 
 function DetailNotFound() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <h1 className="font-display text-3xl font-extrabold text-text-bright">
-          Couldn't find this title
-        </h1>
-        <p className="mt-2 text-base text-text-muted">
-          It may have been removed or the link is wrong.
-        </p>
-        <Link
-          to="/"
-          className="mt-5 inline-block rounded-full border-2 border-text-bright px-4 py-2 text-lg font-bold text-text-bright"
-        >
-          Back to grid
-        </Link>
-      </div>
-    </div>
+    // No guess about why: the page states what is true and the way home.
+    <NotFoundPage title="Title not found" />
   );
 }

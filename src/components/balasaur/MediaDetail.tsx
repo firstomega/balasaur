@@ -129,10 +129,10 @@ function PanelHeading({ children }: { children: React.ReactNode }) {
 
 const PANEL = "rounded-xl bg-panel p-4";
 
-// Two-axis status UI: pick a primary state (Want to Watch | Watched), and once
-// something is Watched a sentiment row appears (Liked it / Not for me). Sentiment
-// is never clobbered by re-tapping Watched. "Never show this" is the quiet escape
-// hatch underneath, a hard "won't watch" that keeps the deck honest.
+// Two-axis status UI: pick a primary state (Watchlist | Seen), and once
+// something is Seen a sentiment row appears (Loved / Not for me). Sentiment is
+// never clobbered by re-tapping Seen. "Hide" is the quiet escape hatch
+// underneath, a hard "won't watch" that keeps the deck honest.
 function StatusControls({ detail }: { detail: MediaDetailType }) {
   const { statuses, recordStatus } = useUserStatus();
   const rec = statuses[detail.id];
@@ -233,7 +233,7 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
             rejected ? "text-status-never" : "text-text-dim hover:text-text-muted",
           )}
         >
-          {rejected ? "✕ Never show this (undo)" : "Never show this"}
+          {rejected ? "Hidden (undo)" : "Hide"}
         </button>
         {(primary || rejected) && (
           <button

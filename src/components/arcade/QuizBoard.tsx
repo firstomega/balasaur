@@ -24,7 +24,12 @@ import { TimerBar } from "./TimerBar";
 
 /** Four tints, one per answer position, the same set Casting Call uses so
  *  the two four-card boards read as one family. Tokens, never hex. */
-const TINTS = ["var(--hue-ruby)", "var(--hue-blue)", "var(--hue-sun)", "var(--hue-teal)"];
+const TINTS = [
+  "var(--swatch-red)",
+  "var(--swatch-blue)",
+  "var(--swatch-gold)",
+  "var(--swatch-teal)",
+];
 
 export interface QuizMedia {
   title: string;

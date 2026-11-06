@@ -49,46 +49,38 @@ export function CookieBanner() {
     setVisible(false);
   };
 
+  // Both choices are the same outlined pill, the one the header uses for Rate.
+  // Refusing has to be exactly as easy as accepting: that is the requirement
+  // regulators actually enforce, and a filled button next to an outlined one
+  // is the nudge they name. It is also what fails certification with the
+  // consent platform this banner will hand over to when ads go live.
+  const choice =
+    "cursor-pointer whitespace-nowrap rounded-full border-2 border-text-bright bg-background px-3 py-1 text-base font-bold text-text-bright transition-colors duration-fast hover:bg-text-bright hover:text-background";
+
   return (
     <div
       ref={barRef}
       role="dialog"
       aria-label="Cookie consent"
-      className="sticky bottom-0 z-50 border-t border-border bg-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-panel/85"
+      className="sticky bottom-0 z-50 border-t-2 border-text-bright bg-background pb-[env(safe-area-inset-bottom)]"
     >
       {/* Every line and every pixel of padding here is taken off the first
-          screen of the page behind it. Three lines of copy left the primary
-          action on a 390px phone showing as a 10px sliver above the bar, and
-          at two rows of padding the bar covered a game board's bottom row.
-          On a phone the copy and the two buttons share one tight band. */}
-      <div className="mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-1.5 md:px-4 md:py-2">
-        <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-text-muted md:text-[13px]">
+          screen of the page behind it, so on a phone the copy and the two
+          buttons share one tight band. Solid white, not frosted glass: a
+          translucent bar was the last grey surface on the site, and headless
+          capture drew it as an empty strip under the footer. */}
+      <div className="mx-auto flex max-w-content flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2">
+        <p className="min-w-0 flex-1 text-base leading-snug text-text-bright">
           Cookies keep you signed in. With consent they also count page visits.{" "}
-          <Link to="/privacy" className="text-text-bright underline-offset-2 hover:underline">
-            Read our privacy policy
+          <Link to="/privacy" className="font-semibold underline underline-offset-2">
+            Privacy policy
           </Link>
-          .
         </p>
         <div className="flex shrink-0 items-center gap-2">
-          {/* The two choices are deliberately identical in weight, size and
-              position. Refusing has to be exactly as easy as accepting: that
-              is the requirement regulators actually enforce, and a filled
-              button next to an outline one is the nudge they name. It is also
-              what fails certification with the consent platform this banner
-              will hand over to when ads go live, so a thumb on the scale here
-              would cost the ad revenue it was meant to protect. */}
-          <button
-            type="button"
-            onClick={() => choose("required")}
-            className="rounded-[5px] border border-border-strong bg-background px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary md:px-3 md:py-1.5"
-          >
+          <button type="button" onClick={() => choose("required")} className={choice}>
             Required only
           </button>
-          <button
-            type="button"
-            onClick={() => choose("all")}
-            className="rounded-[5px] border border-border-strong bg-background px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary md:px-3 md:py-1.5"
-          >
+          <button type="button" onClick={() => choose("all")} className={choice}>
             Accept all
           </button>
         </div>

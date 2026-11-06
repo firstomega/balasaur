@@ -28,9 +28,8 @@ function AboutPage() {
         <p>
           Every title here carries a Balasaur Score, a 0 to 100 blend of its ratings from IMDb,
           Rotten Tomatoes, Metacritic, and TMDB. The same film can sit at 7.1 on IMDb, 93% on Rotten
-          Tomatoes, and 74 on Metacritic. Those are different scales measuring different things, and
-          deciding what to watch tonight should not require reconciling them yourself. The score
-          does the reconciling.
+          Tomatoes, and 74 on Metacritic. Those are different scales measuring different things. The
+          Balasaur Score puts them on one.
         </p>
         <p>
           The exact weights and rules are public, on the{" "}
@@ -57,7 +56,7 @@ function AboutPage() {
         </p>
         <p>
           Balasaur is not a media company. There are no sponsored placements, no paid rankings, and
-          no AI written reviews. When a title sits first in a list, the data put it there.
+          no AI written reviews. The order of every list comes from the score alone.
         </p>
       </ReadingSection>
 

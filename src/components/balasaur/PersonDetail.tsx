@@ -272,7 +272,10 @@ function PersonInner({ detail }: { detail: PersonDetailType }) {
             opens on the filmography instead. */}
         {top.length > 0 && (
           <section className="mt-8 md:mt-12">
-            <SectionHeading>Highest rated</SectionHeading>
+            {/* The heading names the pool: lead cast or director credits, not
+                appearances as themselves, hosting or narration, which the
+                timeline below still lists. */}
+            <SectionHeading>Highest rated as cast or director</SectionHeading>
             <div className="grid grid-cols-2 gap-x-2.5 gap-y-3 sm:grid-cols-3 md:grid-cols-6 md:gap-x-3.5">
               {ranked.map(({ item: it, rank }, i) => (
                 <MediaCard

@@ -8,6 +8,7 @@ import { mediaSlug } from "@/lib/slug";
 import { trustedScore } from "@/lib/trust";
 import { swatchSurface } from "@/lib/swatchSurface";
 import { ScoreBadge } from "./ScoreBadge";
+import { MetaLine } from "./MetaLine";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import {
   DropdownMenu,
@@ -70,13 +71,19 @@ export function MediaCard({
   const to = item.mediaType === "movie" ? "/movie/$id" : "/tv/$id";
 
   const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
-  const yearLine =
-    displayYear(item) + (seasons > 0 ? ` · ${seasons} Season${seasons === 1 ? "" : "s"}` : "");
+  // No year prints nothing rather than a dash standing in for one.
+  const meta = [
+    item.year ? displayYear(item) : "",
+    seasons > 0 ? `${seasons} Season${seasons === 1 ? "" : "s"}` : "",
+  ];
+  const reasons = item.matchReasons ?? [];
 
   return (
     <article
       className={cn(
-        "group relative flex flex-col rounded-xl p-1.5 pb-2 transition-transform duration-base motion-safe:hover:-translate-y-0.5 md:p-2 md:pb-2.5",
+        // h-full: in a rail or a grid row every card ends at the same height,
+        // whatever its title wraps to.
+        "group relative flex h-full flex-col rounded-xl p-1.5 pb-2 transition-transform duration-base motion-safe:hover:-translate-y-0.5 md:p-2 md:pb-2.5",
         swatchSurface(item.swatch),
       )}
     >
@@ -108,6 +115,7 @@ export function MediaCard({
             watched={watched}
             rejected={rejected}
             onQuickAction={onQuickAction}
+            className="card-more absolute right-1 top-1"
           />
         )}
 
@@ -146,33 +154,43 @@ export function MediaCard({
         ) : (
           <h3 className="line-clamp-2 text-base font-bold leading-tight">{item.title}</h3>
         )}
-        <p className="mt-0.5 font-mono text-sm tabular-nums">{yearLine}</p>
-        {item.matchReasons && item.matchReasons.length > 0 && (
-          <p className="mt-1.5 line-clamp-2 border-t border-current/30 pt-1.5 text-sm leading-tight">
-            {item.matchReasons[0] === "Same series"
-              ? item.matchReasons.join(" · ")
-              : `Shares: ${item.matchReasons.join(" · ")}`}
-          </p>
+        <MetaLine bits={meta} className="mt-0.5 font-mono text-sm" />
+        {/* Why this card sits in a "like this" rail. The two strongest shared
+            facts print whole: a name cut mid-word explains nothing. */}
+        {reasons.length > 0 && (
+          <MetaLine
+            bits={
+              reasons[0] === "Same series"
+                ? reasons.slice(0, 2)
+                : [`Shares: ${reasons[0]}`, ...reasons.slice(1, 2)]
+            }
+            className="mt-1.5 border-t border-current/30 pt-1.5 text-sm leading-tight break-words"
+          />
         )}
       </div>
     </article>
   );
 }
 
-/** The card's one "more" control: Watchlist, Seen and Hide in one menu, so the
- *  poster carries one button instead of three, at every width. */
-function CardMore({
+/** The one "more" control: Watchlist, Seen and Hide in one menu, so a card or
+ *  a ranked row carries one button instead of three, at every width. The
+ *  caller places it with `className`. On a card it carries .card-more (see
+ *  styles.css): with a mouse it shows on hover or focus, so a small poster is
+ *  not mostly badges; on touch it is always there. */
+export function CardMore({
   item,
   saved,
   watched,
   rejected,
   onQuickAction,
+  className,
 }: {
   item: MediaItem;
   saved: boolean;
   watched: boolean;
   rejected: boolean;
   onQuickAction: (item: MediaItem, action: QuickAction) => void;
+  className?: string;
 }) {
   return (
     <DropdownMenu modal={false}>
@@ -180,9 +198,12 @@ function CardMore({
         <button
           type="button"
           aria-label={`Actions for ${item.title}`}
-          className="absolute right-1 top-1 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-text-bright bg-background text-text-bright transition-colors duration-fast hover:bg-text-bright hover:text-background data-[state=open]:bg-text-bright data-[state=open]:text-background"
+          className={cn(
+            "inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-text-bright bg-background text-text-bright transition duration-fast hover:bg-text-bright hover:text-background data-[state=open]:bg-text-bright data-[state=open]:text-background",
+            className,
+          )}
         >
-          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-40 text-base">

@@ -28,7 +28,7 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background">
-      <div className="mx-auto flex h-14 max-w-grid items-center gap-4 px-4">
+      <div className="mx-auto flex h-14 max-w-content items-center gap-4 px-4">
         {/* Mobile and tablet menu — below 1024px the bar can't fit five nav
             links beside search, so places live in a drawer and the search row
             breathes. */}
@@ -83,9 +83,9 @@ export function TopBar() {
         {/* Wordmark */}
         <Link to="/" className="flex shrink-0 items-center gap-2 text-text-bright">
           <DinoMark className="h-6 w-6 text-primary" />
-          {/* Below 400px the glyph carries the brand alone, so the bar never
-              outgrows the screen. */}
-          <span className="font-display text-2xl font-extrabold lowercase leading-none tracking-tight max-[399px]:hidden">
+          {/* Below 360px the glyph carries the brand alone, so the bar never
+              outgrows the screen. A 390px phone has room for the name. */}
+          <span className="font-display text-2xl font-extrabold lowercase leading-none tracking-tight max-[359px]:hidden">
             balasaur
           </span>
         </Link>
@@ -236,7 +236,7 @@ export function TopBar() {
 
       {/* Mobile second row: search alone, full width. The places moved into
           the drawer, which is what lets search breathe on a phone. */}
-      <div className="mx-auto max-w-grid px-4 pb-2 md:hidden">
+      <div className="mx-auto max-w-content px-4 pb-2 md:hidden">
         <TopBarSearch />
       </div>
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />

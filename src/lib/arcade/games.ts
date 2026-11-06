@@ -13,7 +13,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     path: "/play/balasaurdle",
     hue: "blue",
     hook: "One title a day, guessed from six clues.",
-    rule: "One title a day. Six clues, one at a time. Guess it in as few as you can.",
+    rule: "One title a day, guessed from up to six clues.",
     payoutRule: "Solve early for up to 12 comets. Hints cost 2 each.",
     minutes: "2 min",
     launched: LAUNCHED,
@@ -24,7 +24,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     slug: "poster-reveal",
     name: "Poster Reveal",
     path: "/play/poster-reveal",
-    hue: "ice",
+    hue: "sky",
     hook: "A poster that sharpens with each miss.",
     rule: "The poster starts blurred. Every wrong guess sharpens it. Six guesses.",
     payoutRule: "Solve early for up to 12 comets.",
@@ -37,7 +37,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     slug: "quote-match",
     name: "Quote Match",
     path: "/play/quote-match",
-    hue: "crimson",
+    hue: "wine",
     hook: "Five quotes matched to five movies.",
     rule: "Five lines, five posters. Tap a line, then the movie that said it.",
     payoutRule: "2 comets a match, 5 more for a clean board.",
@@ -50,7 +50,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     slug: "taglines",
     name: "Tagline Roulette",
     path: "/play/taglines",
-    hue: "magenta",
+    hue: "violet",
     hook: "Five taglines matched to five posters.",
     rule: "Five taglines, five posters. Tap a tagline, then its poster.",
     payoutRule: "2 comets a match, 5 more for a clean board.",
@@ -89,7 +89,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     slug: "timeline",
     name: "Timeline",
     path: "/play/timeline",
-    hue: "violet",
+    hue: "green",
     hook: "Five titles sorted into release order.",
     rule: "Drag five titles into release order, then lock it in.",
     payoutRule: "2 comets a right slot, 5 more for a perfect order.",
@@ -102,7 +102,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     slug: "screening",
     name: "The 8PM Screening",
     path: "/play/screening",
-    hue: "ruby",
+    hue: "red",
     hook: "Ten questions, twenty seconds each.",
     rule: "Ten questions, twenty seconds each. One set a day, the same for everyone.",
     payoutRule: "3 comets a right answer, 10 more for a perfect ten.",
@@ -115,7 +115,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     slug: "emoji",
     name: "Emoji Plots",
     path: "/play/emoji",
-    hue: "sun",
+    hue: "pink",
     hook: "Five movie plots told in emoji.",
     rule: "Five plots told in emoji. Name each title in three guesses.",
     payoutRule: "2 comets a solved plot, 1 more when the first guess lands.",
@@ -197,35 +197,36 @@ export const ENABLED_SLUGS: GameSlug[] = HUB_ORDER.filter((slug) => GAMES[slug].
 
 /** Hex per hue, mirroring src/styles.css. Only for surfaces that cannot read
  *  CSS variables: the canvas share card and the OG image script. */
+/** Each game's swatch fill, as in --swatch-<name> in src/styles.css
+ *  (palette.test.ts holds the two equal). No two games share one, and the
+ *  hub never sets two warm yellows side by side: only Casting Call is gold. */
 export const HUE_HEX: Record<ArcadeHue, string> = {
-  blue: "#3b82f6",
-  ice: "#22d3ee",
-  crimson: "#ef4444",
-  magenta: "#e879f9",
-  gold: "#f5b82e",
-  teal: "#2dd4bf",
-  violet: "#a78bfa",
-  ruby: "#f43f5e",
-  sun: "#fde047",
-  lime: "#a3e635",
-  orange: "#fb923c",
+  blue: "#2f5cff",
+  sky: "#43b9ff",
+  red: "#ec3b2f",
+  lime: "#bceb3c",
+  gold: "#ffc52e",
+  pink: "#f4519f",
+  orange: "#ff7b1c",
+  teal: "#17bfae",
+  wine: "#a3173d",
+  violet: "#8048f5",
+  green: "#1fb466",
 };
 
-/** Readable text on the hue, mirroring --hue-<name>-ink. Every hue takes the
- *  dark ink: white measured 1.86 (teal) to 3.76 (crimson) on the seven hues
- *  that used it, and src/lib/palette.test.ts holds each pair at 4.5:1. */
+/** Readable text on the fill, mirroring --swatch-<name>-ink. */
 export const HUE_INK: Record<ArcadeHue, string> = {
-  blue: "#0b0d10",
-  ice: "#0b0d10",
-  crimson: "#0b0d10",
-  magenta: "#0b0d10",
-  gold: "#0b0d10",
-  teal: "#0b0d10",
-  violet: "#0b0d10",
-  ruby: "#0b0d10",
-  sun: "#0b0d10",
-  lime: "#0b0d10",
-  orange: "#0b0d10",
+  blue: "#ffffff",
+  sky: "#06192a",
+  red: "#16110c",
+  lime: "#121a06",
+  gold: "#16110c",
+  pink: "#16110c",
+  orange: "#16110c",
+  teal: "#06201d",
+  wine: "#ffffff",
+  violet: "#ffffff",
+  green: "#16110c",
 };
 
 /** How much of the hue survives in --game-text, the rest being ink. Most
@@ -242,9 +243,9 @@ export const GAME_TEXT_HUE_PCT = 40;
 export function hueVars(slug: GameSlug): CSSProperties {
   const hue = GAMES[slug].hue;
   return {
-    "--game": `var(--hue-${hue})`,
-    "--game-ink": `var(--hue-${hue}-ink)`,
-    "--game-text": `color-mix(in srgb, var(--hue-${hue}) ${GAME_TEXT_HUE_PCT}%, var(--ink))`,
+    "--game": `var(--swatch-${hue})`,
+    "--game-ink": `var(--swatch-${hue}-ink)`,
+    "--game-text": `color-mix(in srgb, var(--swatch-${hue}) ${GAME_TEXT_HUE_PCT}%, var(--ink))`,
   } as CSSProperties;
 }
 

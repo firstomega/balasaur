@@ -21,18 +21,19 @@ export function ReadingPage({
   dek?: ReactNode;
   children: ReactNode;
 }) {
+  // The column starts at the same left edge as the logo and every other
+  // page; only its width is narrow.
   return (
-    <main
-      id="main"
-      className="mx-auto box-content max-w-md px-4 pb-16 pt-10 text-lg leading-relaxed text-text md:max-w-lg md:pt-16 md:text-xl md:leading-relaxed"
-    >
-      <header className="mb-10 md:mb-14">
-        <h1 className="text-balance font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
-          {title}
-        </h1>
-        {dek && <div className="mt-3 text-text-muted">{dek}</div>}
-      </header>
-      <div className="space-y-10 md:space-y-12">{children}</div>
+    <main id="main" className="mx-auto w-full max-w-content px-4 pb-16 pt-10 md:pt-16">
+      <div className="max-w-md text-lg leading-relaxed text-text md:max-w-lg md:text-xl md:leading-relaxed">
+        <header className="mb-10 md:mb-14">
+          <h1 className="text-balance font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
+            {title}
+          </h1>
+          {dek && <div className="mt-3 text-text-muted">{dek}</div>}
+        </header>
+        <div className="space-y-10 md:space-y-12">{children}</div>
+      </div>
     </main>
   );
 }

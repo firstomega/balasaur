@@ -152,10 +152,9 @@ export function GameShell({
               <div className="flex h-32 w-32 items-center justify-center rounded-2xl bg-[var(--game,var(--primary))] text-[var(--game-ink,var(--primary-foreground))]">
                 <GameMark slug={game.slug} size={92} />
               </div>
-              <h2 className="mt-4 font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
-                {game.name}
-              </h2>
-              <p className="mt-3 text-xl leading-snug text-text">{game.rule}</p>
+              {/* The band above already carries the game's name, so the panel
+                  leads with the rule. */}
+              <p className="mt-4 text-xl leading-snug text-text">{game.rule}</p>
               <button
                 type="button"
                 onClick={() => {
@@ -164,8 +163,7 @@ export function GameShell({
                   resumeSound();
                   api.start();
                 }}
-                autoFocus
-                className="arcade-focus mt-5 inline-flex min-w-40 items-center justify-center rounded-full border-2 border-text-bright bg-[var(--game,var(--primary))] px-8 py-3 font-display text-2xl font-extrabold leading-none tracking-tight text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.03] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
+                className="mt-5 inline-flex min-w-40 items-center justify-center rounded-full border-2 border-text-bright bg-[var(--game,var(--primary))] px-8 py-3 font-display text-2xl font-extrabold leading-none tracking-tight text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.03] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
               >
                 {startLabel}
               </button>
@@ -176,7 +174,7 @@ export function GameShell({
                 role="switch"
                 aria-checked={sound}
                 onClick={toggleSound}
-                className="arcade-focus mt-4 inline-flex items-center gap-2 rounded-full border border-border-strong px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-text-muted hover:border-text-bright hover:text-text-bright"
+                className="mt-4 inline-flex items-center gap-2 rounded-full border border-border-strong px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-text-muted hover:border-text-bright hover:text-text-bright"
               >
                 <span
                   aria-hidden="true"
