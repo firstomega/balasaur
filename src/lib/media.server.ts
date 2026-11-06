@@ -1316,19 +1316,28 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
   await recordAvailabilityEvents(availabilityClient, priorAvailability, rows, { tag });
 }
 
-/** Newest `updated_at` in `media` — the freshness signal the nightly canary asserts on. */
+/**
+ * The freshness signal the nightly canary asserts on. Despite the name, this
+ * reads the newest `fetched_at`, not `updated_at`: every sync and refresh write
+ * goes through `rowFromEnrichedItem`, which stamps both, and `fetched_at` has an
+ * index, so this is one index lookup (2 ms) instead of a scan of the whole table
+ * (180 ms idle, past the statement timeout under load, which returned null on 18
+ * of 45 passes and turned four nights red with every write landed). The name is
+ * kept because the workflow and older run logs read `catalogMaxUpdatedAt`.
+ * `fetched_at` is NOT NULL, so the default DESC order never puts a null first.
+ */
 async function catalogMaxUpdatedAt(): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("media")
-    .select("updated_at")
-    .order("updated_at", { ascending: false })
+    .select("fetched_at")
+    .order("fetched_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) {
     console.error("[sync] catalogMaxUpdatedAt failed:", error.message);
     return null;
   }
-  return data?.updated_at ?? null;
+  return data?.fetched_at ?? null;
 }
 
 // ---------- Poster colors ----------
@@ -1589,7 +1598,7 @@ export interface SyncResult {
   skippedFresh: number;
   failed: number;
   durationMs: number;
-  /** Newest media.updated_at AFTER this pass's writes (nightly freshness canary). */
+  /** Newest media.fetched_at AFTER this pass's writes (nightly freshness canary). */
   catalogMaxUpdatedAt: string | null;
 }
 
@@ -1792,7 +1801,7 @@ export interface RefreshResult {
   oldestAgeDays: number | null;
   budgetHit: boolean;
   durationMs: number;
-  /** Newest media.updated_at AFTER this pass's writes (nightly freshness canary). */
+  /** Newest media.fetched_at AFTER this pass's writes (nightly freshness canary). */
   catalogMaxUpdatedAt: string | null;
 }
 
@@ -1821,7 +1830,10 @@ export async function refreshStalest(opts?: {
   const { data: stale, error: selErr } = await supabaseAdmin
     .from("media")
     .select("media_id, media_type, genres, title, year, poster_url, fetched_at")
-    .order("fetched_at", { ascending: true, nullsFirst: true })
+    // NULLS LAST, the btree's own order, so this walks idx_media_fetched_at
+    // (3 ms) instead of sorting the whole table (280 ms idle, a statement
+    // timeout under load). fetched_at is NOT NULL, so no row is skipped.
+    .order("fetched_at", { ascending: true, nullsFirst: false })
     .limit(limit);
   if (selErr) throw new Error(`stalest select failed: ${selErr.message}`);
   if (!stale || stale.length === 0) {
