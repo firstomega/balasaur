@@ -31,12 +31,22 @@ export const SITE_NAME = "Balasaur";
 // default description of the whole catalog and is a sentence any of a dozen
 // competitors could print, which is the thin-derivative signal that gets a
 // database site demoted.
-export const SITE_TAGLINE = "A movie and TV database built around one number";
+//
+// Its subject is the ratings, not the site. "A movie and TV database built
+// around one number" described the site, which Principle 4 rules out.
+// LandingHero marks the words "one number" on a gold swatch; keep them or the
+// mark quietly disappears.
+export const SITE_TAGLINE = "Movie and TV ratings in one number";
 // The second beat, wherever the tagline gets a line of backing: what the number
-// is and how current it is. Lives here rather than in each surface so the hero
-// and the share card cannot drift apart. scripts/brand-assets.ts reads both of
-// these straight out of this file when it renders public/og-default.png.
-export const SITE_PROOF = "Every title carries a Balasaur Score from 0 to 100, refreshed nightly.";
+// is. Lives here rather than in each surface so the hero and the share card
+// cannot drift apart. scripts/brand-assets.ts reads both of these straight out
+// of this file when it renders public/og-default.png.
+//
+// The previous line, "Every title carries a Balasaur Score from 0 to 100,
+// refreshed nightly", was false (about 18,000 titles have too few ratings for
+// one) and spent its last words on how often a job runs.
+export const SITE_PROOF =
+  "The Balasaur Score blends IMDb, Rotten Tomatoes, Metacritic and TMDB into a score from 0 to 100.";
 // The site-wide meta description: the tagline and its backing, nothing else.
 // Any page without its own composed description falls back to this.
 export const SITE_DESCRIPTION = `${SITE_TAGLINE}. ${SITE_PROOF}`;
