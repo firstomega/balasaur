@@ -1,5 +1,5 @@
 import { Fragment, Suspense, useState } from "react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useCanGoBack, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Bookmark, Check, ExternalLink, Play, ThumbsDown, ThumbsUp } from "lucide-react";
 import { ShareButton } from "./ShareButton";
@@ -256,22 +256,20 @@ function titleSize(title: string): string {
   return title.length > 26 ? "text-3xl md:text-[56px]" : "text-4xl md:text-[80px]";
 }
 
+// Only for someone who reached this page from another page of the site. The
+// browser's own history counted the search results page too, so a visitor
+// from Google was offered a button that sent them back to Google. Without
+// in-app history there is nothing here: the logo already goes home. A true
+// back, not a link, so the filtered grid and its scroll position come back.
 function BackButton() {
   const router = useRouter();
-  const goBack = () => {
-    // Prefer a true browser-back so the filtered grid + scroll position are
-    // restored; fall back to the homepage (which restores filters from storage).
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.history.back();
-    } else {
-      router.navigate({ to: "/" });
-    }
-  };
+  const canGoBack = useCanGoBack();
+  if (!canGoBack) return null;
   return (
     <button
       type="button"
-      onClick={goBack}
-      className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border-2 border-text-bright bg-background px-3 text-base font-bold text-text-bright transition-colors duration-fast hover:bg-text-bright hover:text-background"
+      onClick={() => router.history.back()}
+      className="mr-auto inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border-2 border-text-bright bg-background px-3 text-base font-bold text-text-bright transition-colors duration-fast hover:bg-text-bright hover:text-background"
     >
       <ArrowLeft className="h-3.5 w-3.5" />
       Back to browse
@@ -353,7 +351,7 @@ function DetailInner({
   });
 
   const toolbar = (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center justify-end gap-3">
       <BackButton />
       <ShareButton title={detail.title} />
     </div>
@@ -475,11 +473,26 @@ function DetailInner({
             {balasaur !== undefined && (
               <div className="ml-auto flex shrink-0 items-center gap-3 md:ml-0 md:pb-1">
                 <ScoreBadge score={balasaur} size="lg" className="-rotate-3" />
-                <p className="text-base font-bold leading-tight">
+                {/* The label answers "what is 84?" by taking the reader to
+                    the sources it blends. A scroll, not a hash navigation:
+                    the router would count a fragment as a page visit, and
+                    the URL and the back button would change for a jump down
+                    the same page. */}
+                <a
+                  href="#ratings"
+                  onClick={(e) => {
+                    const target = document.getElementById("ratings");
+                    if (!target) return;
+                    e.preventDefault();
+                    target.scrollIntoView({ block: "start" });
+                    target.focus({ preventScroll: true });
+                  }}
+                  className="rounded-sm text-base font-bold leading-tight underline decoration-2 underline-offset-4"
+                >
                   Balasaur Score
                   <br />
                   out of 100
-                </p>
+                </a>
               </div>
             )}
           </div>
@@ -517,7 +530,9 @@ function DetailInner({
             </section>
           )}
 
-          <section>
+          {/* The hero label's target. The margin keeps the heading clear of
+              the sticky header; focusable so a keyboard reader lands here. */}
+          <section id="ratings" tabIndex={-1} className="scroll-mt-16">
             <SectionHeading>Ratings</SectionHeading>
             {rows.length > 0 ? (
               <table className="w-full max-w-md border-collapse text-base">
@@ -830,8 +845,8 @@ function DetailInner({
 
 // The lists this title holds a place on, as list tiles: each is painted from
 // its own leader and links to the list. The line under the leader is this
-// title's position, the number the linked page prints, so following the link
-// shows where it came from. Same query as the closing rail, prefetched by the
+// title's rank, the number the linked page prints, ties included, so following
+// the link shows where it came from. Same query as the closing rail, prefetched by the
 // route so the links are in the HTML. Nothing renders while loading, on error,
 // or for a title on no list.
 //
@@ -875,7 +890,9 @@ function RanksOn({ mediaId }: { mediaId: string }) {
 // The page closes on the shelf this title ranks in: the collection, the place
 // it holds, and the titles either side of it carrying their rank numerals, so
 // the order on screen is explained by what is on screen. A reader who has
-// decided no now has somewhere to go.
+// decided no now has somewhere to go. The server never picks a list the tiles
+// above already show, so the page names each list once; a title whose every
+// list is a tile ends without a rail.
 //
 // Fail-soft: nothing renders while loading, on error, or for a title that has
 // not earned a shelf spot. Those titles end the page where it ended before.
@@ -912,7 +929,7 @@ function ShelfRail({ mediaId, title }: { mediaId: string; title: string }) {
                   aria-hidden="true"
                   className={cn(
                     "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 font-display text-base font-extrabold tabular-nums leading-none",
-                    slot.rank === shelf.rank
+                    slot.item.id === mediaId
                       ? "bg-swatch-gold text-swatch-gold-ink"
                       : "bg-text-bright text-background",
                   )}
