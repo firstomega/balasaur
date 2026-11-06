@@ -4,7 +4,7 @@ import { listSitemapEntries } from "@/lib/media.server";
 import { urlsetXml, xmlResponse, type SitemapUrl } from "@/lib/sitemapXml";
 
 // Served at /sitemap-titles.xml: every kept movie and TV page (see
-// src/lib/indexKeep.ts), about 3,700 of the 82,000 that can stand alone.
+// src/lib/indexKeep.ts), about 5,000 of the 82,000 that can stand alone.
 export const Route = createFileRoute("/sitemap-titles.xml")({
   server: {
     handlers: {

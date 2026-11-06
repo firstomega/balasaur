@@ -19,9 +19,13 @@ import { isIndexableDetail } from "./indexability";
 // IndexNow alike:
 //
 //   titles   the rule below, mirrored in SQL by the view index_kept_media
-//            (supabase/migrations/20261016010000_index_diet.sql). The
+//            (supabase/migrations/20261106230000_index_keep_by_fame.sql,
+//            which replaced the 20261016010000_index_diet.sql version). The
 //            constants and the pin list are copied there verbatim and
-//            indexKeep.test.ts reads that file to prove it.
+//            indexKeep.test.ts reads that file to prove it. The two IMDb
+//            lines are also written into the WHERE clause of a partial index
+//            each, which is what keeps the sitemap query fast; changing one
+//            means rebuilding its index.
 //   people   the materialized view person_index_kept. The page reads its
 //            row; nothing here recomputes it. The constants below document
 //            and test the SQL.
@@ -41,6 +45,20 @@ export const TITLE_KEEP_MIN_VOTES_MOVIE = 3000;
  * this site and draws far fewer TMDB votes: 300 keeps 1,797 shows of 23,658.
  */
 export const TITLE_KEEP_MIN_VOTES_TV = 300;
+
+/**
+ * IMDb votes that keep a movie whatever its TMDB count. TMDB's voters are few
+ * and recent, so the TMDB line alone turned away 869 movies with 100,000+ IMDb
+ * votes (2026-11-06): 3 Idiots, The Great Escape, Gandhi, Rashomon, Ran, City
+ * Lights, Paddington 2. At the line sit Good Luck Chuck and Hot Rod.
+ */
+export const TITLE_KEEP_MIN_IMDB_VOTES_MOVIE = 100000;
+
+/**
+ * IMDb votes that keep a show whatever its TMDB count. 20,000 adds 373 shows
+ * (2026-11-06): Scrubs (288,055), Call the Midwife, QI, I Love Lucy.
+ */
+export const TITLE_KEEP_MIN_IMDB_VOTES_TV = 20000;
 
 /**
  * Titles Google has already indexed that fall under the vote line. Pinned so
@@ -94,14 +112,29 @@ export interface KeepTitleInput {
   mediaType: string;
   /** TMDB vote count. Unknown counts as not enough. */
   voteCount?: number | null;
+  /** IMDb vote count (parseImdbVotes). Unknown counts as not enough. */
+  imdbVotes?: number | null;
+}
+
+/**
+ * IMDb's vote count as OMDb sends it: "2,877,173", or "N/A" when IMDb has
+ * none. Anything that is not digits and commas is unknown. Same reading as
+ * the SQL function public.omdb_imdb_votes.
+ */
+export function parseImdbVotes(raw: unknown): number | undefined {
+  if (typeof raw !== "string" || !/^[0-9][0-9,]*$/.test(raw)) return undefined;
+  return Number(raw.replaceAll(",", ""));
 }
 
 /** Is this title in the kept set? Same rule as the SQL view. */
 export function isKeptTitle(t: KeepTitleInput): boolean {
   if (TITLE_KEEP_PINNED.includes(t.id)) return true;
   const votes = t.voteCount ?? 0;
-  if (t.mediaType === "tv") return votes >= TITLE_KEEP_MIN_VOTES_TV;
-  return votes >= TITLE_KEEP_MIN_VOTES_MOVIE;
+  const imdb = t.imdbVotes ?? 0;
+  if (t.mediaType === "tv") {
+    return votes >= TITLE_KEEP_MIN_VOTES_TV || imdb >= TITLE_KEEP_MIN_IMDB_VOTES_TV;
+  }
+  return votes >= TITLE_KEEP_MIN_VOTES_MOVIE || imdb >= TITLE_KEEP_MIN_IMDB_VOTES_MOVIE;
 }
 
 /** The title page's noindex decision: it can stand alone and it is kept. */

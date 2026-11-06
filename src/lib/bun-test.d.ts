@@ -9,6 +9,7 @@ declare module "bun:test" {
     toEqual(expected: unknown): void;
     toBeNull(): void;
     toBeUndefined(): void;
+    toBeInstanceOf(expected: unknown): void;
     toBeCloseTo(expected: number, precision?: number): void;
     toBeGreaterThan(expected: number): void;
     toBeLessThan(expected: number): void;
