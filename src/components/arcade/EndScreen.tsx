@@ -5,23 +5,22 @@ import { AnimatedCount } from "@/components/balasaur/AnimatedCount";
 import { MediaCard } from "@/components/balasaur/MediaCard";
 import { ScoreBadge } from "@/components/balasaur/ScoreBadge";
 import { ScrollRail } from "@/components/balasaur/ScrollRail";
-import { ENABLED_SLUGS, GAMES } from "@/lib/arcade/games";
 import type { GameDef, PayoutLine } from "@/lib/arcade/types";
 import { shareCard, type ShareCardOutcome } from "@/lib/arcade/shareImage";
 import type { MediaItem } from "@/types/media";
 import { mediaSlug } from "@/lib/slug";
 import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { cn } from "@/lib/utils";
-import { ArcadeTile } from "./ArcadeTile";
 import { CometBurst } from "./CometBurst";
 import { CometMark } from "./CometChip";
 import { LeaderboardSnippet, type SnippetRow } from "./LeaderboardSnippet";
+import { MoreGames } from "./MoreGames";
 import { NextCountdown } from "./NextCountdown";
 import { ResultGrid, gridCells } from "./ResultGrid";
 import { StatsBlock, type Distribution, type StatsNumbers } from "./StatsBlock";
 
-// The shared end-of-run panel, sequenced on a 400ms beat: the tier word in
-// the hue, the headline, the comet total counting up with the mark (the
+// The shared end-of-run panel, sequenced on a 400ms beat: the tier word on
+// a chip in the hue, the headline in the display face, the comet total counting up with the mark (the
 // arithmetic stays, as one small line beneath), the result grid as colored
 // squares, the record, the share row, the live countdown, the answers, and
 // more games. A losing run gets no ledger: the headline says what happened
@@ -209,7 +208,6 @@ export function EndScreen({
     setTimeout(() => setImageState(null), 3000);
   };
 
-  const others = ENABLED_SLUGS.filter((s) => s !== game.slug);
   const gridParts = splitGrid(grid ?? []);
 
   return (
@@ -218,7 +216,7 @@ export function EndScreen({
         <p
           className={cn(
             ENTER,
-            "text-[13px] font-black uppercase leading-none tracking-[0.12em] text-[var(--game,var(--primary))]",
+            "inline-block rounded-full bg-[var(--game,var(--primary))] px-3 py-1 text-base font-extrabold uppercase leading-none tracking-widest text-[var(--game-ink,var(--primary-foreground))]",
           )}
         >
           {tier}
@@ -227,11 +225,11 @@ export function EndScreen({
 
       {shown(STEP.headline) && (
         <div className={ENTER}>
-          <h2 className="mt-1 text-[28px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright sm:text-[34px]">
+          <h2 className="mt-2 text-balance font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
             {headline}
           </h2>
           {lost && lostHint && (
-            <p className="mt-2 text-[14px] leading-relaxed text-text-muted">{lostHint}</p>
+            <p className="mt-2 text-lg leading-relaxed text-text-muted">{lostHint}</p>
           )}
         </div>
       )}
@@ -240,16 +238,16 @@ export function EndScreen({
         <div className={cn(ENTER, "mt-4")}>
           <div className="relative inline-flex items-center gap-2">
             <CometMark className="h-8 w-8 text-[var(--game,var(--primary))]" />
-            <span className="text-[40px] font-black leading-none tabular-nums tracking-[-0.02em] text-text-bright">
+            <span className="font-display text-4xl font-extrabold leading-none tabular-nums tracking-tight text-text-bright">
               +<AnimatedCount value={shown(STEP.count) ? earned : 0} />
             </span>
             <CometBurst count={earned} fire={shown(STEP.burst)} />
           </div>
-          <p className="mt-1 font-mono text-[11.5px] tabular-nums text-text-dim">
+          <p className="mt-1 font-mono text-sm tabular-nums text-text-dim">
             {ledgerLine(breakdown)}
           </p>
           {firstComets && (
-            <p className="mt-2 text-[13.5px] text-text-muted">
+            <p className="mt-2 text-base text-text-muted">
               Your first comets. They count on the weekly board.
             </p>
           )}
@@ -260,7 +258,7 @@ export function EndScreen({
         <div className={cn(ENTER, "mt-5")}>
           <ResultGrid rows={gridParts.squares} />
           {gridParts.overflow && (
-            <p className="mt-1.5 font-mono text-[11.5px] tabular-nums text-text-dim">
+            <p className="mt-1.5 font-mono text-sm tabular-nums text-text-dim">
               {gridParts.overflow}
             </p>
           )}
@@ -280,7 +278,7 @@ export function EndScreen({
           <button
             type="button"
             onClick={share}
-            className="arcade-focus inline-flex items-center gap-2 rounded-full bg-[var(--game,var(--primary))] px-5 py-2.5 text-[14px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] hover:brightness-110"
+            className="arcade-focus inline-flex items-center gap-2 rounded-full border-2 border-text-bright bg-[var(--game,var(--primary))] px-5 py-2 text-lg font-bold text-[var(--game-ink,var(--primary-foreground))] hover:brightness-105"
           >
             {copied ? (
               <Check className="h-4 w-4" aria-hidden="true" />
@@ -294,7 +292,7 @@ export function EndScreen({
               type="button"
               onClick={saveImage}
               disabled={imageState === "drawing"}
-              className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-background px-4 py-2.5 text-[14px] font-semibold text-text-bright hover:border-[var(--game,var(--primary))] hover:text-[var(--game,var(--primary))] disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-border-strong bg-background px-4 py-2 text-lg font-semibold text-text-bright hover:border-text-bright disabled:opacity-60"
             >
               <ImageIcon className="h-4 w-4" aria-hidden="true" />
               {imageState === "shared"
@@ -305,10 +303,10 @@ export function EndScreen({
             </button>
           )}
           {imageState === "blocked" && (
-            <span className="text-[12.5px] text-text-muted">Allow pop-ups to open the image.</span>
+            <span className="text-sm text-text-muted">Allow pop-ups to open the image.</span>
           )}
           {imageState === "failed" && (
-            <span className="text-[12.5px] text-text-muted">The image did not draw.</span>
+            <span className="text-sm text-text-muted">The image did not draw.</span>
           )}
           {fallbackText && (
             <textarea
@@ -317,23 +315,23 @@ export function EndScreen({
               rows={3}
               onFocus={(e) => e.currentTarget.select()}
               aria-label="Share text"
-              className="mt-2 w-full rounded-[5px] border border-border bg-background p-2 font-mono text-[12px] text-text"
+              className="mt-2 w-full rounded-md border border-border-strong bg-background p-2 font-mono text-sm text-text"
             />
           )}
         </div>
       )}
 
       {shown(STEP.next) && (
-        <div className={cn(ENTER, "mt-3 font-mono text-[12px] tabular-nums text-text-muted")}>
+        <div className={cn(ENTER, "mt-3 text-sm tabular-nums text-text-muted")}>
           <NextCountdown />
         </div>
       )}
 
       {answers && answers.length > 0 && shown(STEP.answers) && (
         <div className={cn(ENTER, "mt-6 border-t border-border pt-4")}>
-          <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          <h3 className="mb-3 font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
             {answersLabel}
-          </p>
+          </h3>
           {answers.length === 1 ? (
             <AnswerRow item={answers[0]} note={answerNote} />
           ) : (
@@ -354,24 +352,19 @@ export function EndScreen({
         </div>
       )}
 
-      {moreGames && others.length > 0 && shown(STEP.more) && (
-        <div className={cn(ENTER, "mt-6 border-t border-border pt-4")}>
-          <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-text-dim">
-            More games
-          </p>
-          <ScrollRail className="gap-2.5">
-            {others.map((slug) => (
-              <ArcadeTile key={slug} game={GAMES[slug]} className="w-[168px] shrink-0" />
-            ))}
-          </ScrollRail>
-        </div>
+      {moreGames && shown(STEP.more) && (
+        <MoreGames
+          exclude={game.slug}
+          allLink={false}
+          className={cn(ENTER, "mt-6 border-t border-border pt-4")}
+        />
       )}
 
       {leaderboard && (leaderboard.rows.length > 0 || leaderboard.you) && shown(STEP.board) && (
         <div className={cn(ENTER, "mt-6 border-t border-border pt-4")}>
-          <p className="mb-1 font-mono text-[11px] uppercase tracking-wider text-text-dim">
+          <h3 className="mb-2 font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
             {leaderboard.label ?? "Today's board"}
-          </p>
+          </h3>
           <LeaderboardSnippet rows={leaderboard.rows} you={leaderboard.you} />
         </div>
       )}
@@ -390,7 +383,7 @@ function AnswerRow({ item, note }: { item: MediaItem; note?: string }) {
   const slug = mediaSlug(rawId, item.title);
   const score = item.ratings?.balasaur;
   const art = (
-    <div className="aspect-[2/3] w-full overflow-hidden rounded-[5px] border border-border bg-panel">
+    <div className="aspect-[2/3] w-full overflow-hidden rounded-lg bg-panel">
       {item.posterUrl ? (
         <img
           src={tmdbImage(item.posterUrl, "w342")}
@@ -408,13 +401,13 @@ function AnswerRow({ item, note }: { item: MediaItem; note?: string }) {
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-accent text-text-dim">
-          <span className="font-mono text-[11px] uppercase">No art</span>
+          <span className="font-mono text-xs uppercase">No art</span>
         </div>
       )}
     </div>
   );
   const name = (
-    <span className="text-[22px] font-black leading-[1.1] tracking-[-0.02em] text-text-bright sm:text-[26px]">
+    <span className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright sm:text-4xl">
       {item.title}
     </span>
   );
@@ -446,13 +439,13 @@ function AnswerRow({ item, note }: { item: MediaItem; note?: string }) {
         ) : (
           name
         )}
-        <p className="mt-1.5 font-mono text-[12px] tabular-nums text-text-muted">{item.year}</p>
+        <p className="mt-1.5 font-mono text-sm tabular-nums text-text-muted">{item.year}</p>
         {typeof score === "number" && (
           <div className="mt-3">
             <ScoreBadge score={score} size="md" />
           </div>
         )}
-        {note && <p className="mt-3 text-[14px] leading-snug text-text-muted">{note}</p>}
+        {note && <p className="mt-3 text-lg leading-snug text-text-muted">{note}</p>}
       </div>
     </div>
   );

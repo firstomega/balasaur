@@ -37,11 +37,14 @@ export function formatShort(ms: number): string {
 }
 
 interface NextCountdownProps {
-  /** The words before the time. Defaults to "Next round in". */
-  label?: string;
+  /** The words before the time. Defaults to "Next round in". Null leaves
+   *  them out, for a caller that sets its own label beside the clock. */
+  label?: string | null;
   /** "clock" ticks hh:mm:ss; "short" shows "3h 12m" and updates each minute. */
   format?: "clock" | "short";
   className?: string;
+  /** Replaces the time's own style (mono, ink). */
+  timeClassName?: string;
 }
 
 function reducedMotion(): boolean {
@@ -56,6 +59,7 @@ export function NextCountdown({
   label = "Next round in",
   format = "clock",
   className,
+  timeClassName,
 }: NextCountdownProps) {
   const [text, setText] = useState<string | null>(null);
 
@@ -78,8 +82,8 @@ export function NextCountdown({
 
   return (
     <span className={cn("inline-flex items-baseline gap-1.5 whitespace-nowrap", className)}>
-      <span>{label}</span>
-      <span className="font-mono tabular-nums text-text-bright">{text}</span>
+      {label !== null && <span>{label}</span>}
+      <span className={timeClassName ?? "font-mono tabular-nums text-text-bright"}>{text}</span>
     </span>
   );
 }

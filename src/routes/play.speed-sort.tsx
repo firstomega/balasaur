@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
-import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import { MoreGames } from "@/components/arcade/MoreGames";
 import { BinSort, type BinDef } from "@/components/arcade/BinSort";
 import type { EndScreenContent } from "@/components/arcade/EndScreen";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
@@ -10,7 +9,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { speedSortPayout, totalComets } from "@/lib/arcade/comets";
 import { shareSpeedSort } from "@/lib/arcade/share";
 import { recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, hueVars, tierFor } from "@/lib/arcade/games";
+import { GAMES, hueVars, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -94,7 +93,7 @@ function MediaLink({ media }: { media: SolvedMedia }) {
     <Link
       to={media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
       params={{ id: mediaSlug(media.id.replace(/^(movie|tv)-/, ""), media.title) }}
-      className="font-semibold text-text-bright hover:text-[var(--game,var(--primary))]"
+      className="font-semibold text-text-bright hover:text-[var(--game-text,var(--primary))]"
     >
       {media.title}
     </Link>
@@ -105,14 +104,14 @@ function YesterdaySolved({ y }: { y: ArcadeYesterday | null }) {
   if (!y || y.entries.length === 0) return null;
   return (
     <section className="mt-10">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+      <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
         Yesterday's deck, sorted
       </h2>
       <ul className="mt-2 space-y-1.5">
         {y.entries.map((e, i) => (
           <li
             key={i}
-            className="flex items-baseline justify-between gap-3 rounded-[5px] border border-border bg-panel px-3 py-2 text-[13px] leading-snug"
+            className="flex items-baseline justify-between gap-3 rounded-lg bg-panel px-3 py-2.5 text-base leading-snug"
           >
             {e.media ? (
               <MediaLink media={e.media} />
@@ -137,7 +136,7 @@ function MissList({ misses }: { misses: Miss[] }) {
       style={hueVars(GAME.slug)}
       className="mx-auto mt-8 w-full border-t border-border pt-5 lg:max-w-[880px]"
     >
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+      <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
         Missed, and where they belonged
       </h2>
       <ul className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -160,25 +159,6 @@ function MissList({ misses }: { misses: Miss[] }) {
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-function MoreGames() {
-  return (
-    <section className="mt-8">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <ScrollRail className="mt-2 gap-2.5">
-        {ENABLED_SLUGS.filter((s) => s !== GAME.slug).map((s) => (
-          <ArcadeTile key={s} game={GAMES[s]} className="w-[168px] shrink-0" />
-        ))}
-      </ScrollRail>
-      <Link
-        to="/play"
-        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
-      >
-        All games
-      </Link>
     </section>
   );
 }
@@ -385,20 +365,20 @@ function SpeedSortPage() {
           </>
         ) : (
           <section>
-            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+            <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
               {GAME.name}
             </h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
-            <p className="mt-6 text-[14px] text-text-muted">
+            <p className="mt-2 text-lg text-text-muted">{GAME.hook}</p>
+            <p className="mt-6 text-lg text-text-muted">
               Today's deck did not load. Try again in a minute.
             </p>
           </section>
         )}
 
         <YesterdaySolved y={yesterday} />
-        <MoreGames />
+        <MoreGames exclude={GAME.slug} />
 
-        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
+        <p className="mt-10 text-sm text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );

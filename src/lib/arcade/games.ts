@@ -12,7 +12,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Balasaurdle",
     path: "/play/balasaurdle",
     hue: "blue",
-    hook: "Six clues. How few do you need?",
+    hook: "One title a day, guessed from six clues.",
     rule: "One title a day. Six clues, one at a time. Guess it in as few as you can.",
     payoutRule: "Solve early for up to 12 comets. Hints cost 2 each.",
     minutes: "2 min",
@@ -25,7 +25,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Poster Reveal",
     path: "/play/poster-reveal",
     hue: "ice",
-    hook: "Name it before it comes into focus.",
+    hook: "A poster that sharpens with each miss.",
     rule: "The poster starts blurred. Every wrong guess sharpens it. Six guesses.",
     payoutRule: "Solve early for up to 12 comets.",
     minutes: "1 min",
@@ -38,7 +38,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Quote Match",
     path: "/play/quote-match",
     hue: "crimson",
-    hook: "You have said these lines out loud. Prove you know where from.",
+    hook: "Five quotes matched to five movies.",
     rule: "Five lines, five posters. Tap a line, then the movie that said it.",
     payoutRule: "2 comets a match, 5 more for a clean board.",
     minutes: "2 min",
@@ -51,7 +51,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Tagline Roulette",
     path: "/play/taglines",
     hue: "magenta",
-    hook: "Every poster had a tagline. Match all five.",
+    hook: "Five taglines matched to five posters.",
     rule: "Five taglines, five posters. Tap a tagline, then its poster.",
     payoutRule: "2 comets a match, 5 more for a clean board.",
     minutes: "2 min",
@@ -64,7 +64,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Casting Call",
     path: "/play/casting-call",
     hue: "gold",
-    hook: "Three were in it. One never was. Five seconds.",
+    hook: "Four actors, one never in the movie.",
     rule: "Four actors, one movie. Tap the one who was never in it before the clock runs out.",
     payoutRule: "2 comets for every right call.",
     minutes: "1 min",
@@ -77,7 +77,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Link Up",
     path: "/play/link-up",
     hue: "teal",
-    hook: "Two actors, three movies. Find the chain.",
+    hook: "Two actors linked through shared movies.",
     rule: "Pick the movies that connect the first actor to the second. Fewer picks, better run.",
     payoutRule: "8 comets for completing the chain.",
     minutes: "2 min",
@@ -90,7 +90,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Timeline",
     path: "/play/timeline",
     hue: "violet",
-    hook: "Was Shrek before Monsters, Inc.? Everyone is sure. Everyone is wrong.",
+    hook: "Five titles sorted into release order.",
     rule: "Drag five titles into release order, then lock it in.",
     payoutRule: "2 comets a right slot, 5 more for a perfect order.",
     minutes: "1 min",
@@ -103,7 +103,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "The 8PM Screening",
     path: "/play/screening",
     hue: "ruby",
-    hook: "Ten questions. Same ten for everyone. One board.",
+    hook: "Ten questions, twenty seconds each.",
     rule: "Ten questions, twenty seconds each. One set a day, the same for everyone.",
     payoutRule: "3 comets a right answer, 10 more for a perfect ten.",
     minutes: "5 min",
@@ -116,7 +116,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Emoji Plots",
     path: "/play/emoji",
     hue: "sun",
-    hook: "A whole movie in emoji. Name it.",
+    hook: "Five movie plots told in emoji.",
     rule: "Five plots told in emoji. Name each title in three guesses.",
     payoutRule: "2 comets a solved plot, 1 more when the first guess lands.",
     minutes: "2 min",
@@ -129,7 +129,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Speed Sort",
     path: "/play/speed-sort",
     hue: "lime",
-    hook: "Sixty seconds. Two bins. Your thumb versus the catalog.",
+    hook: "Titles sorted into two bins in a minute.",
     rule: "Sixty seconds. Swipe each title into the right bin.",
     payoutRule: "1 comet a right sort, 5 more for a clean minute.",
     minutes: "1 min",
@@ -142,7 +142,7 @@ export const GAMES: Record<GameSlug, GameDef> = {
     name: "Sequel or Fake",
     path: "/play/sequel-or-fake",
     hue: "orange",
-    hook: "Titanic II is real. Which of these are not?",
+    hook: "Ten sequel titles, some real, some fake.",
     rule: "Ten sequel titles. Call each one real or fake.",
     payoutRule: "1 comet a right call, 5 more at a streak of ten.",
     minutes: "1 min",
@@ -160,28 +160,10 @@ export const HUB_SECTIONS: { title: string; slugs: GameSlug[] }[] = [
   { title: "Pair and order", slugs: ["link-up", "quote-match", "taglines", "timeline"] },
 ];
 
-/** The hook as it fits on a hub or rail tile: two lines at 13px in the
- *  narrowest tile (129px of text at 390, 136px in the More games rail),
- *  measured against the Archivo file. Games missing here use the registry
- *  hook unchanged; the game pages always use the registry hook. Every entry
- *  and every fallback stays at or under TILE_HOOK_MAX characters. */
-const TILE_HOOKS: Partial<Record<GameSlug, string>> = {
-  "quote-match": "You know these lines. Prove it.",
-  taglines: "Five taglines. Five posters. Match them.",
-  "casting-call": "Three were in it. One never was.",
-  "link-up": "Two actors, three movies. Link them.",
-  timeline: "Which came first? Everyone is wrong.",
-  screening: "Ten questions. One board.",
-  "speed-sort": "Sixty seconds. Two bins. Go.",
-  "sequel-or-fake": "Titanic II is real. Which are not?",
-};
-
-/** The longest hook that still fits two lines on the narrowest tile. */
+/** The longest hook a tile shows whole: two lines at 13px in the narrowest
+ *  tile. Every hook is a plain line of what the game is, and the hub tile, the
+ *  More games rail and the game page all show the same one. */
 export const TILE_HOOK_MAX = 40;
-
-export function tileHook(game: GameDef): string {
-  return TILE_HOOKS[game.slug] ?? game.hook;
-}
 
 /** Games scored by how many guesses the solve took rather than by a
  *  fraction of a board. Their tier is the count itself. */
@@ -246,13 +228,23 @@ export const HUE_INK: Record<ArcadeHue, string> = {
   orange: "#0b0d10",
 };
 
+/** How much of the hue survives in --game-text, the rest being ink. Most
+ *  hues measure 1.3 to 3.8 against white, so a label in the raw hue is
+ *  unreadable on the light ground; 40 percent keeps the hue's identity and
+ *  measures at least 5.4 on paper, the wash and a 16 percent hue tint
+ *  (games.test.ts holds every hue to 4.5). */
+export const GAME_TEXT_HUE_PCT = 40;
+
 /** The style object a game root (or hub tile) sets so everything beneath
- *  can paint with var(--game) and var(--game-ink) and never name a hue. */
+ *  can paint with var(--game), var(--game-ink) and var(--game-text) and never
+ *  name a hue. --game fills a surface, --game-ink is text on that fill, and
+ *  --game-text is the hue as text on the page ground. */
 export function hueVars(slug: GameSlug): CSSProperties {
   const hue = GAMES[slug].hue;
   return {
     "--game": `var(--hue-${hue})`,
     "--game-ink": `var(--hue-${hue}-ink)`,
+    "--game-text": `color-mix(in srgb, var(--hue-${hue}) ${GAME_TEXT_HUE_PCT}%, var(--ink))`,
   } as CSSProperties;
 }
 

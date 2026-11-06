@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
-import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import { MoreGames } from "@/components/arcade/MoreGames";
 import { PosterBoard, POSTER_MAX_GUESSES, REVEAL_HOLD_MS } from "@/components/arcade/PosterBoard";
 import { GuessBox } from "@/components/arcade/GuessBox";
 import type { EndScreenContent } from "@/components/arcade/EndScreen";
@@ -11,7 +10,7 @@ import { useComets } from "@/lib/arcade/useComets";
 import { posterRevealPayout, totalComets } from "@/lib/arcade/comets";
 import { sharePosterReveal } from "@/lib/arcade/share";
 import { distribution, recordResult } from "@/lib/arcade/stats";
-import { ENABLED_SLUGS, GAMES, hueVars, tierFor } from "@/lib/arcade/games";
+import { GAMES, hueVars, tierFor } from "@/lib/arcade/games";
 import type { GameStats } from "@/lib/arcade/types";
 import { arcadeSubmitRun } from "@/lib/arcade";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,38 +88,19 @@ function detailSlug(media: SolvedMedia): string {
   return mediaSlug(media.id.replace(/^(movie|tv)-/, ""), media.title);
 }
 
-function MoreGames() {
-  return (
-    <section className="mt-8">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <ScrollRail className="mt-2 gap-2.5">
-        {ENABLED_SLUGS.filter((s) => s !== GAME.slug).map((s) => (
-          <ArcadeTile key={s} game={GAMES[s]} className="w-[168px] shrink-0" />
-        ))}
-      </ScrollRail>
-      <Link
-        to="/play"
-        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
-      >
-        All games
-      </Link>
-    </section>
-  );
-}
-
 function YesterdayAnswer({ y }: { y: ArcadeYesterday | null }) {
   const media: SolvedMedia | undefined = y?.entries[0]?.media;
   if (!y || !media) return null;
   return (
     <section className="mt-10">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+      <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
         Yesterday's poster
       </h2>
-      <div className="mt-2 rounded-[5px] border border-border bg-panel px-3 py-2 text-[13px] leading-snug">
+      <div className="mt-2 rounded-lg bg-panel px-3 py-2.5 text-base leading-snug">
         <Link
           to={media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
           params={{ id: detailSlug(media) }}
-          className="font-semibold text-text-bright hover:text-[var(--game,var(--primary))]"
+          className="font-semibold text-text-bright hover:text-[var(--game-text,var(--primary))]"
         >
           {media.title}
         </Link>
@@ -348,7 +328,7 @@ function PosterRevealPage() {
                   <Link
                     to={round.media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
                     params={{ id: detailSlug(round.media) }}
-                    className="inline-block text-[24px] font-black leading-tight tracking-[-0.02em] text-text-bright hover:text-[var(--game,var(--primary))]"
+                    className="inline-block text-[24px] font-black leading-tight tracking-[-0.02em] text-text-bright hover:text-[var(--game-text,var(--primary))]"
                   >
                     {round.media.title}
                   </Link>
@@ -369,20 +349,20 @@ function PosterRevealPage() {
           </>
         ) : (
           <section>
-            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+            <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
               {GAME.name}
             </h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
-            <p className="mt-6 text-[14px] text-text-muted">
+            <p className="mt-2 text-lg text-text-muted">{GAME.hook}</p>
+            <p className="mt-6 text-lg text-text-muted">
               Today's poster did not load. Try again in a minute.
             </p>
           </section>
         )}
 
         <YesterdayAnswer y={yesterday} />
-        <MoreGames />
+        <MoreGames exclude={GAME.slug} />
 
-        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
+        <p className="mt-10 text-sm text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );

@@ -11,8 +11,9 @@ import { GameMark } from "./GameMark";
 import { ScoreStrip } from "./ScoreStrip";
 
 // The chrome every game page shares. The root sets the game's hue, so every
-// component below paints from var(--game). Header: a one-line hue band with
-// the mark on a hue disc, the name in the display weight, the day chip inline,
+// component below paints from var(--game). Header: a one-line band painted
+// flat in the hue, text in the hue's ink, the mark on a black disc, the name
+// in the display face, the day chip inline,
 // and the comet chip (absent until the player has any). The hook joins the
 // band only on wide screens once play has started; in the ready state the
 // panel below carries it large, and at phone width the band stays one line so
@@ -112,36 +113,31 @@ export function GameShell({
           style={hueVars(game.slug)}
           className={cn("mx-auto w-full", narrow ? "max-w-[600px]" : "lg:max-w-[880px]")}
         >
-          <header
-            className={cn(
-              "flex items-center justify-between gap-3 rounded-[6px] border px-3 py-2.5 sm:px-4",
-              "border-[color-mix(in_oklab,var(--game,var(--primary))_35%,var(--color-border))] [background:color-mix(in_oklab,var(--game,var(--primary))_16%,var(--color-panel))]",
-            )}
-          >
+          <header className="flex items-center justify-between gap-3 rounded-xl bg-[var(--game,var(--primary))] px-3 py-2.5 text-[var(--game-ink,var(--primary-foreground))] sm:px-4">
             <div className="flex min-w-0 items-center gap-3">
               <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--game,var(--primary))] [background:color-mix(in_oklab,var(--game,var(--primary))_24%,var(--color-background))]"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-swatch-noir text-[var(--game,var(--primary))]"
                 aria-hidden="true"
               >
                 <GameMark slug={game.slug} size={22} />
               </span>
               <div className="min-w-0">
-                {/* The name is never cut. At phone width it shrinks with the
-                    viewport first (17px at 354, 20px from 416), and the day
-                    chip drops to a second line when the two still do not
-                    share one. */}
+                {/* The name is never cut: the condensed face fits the
+                    longest, "The 8PM Screening", at 22px on a 320px phone,
+                    and the day chip drops to a second line when the two do
+                    not share one. */}
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <h1 className="min-w-0 text-[clamp(17px,4.8vw,20px)] font-black leading-none tracking-[-0.02em] text-text-bright sm:text-[22px]">
+                  <h1 className="min-w-0 font-display text-2xl font-extrabold leading-none tracking-tight">
                     {game.name}
                   </h1>
                   {chip && (
-                    <span className="shrink-0 whitespace-nowrap rounded-full border border-[color-mix(in_oklab,var(--game,var(--primary))_45%,transparent)] px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-wider text-[var(--game,var(--primary))]">
+                    <span className="shrink-0 whitespace-nowrap rounded-full border border-current px-2 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider">
                       {chip}
                     </span>
                   )}
                 </div>
                 {bandHook && (
-                  <p className="mt-1 hidden text-[13.5px] leading-snug text-text-muted sm:block">
+                  <p className="mt-1 hidden text-base font-medium leading-snug sm:block">
                     {game.hook}
                   </p>
                 )}
@@ -152,20 +148,20 @@ export function GameShell({
 
           {api.phase === "ready" && (
             <div key="ready" className={cn(ENTER, "mt-6 flex flex-col items-center text-center")}>
-              <div className="flex h-[132px] w-[132px] items-center justify-center rounded-[6px] bg-[var(--game,var(--primary))] text-[var(--game-ink,var(--primary-foreground))]">
-                <GameMark slug={game.slug} size={96} />
+              <div className="flex h-32 w-32 items-center justify-center rounded-2xl bg-[var(--game,var(--primary))] text-[var(--game-ink,var(--primary-foreground))]">
+                <GameMark slug={game.slug} size={92} />
               </div>
               <div className="mt-4 flex items-baseline gap-2">
-                <h2 className="text-[28px] font-black leading-none tracking-[-0.02em] text-text-bright">
+                <h2 className="font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
                   {game.name}
                 </h2>
                 {dayChip && (
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+                  <span className="font-mono text-xs uppercase tracking-wider text-text-dim">
                     {dayChip}
                   </span>
                 )}
               </div>
-              <p className="mt-3 max-w-[34ch] text-[16px] leading-snug text-text">{game.hook}</p>
+              <p className="mt-3 text-xl leading-snug text-text">{game.hook}</p>
               <button
                 type="button"
                 onClick={() => {
@@ -175,25 +171,25 @@ export function GameShell({
                   api.start();
                 }}
                 autoFocus
-                className="arcade-focus mt-5 inline-flex min-w-[160px] items-center justify-center rounded-full bg-[var(--game,var(--primary))] px-8 py-3 text-[16px] font-black tracking-[-0.01em] text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.03] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
+                className="arcade-focus mt-5 inline-flex min-w-40 items-center justify-center rounded-full border-2 border-text-bright bg-[var(--game,var(--primary))] px-8 py-3 font-display text-2xl font-extrabold leading-none tracking-tight text-[var(--game-ink,var(--primary-foreground))] transition-transform hover:scale-[1.03] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
               >
                 {startLabel}
               </button>
-              <p className="mt-4 text-[12.5px] text-text-muted">{game.rule}</p>
-              <p className="mt-1 text-[12px] text-text-dim">{game.payoutRule}</p>
+              <p className="mt-4 text-base text-text-muted">{game.rule}</p>
+              <p className="mt-1 text-sm text-text-dim">{game.payoutRule}</p>
 
               <button
                 type="button"
                 role="switch"
                 aria-checked={sound}
                 onClick={toggleSound}
-                className="arcade-focus mt-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-dim hover:border-[color-mix(in_oklab,var(--game,var(--primary))_45%,var(--color-border))] hover:text-text-bright"
+                className="arcade-focus mt-4 inline-flex items-center gap-2 rounded-full border border-border-strong px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-text-muted hover:border-text-bright hover:text-text-bright"
               >
                 <span
                   aria-hidden="true"
                   className={cn(
                     "relative h-3.5 w-6 shrink-0 rounded-full transition-colors duration-150 motion-reduce:transition-none",
-                    sound ? "bg-[var(--game,var(--primary))]" : "bg-border",
+                    sound ? "bg-text-bright" : "bg-border-strong",
                   )}
                 >
                   <span
@@ -208,13 +204,13 @@ export function GameShell({
 
               {howTo && howTo.length > 0 && (
                 <details className="group/howto mt-4 w-full max-w-[44ch] text-left">
-                  <summary className="cursor-pointer list-none font-mono text-[11px] uppercase tracking-wider text-text-dim hover:text-text-bright [&::-webkit-details-marker]:hidden">
+                  <summary className="cursor-pointer list-none font-mono text-xs uppercase tracking-wider text-text-muted hover:text-text-bright [&::-webkit-details-marker]:hidden">
                     <span className="inline-block w-3 transition-transform group-open/howto:rotate-90 motion-reduce:transition-none">
                       &#9656;
                     </span>{" "}
                     How to play
                   </summary>
-                  <ol className="mt-2 space-y-1.5 border-l-2 border-[color-mix(in_oklab,var(--game,var(--primary))_50%,transparent)] pl-3 text-[13.5px] leading-snug text-text">
+                  <ol className="mt-2 space-y-1.5 border-l-4 border-[var(--game,var(--primary))] pl-3 text-base leading-snug text-text">
                     {howTo.map((line, i) => (
                       <li key={i}>{line}</li>
                     ))}

@@ -58,7 +58,7 @@ export function ChipStrip({
               isSpent &&
                 "border-[var(--game,var(--primary))] bg-[var(--game,var(--primary))] text-[var(--game-ink,var(--primary-foreground))]",
               isActive &&
-                "border-[var(--game,var(--primary))] bg-[color-mix(in_oklab,var(--game,var(--primary))_18%,var(--color-panel))] text-[var(--game,var(--primary))]",
+                "border-[var(--game,var(--primary))] bg-[color-mix(in_oklab,var(--game,var(--primary))_18%,var(--color-panel))] text-[var(--game-text,var(--primary))]",
               !isSpent && !isActive && "border-border text-text-dim",
             )}
           >

@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { GameShell } from "@/components/arcade/GameShell";
 import { GuessBox } from "@/components/arcade/GuessBox";
 import { ChipStrip, REVEAL_HOLD_MS } from "@/components/arcade/PosterBoard";
 import { PosterFlip } from "@/components/arcade/EmojiStage";
-import { ArcadeTile } from "@/components/arcade/ArcadeTile";
+import { MoreGames } from "@/components/arcade/MoreGames";
 import { getDailyChallenge, type DailyChallenge } from "@/lib/daily.functions";
 import { getYesterday, type ArcadeYesterday } from "@/lib/arcade.functions";
 import type { SearchHit } from "@/lib/catalog.functions";
 import { useViewerCountry } from "@/hooks/useCatalog";
 import { useAuth } from "@/hooks/useAuth";
 import { arcadeSubmitRun } from "@/lib/arcade";
-import { GAMES, ENABLED_SLUGS, tierFor } from "@/lib/arcade/games";
+import { GAMES, tierFor } from "@/lib/arcade/games";
 import { balasaurdlePayout, totalComets } from "@/lib/arcade/comets";
 import { useArcadeGame } from "@/lib/arcade/useArcadeGame";
 import { useComets } from "@/lib/arcade/useComets";
@@ -159,7 +158,7 @@ function ClueList({ clues, latest }: { clues: string[]; latest: number }) {
             )}
             style={{ animationDelay: i < initial.current ? `${i * 60}ms` : "0ms" }}
           >
-            <span className="pt-[2px] font-mono text-[11px] font-semibold tabular-nums text-[var(--game,var(--primary))]">
+            <span className="pt-[2px] font-mono text-[11px] font-semibold tabular-nums text-[var(--game-text,var(--primary))]">
               {i + 1}
             </span>
             <span>{clue}</span>
@@ -167,25 +166,6 @@ function ClueList({ clues, latest }: { clues: string[]; latest: number }) {
         );
       })}
     </ol>
-  );
-}
-
-function MoreGames() {
-  return (
-    <section className="mt-8">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">More games</h2>
-      <ScrollRail className="mt-2 gap-2.5">
-        {ENABLED_SLUGS.filter((slug) => slug !== GAME.slug).map((slug) => (
-          <ArcadeTile key={slug} game={GAMES[slug]} className="w-[168px] shrink-0" />
-        ))}
-      </ScrollRail>
-      <Link
-        to="/play"
-        className="mt-2 inline-block font-mono text-[11px] uppercase tracking-wider text-text-dim underline hover:text-text-bright"
-      >
-        All games
-      </Link>
-    </section>
   );
 }
 
@@ -416,7 +396,7 @@ function PlayPage() {
         {staleDay && (
           <p
             role="status"
-            className="mb-4 rounded-[5px] border border-border bg-panel px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-text-muted"
+            className="mb-4 rounded-lg bg-panel px-3 py-2 text-sm font-semibold text-text-bright"
           >
             A new game is out.{" "}
             <button
@@ -431,11 +411,11 @@ function PlayPage() {
 
         {!challenge || !state ? (
           <section>
-            <h1 className="text-[22px] font-black tracking-[-0.02em] text-text-bright">
+            <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
               {GAME.name}
             </h1>
-            <p className="mt-1 text-[13.5px] text-text-muted">{GAME.hook}</p>
-            <p className="mt-6 text-[14px] text-text-muted">
+            <p className="mt-2 text-lg text-text-muted">{GAME.hook}</p>
+            <p className="mt-6 text-lg text-text-muted">
               Today's game did not load. Try again in a minute.
             </p>
           </section>
@@ -487,33 +467,31 @@ function PlayPage() {
               )}
 
               {finished ? (
-                <div className="mt-4 flex items-center gap-4 rounded-[6px] border border-[var(--game,var(--primary))] [background:color-mix(in_oklab,var(--game,var(--primary))_14%,var(--color-panel))] p-3.5">
+                <div className="mt-4 flex items-center gap-4 rounded-xl bg-[var(--game,var(--primary))] p-3.5 text-[var(--game-ink,var(--primary-foreground))]">
                   <PosterFlip
                     posterUrl={challenge.posterUrl}
                     title={challenge.title}
                     className="w-[72px] shrink-0"
                   />
                   <div className="min-w-0">
-                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--game,var(--primary))]">
+                    <p className="font-mono text-xs font-semibold uppercase tracking-widest">
                       {state.solved ? solveTier(state.guessedIds.length) : "The answer"}
                     </p>
                     <Link
                       to={challenge.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
                       params={{ id: detailSlug }}
-                      className="mt-1 block text-[20px] font-black leading-tight tracking-[-0.02em] text-text-bright hover:text-[var(--game,var(--primary))]"
+                      className="mt-1 block font-display text-3xl font-extrabold leading-none tracking-tight hover:underline"
                     >
                       {challenge.title}
                     </Link>
-                    <p className="mt-0.5 font-mono text-[11px] tabular-nums text-text-muted">
-                      {challenge.year}
-                    </p>
+                    <p className="mt-1 font-mono text-xs tabular-nums">{challenge.year}</p>
                   </div>
                 </div>
               ) : (
                 <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
                   {hintsUsed > 0 && (
                     <div className="shrink-0" aria-live="polite">
-                      <p className="mb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--game,var(--primary))]">
+                      <p className="mb-1 font-mono text-xs font-semibold uppercase tracking-widest text-[var(--game-text,var(--primary))]">
                         Hint
                       </p>
                       <div className="h-[144px] w-[96px] overflow-hidden rounded-[5px] bg-panel">
@@ -536,7 +514,7 @@ function PlayPage() {
                         <button
                           type="button"
                           onClick={takeHint}
-                          className="inline-flex items-center rounded-full border border-[var(--game,var(--primary))] px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-[var(--game,var(--primary))] hover:[background:color-mix(in_oklab,var(--game,var(--primary))_14%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--game,var(--primary))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                          className="inline-flex items-center rounded-full border-2 border-text-bright bg-[var(--game,var(--primary))] px-3 py-1 text-sm font-semibold text-[var(--game-ink,var(--primary-foreground))] hover:brightness-105"
                         >
                           Take a hint ({MAX_HINTS - hintsUsed} left)
                         </button>
@@ -544,7 +522,7 @@ function PlayPage() {
                       <button
                         type="button"
                         onClick={giveUp}
-                        className="ml-auto inline-flex items-center rounded-full border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-text-dim hover:border-text-dim hover:text-text-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--game,var(--primary))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="ml-auto inline-flex items-center rounded-full border-2 border-border-strong px-3 py-1 text-sm font-semibold text-text-muted hover:border-text-bright hover:text-text-bright"
                       >
                         Reveal the answer
                       </button>
@@ -558,10 +536,10 @@ function PlayPage() {
 
         {yesterday && yesterdayEntry && yesterdayEntry.media && (
           <section className="mt-10">
-            <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
+            <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
               Yesterday's answer
             </h2>
-            <div className="mt-2 flex items-center gap-3 rounded-[6px] border border-border bg-panel p-3">
+            <div className="mt-3 flex items-center gap-3 rounded-xl bg-panel p-3">
               <img
                 src={tmdbImage(yesterdayEntry.media.posterUrl, "w185")}
                 alt={`Poster for ${yesterdayEntry.media.title}`}
@@ -571,11 +549,11 @@ function PlayPage() {
                 <Link
                   to={yesterdayEntry.media.mediaType === "movie" ? "/movie/$id" : "/tv/$id"}
                   params={{ id: yesterdaySlug }}
-                  className="block truncate text-[15px] font-semibold text-text-bright hover:text-[var(--game,var(--primary))]"
+                  className="block truncate text-lg font-semibold text-text-bright hover:underline"
                 >
                   {yesterdayEntry.media.title}
                 </Link>
-                <p className="mt-0.5 font-mono text-[11px] tabular-nums text-text-muted">
+                <p className="mt-0.5 font-mono text-xs tabular-nums text-text-muted">
                   {yesterdayEntry.media.year} · No. {yesterday.dayKey}
                 </p>
               </div>
@@ -583,9 +561,9 @@ function PlayPage() {
           </section>
         )}
 
-        {api.phase !== "ended" && <MoreGames />}
+        {api.phase !== "ended" && <MoreGames exclude={GAME.slug} />}
 
-        <p className="mt-8 font-mono text-[11px] text-text-dim">Title data from TMDB and OMDb</p>
+        <p className="mt-10 text-sm text-text-dim">Title data from TMDB and OMDb</p>
       </main>
     </div>
   );
