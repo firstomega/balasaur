@@ -195,11 +195,34 @@ describe("the SQL kept sets match the constants", () => {
     expect(fn).toContain("raw->>'imdbVotes' ~ '^[0-9][0-9,]*$'");
     expect(fn).toContain("replace(raw->>'imdbVotes', ',', '')::bigint");
     expect(fn).toContain("immutable");
-    // The view reads the count through an index, never from the payload.
-    expect(TITLE_MIGRATION).toContain("on public.media (public.omdb_imdb_votes(raw_omdb));");
-    expect(TITLE_MIGRATION.indexOf("create index if not exists media_imdb_votes_idx")).toBeLessThan(
-      TITLE_MIGRATION.indexOf("create or replace view public.index_kept_media"),
+  });
+
+  it("titles: each IMDb line has a partial index whose WHERE matches the view", () => {
+    // The view must never read a payload per row (24 to 30 seconds). Postgres
+    // answers an IMDb condition from its index alone only when the condition
+    // and the index's WHERE clause say the same thing, so a threshold changed
+    // in one place and not the other would quietly bring the slow scan back.
+    const lines = TITLE_MIGRATION.split("\n");
+    const viewAt = lines.findIndex((l) =>
+      l.startsWith("create or replace view public.index_kept_media"),
     );
+    for (const [name, index] of [
+      ["TITLE_KEEP_MIN_IMDB_VOTES_TV", "media_imdb_famous_tv_idx"],
+      ["TITLE_KEEP_MIN_IMDB_VOTES_MOVIE", "media_imdb_famous_movie_idx"],
+    ]) {
+      const inView = titleLine(name)
+        .trim()
+        .replace(/^where /, "")
+        .replace(/\)+;?$/, "")
+        .replaceAll("m.", "");
+      const at = lines.findIndex((l) => l.includes(`-- index for ${name}`));
+      expect(at).toBeGreaterThan(0);
+      expect(at).toBeLessThan(viewAt);
+      expect(lines[at - 2]).toBe(`create index if not exists ${index}`);
+      expect(lines[at - 1]).toBe("  on public.media (media_id)");
+      const where = lines[at].slice(0, lines[at].indexOf("--")).trim();
+      expect(where).toBe(`where ${inView};`);
+    }
   });
 
   it("titles: the kept view narrows the substance gate rather than replacing it", () => {

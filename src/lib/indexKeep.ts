@@ -22,7 +22,10 @@ import { isIndexableDetail } from "./indexability";
 //            (supabase/migrations/20261106230000_index_keep_by_fame.sql,
 //            which replaced the 20261016010000_index_diet.sql version). The
 //            constants and the pin list are copied there verbatim and
-//            indexKeep.test.ts reads that file to prove it.
+//            indexKeep.test.ts reads that file to prove it. The two IMDb
+//            lines are also written into the WHERE clause of a partial index
+//            each, which is what keeps the sitemap query fast; changing one
+//            means rebuilding its index.
 //   people   the materialized view person_index_kept. The page reads its
 //            row; nothing here recomputes it. The constants below document
 //            and test the SQL.
