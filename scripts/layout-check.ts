@@ -229,6 +229,11 @@ async function main() {
       "/library",
       "/night",
       "/privacy",
+      // An invite link to a room this browser is not in, and the two pages
+      // every mistyped one-segment address lands on.
+      "/night/ZZZZZ",
+      "/no-such-page",
+      "/@nobody-here",
     ];
 
     console.log(`Checking ${routes.length} routes at ${WIDTHS.length} widths\n`);

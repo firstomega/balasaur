@@ -26,11 +26,15 @@ import {
 import { primaryOf, isNotInterested } from "@/lib/userStatus";
 import { tmdbImage } from "@/lib/tmdbImage";
 import { mediaSlug } from "@/lib/slug";
+import { swatchSurface } from "@/lib/swatchSurface";
+import type { SwatchKey } from "@/lib/posterSwatch";
+import { usePosterSwatches } from "@/hooks/usePosterSwatches";
 
-// My Library: the reading room. Shelves are hand-arranged, the order is the
-// content, and the room is drawn in CSS (SVG-noise wood grain, brass plates,
-// picture lights) so it ships no images of its own. Everything personal
-// renders after mount; the served shell is identical for every visitor.
+// My Library: shelves the visitor arranges by hand, where the order is the
+// content. Each shelf is a flat panel with its name as a heading, and each
+// title is its poster on a card painted in the poster's swatch, numbered by
+// its place. Everything personal renders after mount; the served shell is
+// identical for every visitor.
 
 export const Route = createFileRoute("/library")({
   head: () => ({
@@ -50,90 +54,36 @@ interface PoolItem {
   mediaType: string;
   posterUrl?: string;
   seen: boolean;
+  swatch?: SwatchKey | null;
 }
 
-const GRAIN =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='460' height='460'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.010 0.16' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.55 0.22 0.08 0 0'/%3E%3C/filter%3E%3Crect width='460' height='460' filter='url(%23g)'/%3E%3C/svg%3E\")";
-const BAYTEX =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.2' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0.15 0.06 0 0'/%3E%3C/filter%3E%3Crect width='420' height='420' filter='url(%23b)'/%3E%3C/svg%3E\")";
-const BOARDTEX =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='460' height='60'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.3' numOctaves='2' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0.2 0.08 0 0'/%3E%3C/filter%3E%3Crect width='460' height='60' filter='url(%23g)'/%3E%3C/svg%3E\")";
-
-// The room's stylesheet, scoped under .libroom. The page around the bookcase
-// is the site's light ground; the case itself keeps its wood, and the lamps
-// inside it are wired to the shelves. `.lit` comes on once there is something
-// on a shelf to light, and "Late" turns the lamps up and the room to the wash.
+// The room's stylesheet, scoped under .libroom. The class names are the drag
+// engine's handles (it finds rows, items and posters by them), so they stay.
+// A shelf is the wash panel; a title is a painted card. `.target` marks the
+// shelf a dragged poster would land on.
 const ROOM_CSS = `
-.libroom{position:relative; overflow:hidden; background:var(--paper);}
-.libroom.lit.late{background:var(--wash);}
-.libroom{--lampglow:.17}
-.libroom.lit.late{--lampglow:.27}
-.libcase{position:relative; border-radius:8px; padding:14px 14px 18px;
-  background:
-    linear-gradient(180deg, rgba(255,214,150,.10), rgba(0,0,0,.28) 30%, rgba(0,0,0,.45)),
-    ${GRAIN},
-    linear-gradient(180deg,#5a3d22,#462e18 45%,#33200f);
-  box-shadow:
-    inset 0 1px 0 rgba(255,220,160,.22), inset 0 0 0 1px rgba(0,0,0,.55),
-    inset 0 -2px 6px rgba(0,0,0,.5), 0 30px 60px -18px rgba(0,0,0,.85), 0 8px 22px rgba(0,0,0,.6);}
-.libbay{position:relative; border-radius:3px 3px 0 0; overflow:hidden;
-  background:
-    radial-gradient(75% 95% at 50% 0%, rgba(255,186,106,calc(var(--lampglow) * 1.6 + .03)), transparent 64%),
-    ${BAYTEX},
-    linear-gradient(180deg,#241811 0%, #1c120b 55%, #170e08);
-  box-shadow:
-    inset 0 14px 22px -12px rgba(0,0,0,.9),
-    inset 12px 0 18px -14px rgba(0,0,0,.85),
-    inset -12px 0 18px -14px rgba(0,0,0,.85);}
-.libwall.target .libbay{box-shadow:
-    inset 0 14px 22px -12px rgba(0,0,0,.9), inset 12px 0 18px -14px rgba(0,0,0,.85),
-    inset -12px 0 18px -14px rgba(0,0,0,.85), inset 0 0 0 1px rgba(59,130,246,.55);}
-.liblamp{position:absolute; top:0; left:50%; transform:translateX(-50%);
-  width:132px; height:5px; border-radius:0 0 4px 4px; z-index:3;
-  background:linear-gradient(180deg,#e8c887,#a97f3c 60%,#6e5122);
-  box-shadow:0 1px 0 rgba(0,0,0,.6), 0 5px 26px 4px rgba(255,190,110,calc(var(--lampglow) * 2.6)), inset 0 -1px 1px rgba(0,0,0,.4);}
-.libplate{position:absolute; left:50%; top:11px; transform:translateX(-50%); z-index:4;
-  max-width:72%; padding:1px 22px; border-radius:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  background:linear-gradient(180deg,#e9cd93 0%, #c8a057 40%, #96712f 85%, #b28c46 100%);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 2px rgba(70,45,10,.7), 0 1px 3px rgba(0,0,0,.7);
-  font-family:Georgia,'Times New Roman',serif; font-weight:600; font-size:13.5px; letter-spacing:.13em;
-  font-variant:small-caps; text-align:center; color:#41290c; text-shadow:0 1px 0 rgba(255,235,190,.5);}
-.libplate::before,.libplate::after{content:""; position:absolute; top:50%; transform:translateY(-50%);
-  width:4px; height:4px; border-radius:50%;
-  background:radial-gradient(circle at 35% 30%, #f2dda6, #7c5c26 70%); box-shadow:0 1px 1px rgba(0,0,0,.6);}
-.libplate::before{left:7px}.libplate::after{right:7px}
-.libboard{position:relative; height:28px; z-index:2; border-radius:0 0 3px 3px;
-  background:${BOARDTEX}, linear-gradient(180deg,#7a5530 0%, #5d3d1e 26%, #4a2f15 60%, #38220e 100%);
-  box-shadow:inset 0 2px 1px rgba(255,222,168,.38), inset 0 6px 8px -5px rgba(255,200,130,.25),
-    inset 0 -3px 4px rgba(0,0,0,.55), 0 6px 10px -3px rgba(0,0,0,.8);}
-.libboard::after{content:""; position:absolute; left:2px; right:2px; top:100%; height:12px;
-  background:linear-gradient(180deg, rgba(0,0,0,.5), transparent); pointer-events:none;}
-.libwall.target .libboard{box-shadow:inset 0 2px 1px rgba(255,222,168,.38), inset 0 -3px 4px rgba(0,0,0,.55),
-  0 0 0 1px #3b82f6, 0 0 18px rgba(59,130,246,.5);}
-.librow{position:relative; z-index:1; display:flex; align-items:flex-end; gap:14px;
-  overflow-x:auto; overflow-y:hidden; min-height:210px; padding:46px 18px 0;
-  scrollbar-width:thin; scrollbar-color:#3d3325 transparent;}
+.libcase{display:flex; flex-direction:column; gap:12px;}
+.libwall{position:relative; border-radius:16px; background:var(--wash); padding:12px 0 4px;}
+.libwall.target{box-shadow:inset 0 0 0 2px var(--ink);}
+.librow{position:relative; display:flex; align-items:flex-start; gap:10px;
+  overflow-x:auto; overflow-y:hidden; min-height:196px; padding:6px 14px 12px;
+  scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent;}
 .librow::-webkit-scrollbar{height:6px}
-.librow::-webkit-scrollbar-thumb{background:#3d3325; border-radius:3px}
-.libitem{flex:none; width:96px; outline:none; cursor:grab; -webkit-touch-callout:none;
-  -webkit-user-select:none; user-select:none; touch-action:pan-x pan-y;}
-.libposter{position:relative; width:96px; height:144px; border-radius:3px 3px 1px 1px; overflow:hidden;
-  background:#241d15; display:flex; align-items:center; justify-content:center;
-  box-shadow:inset 0 0 0 1px rgba(255,240,210,.09), 0 12px 10px -7px rgba(0,0,0,.85), 0 3px 4px rgba(0,0,0,.5);
-  transition:transform .12s;}
+.librow::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:3px}
+.libitem{flex:none; width:108px; cursor:grab; border-radius:12px;
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:pan-x pan-y;}
+.libframe{border-radius:12px; padding:6px 6px 4px; transition:transform .12s;}
+.libitem:hover .libframe{transform:translateY(-2px)}
+.libposter{position:relative; width:96px; height:144px; border-radius:8px; overflow:hidden;
+  background:var(--wash-strong); display:flex; align-items:center; justify-content:center;}
 .libposter img{width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;}
-.libposter .sheen{position:absolute; inset:0; pointer-events:none;
-  background:linear-gradient(115deg, rgba(255,235,200,.13) 0%, rgba(255,255,255,.04) 28%, transparent 46%, rgba(0,0,0,.14) 78%, rgba(0,0,0,.28) 100%);}
-.libitem:hover .libposter{transform:translateY(-3px)}
-.libitem:focus-visible .libposter{box-shadow:0 0 0 2px #3b82f6, 0 6px 14px rgba(0,0,0,.45)}
 .libitem.ph{cursor:default}
-.libitem.ph .phbox{width:96px; height:144px; border:1px dashed #3b82f6; border-radius:5px; background:rgba(59,130,246,.08);}
-.libcap{height:15px; display:flex; align-items:flex-end; justify-content:center;
-  font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; color:rgba(236,211,158,.68);}
-.libghost{position:fixed; z-index:100; pointer-events:none; width:96px; height:144px; border-radius:5px; overflow:hidden;
-  transform:rotate(3deg) scale(1.06); box-shadow:0 24px 46px rgba(0,0,0,.8);}
+.libitem.ph .phbox{width:108px; height:174px; border:2px dashed var(--ink); border-radius:12px;}
+.libcap{height:20px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:800; font-size:15px; line-height:1;}
+.libghost{position:fixed; z-index:100; pointer-events:none; width:96px; height:144px; border-radius:8px; overflow:hidden;
+  transform:rotate(3deg) scale(1.06); box-shadow:0 10px 22px rgba(0,0,0,.3);}
 .libghost img{width:100%; height:100%; object-fit:cover;}
-.libtools{position:absolute; top:9px; right:8px; z-index:5; display:flex; align-items:center; gap:3px;}
 `;
 
 /** A count inside a sentence. Mono is for the figure only: the words beside it
@@ -146,7 +96,6 @@ function LibraryPage() {
   const { statuses, ready: statusReady } = useUserStatus();
   const { shelves, ready: shelvesReady, update } = useShelves();
   const [mounted, setMounted] = useState(false);
-  const [late, setLate] = useState(false);
   const [query, setQuery] = useState("");
   const [naming, setNaming] = useState(false);
   const [newName, setNewName] = useState("");
@@ -158,23 +107,20 @@ function LibraryPage() {
 
   useEffect(() => {
     setMounted(true);
-    try {
-      setLate(window.localStorage.getItem("balasaur:library:light") === "late");
-    } catch {
-      /* ignore */
-    }
   }, []);
-  const toggleLight = (v: boolean) => {
-    setLate(v);
-    try {
-      window.localStorage.setItem("balasaur:library:light", v ? "late" : "evening");
-    } catch {
-      /* ignore */
-    }
-  };
 
   // The pool: everything the person has seen or saved, from the snapshots the
   // status store already keeps, so the room renders without a catalog query.
+  // The snapshots carry no colour, so the swatches arrive in one lookup after
+  // mount and the cards wait on the paper tile until then.
+  const filedIds = useMemo(
+    () =>
+      Object.entries(statuses)
+        .filter(([, rec]) => !isNotInterested(rec) && primaryOf(rec))
+        .map(([id]) => id),
+    [statuses],
+  );
+  const swatches = usePosterSwatches(filedIds);
   const pool = useMemo(() => {
     const out = new Map<string, PoolItem>();
     for (const [id, rec] of Object.entries(statuses)) {
@@ -189,10 +135,11 @@ function LibraryPage() {
         mediaType: snap?.mediaType ?? "movie",
         posterUrl: snap?.posterUrl,
         seen: p === "watched",
+        swatch: swatches[id] ?? null,
       });
     }
     return out;
-  }, [statuses]);
+  }, [statuses, swatches]);
 
   // Starter shelves, once, from what the person already filed. Adding to a
   // made shelf is easier than facing an empty room.
@@ -559,9 +506,8 @@ function LibraryPage() {
   const totalShelved = onShelf.size;
   const ready = mounted && statusReady && shelvesReady;
   const empty = statusReady && pool.size === 0;
-  // Nothing filed yet means nothing to light, so the room stays dark and the
-  // lamp switch stays away with it.
-  const lit = ready && !empty;
+  // Nothing filed yet means nothing to count.
+  const filled = ready && !empty;
   const countParts = [
     shelves.length > 0 && {
       key: "shelves",
@@ -575,25 +521,24 @@ function LibraryPage() {
   return (
     // No min-h-screen here. The root layout already holds the footer at the
     // bottom of a short page; a second full-viewport box inside it made the
-    // page exactly one footer taller than the window, so an empty room
-    // scrolled 141px into nothing. The room keeps `grow` so a lit one still
-    // runs the height of whatever the shelves need.
-    <div className="flex flex-col bg-background text-foreground">
+    // page exactly one footer taller than the window, so an empty library
+    // scrolled 141px into nothing.
+    <div className="bg-background text-foreground">
       <style>{ROOM_CSS}</style>
-      <div className={"libroom grow" + (lit ? " lit" : "") + (lit && late ? " late" : "")}>
-        <main id="main" className="relative z-10 mx-auto w-full max-w-content px-4 py-7 sm:px-5">
-          <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div className="libroom">
+        <main id="main" className="mx-auto w-full max-w-content px-4 pb-12 pt-6 md:pt-9">
+          <header className="mb-5 flex flex-wrap items-end justify-between gap-3 md:mb-6">
             <div>
-              <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
+              <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
                 My Library
               </h1>
-              {/* Three zeros over an empty room said nothing the empty state
+              {/* Three zeros over an empty library said nothing the empty state
                   below did not already say in a sentence, so the line waits
                   until there is something to count, and each figure drops out
                   once it is nothing. "0 waiting" is a number nobody wanted.
                   Numbers keep the mono face; the words around them do not. */}
-              {lit && countParts.length > 0 && (
-                <p className="mt-0.5 text-[12.5px] text-text-muted">
+              {filled && countParts.length > 0 && (
+                <p className="mt-2 text-lg text-text-muted">
                   {countParts.map((part, i) => (
                     <span key={part.key}>
                       {i > 0 && " · "}
@@ -603,43 +548,17 @@ function LibraryPage() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Link
-                to="/lists"
-                className="text-[13px] font-semibold text-text-dim underline-offset-2 hover:text-text-bright hover:underline"
-              >
-                My lists
-              </Link>
-              {/* A light switch for a room with nothing in it is a control with
-                  nothing to act on, so it arrives with the shelves. */}
-              {lit && (
-                <>
-                  <span className="text-[12px] font-semibold text-text-dim">Lights</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleLight(false)}
-                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${!late ? "border-text-bright bg-panel text-text-bright" : "border-border-strong text-text-muted hover:text-text-bright"}`}
-                  >
-                    Evening
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleLight(true)}
-                    className={`cursor-pointer rounded-[4px] border px-2.5 py-1 text-[12px] font-bold tracking-[-0.01em] ${late ? "border-text-bright bg-panel text-text-bright" : "border-border-strong text-text-muted hover:text-text-bright"}`}
-                  >
-                    Late
-                  </button>
-                </>
-              )}
-            </div>
+            <Link
+              to="/lists"
+              className="rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
+            >
+              My lists
+            </Link>
           </header>
 
           {!ready ? (
-            <div className="h-64 animate-pulse rounded-[8px] border border-border bg-panel" />
+            <div className="h-64 animate-pulse rounded-2xl bg-panel" />
           ) : empty ? (
-            /* On the dark ground this is the same dead end the rest of the site
-               shows, on the column's own left edge. Given its own panel it was
-               a 480px box floating in a page a thousand pixels taller. */
             <EmptyState
               line="Nothing on the shelves yet."
               hint="Mark titles watched, or save them for later. They land here ready to arrange."
@@ -658,69 +577,62 @@ function LibraryPage() {
             <>
               <div className="libcase">
                 {shelves.map((sh, idx) => (
-                  <section key={sh.id} className="relative">
-                    <h2 className="sr-only">{sh.name}</h2>
-                    <div className="libwall">
-                      <div className="libbay">
-                        <div className="liblamp" />
-                        <div className="libplate" aria-hidden="true">
-                          {sh.name}
-                        </div>
-                        <div className="libtools">
-                          {/* On a phone the brass plate and this count ran into
-                              each other, and the count is the half you can get
-                              by looking at the shelf. */}
-                          <span className="mr-1 hidden font-mono text-[11px] tabular-nums text-[#e4d8c0]/60 sm:inline">
-                            {sh.items.length} {sh.items.length === 1 ? "title" : "titles"}
-                          </span>
+                  <section key={sh.id} className="libwall">
+                    <div className="flex items-start justify-between gap-3 px-4">
+                      <h2 className="min-w-0 font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
+                        {sh.name}
+                      </h2>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <span className="mr-1.5 text-sm font-bold text-text-muted">
+                          <span className="font-mono tabular-nums">{sh.items.length}</span>{" "}
+                          {sh.items.length === 1 ? "title" : "titles"}
+                        </span>
+                        <BayTool
+                          label={`Move shelf ${sh.name} up`}
+                          disabled={idx === 0}
+                          onClick={() => commit(moveShelf(shelvesLive.current, sh.id, -1))}
+                        >
+                          ↑
+                        </BayTool>
+                        <BayTool
+                          label={`Move shelf ${sh.name} down`}
+                          disabled={idx === shelves.length - 1}
+                          onClick={() => commit(moveShelf(shelvesLive.current, sh.id, 1))}
+                        >
+                          ↓
+                        </BayTool>
+                        {sh.items.length === 0 && (
                           <BayTool
-                            label={`Move shelf ${sh.name} up`}
-                            disabled={idx === 0}
-                            onClick={() => commit(moveShelf(shelvesLive.current, sh.id, -1))}
+                            label={`Remove shelf ${sh.name}`}
+                            onClick={() => commit(removeShelf(shelvesLive.current, sh.id))}
                           >
-                            ↑
+                            ×
                           </BayTool>
-                          <BayTool
-                            label={`Move shelf ${sh.name} down`}
-                            disabled={idx === shelves.length - 1}
-                            onClick={() => commit(moveShelf(shelvesLive.current, sh.id, 1))}
-                          >
-                            ↓
-                          </BayTool>
-                          {sh.items.length === 0 && (
-                            <BayTool
-                              label={`Remove shelf ${sh.name}`}
-                              onClick={() => commit(removeShelf(shelvesLive.current, sh.id))}
-                            >
-                              ×
-                            </BayTool>
-                          )}
-                        </div>
-                        <div className="librow" data-container={`shelf:${sh.id}`}>
-                          {sh.items.map((id, i) => (
-                            <ShelfItem
-                              key={id}
-                              item={itemFor(id)}
-                              container={`shelf:${sh.id}`}
-                              pos={i + 1}
-                              total={sh.items.length}
-                              shelfName={sh.name}
-                              onPointerDown={onItemPointerDown}
-                              onOpen={() => {
-                                if (!suppressClickRef.current)
-                                  setPlaque({ id, container: `shelf:${sh.id}` });
-                              }}
-                              onNudge={(dir) => doNudge(sh.id, id, dir)}
-                            />
-                          ))}
-                          {sh.items.length === 0 && (
-                            <div className="m-auto self-center px-2 text-[13px] text-[#8d8472]">
-                              Drag a poster here.
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-                      <div className="libboard" />
+                    </div>
+                    <div className="librow" data-container={`shelf:${sh.id}`}>
+                      {sh.items.map((id, i) => (
+                        <ShelfItem
+                          key={id}
+                          item={itemFor(id)}
+                          container={`shelf:${sh.id}`}
+                          pos={i + 1}
+                          total={sh.items.length}
+                          shelfName={sh.name}
+                          onPointerDown={onItemPointerDown}
+                          onOpen={() => {
+                            if (!suppressClickRef.current)
+                              setPlaque({ id, container: `shelf:${sh.id}` });
+                          }}
+                          onNudge={(dir) => doNudge(sh.id, id, dir)}
+                        />
+                      ))}
+                      {sh.items.length === 0 && (
+                        <div className="m-auto self-center px-2 text-base text-text-dim">
+                          Drag a poster here.
+                        </div>
+                      )}
                     </div>
                   </section>
                 ))}
@@ -731,7 +643,7 @@ function LibraryPage() {
                   <button
                     type="button"
                     onClick={() => setNaming(true)}
-                    className="cursor-pointer rounded-[5px] border border-border-strong bg-panel px-3 py-2 text-[13px] font-medium text-foreground hover:border-primary hover:text-text-bright"
+                    className="cursor-pointer rounded-full border border-border-strong px-3.5 py-2 text-base font-bold text-text-bright hover:border-text-bright"
                   >
                     + New shelf
                   </button>
@@ -753,19 +665,19 @@ function LibraryPage() {
                       maxLength={SHELF_NAME_MAX}
                       onChange={(e) => setNewName(e.target.value)}
                       placeholder="Name the shelf"
-                      className="w-[230px] max-w-[60vw] rounded-[5px] border border-border-strong bg-background px-3 py-2 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
+                      className="w-[230px] max-w-[60vw] rounded-full border border-border-strong bg-background px-4 py-2 text-lg text-text-bright placeholder:text-text-dim focus:border-text-bright focus:outline-none"
                     />
                     <button
                       type="submit"
                       disabled={!newName.trim()}
-                      className="cursor-pointer rounded-[5px] border border-border-strong bg-panel px-3 py-2 text-[13px] font-medium text-foreground hover:border-primary disabled:opacity-40"
+                      className="cursor-pointer rounded-full bg-text-bright px-3.5 py-2 text-base font-bold text-background hover:opacity-90 disabled:opacity-30"
                     >
                       Create
                     </button>
                     <button
                       type="button"
                       onClick={() => setNaming(false)}
-                      className="cursor-pointer px-2 py-2 text-[13px] text-text-dim hover:text-text-muted"
+                      className="cursor-pointer px-2 py-2 text-base font-bold text-text-muted hover:text-text-bright"
                     >
                       Cancel
                     </button>
@@ -774,29 +686,25 @@ function LibraryPage() {
               </div>
 
               {unshelved.length > 0 && (
-                <section className="mt-9">
-                  <div className="flex flex-wrap items-baseline gap-3">
-                    <span className="text-[17px] font-black tracking-[-0.02em] text-text-bright">
+                <section className="mt-10">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
                       Not on a shelf yet{" "}
-                      <span className="font-mono text-[13px] tabular-nums text-text-dim">
+                      <span className="font-mono text-base font-normal tabular-nums text-text-muted">
                         {q ? `${unshelvedShown.length} of ${unshelved.length}` : unshelved.length}
                       </span>
-                    </span>
+                    </h2>
                     <input
                       type="search"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Find a title"
                       aria-label="Find a title that is not on a shelf"
-                      className="ml-auto w-[190px] rounded-[5px] border border-border-strong bg-background px-3 py-1.5 text-[13px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
+                      className="ml-auto w-[200px] rounded-full border border-border-strong bg-background px-4 py-1.5 text-base text-text-bright placeholder:text-text-dim focus:border-text-bright focus:outline-none"
                     />
                   </div>
-                  <div className="libwall mt-2 border-b-2 border-dashed border-border-strong pb-2">
-                    <div
-                      className="librow"
-                      data-container="unshelved"
-                      style={{ minHeight: 170, paddingTop: 8 }}
-                    >
+                  <div className="libwall mt-3">
+                    <div className="librow" data-container="unshelved">
                       {unshelvedShown.map((it) => (
                         <ShelfItem
                           key={it.id}
@@ -810,7 +718,7 @@ function LibraryPage() {
                         />
                       ))}
                       {unshelvedShown.length === 0 && (
-                        <div className="m-auto self-center text-[13px] text-text-dim">
+                        <div className="m-auto self-center text-base text-text-dim">
                           No title here matches.
                         </div>
                       )}
@@ -865,7 +773,7 @@ function BayTool({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[4px] border border-transparent bg-[#140e09]/60 text-[12px] leading-none text-[#e4d8c0]/70 hover:border-[#3d3325] hover:text-[#f7f2e7] disabled:cursor-default disabled:opacity-25"
+      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border-strong bg-background text-base font-bold leading-none text-text-bright hover:border-text-bright disabled:cursor-default disabled:opacity-30"
     >
       {children}
     </button>
@@ -922,48 +830,57 @@ function ShelfItem({
         }
       }}
     >
-      <div className="libposter">
-        {item.posterUrl ? (
-          <img src={tmdbImage(item.posterUrl, "w185")} alt="" loading="lazy" draggable={false} />
-        ) : (
-          <span className="px-2 text-center text-[11px] font-bold uppercase leading-tight text-[#e2dccf]">
-            {item.title}
-          </span>
-        )}
-        <span className="sheen" />
-        {onNudge && (
-          <>
-            <button
-              type="button"
-              aria-label={`Move ${item.title} left`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onNudge(-1);
-              }}
-              className="absolute left-[3px] top-[5px] z-[2] hidden h-6 w-[22px] cursor-pointer items-center justify-center rounded-[5px] border border-[#3d3325] bg-[#140e09]/90 text-[13px] leading-none text-[#e2dccf] hover:border-primary group-hover:flex"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              aria-label={`Move ${item.title} right`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onNudge(1);
-              }}
-              className="absolute right-[3px] top-[5px] z-[2] hidden h-6 w-[22px] cursor-pointer items-center justify-center rounded-[5px] border border-[#3d3325] bg-[#140e09]/90 text-[13px] leading-none text-[#e2dccf] hover:border-primary group-hover:flex"
-            >
-              ›
-            </button>
-          </>
-        )}
+      <div className={"libframe " + swatchSurface(item.swatch)}>
+        <div className="libposter">
+          {item.posterUrl ? (
+            <img src={tmdbImage(item.posterUrl, "w185")} alt="" loading="lazy" draggable={false} />
+          ) : (
+            <span className="px-2 text-center font-display text-base font-extrabold leading-tight text-text-bright">
+              {item.title}
+            </span>
+          )}
+          {onNudge && (
+            <>
+              <button
+                type="button"
+                aria-label={`Move ${item.title} left`}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNudge(-1);
+                }}
+                className={NUDGE + " left-1"}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label={`Move ${item.title} right`}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNudge(1);
+                }}
+                className={NUDGE + " right-1"}
+              >
+                ›
+              </button>
+            </>
+          )}
+        </div>
+        {/* The place on the shelf, in the card's own ink. */}
+        <div className="libcap" aria-hidden="true">
+          {container === "unshelved" ? "" : pos}
+        </div>
       </div>
-      <div className="libcap">{container === "unshelved" ? "" : String(pos).padStart(2, "0")}</div>
     </div>
   );
 }
+
+/** The left and right nudges on a shelved poster: round paper buttons that
+ *  appear under the pointer. */
+const NUDGE =
+  "absolute top-1 z-[2] hidden h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-text-bright bg-background text-lg font-bold leading-none text-text-bright group-hover:flex";
 
 function Plaque({
   state,
@@ -1014,7 +931,7 @@ function Plaque({
     state.qp && qpShelf ? itemFor(qpShelf.items[(state.qp.lo + state.qp.hi) >> 1]) : null;
 
   const btn =
-    "cursor-pointer rounded-[5px] border border-border-strong bg-panel px-3 py-2 text-left text-[13px] text-foreground hover:border-primary hover:text-text-bright disabled:cursor-default disabled:opacity-40";
+    "cursor-pointer rounded-xl border border-border-strong bg-background px-3 py-2 text-left text-base font-bold text-text-bright hover:border-text-bright disabled:cursor-default disabled:opacity-30";
 
   return (
     <div
@@ -1023,31 +940,31 @@ function Plaque({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="absolute inset-x-3 bottom-3 mx-auto max-w-[340px] rounded-[6px] border border-border-strong bg-background p-3.5 shadow-[0_14px_34px_rgba(0,0,0,.18)] sm:inset-x-auto sm:right-6 sm:top-24 sm:bottom-auto sm:w-[300px]">
+      <div className="absolute inset-x-3 bottom-3 mx-auto max-w-[340px] rounded-2xl border-2 border-text-bright bg-background p-4 sm:inset-x-auto sm:right-6 sm:top-24 sm:bottom-auto sm:w-[300px]">
         <div className="flex items-start gap-2">
-          <p className="flex-1 text-[15px] font-semibold leading-tight text-text-bright">
+          <p className="flex-1 font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
             {it.title}
           </p>
           <button
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="h-6 w-6 cursor-pointer rounded-[5px] text-[15px] text-text-dim hover:text-text-bright"
+            className="h-7 w-7 cursor-pointer rounded-full text-lg text-text-muted hover:bg-panel hover:text-text-bright"
           >
             ×
           </button>
         </div>
-        <p className="mt-0.5 font-mono text-[12px] tabular-nums text-text-muted">
+        <p className="mt-1 font-mono text-sm tabular-nums text-text-muted">
           {it.mediaType === "tv" ? "TV · " : ""}
           {it.year}
         </p>
 
         {state.qp && qpShelf && pivot ? (
           <div className="mt-3">
-            <p className="text-center text-[14px] text-foreground">
+            <p className="text-center text-lg text-foreground">
               On <b className="text-text-bright">{qpShelf.name}</b>, above or below this one?
             </p>
-            <div className="mx-auto my-2.5 flex h-[74px] w-[120px] items-center justify-center overflow-hidden rounded-[5px] border border-border-strong bg-panel">
+            <div className="mx-auto my-2.5 flex h-[74px] w-[120px] items-center justify-center overflow-hidden rounded-lg bg-panel">
               {pivot.posterUrl ? (
                 <img
                   src={tmdbImage(pivot.posterUrl, "w185")}
@@ -1055,12 +972,12 @@ function Plaque({
                   className="h-full w-full object-cover object-top"
                 />
               ) : (
-                <span className="px-2 text-center text-[11px] font-bold uppercase text-foreground">
+                <span className="px-2 text-center text-xs font-bold text-foreground">
                   {pivot.title}
                 </span>
               )}
             </div>
-            <p className="mb-2 text-center text-[12px] text-text-dim">{pivot.title}</p>
+            <p className="mb-2 text-center text-sm text-text-muted">{pivot.title}</p>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1080,7 +997,7 @@ function Plaque({
             <button
               type="button"
               onClick={() => onPlaceEnd(qpShelf.id, state.id)}
-              className="mt-2 w-full cursor-pointer py-1 text-center text-[12px] text-text-dim hover:text-text-muted"
+              className="mt-2 w-full cursor-pointer py-1 text-center text-sm font-bold text-text-muted hover:text-text-bright"
             >
               Just add it to the end
             </button>
@@ -1088,7 +1005,7 @@ function Plaque({
         ) : (
           <>
             {shelf && idx >= 0 && (
-              <p className="mt-1 font-mono text-[11.5px] tabular-nums text-text-dim">
+              <p className="mt-1 font-mono text-sm tabular-nums text-text-muted">
                 Placed {idx + 1} of {shelf.items.length}
                 {others.length > 0 && (
                   <>
@@ -1138,7 +1055,7 @@ function Plaque({
               )}
               {targets.length > 0 && (
                 <>
-                  <p className="mt-1 text-[12px] font-bold tracking-[-0.01em] text-text-dim">
+                  <p className="mt-1 text-sm font-bold text-text-muted">
                     {onAShelf ? "Also place on" : "Place on"}
                   </p>
                   {targets.map((s) => (
@@ -1154,7 +1071,7 @@ function Plaque({
                         <button
                           type="button"
                           aria-label={`Slot ${it.title} into ${s.name}`}
-                          className={btn + " text-[12px]"}
+                          className={btn + " text-sm"}
                           onClick={() => onSlot(s.id)}
                         >
                           Slot it
@@ -1167,7 +1084,7 @@ function Plaque({
               <Link
                 to={detailTo}
                 params={{ id: detailId }}
-                className="mt-1 text-center text-[13px] font-semibold text-primary hover:text-primary/80"
+                className="mt-1 rounded-full bg-text-bright px-3 py-2 text-center text-base font-bold text-background hover:opacity-90"
               >
                 Open title page
               </Link>

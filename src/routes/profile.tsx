@@ -47,9 +47,9 @@ const GENRES = [
 const BIO_MAX = 280;
 
 const inputCls =
-  "h-9 w-full rounded-[5px] border border-border bg-background px-2.5 text-[14px] text-foreground placeholder:text-text-dim focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50";
+  "h-10 w-full rounded-xl border border-border-strong bg-background px-3 text-lg text-foreground placeholder:text-text-dim focus:border-text-bright focus:outline-none disabled:opacity-50";
 const btnPrimary =
-  "cursor-pointer rounded-[5px] bg-primary px-3 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed";
+  "cursor-pointer rounded-full bg-text-bright px-4 py-2 text-lg font-bold text-background hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed";
 
 type UStatus = { kind: "idle" | "checking" | "ok" | "bad"; msg?: string };
 
@@ -170,9 +170,9 @@ function ProfileEditor() {
 
   if (loading || !user || isLoading || !profile) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
-        <main id="main" className="mx-auto max-w-article px-5 py-12">
-          <p className="text-[14px] text-text-dim">Loading…</p>
+      <div className="bg-background text-foreground">
+        <main id="main" className="mx-auto max-w-article px-4 pb-12 pt-6 md:pt-9">
+          <p className="text-lg text-text-dim">Loading…</p>
         </main>
       </div>
     );
@@ -186,36 +186,35 @@ function ProfileEditor() {
         : "text-text-dim";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-article px-5 py-10">
-        <header className="mb-7 border-b border-border pb-5">
-          <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
+    <div className="bg-background text-foreground">
+      <main id="main" className="mx-auto max-w-article px-4 pb-12 pt-6 md:pt-9">
+        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
             Edit profile
           </h1>
-          <p className="mt-2 text-[14px] leading-relaxed text-text-dim">
-            This is your <span className="text-text-bright">public</span> page. It's what other
-            people see.{" "}
-            <a href={`/@${profile.username}`} className="text-primary hover:underline">
-              View your public profile →
-            </a>
-          </p>
+          <a
+            href={`/@${profile.username}`}
+            className="rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
+          >
+            Public profile
+          </a>
         </header>
 
         <form onSubmit={save} className="space-y-7">
           {/* Avatar + identity preview */}
-          <section className="flex items-center gap-4 rounded-[6px] border border-border bg-panel/40 p-5">
+          <section className="flex items-center gap-4 rounded-2xl bg-panel p-5">
             <Avatar
               username={normalizeUsername(username) || profile.username}
               displayName={displayName}
               preset={avatarPreset}
               size={64}
-              className="text-[26px]"
+              className="text-2xl"
             />
             <div className="min-w-0">
-              <p className="truncate font-sans text-lg font-semibold text-text-bright">
+              <p className="truncate font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
                 {displayName || `@${normalizeUsername(username) || profile.username}`}
               </p>
-              <p className="font-mono text-[13px] text-primary">
+              <p className="mt-1 font-mono text-base text-text-muted">
                 @{normalizeUsername(username) || profile.username}
               </p>
             </div>
@@ -228,10 +227,10 @@ function ProfileEditor() {
                 type="button"
                 onClick={() => setAvatarPreset(null)}
                 title="Auto (from handle)"
-                className={`h-8 rounded-full border px-3 text-[13px] font-semibold tracking-[-0.01em] ${
+                className={`h-8 rounded-full border px-3 text-base font-bold ${
                   avatarPreset === null
-                    ? "border-primary text-primary"
-                    : "border-border text-text-dim hover:border-border-strong"
+                    ? "border-text-bright bg-text-bright text-background"
+                    : "border-border-strong text-text-bright hover:border-text-bright"
                 }`}
               >
                 Auto
@@ -268,7 +267,7 @@ function ProfileEditor() {
             hint="Letters, numbers, underscores. This is your @handle and your page URL."
           >
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[13px] text-text-dim">@</span>
+              <span className="font-mono text-lg text-text-muted">@</span>
               <input
                 value={username}
                 maxLength={USERNAME_MAX}
@@ -281,7 +280,7 @@ function ProfileEditor() {
               />
             </div>
             {usernameChanged && uStatus.msg && (
-              <p className={`text-[13px] ${uStatusColor}`}>
+              <p className={`text-base ${uStatusColor}`}>
                 {uStatus.kind === "checking" ? "Checking…" : uStatus.msg}
               </p>
             )}
@@ -297,7 +296,7 @@ function ProfileEditor() {
               className={`${inputCls} h-auto py-2`}
               placeholder="A line or two about your taste…"
             />
-            <p className="text-right font-mono text-[12px] tabular-nums text-text-dim">
+            <p className="text-right font-mono text-sm tabular-nums text-text-muted">
               {bio.length}/{BIO_MAX}
             </p>
           </Field>
@@ -312,10 +311,10 @@ function ProfileEditor() {
                     key={g}
                     type="button"
                     onClick={() => toggleGenre(g)}
-                    className={`rounded-full border px-2.5 py-1 text-[13px] font-semibold ${
+                    className={`rounded-full border px-3 py-1 text-base font-bold ${
                       on
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-text-muted hover:border-border-strong"
+                        ? "border-text-bright bg-text-bright text-background"
+                        : "border-border-strong text-text-bright hover:border-text-bright"
                     }`}
                   >
                     {g}
@@ -332,11 +331,11 @@ function ProfileEditor() {
                 type="checkbox"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
-                className="h-4 w-4 accent-primary"
+                className="h-4 w-4 accent-text-bright"
               />
-              <span className="text-[14px] font-semibold text-text-bright">
+              <span className="text-lg font-bold text-text-bright">
                 Public profile
-                <span className="ml-2 font-normal text-text-dim">
+                <span className="ml-2 font-normal text-text-muted">
                   {isPublic
                     ? "Anyone can open your profile page, and search engines can index it."
                     : "Hidden. Only you can see it."}
@@ -351,13 +350,13 @@ function ProfileEditor() {
             </button>
             <Link
               to="/account"
-              className="text-[13px] font-semibold text-text-muted hover:text-text-bright"
+              className="rounded-full border border-border-strong px-4 py-2 text-lg font-bold text-text-bright hover:border-text-bright"
             >
-              Account settings →
+              Account settings
             </Link>
             {saveMsg && (
               <span
-                className={`text-[13px] ${
+                className={`text-base ${
                   saveMsg.kind === "ok" ? "text-rating" : "text-destructive"
                 }`}
               >
@@ -384,16 +383,18 @@ function TasteCardTeaser() {
   const rated = Math.max(r.liked, r.watched);
 
   return (
-    <section className="mt-7 flex flex-wrap items-center justify-between gap-4 rounded-[6px] border border-border bg-panel/40 p-5">
+    <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-panel p-5">
       <div className="flex items-center gap-3.5">
         <DinoMark
           size={40}
           mood={r.ready ? "chomp" : "sleep"}
-          className="h-10 w-10 shrink-0 text-primary/80"
+          className="h-10 w-10 shrink-0 text-text-bright"
         />
         <div>
-          <h2 className="text-[16px] font-black tracking-[-0.02em] text-text-bright">Taste Card</h2>
-          <p className="mt-0.5 text-[13.5px] text-text-muted">
+          <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
+            Taste Card
+          </h2>
+          <p className="mt-1 text-base text-text-muted">
             {r.ready
               ? `${rated} titles rated. Your card is ready.`
               : `${rated} of ${MIN_BASIS_TITLES} titles rated.`}
@@ -403,14 +404,14 @@ function TasteCardTeaser() {
       {r.ready ? (
         <Link
           to="/taste"
-          className="inline-flex cursor-pointer items-center rounded-full bg-primary px-4 py-2 text-[13px] font-black tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+          className="inline-flex cursor-pointer items-center rounded-full bg-text-bright px-4 py-2 text-base font-bold text-background hover:opacity-90"
         >
           Open your card
         </Link>
       ) : (
         <Link
           to="/watched"
-          className="inline-flex cursor-pointer items-center rounded-full border border-border-strong bg-background px-4 py-2 text-[13px] font-semibold text-text-bright hover:border-primary hover:text-primary"
+          className="inline-flex cursor-pointer items-center rounded-full border border-border-strong bg-background px-4 py-2 text-base font-bold text-text-bright hover:border-text-bright"
         >
           Rate titles
         </Link>
@@ -473,18 +474,20 @@ function ArcadeStatsSection({ userId }: { userId: string }) {
   );
 
   return (
-    <section className="mt-7 rounded-[6px] border border-border bg-panel/40 p-5">
+    <section className="mt-4 rounded-2xl bg-panel p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-[17px] font-black tracking-[-0.02em] text-text-bright">Arcade</h2>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] tabular-nums text-text-bright">
-          <CometMark className="h-4 w-4 text-primary" />
+        <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
+          Arcade
+        </h2>
+        <span className="inline-flex items-center gap-1.5 font-mono text-base tabular-nums text-text-bright">
+          <CometMark className="h-4 w-4" />
           <span className="tabular-nums">{total}</span> comets
         </span>
       </div>
       {ordered.length > 0 && (
         <ul className="mt-3 space-y-1">
           {ordered.map((r) => (
-            <li key={r.game_slug} className="flex items-baseline justify-between gap-3 text-[13px]">
+            <li key={r.game_slug} className="flex items-baseline justify-between gap-3 text-base">
               <span className="text-text-muted">
                 {GAMES[r.game_slug as GameSlug]?.name ?? r.game_slug}
               </span>
@@ -510,11 +513,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[14px] font-bold tracking-[-0.01em] text-text-bright">
-        {label}
-      </label>
+      <label className="block text-lg font-bold text-text-bright">{label}</label>
       {children}
-      {hint && <p className="text-[13px] text-text-dim">{hint}</p>}
+      {hint && <p className="text-base text-text-muted">{hint}</p>}
     </div>
   );
 }

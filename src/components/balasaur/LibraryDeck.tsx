@@ -18,6 +18,8 @@ import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
 import { ScoreBadge } from "./ScoreBadge";
 import { trustedScore } from "@/lib/trust";
 import { ChompMask } from "./ChompMask";
+import { swatchSurface } from "@/lib/swatchSurface";
+import { SWATCHES } from "@/lib/posterSwatch";
 import { EmptyState, EMPTY_ACTION_CLASS, EMPTY_ACTION_QUIET_CLASS } from "./EmptyState";
 
 // After this many anonymous picks, nudge the user to sign in to save them.
@@ -210,7 +212,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
   if (!ready) {
     return (
       <div className="mx-auto flex h-[560px] w-full max-w-md items-center justify-center">
-        <span className="text-[14px] text-text-dim">Loading…</span>
+        <span className="text-lg text-text-dim">Loading…</span>
       </div>
     );
   }
@@ -262,19 +264,19 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
 
   return (
     <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-between gap-4 px-4 py-4 md:max-w-3xl">
-      <div className="font-mono text-[12px] tabular-nums text-text-muted">
+      <div className="font-mono text-sm tabular-nums text-text-muted">
         {index + 1} / {deck.length} · sorted {summary.total}
       </div>
 
       {showNudge && (
-        <div className="flex w-full max-w-[360px] items-center gap-2 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2">
-          <span className="flex-1 text-[13px] font-semibold text-text-bright">
+        <div className="flex w-full max-w-[360px] items-center gap-2 rounded-xl bg-panel px-3 py-2">
+          <span className="flex-1 text-base font-bold text-text-bright">
             Sign in to save your {sessionPicks} picks
           </span>
           <button
             type="button"
             onClick={() => setAuthOpen(true)}
-            className="cursor-pointer rounded-[4px] bg-primary px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+            className="cursor-pointer rounded-full bg-text-bright px-3 py-1 text-base font-bold text-background hover:opacity-90"
           >
             Sign in
           </button>
@@ -314,7 +316,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
         <button
           type="button"
           onClick={() => advance("down")}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-border-strong"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
         >
           <SkipForward className="h-3.5 w-3.5" />
           Not now
@@ -323,7 +325,7 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
           type="button"
           onClick={markNotInterested}
           title="Never show this title again (key: X)"
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border bg-panel px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-muted hover:border-text-bright hover:text-text-bright"
         >
           <X className="h-3.5 w-3.5" />
           Never
@@ -447,7 +449,7 @@ function DeckInfo({ item }: { item: MediaItem }) {
   const seasons = item.mediaType === "tv" ? (item.seasonCount ?? item.seasons?.length ?? 0) : 0;
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 font-mono text-[12px] tabular-nums text-text-muted">
+      <div className="flex flex-wrap items-center gap-2 font-mono text-sm font-bold tabular-nums">
         <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
         {item.year && <span>· {item.year}</span>}
         {seasons > 0 && (
@@ -457,21 +459,15 @@ function DeckInfo({ item }: { item: MediaItem }) {
         )}
         {score !== undefined && <ScoreBadge score={score} />}
       </div>
-      <h2 className="text-[22px] font-black leading-[1.1] tracking-[-0.02em] text-text-bright">
+      <h2 className="font-display text-3xl font-extrabold leading-none tracking-tight">
         {item.title}
       </h2>
       {item.genres.length > 0 && (
-        <div className="text-[13px] font-semibold text-text-muted">
-          {item.genres.slice(0, 4).join(" · ")}
-        </div>
+        <div className="text-base font-bold">{item.genres.slice(0, 4).join(" · ")}</div>
       )}
-      {item.overview && (
-        <p className="line-clamp-[9] text-[13px] leading-relaxed text-text-bright/90">
-          {item.overview}
-        </p>
-      )}
+      {item.overview && <p className="line-clamp-[9] text-base leading-relaxed">{item.overview}</p>}
       {item.streaming.length > 0 && (
-        <div className="mt-auto text-[13px] text-text-muted">
+        <div className="mt-auto text-base font-bold">
           On {item.streaming.slice(0, 3).join(", ")}
         </div>
       )}
@@ -496,10 +492,16 @@ function CardFace({
   const cueColor = cue ? ACTION_COLOR[cue] : null;
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-[8px] border border-border bg-panel shadow-[0_24px_60px_-20px_rgba(0,0,0,0.35)]">
+    // The poster on a card painted in its own swatch, the info pane in that
+    // swatch's ink: the same card as everywhere else, at deck size.
+    <div
+      className={
+        "relative h-full w-full overflow-hidden rounded-2xl p-2 " + swatchSurface(item.swatch)
+      }
+    >
       <div className="flex h-full">
-        {/* Poster — full card on mobile, left pane on md+. */}
-        <div className="relative h-full w-full md:w-[45%] md:shrink-0">
+        {/* Poster: full card on mobile, left pane on md+. */}
+        <div className="relative h-full w-full overflow-hidden rounded-xl md:w-[45%] md:shrink-0">
           {item.posterUrl ? (
             <img
               src={tmdbImage(item.posterUrl, "w780")}
@@ -514,14 +516,21 @@ function CardFace({
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-accent text-text-dim">
-              <span className="text-[13px] font-semibold">No art</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-accent p-4 text-center text-text-bright">
+              <span className="font-display text-3xl font-extrabold leading-none">
+                {item.title}
+              </span>
             </div>
           )}
 
           {/* Loved: three scallops out of the poster's top corner, painted in
-              the card's own panel colour so it reads as a bite. */}
-          {chomp && <ChompMask size={54} />}
+              the card's own colour so it reads as a bite. */}
+          {chomp && (
+            <ChompMask
+              size={54}
+              color={item.swatch ? SWATCHES[item.swatch].fill : "var(--panel)"}
+            />
+          )}
 
           {/* Mobile bottom gradient: title + meta, and the tap hint. Hidden
               while the detail overlay is up so text never doubles through it. */}
@@ -531,28 +540,28 @@ function CardFace({
               (infoOpen ? " invisible" : "")
             }
           >
-            <div className="mb-1 flex items-center gap-2 font-mono text-[12px] tabular-nums text-white/80">
+            <div className="mb-1.5 flex items-center gap-2 font-mono text-sm font-bold tabular-nums text-white">
               <span>{item.mediaType === "movie" ? "Movie" : "TV"}</span>
               {item.year && <span>· {item.year}</span>}
               {score !== undefined && <ScoreBadge score={score} />}
             </div>
-            <h2 className="text-[22px] font-black leading-[1.1] tracking-[-0.02em] text-white">
+            <h2 className="font-display text-3xl font-extrabold leading-none tracking-tight text-white">
               {item.title}
             </h2>
-            <p className="mt-1.5 text-[13px] text-white/60">Tap for details</p>
+            <p className="mt-1.5 text-base text-white/80">Tap for details</p>
           </div>
 
           {/* Mobile tap-to-reveal detail overlay. */}
           {infoOpen && (
-            <div className="absolute inset-0 flex flex-col gap-2.5 overflow-hidden bg-background/95 p-4 md:hidden">
+            <div className="absolute inset-0 flex flex-col gap-2.5 overflow-hidden bg-background/95 p-4 text-text-bright md:hidden">
               <DeckInfo item={item} />
-              <p className="text-[13px] text-text-dim">Tap to close</p>
+              <p className="text-base text-text-muted">Tap to close</p>
             </div>
           )}
         </div>
 
         {/* Desktop/tablet info pane — always visible beside the poster. */}
-        <div className="hidden min-w-0 flex-1 flex-col gap-2.5 overflow-hidden p-4 md:flex">
+        <div className="hidden min-w-0 flex-1 flex-col gap-3 overflow-hidden p-4 pl-5 md:flex">
           <DeckInfo item={item} />
         </div>
       </div>
@@ -560,7 +569,7 @@ function CardFace({
       {/* Directional cue overlay */}
       {cueColor && (
         <div
-          className="pointer-events-none absolute inset-0 rounded-[8px]"
+          className="pointer-events-none absolute inset-0 rounded-2xl"
           style={{
             boxShadow: `inset 0 0 0 4px ${cueColor}`,
             backgroundColor: cueColor,
@@ -572,7 +581,7 @@ function CardFace({
       {cue && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span
-            className="rounded-[6px] border-2 px-3 py-1 text-[14px] font-black uppercase tracking-[-0.01em]"
+            className="rounded-full border-2 px-4 py-1 text-lg font-bold uppercase"
             style={{
               borderColor: cueColor!,
               color: cueColor!,
@@ -596,27 +605,27 @@ function Legend() {
     { dir: "down", icon: <ArrowDown className="h-3 w-3" /> },
   ];
   return (
-    <div className="w-full max-w-[360px] space-y-1.5 rounded-[5px] border border-border bg-panel/60 p-2">
-      <div className="text-center text-[12px] text-text-dim">
+    <div className="w-full max-w-[360px] space-y-1.5 rounded-2xl bg-panel p-2">
+      <div className="text-center text-sm text-text-muted">
         Swipe to sort · only Not now comes back
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {rows.map((r) => (
           <div
             key={r.dir}
-            className="flex items-center gap-1.5 rounded-[4px] border border-border px-1.5 py-1"
+            className="flex items-center gap-1.5 rounded-xl bg-background px-2 py-1.5"
           >
             <span
-              className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px]"
+              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
               style={{ backgroundColor: ACTION_COLOR[r.dir], color: "var(--paper)" }}
             >
               {r.icon}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-[12px] font-bold tracking-[-0.01em] text-text-bright">
+              <span className="block truncate text-sm font-bold text-text-bright">
                 {ACTION_LABEL[r.dir]}
               </span>
-              <span className="block truncate text-[12px] text-text-dim">
+              <span className="block truncate text-sm text-text-muted">
                 {ACTION_SUBLABEL[r.dir]}
               </span>
             </span>
@@ -647,22 +656,22 @@ function LibrarySummary({
   return (
     <div className="mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-6 px-6 py-10 text-center">
       <div>
-        <div className="text-[13px] font-semibold text-text-muted">Session complete</div>
-        <div className="mt-2 text-[40px] font-black leading-none tracking-[-0.02em] text-text-bright">
+        <div className="text-base font-bold text-text-muted">Session complete</div>
+        <div className="mt-2 font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
           You sorted <span className="tabular-nums">{summary.total}</span>
         </div>
       </div>
 
       {anonUnsaved > 0 && (
-        <div className="flex w-full items-center gap-3 rounded-[5px] border border-primary/40 bg-primary/10 px-3 py-2.5 text-left">
-          <Check className="h-4 w-4 shrink-0 text-primary" />
-          <span className="flex-1 text-[13px] font-semibold text-text-bright">
+        <div className="flex w-full items-center gap-3 rounded-xl bg-panel px-3 py-2.5 text-left">
+          <Check className="h-4 w-4 shrink-0 text-text-bright" />
+          <span className="flex-1 text-base font-bold text-text-bright">
             Saved on this device · sign in to keep your {anonUnsaved} picks
           </span>
           <button
             type="button"
             onClick={onSignIn}
-            className="shrink-0 cursor-pointer rounded-[4px] bg-primary px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+            className="shrink-0 cursor-pointer rounded-full bg-text-bright px-3 py-1 text-base font-bold text-background hover:opacity-90"
           >
             Sign in
           </button>
@@ -673,16 +682,18 @@ function LibrarySummary({
         {lines.map((l) => (
           <li
             key={l.label}
-            className="flex items-center justify-between rounded-[5px] border border-border bg-panel px-3 py-2"
+            className="flex items-center justify-between rounded-xl bg-panel px-3.5 py-2.5"
           >
-            <span className="flex items-center gap-2 text-[13px] font-semibold text-text-bright">
+            <span className="flex items-center gap-2 text-base font-bold text-text-bright">
               <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: l.color }}
               />
               {l.label}
             </span>
-            <span className="font-mono text-[15px] tabular-nums text-text-bright">{l.value}</span>
+            <span className="font-display text-2xl font-extrabold tabular-nums leading-none text-text-bright">
+              {l.value}
+            </span>
           </li>
         ))}
       </ul>
@@ -690,13 +701,13 @@ function LibrarySummary({
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Link
           to="/lists"
-          className="rounded-[5px] border border-border-strong bg-background px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
+          className="rounded-full border border-border-strong bg-background px-4 py-2 text-lg font-bold text-text-bright hover:border-text-bright"
         >
           View my library
         </Link>
         <Link
           to="/"
-          className="rounded-[5px] bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+          className="rounded-full bg-text-bright px-4 py-2 text-lg font-bold text-background hover:opacity-90"
         >
           Back to the grid
         </Link>
@@ -707,11 +718,13 @@ function LibrarySummary({
 
 export function LibraryHeader() {
   return (
-    <header className="flex h-12 items-center justify-between border-b border-border px-4">
-      <div className="text-[17px] font-black tracking-[-0.02em] text-text-bright">Rate titles</div>
+    <header className="flex h-14 items-center justify-between border-b border-border px-4">
+      <div className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
+        Rate titles
+      </div>
       <Link
         to="/"
-        className="inline-flex items-center gap-1 rounded-[4px] border border-border px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
+        className="inline-flex items-center gap-1 rounded-full border border-border-strong px-3 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
       >
         <X className="h-3 w-3" />
         Exit

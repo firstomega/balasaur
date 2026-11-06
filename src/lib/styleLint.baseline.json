@@ -1,10 +1,10 @@
 {
   "totals": {
-    "fontSize": 475,
-    "radius": 167,
+    "fontSize": 362,
+    "radius": 124,
     "duration": 4,
     "easing": 8,
-    "hex": 237,
+    "hex": 198,
     "containerWidth": 65
   },
   "files": {
@@ -138,8 +138,6 @@
       "fontSize": 1
     },
     "src/components/balasaur/LibraryDeck.tsx": {
-      "fontSize": 30,
-      "radius": 16,
       "containerWidth": 4
     },
     "src/components/balasaur/MediaDetail.tsx": {
@@ -223,8 +221,7 @@
       "radius": 6
     },
     "src/routes/account.tsx": {
-      "fontSize": 30,
-      "radius": 8,
+      "fontSize": 1,
       "containerWidth": 2
     },
     "src/routes/best.$slug.tsx": {
@@ -250,9 +247,7 @@
       "hex": 38
     },
     "src/routes/library.tsx": {
-      "fontSize": 32,
-      "radius": 14,
-      "hex": 39,
+      "fontSize": 1,
       "containerWidth": 2
     },
     "src/routes/lists.tsx": {
@@ -322,8 +317,7 @@
       "containerWidth": 3
     },
     "src/routes/profile.tsx": {
-      "fontSize": 24,
-      "radius": 5
+      "fontSize": 1
     },
     "src/routes/taste.tsx": {
       "fontSize": 1

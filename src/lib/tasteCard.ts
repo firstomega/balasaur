@@ -319,7 +319,23 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
   const dividerY = sentenceLast + 70;
   const numberBaseline = dividerY + 118;
   const labelBaseline = numberBaseline + 46;
-  const blockBottom = labelBaseline + 72;
+
+  // The posters in a row, as tall as the room allows up to 1.75 times their
+  // width (the crop stays under a sixth of the artwork's width). The row sits
+  // on the footer and straddles the painted edge, so the slack from a
+  // one-line versus two-line name goes into the colour rather than leaving a
+  // white gap, and the posters peek out of the block the way they do on the
+  // site's list tiles.
+  const footerY = TASTE_CARD_H - PAD;
+  const n = Math.max(posters.length, 1);
+  const side = 48;
+  const gap = 20;
+  const tileW = Math.floor((TASTE_CARD_W - side * 2 - gap * (n - 1)) / n);
+  const rowBottom = footerY - 140;
+  const rowTopLimit = labelBaseline + 96;
+  const tileH = Math.max(260, Math.min(rowBottom - rowTopLimit, Math.round(tileW * 1.75)));
+  const rowTop = rowBottom - tileH;
+  const blockBottom = Math.max(labelBaseline + 72, rowTop + Math.round(tileH * 0.42));
 
   ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, TASTE_CARD_W, TASTE_CARD_H);
@@ -359,27 +375,12 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
 
   // --- The bottom, laid out upwards from the footer. ------------------------
 
-  const footerY = TASTE_CARD_H - PAD;
   setFont(ctx, `700 36px ${SANS}`);
   ctx.fillStyle = INK;
   ctx.fillText(o.url ?? "balasaur.com/taste", PAD, footerY - 42);
   setFont(ctx, `500 25px ${SANS}`);
   ctx.fillStyle = INK_MUTED;
   ctx.fillText("Title data from TMDB and OMDb", PAD, footerY);
-
-  // The posters in a row on the white ground, each with its sticker. The row
-  // is as tall as the room allows up to 1.75 times its width, where the crop
-  // is still under a sixth of the artwork's width, and sits centred in that
-  // room so the slack from a one-line versus two-line name splits evenly.
-  const rowTopLimit = blockBottom + 64;
-  const rowBottomLimit = footerY - 140;
-  const n = Math.max(posters.length, 1);
-  const side = 48;
-  const gap = 16;
-  const tileW = Math.floor((TASTE_CARD_W - side * 2 - gap * (n - 1)) / n);
-  const available = Math.max(rowBottomLimit - rowTopLimit, 260);
-  const tileH = Math.max(260, Math.min(available, Math.round(tileW * 1.75)));
-  const rowTop = Math.round(rowTopLimit + (available - tileH) / 2);
 
   // Every title standing in for a missing poster is set at one size: the
   // largest the longest of them can hold. Four tiles at four sizes read as an
@@ -394,6 +395,10 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
   posters.forEach((p, i) => {
     const px = side + i * (tileW + gap);
     const tile = surface(painted[i]?.swatch);
+    // A paper ring, so a dark poster on a dark block still has an edge.
+    roundRect(ctx, px - 6, rowTop - 6, tileW + 12, tileH + 12, 22);
+    ctx.fillStyle = PAPER;
+    ctx.fill();
     ctx.save();
     roundRect(ctx, px, rowTop, tileW, tileH, 16);
     ctx.clip();

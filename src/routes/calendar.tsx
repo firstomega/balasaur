@@ -136,8 +136,18 @@ function CalendarPage() {
               >
                 <div className="mb-3 md:mb-0">
                   <h2 className="flex flex-wrap items-baseline gap-x-2 gap-y-1 md:sticky md:top-20 md:flex-col md:items-start">
+                    {/* One line on a phone; on desktop the weekday sits over
+                        the date so the column never breaks "November 1". */}
                     <span className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
-                      {dayLabel(day.date)}
+                      {dayLabel(day.date)
+                        .split(", ")
+                        .map((part, i) => (
+                          <span key={i} className="md:block">
+                            {i > 0 ? " " : ""}
+                            {part}
+                            {i === 0 ? "," : ""}
+                          </span>
+                        ))}
                     </span>
                     <span className="flex items-center gap-2">
                       {day.date === today && (
