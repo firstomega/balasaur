@@ -141,7 +141,7 @@ function ListsPage() {
 
         {/* Tabs as pills with live counts, the current one in ink like the
             current section in the header. */}
-        <div role="tablist" aria-label="Lists" className="mb-5 flex flex-wrap gap-1.5">
+        <div role="tablist" aria-label="Lists" className="mb-5 flex flex-wrap gap-1 md:gap-1.5">
           {BUCKET_ORDER.map((b) => {
             const selected = tab === b;
             return (
@@ -152,7 +152,7 @@ function ListsPage() {
                 type="button"
                 onClick={() => setTab(b)}
                 className={
-                  "flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-2 text-lg font-bold leading-none transition-colors " +
+                  "flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-2 text-base font-bold leading-none transition-colors md:gap-1.5 md:px-3.5 md:text-lg " +
                   (selected
                     ? "bg-text-bright text-background"
                     : "bg-panel text-text-bright hover:bg-border")
