@@ -1,7 +1,7 @@
 {
   "totals": {
-    "fontSize": 781,
-    "radius": 271,
+    "fontSize": 752,
+    "radius": 255,
     "duration": 4,
     "easing": 8,
     "hex": 249,
@@ -266,8 +266,7 @@
       "radius": 3
     },
     "src/routes/collections.tsx": {
-      "fontSize": 25,
-      "radius": 15
+      "fontSize": 1
     },
     "src/routes/contact.tsx": {
       "fontSize": 7
@@ -296,8 +295,7 @@
       "containerWidth": 2
     },
     "src/routes/lists.tsx": {
-      "fontSize": 6,
-      "radius": 1
+      "fontSize": 1
     },
     "src/routes/methodology.tsx": {
       "fontSize": 14,

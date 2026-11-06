@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bookmark, Check, EyeOff, Heart } from "lucide-react";
 import { MediaGrid } from "@/components/balasaur/MediaGrid";
 import { MediaGridSkeleton } from "@/components/balasaur/MediaCardSkeleton";
 import { useUserStatus } from "@/hooks/useUserStatus";
@@ -26,11 +25,13 @@ type Bucket = "watchlist" | "favorites" | "history" | "notInterested";
 
 const BUCKET_ORDER: Bucket[] = ["watchlist", "favorites", "history", "notInterested"];
 
-const BUCKET_META: Record<Bucket, { label: string; Icon: typeof Bookmark; iconClass: string }> = {
-  watchlist: { label: "Watchlist", Icon: Bookmark, iconClass: "text-status-watchlist" },
-  favorites: { label: "Favorites", Icon: Heart, iconClass: "text-rating" },
-  history: { label: "History", Icon: Check, iconClass: "text-primary" },
-  notInterested: { label: "Never", Icon: EyeOff, iconClass: "text-status-never" },
+// The deck names these same four places when a card lands in one
+// (LibraryDeck: "Favorites + History", "Watchlist"), so the names match it.
+const BUCKET_LABEL: Record<Bucket, string> = {
+  watchlist: "Watchlist",
+  favorites: "Favorites",
+  history: "History",
+  notInterested: "Never",
 };
 
 // Empty states that point somewhere: the grid for saving, the deck for rating.
@@ -42,7 +43,7 @@ const BUCKET_EMPTY: Record<
 > = {
   watchlist: {
     line: "Nothing saved for later.",
-    hint: "Hit Save on any poster in the grid, or swipe left in the deck.",
+    hint: "Hit Watchlist in the menu on any poster, or swipe left in the deck.",
     cta: "Browse the grid",
     to: "/",
   },
@@ -133,19 +134,15 @@ function ListsPage() {
     // page exactly one footer taller than the window, so an empty list
     // scrolled 141px into nothing.
     <div className="bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-grid px-4 py-6">
-        <h1 className="mb-4 text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
+      <main id="main" className="mx-auto max-w-grid px-4 pb-10 pt-6 md:pt-9">
+        <h1 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:mb-6 md:text-[64px]">
           My lists
         </h1>
 
-        {/* Tab bar with live counts */}
-        <div
-          role="tablist"
-          aria-label="Lists"
-          className="mb-5 flex flex-wrap gap-1 border-b border-border"
-        >
+        {/* Tabs as pills with live counts, the current one in ink like the
+            current section in the header. */}
+        <div role="tablist" aria-label="Lists" className="mb-5 flex flex-wrap gap-1.5">
           {BUCKET_ORDER.map((b) => {
-            const meta = BUCKET_META[b];
             const selected = tab === b;
             return (
               <button
@@ -155,24 +152,27 @@ function ListsPage() {
                 type="button"
                 onClick={() => setTab(b)}
                 className={
-                  "flex cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 text-[14px] font-bold tracking-[-0.01em] transition-colors " +
+                  "flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-2 text-lg font-bold leading-none transition-colors " +
                   (selected
-                    ? "border-primary text-text-bright"
-                    : "border-transparent text-text-muted hover:text-text-bright")
+                    ? "bg-text-bright text-background"
+                    : "bg-panel text-text-bright hover:bg-border")
                 }
               >
-                <meta.Icon className={`h-3.5 w-3.5 ${selected ? meta.iconClass : ""}`} />
-                {meta.label}
-                <span className="font-mono text-[12px] tabular-nums text-text-dim">
-                  {showSkeleton ? "" : grouped[b].length}
-                </span>
+                {BUCKET_LABEL[b]}
+                {!showSkeleton && (
+                  <span
+                    className={`font-mono text-sm tabular-nums ${selected ? "opacity-80" : "text-text-dim"}`}
+                  >
+                    {grouped[b].length}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
         {!showSkeleton && items.length > 1 && (
-          <p className="mb-4 text-[13px] text-text-dim">Newest first.</p>
+          <p className="mb-4 text-base text-text-dim">Newest first.</p>
         )}
 
         {showSkeleton ? (
@@ -198,13 +198,13 @@ function ListsPage() {
             about instead of above every tab. */}
         {!loading && !user && !showSkeleton && items.length > 0 && (
           <div className="mt-7 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-            <p className="text-[13px] text-text-muted">Saved on this device.</p>
+            <p className="text-base text-text-muted">Saved on this device.</p>
             <button
               type="button"
               onClick={() => setAuthOpen(true)}
-              className="cursor-pointer rounded-[5px] bg-primary px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+              className="cursor-pointer rounded-full bg-text-bright px-3.5 py-1.5 text-base font-bold text-background hover:opacity-90"
             >
-              Keep them anywhere
+              Sign in to keep them
             </button>
             <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
           </div>

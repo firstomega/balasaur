@@ -5,7 +5,6 @@ import {
   EMPTY_ACTION_CLASS,
   EMPTY_ACTION_QUIET_CLASS,
 } from "@/components/balasaur/EmptyState";
-import { ScrollRail } from "@/components/balasaur/ScrollRail";
 import { ListTile } from "@/components/balasaur/ListTile";
 import { paintTiles } from "@/lib/paintWall";
 import { listCollections, type CollectionSummary } from "@/lib/collections.functions";
@@ -18,11 +17,14 @@ import { CATALOG_FLOOR_LABEL } from "@/lib/catalogCount";
 // completeness.
 // Tier 1  Featured: four flagship lists picked by rule (biggest service,
 //         latest year, top award, one discovery) as list tiles.
-// Tier 2  Shelves by intent (streaming / genre / decades / acclaim) on the
-//         same ScrollRail pattern Browse uses.
+// Tier 2  Walls by intent (occasion / service / genre / country / decade /
+//         acclaim): every list of that kind as a tile, none held behind a
+//         swipe. Inside a wall the order is alphabetical, because nearly
+//         every list holds 60 titles and an order by count was an order by
+//         nothing a visitor could see.
 // Tier 3  The full index at the bottom: plain text links, grouped, carrying
-//         the crawl mesh for all ~350 pages (genre-service and genre-decade
-//         live ONLY here; they are refinements, not top-level sections).
+//         the crawl mesh for every page (genre-service, origin-genre and year
+//         lists live ONLY here; they are refinements, not top-level sections).
 // The find box filters client side; while searching, tiers 1-2 hide via CSS
 // so every link stays in the SSR HTML.
 
@@ -93,11 +95,22 @@ function pickFeatured(all: CollectionSummary[]): CollectionSummary[] {
   return picks.slice(0, 4);
 }
 
-/** A row of list tiles, painted together so neighbours do not repeat a colour
- *  (src/lib/paintWall.ts). Rendered as siblings, so a rail snaps each one. */
-/** A list tile's width inside a rail. */
-const RAIL_TILE = "w-[168px] shrink-0 md:w-[220px]";
+/** Alphabetical, locale pinned so the cached SSR order and every client's
+ *  hydration order agree. */
+const byTitle = (a: CollectionSummary, b: CollectionSummary) =>
+  a.title.localeCompare(b.title, "en");
 
+/** The decade lists, newest decade first, the movie list before the show list. */
+function byDecade(a: CollectionSummary, b: CollectionSummary) {
+  return (decadeWord(b.title) ?? "").localeCompare(decadeWord(a.title) ?? "") || byTitle(a, b);
+}
+
+/** The wall's grid: the same columns and gaps as the related collections on
+ *  a best-of page, so a tile is one size wherever it appears. */
+const WALL = "grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:gap-3.5 lg:grid-cols-4";
+
+/** A run of list tiles, painted together so a tile does not repeat the colour
+ *  of the one before it (src/lib/paintWall.ts). */
 function ShelfTiles({
   items,
   progressFor,
@@ -126,27 +139,41 @@ function ShelfTiles({
   );
 }
 
-function Shelf({
+/** A section heading: the label in the display face, the count beside it. */
+function SectionHead({ title, count }: { title: string; count: number }) {
+  return (
+    <div className="flex items-baseline gap-3">
+      <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
+        {title}
+      </h2>
+      <span className="font-mono text-sm tabular-nums text-text-dim">{count} lists</span>
+    </div>
+  );
+}
+
+/** One kind of list as a wall of tiles under a plain label. */
+function Wall({
   title,
-  meta,
-  children,
+  items,
+  progressFor,
 }: {
   title: string;
-  meta?: string;
-  children: React.ReactNode;
+  items: CollectionSummary[];
+  progressFor: (c: CollectionSummary) => string | null;
 }) {
+  if (items.length === 0) return null;
   return (
-    <section className="mt-11">
-      <div className="flex items-baseline gap-3">
-        <h2 className="text-[19px] font-black tracking-[-0.02em] text-text-bright">{title}</h2>
-        {meta && <span className="font-mono text-[12px] tabular-nums text-text-dim">{meta}</span>}
-      </div>
-      <div className="mt-3.5">
-        <ScrollRail label={title}>{children}</ScrollRail>
+    <section className="mt-10 md:mt-14">
+      <SectionHead title={title} count={items.length} />
+      <div className={`mt-3 md:mt-4 ${WALL}`}>
+        <ShelfTiles items={items} progressFor={progressFor} />
       </div>
     </section>
   );
 }
+
+/** A sub-heading inside the full index. */
+const INDEX_H3 = "font-display text-xl font-extrabold leading-none tracking-tight text-text-bright";
 
 // ---- Tier 3 index: matrices and a year grid, not link lists. A cross of two
 // facets is a table, and 67 years are a timeline; rendering either as a
@@ -186,16 +213,16 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
   if (rows.length === 0) return null;
   return (
     <div className="mt-8">
-      <h3 className="mb-2.5 text-[18px] font-black tracking-[-0.02em] text-text-bright">{label}</h3>
+      <h3 className={`mb-2.5 ${INDEX_H3}`}>{label}</h3>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] border-collapse">
           <thead>
             <tr>
-              <th className="w-36 pb-1.5 pr-3" />
+              <th className="w-44 pb-1.5 pr-3" />
               {cols.map((col) => (
                 <th
                   key={col}
-                  className="px-1 pb-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-text-dim"
+                  className="px-1 pb-1.5 text-center text-xs font-bold uppercase tracking-wider text-text-dim"
                 >
                   {col}
                 </th>
@@ -205,9 +232,7 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
           <tbody>
             {rows.map((r) => (
               <tr key={r.label} className="border-t border-border/60">
-                <td className="py-0.5 pr-3 text-[12.5px] leading-tight text-text-muted">
-                  {r.label}
-                </td>
+                <td className="py-0.5 pr-3 text-sm leading-tight text-text-muted">{r.label}</td>
                 {r.cells.map((cell, i) =>
                   cell ? (
                     <td key={i} className="px-0.5 py-0.5 text-center">
@@ -216,9 +241,9 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
                         params={{ slug: cell.slug }}
                         aria-label={cell.title}
                         title={cell.title}
-                        className="group/cell inline-flex h-6 w-full min-w-7 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                        className="group/cell inline-flex h-6 w-full min-w-7 items-center justify-center rounded-sm transition-colors hover:bg-panel"
                       >
-                        <span className="h-2 w-2 rounded-[2px] bg-text-dim transition-colors group-hover/cell:bg-primary" />
+                        <span className="h-2 w-2 rounded-full bg-text-dim transition-colors group-hover/cell:bg-text-bright" />
                       </Link>
                     </td>
                   ) : (
@@ -252,11 +277,11 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
   const decades = [...byDecade.keys()].sort().reverse();
   return (
     <div className="mt-8">
-      <h3 className="mb-2.5 text-[18px] font-black tracking-[-0.02em] text-text-bright">By year</h3>
+      <h3 className={`mb-2.5 ${INDEX_H3}`}>By year</h3>
       <div className="space-y-1">
         {decades.map((dec) => (
           <div key={dec} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-            <span className="w-14 shrink-0 font-mono text-[11px] tabular-nums tracking-wider text-text-dim">
+            <span className="w-14 shrink-0 font-mono text-xs tabular-nums tracking-wider text-text-dim">
               {dec}
             </span>
             <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -273,10 +298,10 @@ function YearIndex({ years }: { years: CollectionSummary[] }) {
                     params={{ slug: c.slug }}
                     aria-label={c.title}
                     title={c.title}
-                    className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 font-mono text-[11.5px] tabular-nums text-text-muted transition-colors hover:bg-panel hover:text-primary"
+                    className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-sm tabular-nums text-text-muted transition-colors hover:bg-panel hover:text-text-bright"
                   >
                     <span
-                      className={`h-1.5 w-1.5 rounded-[2px] ${c.media_type === "tv" ? "bg-media-tv" : "bg-media-movie"}`}
+                      className={`h-1.5 w-1.5 rounded-full ${c.media_type === "tv" ? "bg-media-tv" : "bg-media-movie"}`}
                     />
                     {year}
                   </Link>
@@ -308,7 +333,7 @@ function PeopleIndex({ people }: { people: CollectionSummary[] }) {
     <div className="mt-3.5 space-y-1">
       {initials.map((letter) => (
         <div key={letter} className="flex items-baseline gap-3 border-t border-border/60 py-1">
-          <span className="w-4 shrink-0 font-mono text-[12px] uppercase tracking-wider text-text-dim">
+          <span className="w-4 shrink-0 font-mono text-sm uppercase tracking-wider text-text-dim">
             {letter}
           </span>
           <div className="flex flex-wrap gap-x-1 gap-y-0.5">
@@ -317,7 +342,7 @@ function PeopleIndex({ people }: { people: CollectionSummary[] }) {
                 key={c.slug}
                 to="/best/$slug"
                 params={{ slug: c.slug }}
-                className="inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[12px] text-text-muted transition-colors hover:bg-panel hover:text-primary"
+                className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-sm text-text-muted transition-colors hover:bg-panel hover:text-text-bright"
               >
                 {c.title.replace(/^The Best /, "")}
                 <span className="font-mono tabular-nums text-text-dim">{c.item_count}</span>
@@ -396,13 +421,13 @@ function DualIndexMatrix({
   return (
     <div className="mt-8">
       <div className="mb-2.5 flex items-center gap-4">
-        <h3 className="text-[18px] font-black tracking-[-0.02em] text-text-bright">{label}</h3>
-        <span className="flex items-center gap-3 text-[12px] font-semibold text-text-dim">
+        <h3 className={INDEX_H3}>{label}</h3>
+        <span className="flex items-center gap-3 text-sm font-semibold text-text-dim">
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-[2px] bg-media-movie" /> Movies
+            <span className="h-2 w-2 rounded-full bg-media-movie" /> Movies
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-[2px] bg-media-tv" /> Shows
+            <span className="h-2 w-2 rounded-full bg-media-tv" /> Shows
           </span>
         </span>
       </div>
@@ -410,11 +435,11 @@ function DualIndexMatrix({
         <table className="w-full min-w-[560px] border-collapse">
           <thead>
             <tr>
-              <th className="w-36 pb-1.5 pr-3" />
+              <th className="w-44 pb-1.5 pr-3" />
               {cols.map((col) => (
                 <th
                   key={col}
-                  className="px-1 pb-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-text-dim"
+                  className="px-1 pb-1.5 text-center text-xs font-bold uppercase tracking-wider text-text-dim"
                 >
                   {col}
                 </th>
@@ -424,9 +449,7 @@ function DualIndexMatrix({
           <tbody>
             {rows.map((r) => (
               <tr key={r.label} className="border-t border-border/60">
-                <td className="py-0.5 pr-3 text-[12.5px] leading-tight text-text-muted">
-                  {r.label}
-                </td>
+                <td className="py-0.5 pr-3 text-sm leading-tight text-text-muted">{r.label}</td>
                 {r.cells.map((cell, i) => (
                   <td key={i} className="px-0.5 py-0.5 text-center">
                     {cell ? (
@@ -437,9 +460,9 @@ function DualIndexMatrix({
                             params={{ slug: cell.movie.slug }}
                             aria-label={cell.movie.title}
                             title={cell.movie.title}
-                            className="inline-flex h-6 w-7 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                            className="inline-flex h-6 w-7 items-center justify-center rounded-sm transition-colors hover:bg-panel"
                           >
-                            <span className="h-2 w-2 rounded-[2px] bg-media-movie/80 transition-colors hover:bg-media-movie" />
+                            <span className="h-2 w-2 rounded-full bg-media-movie/80 transition-colors hover:bg-media-movie" />
                           </Link>
                         )}
                         {cell.tv && (
@@ -448,9 +471,9 @@ function DualIndexMatrix({
                             params={{ slug: cell.tv.slug }}
                             aria-label={cell.tv.title}
                             title={cell.tv.title}
-                            className="inline-flex h-6 w-7 items-center justify-center rounded-[3px] transition-colors hover:bg-panel"
+                            className="inline-flex h-6 w-7 items-center justify-center rounded-sm transition-colors hover:bg-panel"
                           >
-                            <span className="h-2 w-2 rounded-[2px] bg-media-tv/80 transition-colors hover:bg-media-tv" />
+                            <span className="h-2 w-2 rounded-full bg-media-tv/80 transition-colors hover:bg-media-tv" />
                           </Link>
                         )}
                       </span>
@@ -473,9 +496,9 @@ function DualIndexMatrix({
 function CollectionsShell({ aside, children }: { aside?: ReactNode; children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-content px-5 py-7">
+      <main id="main" className="mx-auto max-w-content px-4 pb-10 pt-6 md:pt-9">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
+          <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
             Collections
           </h1>
           {aside}
@@ -493,7 +516,6 @@ function IndexDeadEnd() {
     <EmptyState
       className="mt-9"
       line="The collection index did not load."
-      hint="Try again, or start from the catalog."
       action={
         <>
           <button
@@ -526,21 +548,24 @@ function CollectionsError({ error }: ErrorComponentProps) {
 function CollectionsPending() {
   return (
     <CollectionsShell>
-      {/* Same grid, same card sizes as the real tiers, so the rows land in the
+      {/* Same grid, same tile sizes as the real tiers, so the rows land in the
           boxes they were drawn in instead of shifting the page under a thumb. */}
-      <div className="mt-7 grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-2 gap-2.5 md:gap-4 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-[186px] animate-pulse rounded-[8px] bg-panel" />
+          <div
+            key={i}
+            className="min-h-28 animate-pulse rounded-xl bg-panel md:min-h-48 md:rounded-2xl"
+          />
         ))}
       </div>
       {[0, 1].map((r) => (
-        <div key={r} className="mt-11">
-          <div className="h-[19px] w-52 animate-pulse rounded bg-panel" />
-          <div className="mt-3.5 flex gap-2 overflow-hidden">
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={r} className="mt-10 md:mt-14">
+          <div className="h-7 w-52 animate-pulse rounded-sm bg-panel" />
+          <div className={`mt-3 md:mt-4 ${WALL}`}>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
               <div
                 key={i}
-                className="h-[190px] w-[196px] shrink-0 animate-pulse rounded-[7px] bg-panel"
+                className="min-h-28 animate-pulse rounded-xl bg-panel md:min-h-40 md:rounded-2xl"
               />
             ))}
           </div>
@@ -580,15 +605,17 @@ function CollectionsPage() {
   // season covers the current month lead, so October surfaces the Halloween
   // list without anyone touching it.
   const occasions = byKind("occasion");
-  const inSeason = occasions.filter((c: CollectionSummary) => c.season_months?.includes(month));
-  const everyday = occasions.filter((c: CollectionSummary) => !c.season_months?.includes(month));
-  const services = byKind("service");
-  const genres = byKind("genre");
-  const origins = byKind("origin");
-  const decades = byKind("decade").sort((a: CollectionSummary, b: CollectionSummary) =>
-    b.slug.localeCompare(a.slug),
-  );
-  const acclaim = [...byKind("awards"), ...byKind("discovery")];
+  const inSeason = occasions
+    .filter((c: CollectionSummary) => c.season_months?.includes(month))
+    .sort(byTitle);
+  const everyday = occasions
+    .filter((c: CollectionSummary) => !c.season_months?.includes(month))
+    .sort(byTitle);
+  const services = byKind("service").sort(byTitle);
+  const genres = byKind("genre").sort(byTitle);
+  const origins = byKind("origin").sort(byTitle);
+  const decades = byKind("decade").sort(byDecade);
+  const acclaim = [...byKind("awards").sort(byTitle), ...byKind("discovery").sort(byTitle)];
   // Locale pinned so the CDN-cached SSR order and every client's hydration
   // order agree on names with diacritics.
   const people = byKind("person").sort((a: CollectionSummary, b: CollectionSummary) =>
@@ -616,7 +643,7 @@ function CollectionsPage() {
             onChange={(e) => setQ(e.target.value)}
             placeholder="Find a collection"
             aria-label="Find a collection"
-            className="w-full rounded-[6px] border border-border bg-panel px-3.5 py-2.5 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-72"
+            className="w-full rounded-full border border-border bg-panel px-4 py-2.5 text-lg text-text-bright placeholder:text-text-dim focus:border-text-bright sm:w-72"
           />
         )
       }
@@ -627,12 +654,14 @@ function CollectionsPage() {
         {matches && (
           <section className="mt-7">
             {matches.length > 0 && (
-              <h2 className="text-[18px] font-black tracking-[-0.02em] text-text-bright">
-                Matches{" "}
-                <span className="font-mono text-[13px] tabular-nums text-text-dim">
+              <div className="flex items-baseline gap-3">
+                <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
+                  Matches
+                </h2>
+                <span className="font-mono text-sm tabular-nums text-text-dim">
                   {matches.length}
                 </span>
-              </h2>
+              </div>
             )}
             {matches.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -641,7 +670,7 @@ function CollectionsPage() {
                     key={c.slug}
                     to="/best/$slug"
                     params={{ slug: c.slug }}
-                    className="rounded-[4px] border border-border bg-panel px-2.5 py-1 text-[13px] text-text-muted transition-colors hover:border-primary hover:text-primary"
+                    className="rounded-full border border-border bg-panel px-3 py-1 text-base text-text-bright transition-colors hover:border-text-bright"
                   >
                     {c.title}
                   </Link>
@@ -650,8 +679,7 @@ function CollectionsPage() {
             ) : (
               <EmptyState
                 variant="inline"
-                line={`Nothing matches "${q.trim()}".`}
-                hint="Collections are named by genre, service, decade, and year. Try one of those."
+                line={`No collection name contains "${q.trim()}".`}
                 action={
                   <button
                     type="button"
@@ -668,91 +696,45 @@ function CollectionsPage() {
 
         <div className={matches || none ? "hidden" : undefined}>
           {/* Tier 1: featured */}
-          <div className="mt-7 grid grid-cols-2 gap-2.5 md:gap-4 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-2.5 md:gap-4 lg:grid-cols-4">
             <ShelfTiles items={featured} className="md:min-h-48" />
           </div>
 
-          {/* Tier 2: shelves. Occasions lead: they answer "what should I put on
-              tonight", which is the question people actually arrive with. */}
-          {occasions.length > 0 && (
-            <Shelf
-              title="Occasions"
-              meta={
-                inSeason.length > 0
-                  ? `${occasions.length} lists · ${inSeason.length} in season`
-                  : `${occasions.length} lists`
-              }
-            >
-              <ShelfTiles
-                items={[...inSeason, ...everyday]}
-                progressFor={progressFor}
-                className={RAIL_TILE}
-              />
-            </Shelf>
-          )}
-          {services.length > 0 && (
-            <Shelf title="Streaming now" meta={`${services.length} services · updated nightly`}>
-              <ShelfTiles items={services} progressFor={progressFor} className={RAIL_TILE} />
-            </Shelf>
-          )}
-          {genres.length > 0 && (
-            <Shelf title="By genre" meta={`${genres.length} lists`}>
-              <ShelfTiles items={genres} progressFor={progressFor} className={RAIL_TILE} />
-            </Shelf>
-          )}
-          {origins.length > 0 && (
-            <Shelf title="By country" meta={`${origins.length} lists`}>
-              <ShelfTiles items={origins} progressFor={progressFor} className={RAIL_TILE} />
-            </Shelf>
-          )}
-          {decades.length > 0 && (
-            <Shelf
-              title="Through the decades"
-              meta={`${new Set(decades.map((c: CollectionSummary) => decadeWord(c.title))).size} decades · ${new Set(years.map((c: CollectionSummary) => c.slug.match(/-of-(\d{4})$/)?.[1])).size} years`}
-            >
-              <ShelfTiles items={decades} progressFor={progressFor} className={RAIL_TILE} />
-            </Shelf>
-          )}
-          {acclaim.length > 0 && (
-            <Shelf title="Awards & discovery" meta={`${acclaim.length} lists`}>
-              <ShelfTiles items={acclaim} progressFor={progressFor} className={RAIL_TILE} />
-            </Shelf>
-          )}
+          {/* Tier 2: walls. Occasions lead: they answer "what should I put on
+              tonight", which is the question people actually arrive with, and
+              the ones in season lead the occasions. */}
+          <Wall title="Occasions" items={[...inSeason, ...everyday]} progressFor={progressFor} />
+          <Wall title="By service" items={services} progressFor={progressFor} />
+          <Wall title="By genre" items={genres} progressFor={progressFor} />
+          <Wall title="By country" items={origins} progressFor={progressFor} />
+          <Wall title="By decade" items={decades} progressFor={progressFor} />
+          <Wall title="Awards & discovery" items={acclaim} progressFor={progressFor} />
           {people.length > 0 && (
-            <section className="mt-11">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-[19px] font-black tracking-[-0.02em] text-text-bright">
-                  People
-                </h2>
-                <span className="font-mono text-[12px] tabular-nums text-text-dim">
-                  {people.length} lists
-                </span>
-              </div>
+            <section className="mt-10 md:mt-14">
+              <SectionHead title="People" count={people.length} />
               <PeopleIndex people={people} />
             </section>
           )}
 
           {/* Tier 3: the full index */}
-          <section className="mt-13 border-t border-border pt-7">
-            <div className="text-[20px] font-black tracking-[-0.02em] text-text-bright">
-              Every collection
-              {collections.length > 0 && (
-                <span className="ml-2 font-mono text-[14px] tabular-nums text-text-dim">
-                  {collections.length}
-                </span>
-              )}
+          <section className="mt-12 border-t border-border pt-7 md:mt-16">
+            <div className="flex items-baseline gap-3">
+              <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
+                Every collection
+              </h2>
+              <span className="font-mono text-sm tabular-nums text-text-dim">
+                {collections.length}
+              </span>
             </div>
 
-            <div className="lg:grid lg:grid-cols-2 lg:gap-x-10">
-              <IndexMatrix
-                label="Genre × service"
-                cols={MATRIX_COLS.map((c) => c.short)}
-                rows={buildMatrix(
-                  genreServicePairs(byKind("genre-service")),
-                  MATRIX_COLS.map((c) => c.short),
-                )}
-              />
-            </div>
+            <IndexMatrix
+              label="Genre × service"
+              cols={MATRIX_COLS.map((c) => c.short)}
+              rows={buildMatrix(
+                genreServicePairs(byKind("genre-service")),
+                MATRIX_COLS.map((c) => c.short),
+              )}
+            />
             <DualIndexMatrix
               label="Origin × genre"
               cols={originCols}
@@ -763,11 +745,11 @@ function CollectionsPage() {
             <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 pb-2">
               <Link
                 to="/methodology"
-                className="text-[13px] font-semibold text-text-muted hover:text-primary"
+                className="text-base font-semibold text-text-bright underline underline-offset-2"
               >
-                How we rank →
+                Methodology
               </Link>
-              <span className="text-[13px] text-text-dim">Data: TMDB &amp; OMDb</span>
+              <span className="text-base text-text-dim">Data: TMDB &amp; OMDb</span>
             </div>
           </section>
         </div>
