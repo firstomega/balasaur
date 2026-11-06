@@ -182,6 +182,62 @@ async function gotoSettled(page: Page, target: string): Promise<void> {
   }
 }
 
+/**
+ * Screens that only exist after a tap, which a page load never shows: the
+ * phone menu open, and a signed-out save on a title page with its toast, then
+ * where the toast's View button leads. Viewport-sized, named `state-*`. These
+ * are pictures for a reviewer, not assertions: a step that cannot run (no
+ * catalog key, so the title page is a not-found) is logged and skipped.
+ */
+async function captureStates(
+  browser: Awaited<ReturnType<typeof chromium.launch>>,
+  url: string,
+): Promise<void> {
+  console.log("\nCapturing tapped states\n");
+  for (const { w, h, label } of [WIDTHS[0], WIDTHS[2]]) {
+    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
+    try {
+      // The menu button exists below 1024px only.
+      if (w < 1024) {
+        await gotoSettled(page, `${url}/`);
+        await page.waitForTimeout(2500);
+        await page.getByRole("button", { name: "Menu" }).click();
+        await page.waitForTimeout(600);
+        await page.screenshot({ path: `${OUT_DIR}/state-menu-open-${label}.png` });
+        console.log(`ok    menu open @ ${label}px`);
+      }
+
+      await gotoSettled(page, `${url}/movie/inception-27205`);
+      await page.waitForTimeout(2500);
+      const save = page.getByRole("button", { name: "Watchlist", exact: true });
+      if ((await save.count()) === 0) {
+        console.log(`skip  title-page save @ ${label}px: no Watchlist button rendered`);
+        continue;
+      }
+      await save.first().click();
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: `${OUT_DIR}/state-title-saved-${label}.png` });
+      console.log(`ok    title-page save toast @ ${label}px`);
+
+      const view = page.getByRole("button", { name: "View", exact: true });
+      if ((await view.count()) === 0) {
+        console.log(`skip  toast View @ ${label}px: no View button in the toast`);
+        continue;
+      }
+      await view.first().click();
+      await page.waitForURL(/\/lists$/, { timeout: 10_000 });
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: `${OUT_DIR}/state-title-saved-view-${label}.png` });
+      console.log(`ok    toast View opens /lists @ ${label}px`);
+    } catch (e) {
+      const message = e instanceof Error ? e.message.split("\n")[0] : String(e);
+      console.log(`skip  tapped states @ ${label}px: ${message}`);
+    } finally {
+      await page.close();
+    }
+  }
+}
+
 async function main() {
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
@@ -290,6 +346,7 @@ async function main() {
         }
       }
     }
+    await captureStates(browser, url);
   } finally {
     await browser.close();
     stop();

@@ -113,9 +113,21 @@ function ListsPage() {
     // scrolled 141px into nothing.
     <div className="bg-background text-foreground">
       <main id="main" className="mx-auto max-w-content px-4 pb-10 pt-6 md:pt-9">
-        <h1 className="mb-4 font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:mb-6 md:text-[64px]">
-          My lists
-        </h1>
+        {/* The heading names the list on screen, so the header's Watchlist
+            link, the save toast's View button and this page say the same
+            word. The library used to be the header's target; it keeps a link
+            here so it stays one tap away at every width. */}
+        <header className="mb-4 flex flex-wrap items-end justify-between gap-3 md:mb-6">
+          <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
+            {BUCKET_LABEL[tab]}
+          </h1>
+          <Link
+            to="/library"
+            className="rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
+          >
+            My Library
+          </Link>
+        </header>
 
         {/* Tabs as pills with live counts, the current one in ink like the
             current section in the header. */}

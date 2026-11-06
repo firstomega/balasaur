@@ -5,6 +5,7 @@ import { ArrowLeft, Bookmark, Check, ExternalLink, Play, ThumbsDown, ThumbsUp } 
 import { ShareButton } from "./ShareButton";
 import { useMediaDetail } from "@/hooks/useMediaDetail";
 import { useUserStatus } from "@/hooks/useUserStatus";
+import { useQuickAction } from "@/hooks/useQuickAction";
 import type { MediaDetail as MediaDetailType } from "@/types/media";
 import type { EpisodeRating } from "@/lib/episodes";
 import type { SwatchKey } from "@/lib/posterSwatch";
@@ -32,8 +33,6 @@ import {
   primaryOf,
   recordForNotInterested,
   recordForSentiment,
-  recordForWant,
-  recordForWatched,
   sentimentOf,
   PRIMARY_COLOR,
   PRIMARY_LABEL,
@@ -139,14 +138,10 @@ function StatusControls({ detail }: { detail: MediaDetailType }) {
   const primary = primaryOf(rec);
   const sentiment = sentimentOf(rec);
   const rejected = isNotInterested(rec);
-
-  const setPrimary = (key: PrimaryKey) => {
-    if (primary === key) {
-      recordStatus(detail.id, null); // tap again to clear
-    } else {
-      recordStatus(detail.id, key === "want" ? recordForWant() : recordForWatched(rec), detail);
-    }
-  };
+  // The cards' handler, so a save here confirms itself with the same toast
+  // and View button. A second tap clears, with the matching removal toast.
+  const quickAction = useQuickAction(statuses, recordStatus);
+  const setPrimary = (key: PrimaryKey) => quickAction(detail, key);
 
   const setSentiment = (s: SentimentKey) => {
     recordStatus(detail.id, recordForSentiment(rec, s), detail);
