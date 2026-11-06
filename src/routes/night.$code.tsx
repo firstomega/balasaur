@@ -336,7 +336,7 @@ function JoinGate({
         <DinoMark className="h-6 w-6 text-primary" />
         <div>
           <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
-            Room <span className="font-mono tracking-widest">{code}</span>
+            Room <span className="font-mono">{code}</span>
           </h1>
           <p className="mt-1.5 text-[13px] text-text-muted">
             {lost ? "Your spot in this room expired. Rejoin with a name." : "Pick a name to join."}

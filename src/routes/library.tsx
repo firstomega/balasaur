@@ -59,11 +59,13 @@ interface PoolItem {
 
 // The room's stylesheet, scoped under .libroom. The class names are the drag
 // engine's handles (it finds rows, items and posters by them), so they stay.
-// A shelf is the wash panel; a title is a painted card. `.target` marks the
+// A shelf is a ruled panel on the paper, so a painted card and the paper
+// tile of a title with no swatch yet both stand out on it. `.target` marks the
 // shelf a dragged poster would land on.
 const ROOM_CSS = `
 .libcase{display:flex; flex-direction:column; gap:12px;}
-.libwall{position:relative; border-radius:16px; background:var(--wash); padding:12px 0 4px;}
+.libwall{position:relative; border-radius:16px; background:var(--paper); padding:12px 0 4px;
+  box-shadow:inset 0 0 0 1px var(--line-strong);}
 .libwall.target{box-shadow:inset 0 0 0 2px var(--ink);}
 .librow{position:relative; display:flex; align-items:flex-start; gap:10px;
   overflow-x:auto; overflow-y:hidden; min-height:196px; padding:6px 14px 12px;
