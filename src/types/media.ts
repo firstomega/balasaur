@@ -200,4 +200,6 @@ export interface PersonList {
   slug: string;
   title: string;
   itemCount: number;
+  /** media_id of the list's first title (collections.poster_ids[0]). */
+  leadId?: string;
 }

@@ -3051,12 +3051,20 @@ async function attachPersonLists(detail: PersonDetail): Promise<void> {
     if (error || !name) return;
     const { data: lists, error: listErr } = await loose(supabaseAdmin)
       .from("collections")
-      .select("slug, title, item_count")
+      .select("slug, title, item_count, poster_ids")
       .eq("kind", "person")
       .in("title", personListTitles(name));
     if (listErr || !lists) return;
-    detail.lists = (lists as { slug: string; title: string; item_count: number }[])
-      .map((l) => ({ slug: l.slug, title: l.title, itemCount: l.item_count }))
+    detail.lists = (
+      lists as { slug: string; title: string; item_count: number; poster_ids: string[] | null }[]
+    )
+      .map((l) => ({
+        slug: l.slug,
+        title: l.title,
+        itemCount: l.item_count,
+        // The list's #1, so the page can paint the list's tile from it.
+        leadId: l.poster_ids?.[0],
+      }))
       // Movies before shows.
       .sort((a, b) => a.slug.localeCompare(b.slug));
   } catch (e) {

@@ -78,23 +78,22 @@ function PersonError({ reset }: ErrorComponentProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <h1 className="text-xl font-semibold text-text-bright">Couldn't load this person</h1>
-        <p className="mt-2 text-sm text-text-muted">
-          We hit a snag fetching their work. Try again or head back to the grid.
-        </p>
+        <h1 className="font-display text-3xl font-extrabold leading-none text-text-bright">
+          Couldn't load this person
+        </h1>
         <div className="mt-5 flex justify-center gap-2">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="rounded-[5px] bg-primary px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground"
+            className="rounded-full bg-text-bright px-4 py-2 text-lg font-bold text-background"
           >
             Try again
           </button>
           <Link
             to="/"
-            className="rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
+            className="rounded-full border-2 border-text-bright px-4 py-2 text-lg font-bold text-text-bright"
           >
             Back to grid
           </Link>
@@ -108,13 +107,15 @@ function PersonNotFound() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <h1 className="text-xl font-semibold text-text-bright">Couldn't find this person</h1>
-        <p className="mt-2 text-sm text-text-muted">
+        <h1 className="font-display text-3xl font-extrabold leading-none text-text-bright">
+          Couldn't find this person
+        </h1>
+        <p className="mt-3 text-lg text-text-muted">
           They may have been removed or the link is wrong.
         </p>
         <Link
           to="/"
-          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 text-[14px] font-bold tracking-[-0.01em] text-text-bright"
+          className="mt-5 inline-block rounded-full border-2 border-text-bright px-4 py-2 text-lg font-bold text-text-bright"
         >
           Back to grid
         </Link>

@@ -1,11 +1,11 @@
 {
   "totals": {
-    "fontSize": 752,
-    "radius": 255,
+    "fontSize": 741,
+    "radius": 249,
     "duration": 4,
     "easing": 8,
     "hex": 249,
-    "containerWidth": 72
+    "containerWidth": 70
   },
   "files": {
     "src/components/arcade/ArcadeTile.tsx": {
@@ -167,9 +167,7 @@
       "radius": 7
     },
     "src/components/balasaur/PersonDetail.tsx": {
-      "fontSize": 11,
-      "radius": 3,
-      "containerWidth": 2
+      "fontSize": 3
     },
     "src/components/balasaur/ProviderIcon.tsx": {
       "fontSize": 2,
@@ -309,10 +307,6 @@
       "fontSize": 13,
       "radius": 6,
       "containerWidth": 1
-    },
-    "src/routes/person.$id.tsx": {
-      "fontSize": 3,
-      "radius": 3
     },
     "src/routes/play.balasaurdle.tsx": {
       "fontSize": 19,
