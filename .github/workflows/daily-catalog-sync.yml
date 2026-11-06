@@ -49,6 +49,8 @@ jobs:
           # of re-running the same 9 combos every day.
           BASE=$(( $(date -u +%s) / 86400 * 9 ))
           total=0
+          # One freshness value per successful pass, judged by the next step.
+          : > /tmp/freshness.txt
           for i in $(seq 1 9); do
             bucket=$(( BASE + i ))
             echo "──────── sync pass $i/9 (bucket=$bucket) ────────"
@@ -78,6 +80,7 @@ jobs:
               echo "::error::Sync pass $i failed with HTTP $HTTP (after retries)"
               exit 1
             fi
+            jq -r '.catalogMaxUpdatedAt // "null"' /tmp/sync.json >> /tmp/freshness.txt 2>/dev/null || echo null >> /tmp/freshness.txt
             refreshed=$(jq -r '.refreshed // 0' /tmp/sync.json 2>/dev/null || echo 0)
             case "$refreshed" in '' | *[!0-9]*) refreshed=0 ;; esac
             total=$((total + refreshed))
@@ -90,26 +93,33 @@ jobs:
         env:
           BASE_URL: https://balasaur.com
         run: |
-          # The sync endpoint reports the newest media.updated_at AFTER its writes
-          # (`catalogMaxUpdatedAt`). If it's missing (old deploy without the field)
-          # or older than 48h, the writes aren't landing — fail the run LOUDLY.
+          # Every sync pass reports the newest media.fetched_at after its writes
+          # (the field is still called `catalogMaxUpdatedAt`). The newest value
+          # across ALL passes is judged, not only the last pass's: on 1 to 4 Nov
+          # every write landed, but the last pass's freshness read came back
+          # null and the night went red. If no pass returned a value, or the
+          # newest is older than 48h, writes are not landing: fail LOUDLY.
           # 2026-07/08 incident: upserts failed for five weeks while every nightly
           # run stayed green because per-chunk errors were only console.logged.
-          MAXUPD=$(jq -r '.catalogMaxUpdatedAt // empty' /tmp/sync.json 2>/dev/null)
-          if [ -z "$MAXUPD" ]; then
-            echo "::error::Sync response has no catalogMaxUpdatedAt — the deployed app predates the freshness canary (or writes are failing). Redeploy from main and verify."
+          set +e
+          RESULT=$(bash .github/scripts/catalog-freshness.sh /tmp/freshness.txt 48)
+          CODE=$?
+          set -e
+          echo "Freshness: $RESULT"
+          if [ "$CODE" -eq 1 ]; then
+            echo "::error::No sync pass returned a freshness value ($RESULT). Either the deployed app predates the canary or every freshness read failed. Redeploy from main and verify."
             exit 1
           fi
-          NOW=$(date -u +%s)
-          THEN=$(date -u -d "$MAXUPD" +%s 2>/dev/null || echo 0)
-          AGE_H=$(( (NOW - THEN) / 3600 ))
-          echo "Newest media.updated_at: $MAXUPD (~${AGE_H}h ago)"
-          if [ "$THEN" -eq 0 ] || [ "$AGE_H" -gt 48 ]; then
-            echo "::error::Catalog is stale: newest media.updated_at is ${MAXUPD} (~${AGE_H}h old). Writes are not persisting — check server env (APP_SUPABASE_*) and DB grants."
+          if [ "$CODE" -ne 0 ]; then
+            echo "::error::Catalog is stale ($RESULT, limit 48h). Writes are not persisting. Check server env (APP_SUPABASE_*) and DB grants."
             exit 1
           fi
 
+      # Runs even when an earlier step failed: a red freshness check used to
+      # skip this step and the backfill, so a false alarm cost a night of
+      # long-tail freshness. Only a cancelled run skips it.
       - name: Long-tail refresh (stalest titles, table-wide)
+        if: ${{ !cancelled() }}
         env:
           BASE_URL: https://balasaur.com
           APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
@@ -124,7 +134,7 @@ jobs:
           # whole hole in roughly a week. Drop back to 5 once the backfill step below
           # reports missingRaw near 0.
           for i in $(seq 1 30); do
-            echo "──────── refresh pass $i/5 ────────"
+            echo "──────── refresh pass $i/30 ────────"
             HTTP=000
             for attempt in 1 2 3 4; do
               HTTP=$(curl -sS -o /tmp/refresh.json -w "%{http_code}" \
@@ -134,20 +144,20 @@ jobs:
               HTTP=${HTTP:-000}
               [ "$HTTP" = "200" ] && break
               echo "pass $i attempt $attempt: HTTP $HTTP"; cat /tmp/refresh.json 2>/dev/null; echo
-              case "$HTTP" in 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
+              # 500 is retried for the reason the sync step gives: a refresh pass
+              # is a set of upserts, so a rerun only redoes what did not land.
+              case "$HTTP" in 500 | 502 | 503 | 504 | 429 | 000) ;; *) break ;; esac
               backoff=$((attempt * attempt * 5)); echo "retrying in ${backoff}s…"; sleep "$backoff"
             done
             echo "HTTP $HTTP"; echo "Response:"; cat /tmp/refresh.json; echo
             if [ "$HTTP" != "200" ]; then
-              # Stopgap (2026-06): the table-wide "stalest titles" query times out
-              # (HTTP 500: "canceling statement due to statement timeout") as the
-              # catalog grows, which was hard-failing the whole nightly run even
-              # though the grow passes above had already succeeded. Until the refresh
-              # path is redesigned, treat a failed refresh as a non-fatal warning so
-              # new titles keep flowing and the run stays green. Auth/endpoint outages
-              # are still caught by the grow step above, which exits 1 on any non-200.
-              echo "::warning::Long-tail refresh pass $i returned HTTP $HTTP — skipping remaining refresh for this run (known stalest-query timeout; grow passes already succeeded)."
-              break
+              # This used to be a warning, because the stalest-titles query sorted
+              # the whole table and timed out under load. It now reads the
+              # fetched_at index (3 ms), so a pass that still fails after four
+              # attempts is a real failure and the night goes red. The backfill
+              # and poster-colour steps below still run.
+              echo "::error::Long-tail refresh pass $i failed with HTTP $HTTP (after retries). Remaining refresh passes skipped."
+              exit 1
             fi
             refreshed=$(jq -r '.refreshed // 0' /tmp/refresh.json 2>/dev/null || echo 0)
             case "$refreshed" in '' | *[!0-9]*) refreshed=0 ;; esac
@@ -157,6 +167,7 @@ jobs:
           done
 
       - name: Backfill facets + derivations (automatic, resumable)
+        if: ${{ !cancelled() }}
         env:
           BASE_URL: https://balasaur.com
           APIKEY: ${{ secrets.SYNC_HOOK_SECRET }}
@@ -171,8 +182,8 @@ jobs:
           # flag; we thread lastId back as `after`, so one run walks the whole catalog via
           # many short calls (none long enough to hit a host/statement timeout). skip-unchanged
           # makes converged runs cheap (no rewrites). A stuck page (transient read timeout) is
-          # retried, and any failure is a non-fatal warning — it resumes next run, and the
-          # grow passes above already succeeded.
+          # retried, and any failure is a non-fatal warning: it resumes next run, and the
+          # sync, freshness and refresh steps above decide whether the night is red.
           # Wall-clock budget (2026-07-02 incident): an unbounded converge run once made
           # 58 back-to-back passes (~97 min of sustained reads + ~60k row updates) and
           # took the Cloud DB down with it — the site was dark for hours. Cap the nightly

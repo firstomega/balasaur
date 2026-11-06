@@ -20,7 +20,9 @@ import { mediaSlug } from "./slug";
 import { bestDecadeOf, pickTopCredits, rankedPool, type PersonCreditFacts } from "./personRanking";
 import { personListTitles } from "./personLists";
 import { joinCatalogCredits } from "./personPage";
+import { dataUnavailable } from "./dataError";
 import { RANKED_MIN_VOTES } from "./trust";
+import { parseImdbVotes } from "./indexKeep";
 import { upsertInChunks } from "./chunkedUpsert";
 import {
   recordAvailabilityEvents,
@@ -48,7 +50,7 @@ type MediaRow = TablesInsert<"media"> & {
 
 /**
  * The sitemap protocol's ceiling on URLs per file. Not a budget: the title
- * sitemap lists exactly the kept set (index_kept_media, about 3,700 titles),
+ * sitemap lists exactly the kept set (index_kept_media, about 5,000 titles),
  * and which titles are kept is decided in src/lib/indexKeep.ts.
  */
 export const SITEMAP_URL_LIMIT = 50000;
@@ -424,6 +426,8 @@ function enrichFromDetails(item: MediaItem, d: TmdbDetails): string | undefined 
 interface OmdbResponse {
   Response: "True" | "False";
   imdbRating?: string;
+  /** "2,877,173", or "N/A". Read with parseImdbVotes. */
+  imdbVotes?: string;
   Metascore?: string;
   Ratings?: { Source: string; Value: string }[];
   Awards?: string;
@@ -1322,19 +1326,28 @@ async function upsertMediaRowsStrict(rows: MediaRow[], tag: string): Promise<voi
   await recordAvailabilityEvents(availabilityClient, priorAvailability, rows, { tag });
 }
 
-/** Newest `updated_at` in `media` — the freshness signal the nightly canary asserts on. */
+/**
+ * The freshness signal the nightly canary asserts on. Despite the name, this
+ * reads the newest `fetched_at`, not `updated_at`: every sync and refresh write
+ * goes through `rowFromEnrichedItem`, which stamps both, and `fetched_at` has an
+ * index, so this is one index lookup (2 ms) instead of a scan of the whole table
+ * (180 ms idle, past the statement timeout under load, which returned null on 18
+ * of 45 passes and turned four nights red with every write landed). The name is
+ * kept because the workflow and older run logs read `catalogMaxUpdatedAt`.
+ * `fetched_at` is NOT NULL, so the default DESC order never puts a null first.
+ */
 async function catalogMaxUpdatedAt(): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("media")
-    .select("updated_at")
-    .order("updated_at", { ascending: false })
+    .select("fetched_at")
+    .order("fetched_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) {
     console.error("[sync] catalogMaxUpdatedAt failed:", error.message);
     return null;
   }
-  return data?.updated_at ?? null;
+  return data?.fetched_at ?? null;
 }
 
 // ---------- Poster colors ----------
@@ -1634,7 +1647,7 @@ export interface SyncResult {
   skippedFresh: number;
   failed: number;
   durationMs: number;
-  /** Newest media.updated_at AFTER this pass's writes (nightly freshness canary). */
+  /** Newest media.fetched_at AFTER this pass's writes (nightly freshness canary). */
   catalogMaxUpdatedAt: string | null;
 }
 
@@ -1837,7 +1850,7 @@ export interface RefreshResult {
   oldestAgeDays: number | null;
   budgetHit: boolean;
   durationMs: number;
-  /** Newest media.updated_at AFTER this pass's writes (nightly freshness canary). */
+  /** Newest media.fetched_at AFTER this pass's writes (nightly freshness canary). */
   catalogMaxUpdatedAt: string | null;
 }
 
@@ -1866,7 +1879,10 @@ export async function refreshStalest(opts?: {
   const { data: stale, error: selErr } = await supabaseAdmin
     .from("media")
     .select("media_id, media_type, genres, title, year, poster_url, fetched_at")
-    .order("fetched_at", { ascending: true, nullsFirst: true })
+    // NULLS LAST, the btree's own order, so this walks idx_media_fetched_at
+    // (3 ms) instead of sorting the whole table (280 ms idle, a statement
+    // timeout under load). fetched_at is NOT NULL, so no row is skipped.
+    .order("fetched_at", { ascending: true, nullsFirst: false })
     .limit(limit);
   if (selErr) throw new Error(`stalest select failed: ${selErr.message}`);
   if (!stale || stale.length === 0) {
@@ -2411,7 +2427,10 @@ function buildDetailFromRaw(
   }
 
   // OMDb enrichment from the supplied payload (no network call here).
-  if (rawOmdb) applyOmdbRatings(detail, rawOmdb);
+  if (rawOmdb) {
+    applyOmdbRatings(detail, rawOmdb);
+    detail.imdbVotes = parseImdbVotes(rawOmdb.imdbVotes);
+  }
 
   return detail;
 }
@@ -2484,10 +2503,9 @@ async function fetchRelatedRail(
     p_media_id: anchorId,
     p_target_type: targetType,
   });
-  if (error) {
-    console.error("[detail] related_titles failed:", error.message);
-    return undefined;
-  }
+  // A failed read throws so attachRelatedRails can tell it from a rail the
+  // gate refused, which returns undefined below.
+  if (error) throw dataUnavailable("[detail] related_titles failed", error);
   const rows = ((data ?? []) as unknown as RelatedRow[]).filter(isStrongMatch);
   if (rows.length < MIN_RELATED_MATCHES) return undefined;
   const items = rows.slice(0, 12).map((r) => {
@@ -2504,20 +2522,52 @@ async function fetchRelatedRail(
 async function attachRelatedRails(detail: MediaDetail): Promise<void> {
   if (detail.mediaType !== "movie" && detail.mediaType !== "tv") return;
   const other = detail.mediaType === "tv" ? "movie" : "tv";
-  const [own, cross, ctx] = await Promise.all([
+  const reads = await Promise.allSettled([
     fetchRelatedRail(detail.id, detail.mediaType),
     fetchRelatedRail(detail.id, other),
     loose(supabaseAdmin)
       .rpc("title_context", { p_media_id: detail.id })
-      .then(
-        (r) => (r.error ? null : (r.data?.[0] ?? null)),
-        () => null,
-      ),
+      .then((r) => {
+        if (r.error) throw dataUnavailable("[detail] title_context failed", r.error);
+        return (r.data?.[0] ?? null) as TitleContextRow | null;
+      }),
   ]);
+  settleRelatedRails(detail, reads);
+}
+
+interface TitleContextRow {
+  cohort_label?: string | null;
+  percentile?: number | null;
+  cohort_size?: number | null;
+  franchise_rank?: number | null;
+  franchise_size?: number | null;
+}
+
+/**
+ * Writes the rail reads onto the detail. The engine version is stamped only
+ * when all three reads answered, because the stamp is what keeps the payload
+ * for seven days: a timed-out read left unstamped is retried on the next view
+ * instead of serving "no rail" for a week. A read that failed leaves no rail,
+ * as before: what the field held may be TMDB's unfiltered list or an older
+ * engine's rail, and neither may render. A rail the gate refused (fewer than 6
+ * real matches) is an answer, not a failure, and is stamped like any other.
+ */
+export function settleRelatedRails(
+  detail: MediaDetail,
+  [own, cross, ctxRead]: [
+    PromiseSettledResult<MediaItem[] | undefined>,
+    PromiseSettledResult<MediaItem[] | undefined>,
+    PromiseSettledResult<TitleContextRow | null>,
+  ],
+): void {
   // No weak rail: fewer than 6 real matches means no rail at all. This also
   // drops TMDB's raw recommendation list, which had no content filters.
-  detail.related = own;
-  detail.relatedCross = cross;
+  detail.related = own.status === "fulfilled" ? own.value : undefined;
+  detail.relatedCross = cross.status === "fulfilled" ? cross.value : undefined;
+  if (own.status === "rejected" || cross.status === "rejected" || ctxRead.status === "rejected") {
+    return;
+  }
+  const ctx = ctxRead.value;
   // Cohort percentile + franchise standing for the data-prose layer.
   if (ctx) {
     const cohort =
@@ -2581,11 +2631,12 @@ export async function fetchMediaDetail(
             [r?.imdb, r?.rottenTomatoes, r?.metacritic, r?.tmdb].filter(
               (v) => typeof v === "number",
             ).length;
-          // The vote count is always re-read, not only when missing. The kept
-          // set (src/lib/indexKeep.ts) draws a line on it, and the sitemap
-          // reads the catalog row's count; a payload up to seven days old
-          // would let a title near the line say noindex while the sitemap
-          // still lists it.
+          // Both vote counts are always re-read, not only when missing. The
+          // kept set (src/lib/indexKeep.ts) draws a line on each, and the
+          // sitemap reads the catalog row's counts; a payload up to seven days
+          // old would let a title near a line say noindex while the sitemap
+          // still lists it. The IMDb count is read as one field of the stored
+          // OMDb payload, not the whole payload.
           const needsScore = cached.ratings?.balasaur === undefined;
           const needsStreaming = (cached.streaming ?? []).length === 0;
           const needsSources = sourceCount(cached.ratings) < 2;
@@ -2593,13 +2644,14 @@ export async function fetchMediaDetail(
             const { data: row } = await loose(supabaseAdmin)
               .from("media")
               .select(
-                "vote_count, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
+                "vote_count, imdb_votes:raw_omdb->>imdbVotes, rating_balasaur, streaming, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb",
               )
               .eq("media_id", cacheId)
               .maybeSingle();
             if (typeof row?.vote_count === "number") {
               cached.voteCount = row.vote_count;
             }
+            if (row) cached.imdbVotes = parseImdbVotes(row.imdb_votes);
             if (needsScore && typeof row?.rating_balasaur === "number") {
               cached.ratings = { ...(cached.ratings ?? {}), balasaur: row.rating_balasaur };
             }
@@ -3093,6 +3145,7 @@ async function attachPersonLists(detail: PersonDetail): Promise<void> {
  *  same answer the sitemap gives a person it cannot confirm. */
 async function attachPersonIndexable(detail: PersonDetail): Promise<void> {
   delete detail.indexable;
+  delete detail.incomplete;
   const personId = Number.parseInt(detail.id, 10);
   if (!Number.isFinite(personId)) return;
   try {
@@ -3103,11 +3156,13 @@ async function attachPersonIndexable(detail: PersonDetail): Promise<void> {
       .maybeSingle();
     if (error) {
       console.error("[person] kept-set lookup failed:", error.message);
+      detail.incomplete = true;
       return;
     }
     detail.indexable = Boolean(data);
   } catch (e) {
     console.error("[person] kept-set lookup failed:", e);
+    detail.incomplete = true;
   }
 }
 
