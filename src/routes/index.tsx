@@ -122,31 +122,39 @@ export const Route = createFileRoute("/")({
       context.queryClient.getQueryData(homeLeadersOptions().queryKey) ?? null;
     return { leaders };
   },
-  head: ({ match, loaderData }) => ({
-    meta: [
-      { title: pageTitle(match?.search as FilterSearch | undefined) },
-      { name: "description", content: homeDescription(loaderData?.leaders) },
-      { property: "og:title", content: pageTitle(match?.search as FilterSearch | undefined) },
-      { property: "og:description", content: homeDescription(loaderData?.leaders) },
-      { property: "og:url", content: SITE_ORIGIN + "/" },
-      ...(homeIsIndexable(match?.search as FilterSearch | undefined) ? [] : [noindexMeta()]),
-    ],
-    links: [
-      // Page 2 and beyond self-canonicalise and say "noindex, follow" (see
-      // homeIsIndexable): pointing them at "/" would tell Google to ignore
-      // the very links the trail exists to offer, and indexing them spent
-      // crawl budget on 400 slices of one grid.
-      //
-      // A FILTERED view is the opposite case and used to be handled wrong.
-      // /?genre=Horror&page=3 canonicalised to /?page=3, which is a different
-      // set of titles, so the page claimed to be a page it was not. Filters
-      // produce hundreds of near-duplicate slices of one catalog and none of
-      // them is the canonical home for anything, so they all consolidate to "/"
-      // and the crawl budget goes to the kept title pages instead.
-      canonicalLink(SITE_ORIGIN + canonicalPath(match?.search as FilterSearch | undefined)),
-    ],
-    scripts: [jsonLdScript(websiteJsonLd())],
-  }),
+  head: ({ match, loaderData }) => {
+    const title = pageTitle(match?.search as FilterSearch | undefined);
+    const description = homeDescription(loaderData?.leaders);
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        // The root's share tags read "Balasaur" and the site description; a
+        // card shared from home should carry what the search result carries.
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { property: "og:url", content: SITE_ORIGIN + "/" },
+        ...(homeIsIndexable(match?.search as FilterSearch | undefined) ? [] : [noindexMeta()]),
+      ],
+      links: [
+        // Page 2 and beyond self-canonicalise and say "noindex, follow" (see
+        // homeIsIndexable): pointing them at "/" would tell Google to ignore
+        // the very links the trail exists to offer, and indexing them spent
+        // crawl budget on 400 slices of one grid.
+        //
+        // A FILTERED view is the opposite case and used to be handled wrong.
+        // /?genre=Horror&page=3 canonicalised to /?page=3, which is a different
+        // set of titles, so the page claimed to be a page it was not. Filters
+        // produce hundreds of near-duplicate slices of one catalog and none of
+        // them is the canonical home for anything, so they all consolidate to "/"
+        // and the crawl budget goes to the kept title pages instead.
+        canonicalLink(SITE_ORIGIN + canonicalPath(match?.search as FilterSearch | undefined)),
+      ],
+      scripts: [jsonLdScript(websiteJsonLd())],
+    };
+  },
   errorComponent: HomeError,
   component: HomePage,
 });
