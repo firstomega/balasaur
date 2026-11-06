@@ -18,8 +18,8 @@ import { ScoreStrip } from "./ScoreStrip";
 // band only on wide screens once play has started; in the ready state the
 // panel below carries it large, and at phone width the band stays one line so
 // the board starts within 60px of the top bar. Ready: the mark large on a hue
-// block, the hook, one Play pill, the rule, and a collapsible how-to that
-// exists only here. Playing: the score strip and the board; the timer lives
+// block, the name, the rule, one Play pill, the payout, and a collapsible
+// how-to that exists only here. Playing: the score strip and the board; the timer lives
 // in the board next to what it times. Ended: the EndScreen. Phases cross-fade.
 //
 // The shell also owns the two cues that belong to no board, because it is the
@@ -102,8 +102,9 @@ export function GameShell({
   const dayChip = dayNumber !== undefined ? `No. ${dayNumber}` : null;
   const roundChip = !game.daily && api.phase !== "ready" ? `Round ${api.round}` : null;
   const chip = dayChip ?? roundChip;
-  // The ready panel already says the hook at 16px; the band repeats it only
-  // once play has started, and only where a second line costs nothing.
+  // The ready panel leads with the rule, which already says what the hook
+  // says; the band adds the hook once play has started, and only where a
+  // second line costs nothing. The day chip lives in the band alone.
   const bandHook = api.phase !== "ready";
 
   return (
@@ -151,17 +152,10 @@ export function GameShell({
               <div className="flex h-32 w-32 items-center justify-center rounded-2xl bg-[var(--game,var(--primary))] text-[var(--game-ink,var(--primary-foreground))]">
                 <GameMark slug={game.slug} size={92} />
               </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <h2 className="font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
-                  {game.name}
-                </h2>
-                {dayChip && (
-                  <span className="font-mono text-xs uppercase tracking-wider text-text-dim">
-                    {dayChip}
-                  </span>
-                )}
-              </div>
-              <p className="mt-3 text-xl leading-snug text-text">{game.hook}</p>
+              <h2 className="mt-4 font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
+                {game.name}
+              </h2>
+              <p className="mt-3 text-xl leading-snug text-text">{game.rule}</p>
               <button
                 type="button"
                 onClick={() => {
@@ -175,8 +169,7 @@ export function GameShell({
               >
                 {startLabel}
               </button>
-              <p className="mt-4 text-base text-text-muted">{game.rule}</p>
-              <p className="mt-1 text-sm text-text-dim">{game.payoutRule}</p>
+              <p className="mt-4 text-sm text-text-muted">{game.payoutRule}</p>
 
               <button
                 type="button"

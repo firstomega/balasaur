@@ -211,7 +211,7 @@ function ArcadeHub() {
  *  mount in reserved space. */
 function Hero({ mounted, best }: { mounted: boolean; best: Personal["best"] }) {
   return (
-    <header className="grid gap-5 md:grid-cols-[1fr_auto] md:items-end md:gap-10">
+    <header className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end md:gap-10">
       <div>
         <h1 className="text-balance font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
           {ENABLED_SLUGS.length} movie games, new at midnight
@@ -219,7 +219,7 @@ function Hero({ mounted, best }: { mounted: boolean; best: Personal["best"] }) {
         <p className="mt-3 text-lg text-text-muted">Every player gets the same boards.</p>
 
         {/* Personal row: reserved height, filled after mount. */}
-        <div className="mt-3 flex min-h-8 flex-wrap items-center gap-x-5 gap-y-2 text-base text-text-muted">
+        <div className="mt-2 flex min-h-8 flex-wrap items-center gap-x-5 gap-y-2 text-base text-text-muted">
           {mounted && (
             <>
               <CometChip />
