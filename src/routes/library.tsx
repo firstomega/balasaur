@@ -554,7 +554,7 @@ function LibraryPage() {
               to="/lists"
               className="rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
             >
-              My lists
+              Watchlist
             </Link>
           </header>
 

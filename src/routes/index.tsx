@@ -31,14 +31,9 @@ import { WatchlistNudge } from "@/components/balasaur/WatchlistNudge";
 import { boostBucketsForCountry } from "@/lib/localFirst";
 import { ssrBudget } from "@/lib/ssrBudget";
 import { useUserStatus } from "@/hooks/useUserStatus";
+import { useQuickAction } from "@/hooks/useQuickAction";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  isNotInterested,
-  primaryOf,
-  recordForNotInterested,
-  recordForWant,
-  recordForWatched,
-} from "@/lib/userStatus";
+import { isNotInterested, primaryOf } from "@/lib/userStatus";
 import type { QuickAction } from "@/components/balasaur/MediaCard";
 import { loadFilters, saveFilters } from "@/lib/filterStorage";
 import {
@@ -51,7 +46,6 @@ import {
 import { rescueCandidates } from "@/lib/filterRescue";
 import { defaultFilterState, type FilterState } from "@/types/filters";
 import type { MediaItem } from "@/types/media";
-import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { SITE_ORIGIN, canonicalLink, jsonLdScript, noindexMeta } from "@/lib/seo";
@@ -228,38 +222,10 @@ function HomePage() {
   const homeCountry = (user?.user_metadata?.region as string | undefined) || ipCountry || "";
   const boostCountry = boostBucketsForCountry(homeCountry).length > 0 ? homeCountry : "";
 
-  // Card quick actions (desktop hover): Save-to-watchlist (primary while
-  // browsing) and Watched. Each toggles its own state; Watched preserves any
-  // sentiment already on the record.
-  // No sign-in gate here. Saving works signed out: useUserStatus keeps an
-  // anonymous pick in localStorage and moves it into the account on sign-in.
-  const handleQuickAction = (item: MediaItem, action: QuickAction) => {
-    const rec = statuses[item.id];
-    if (action === "notInterested") {
-      if (isNotInterested(rec)) {
-        recordStatus(item.id, null);
-        toast(`Restored · ${item.title}`, { duration: 1400 });
-      } else {
-        recordStatus(item.id, recordForNotInterested(), item);
-        toast(`Hidden · ${item.title}`, {
-          duration: 3500,
-          action: { label: "Undo", onClick: () => recordStatus(item.id, null) },
-        });
-      }
-      return;
-    }
-    const current = primaryOf(rec);
-    if (current === action) {
-      recordStatus(item.id, null); // toggle off
-      toast(`Removed · ${item.title}`, { duration: 1400 });
-    } else if (action === "want") {
-      recordStatus(item.id, recordForWant(), item);
-      toast.success(`Watchlist · ${item.title}`, { duration: 1400 });
-    } else {
-      recordStatus(item.id, recordForWatched(rec), item);
-      toast.success(`Seen · ${item.title}`, { duration: 1400 });
-    }
-  };
+  // Card quick actions: the shared handler, so home cards confirm a save the
+  // same way as every other card. No sign-in gate: useUserStatus keeps a
+  // signed-out pick in localStorage and moves it into the account on sign-in.
+  const handleQuickAction = useQuickAction(statuses, recordStatus);
 
   // Watchlist / rejected ids for card states (seenIds already exists for watched).
   const wantIds = useMemo(

@@ -240,8 +240,8 @@ export function LibraryDeck({ items }: { items: MediaItem[] }) {
             }
             action={
               <>
-                <Link to="/lists" className={EMPTY_ACTION_QUIET_CLASS}>
-                  My library
+                <Link to="/library" className={EMPTY_ACTION_QUIET_CLASS}>
+                  My Library
                 </Link>
                 <Link to="/" className={EMPTY_ACTION_CLASS}>
                   Browse the grid
@@ -704,10 +704,10 @@ function LibrarySummary({
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Link
-          to="/lists"
+          to="/library"
           className="rounded-full border border-border-strong bg-background px-4 py-2 text-lg font-bold text-text-bright hover:border-text-bright"
         >
-          View my library
+          View My Library
         </Link>
         <Link
           to="/"

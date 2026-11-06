@@ -64,10 +64,13 @@ export function TopBar() {
               <MenuLink to="/play" label="Play" onNavigate={() => setMenuOpen(false)} />
               <MenuLink to="/night" label="Movie Night" onNavigate={() => setMenuOpen(false)} />
               <div className="mx-4 my-2 border-t border-border" />
+              {/* The phone's way to the Watchlist: the header has no room for
+                  its link below 768px. Rate is not repeated here because the
+                  header's Rate button shows at every width. */}
               <MenuLink
-                to="/watched"
-                label="Rate titles"
-                icon={<Zap className="h-3.5 w-3.5" />}
+                to="/lists"
+                label="Watchlist"
+                icon={<Bookmark className="h-3.5 w-3.5" />}
                 onNavigate={() => setMenuOpen(false)}
               />
               <MenuLink
@@ -118,11 +121,14 @@ export function TopBar() {
             <Zap className="h-3.5 w-3.5" />
             Rate
           </Link>
-          {/* The Watchlist lives in the library. The count appears only for a
-              signed-in visitor with something saved: a 0 tells a first-time
-              visitor nothing. It is read after mount, never in cached HTML. */}
+          {/* The Watchlist is the first tab of /lists, where the save toast's
+              View button and the home page's streaming line also lead. The
+              count appears only for a signed-in visitor with something saved:
+              a 0 tells a first-time visitor nothing. It is read after mount,
+              never in cached HTML. Below 768px there is no room beside Sign
+              in, so the menu carries it. */}
           <Link
-            to="/library"
+            to="/lists"
             aria-label={saved ? `Watchlist, ${saved} saved` : "Watchlist"}
             className="hidden items-center gap-1.5 rounded-full px-3 py-1 text-base font-semibold text-text-bright transition-colors duration-fast hover:bg-panel md:inline-flex"
           >
