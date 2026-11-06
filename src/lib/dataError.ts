@@ -7,20 +7,23 @@
 // returns one; only a failure throws.
 
 export class DataUnavailableError extends Error {
-  constructor(what: string, cause?: string) {
-    super(cause ? `${what}: ${cause}` : what);
+  constructor(what: string) {
+    super(what);
     this.name = "DataUnavailableError";
   }
 }
 
 /** Log a failed read and return the error to throw, so every call site reads
- *  `if (error) throw dataUnavailable("[calendar] query failed", error)`. */
+ *  `if (error) throw dataUnavailable("[calendar] query failed", error)`. The
+ *  database's own message goes to the server log only: a thrown error is
+ *  serialized into the page for hydration, and a Postgres message can name
+ *  tables and columns. */
 export function dataUnavailable(
   what: string,
   error: { message?: string } | null | undefined,
 ): DataUnavailableError {
   console.error(`${what}:`, error?.message);
-  return new DataUnavailableError(what, error?.message);
+  return new DataUnavailableError(what);
 }
 
 /**

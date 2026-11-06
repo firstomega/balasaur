@@ -2474,9 +2474,10 @@ interface TitleContextRow {
  * Writes the rail reads onto the detail. The engine version is stamped only
  * when all three reads answered, because the stamp is what keeps the payload
  * for seven days: a timed-out read left unstamped is retried on the next view
- * instead of serving "no rail" for a week. A read that failed leaves its field
- * as it was. A rail the gate refused (fewer than 6 real matches) is an answer,
- * not a failure, and is stamped like any other.
+ * instead of serving "no rail" for a week. A read that failed leaves no rail,
+ * as before: what the field held may be TMDB's unfiltered list or an older
+ * engine's rail, and neither may render. A rail the gate refused (fewer than 6
+ * real matches) is an answer, not a failure, and is stamped like any other.
  */
 export function settleRelatedRails(
   detail: MediaDetail,
@@ -2488,8 +2489,8 @@ export function settleRelatedRails(
 ): void {
   // No weak rail: fewer than 6 real matches means no rail at all. This also
   // drops TMDB's raw recommendation list, which had no content filters.
-  if (own.status === "fulfilled") detail.related = own.value;
-  if (cross.status === "fulfilled") detail.relatedCross = cross.value;
+  detail.related = own.status === "fulfilled" ? own.value : undefined;
+  detail.relatedCross = cross.status === "fulfilled" ? cross.value : undefined;
   if (own.status === "rejected" || cross.status === "rejected" || ctxRead.status === "rejected") {
     return;
   }

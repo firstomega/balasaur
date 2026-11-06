@@ -47,10 +47,13 @@ describe("settleRelatedRails", () => {
     expect(d.relatedCross).toEqual(rail);
   });
 
-  it("keeps the rail a cached payload already had when the rebuild read fails", () => {
-    const d = detail({ related: rail, relatedVersion: 2 });
+  it("drops TMDB's unfiltered list when the rebuild read fails, as it did before", () => {
+    // buildDetailFromRaw fills `related` from TMDB recommendations, which have
+    // no content filters. A failed engine read must not let that list render.
+    const d = detail({ related: rail, relatedCross: rail, relatedVersion: 2 });
     settleRelatedRails(d, [timedOut, timedOut, ok(null)]);
-    expect(d.related).toEqual(rail);
+    expect(d.related).toBeUndefined();
+    expect(d.relatedCross).toBeUndefined();
     expect(d.relatedVersion).toBe(2);
   });
 

@@ -2,11 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { DataUnavailableError, dataUnavailable, noStoreOnServerError } from "./dataError";
 
 describe("dataUnavailable", () => {
-  it("carries the read and the database's reason", () => {
-    const e = dataUnavailable("[calendar] query failed", { message: "statement timeout" });
+  it("names the read but keeps the database's reason out of the page", () => {
+    // The thrown error is serialized into the HTML for hydration.
+    const e = dataUnavailable("[calendar] query failed", {
+      message: 'relation "media" column "raw_omdb" does not exist',
+    });
     expect(e).toBeInstanceOf(DataUnavailableError);
     expect(e.name).toBe("DataUnavailableError");
-    expect(e.message).toBe("[calendar] query failed: statement timeout");
+    expect(e.message).toBe("[calendar] query failed");
   });
 });
 
