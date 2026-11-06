@@ -18,7 +18,35 @@
 // Run: bun scripts/layout-check.ts   (needs `bun add --no-save playwright`)
 
 import { chromium, type Page } from "playwright";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+
+/** What a search result and a share card read from a page, taken from the
+ *  server-rendered HTML (not the hydrated DOM), so it is what a crawler gets. */
+interface HeadTags {
+  route: string;
+  title: string | null;
+  description: string | null;
+  ogUrl: string | null;
+  canonical: string | null;
+  websiteBlocks: number;
+}
+
+function attr(html: string, re: RegExp): string | null {
+  const m = re.exec(html);
+  return m ? m[1].replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'") : null;
+}
+
+async function readHead(url: string, route: string): Promise<HeadTags> {
+  const html = await (await fetch(url)).text();
+  return {
+    route,
+    title: attr(html, /<title>([^<]*)<\/title>/),
+    description: attr(html, /<meta name="description" content="([^"]*)"/),
+    ogUrl: attr(html, /<meta property="og:url" content="([^"]*)"/),
+    canonical: attr(html, /<link rel="canonical" href="([^"]*)"/),
+    websiteBlocks: (html.match(/"@type":"WebSite"/g) ?? []).length,
+  };
+}
 
 const WIDTHS = [
   { w: 390, h: 844, label: "390" },
@@ -197,6 +225,7 @@ async function main() {
     process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
   );
   const failures: string[] = [];
+  const heads: HeadTags[] = [];
   let checkedRoutes = 0;
 
   try {
@@ -229,6 +258,7 @@ async function main() {
       "/library",
       "/night",
       "/privacy",
+      "/terms",
       // An invite link to a room this browser is not in, and the two pages
       // every mistyped one-segment address lands on.
       "/night/ZZZZZ",
@@ -240,6 +270,13 @@ async function main() {
 
     for (const route of routes) {
       checkedRoutes++;
+      // Recorded, never asserted: a failed read is noted in the file and the
+      // overflow check carries on.
+      try {
+        heads.push(await readHead(`${url}${route}`, route));
+      } catch (e) {
+        console.log(`      ${route}: could not read head tags (${String(e)})`);
+      }
       for (const { w, h, label } of WIDTHS) {
         const page = await browser.newPage({
           viewport: { width: w, height: h },
@@ -290,12 +327,30 @@ async function main() {
         }
       }
     }
+    // Pages whose head tags are worth a record but whose layout is the same
+    // game board as /play/balasaurdle: read, not screenshotted.
+    for (const route of ["/play/emoji", "/play/quote-match", "/play/taglines", "/play/timeline"]) {
+      try {
+        heads.push(await readHead(`${url}${route}`, route));
+      } catch (e) {
+        console.log(`      ${route}: could not read head tags (${String(e)})`);
+      }
+    }
+
+    // llms.txt is plain text, so its first lines stand in for head tags.
+    try {
+      const llms = await (await fetch(`${url}/llms.txt`)).text();
+      await writeFile(`${OUT_DIR}/llms.txt`, llms);
+    } catch (e) {
+      console.log(`      /llms.txt: could not read (${String(e)})`);
+    }
   } finally {
     await browser.close();
     stop();
+    await writeFile(`${OUT_DIR}/heads.json`, JSON.stringify(heads, null, 2) + "\n");
   }
 
-  console.log(`\nScreenshots in ${OUT_DIR}/`);
+  console.log(`\nScreenshots, heads.json and llms.txt in ${OUT_DIR}/`);
 
   if (failures.length > 0) {
     console.log(`\n${failures.length} layout failure(s). Screenshots show the rendered page.`);
