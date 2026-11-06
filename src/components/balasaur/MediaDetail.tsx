@@ -436,15 +436,15 @@ function DetailInner({
               {meta.length > 0 && (
                 <p className="mt-3 text-lg font-semibold tabular-nums">
                   {/* Each bit holds together and the dot travels with the bit
-                      after it, so a wrap never splits "TV-MA" or "5 seasons"
+                      before it, so a wrap never splits "TV-MA" or "5 seasons"
                       and never starts a line with a separator. */}
                   {meta.map((bit, i) => (
                     <Fragment key={i}>
-                      {i > 0 && " "}
                       <span className="whitespace-nowrap">
-                        {i > 0 && "· "}
                         {bit}
+                        {i < meta.length - 1 && " ·"}
                       </span>
+                      {i < meta.length - 1 && " "}
                     </Fragment>
                   ))}
                 </p>

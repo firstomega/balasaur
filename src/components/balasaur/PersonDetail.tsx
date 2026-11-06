@@ -129,15 +129,15 @@ function CreditRow({ item, showYear }: { item: PersonCredit; showYear: boolean }
           {item.title}
         </h3>
         <p className="mt-0.5 line-clamp-2 text-sm text-text-muted md:text-base">
-          {/* The dot travels with the bit after it, so a wrap never strands a
-              separator or splits "2 Seasons". */}
+          {/* The dot travels with the bit before it, so a wrapped line
+              starts on a word, never a separator, and "2 Seasons" holds. */}
           {meta.map((bit, i) => (
             <Fragment key={i}>
-              {i > 0 && " "}
               <span className="whitespace-nowrap">
-                {i > 0 && "· "}
                 {bit}
+                {i < meta.length - 1 && " ·"}
               </span>
+              {i < meta.length - 1 && " "}
             </Fragment>
           ))}
         </p>
