@@ -184,7 +184,7 @@ function NightRoomPage() {
     return (
       <Shell>
         <div className="py-16 text-center">
-          <h1 className="text-[24px] font-black tracking-[-0.02em] text-text-bright">
+          <h1 className="font-display text-4xl font-extrabold leading-none tracking-tight text-text-bright">
             This room is gone
           </h1>
           <p className="mt-2 text-[13px] text-text-muted">
@@ -192,7 +192,7 @@ function NightRoomPage() {
           </p>
           <Link
             to="/night"
-            className="mt-5 inline-block rounded-[5px] border border-primary bg-primary px-4 py-2 text-[14px] font-bold tracking-[-0.01em] text-primary-foreground"
+            className="mt-5 inline-block rounded-full bg-text-bright px-4 py-2 text-[14px] font-bold text-background hover:opacity-90"
           >
             New movie night
           </Link>
@@ -335,14 +335,11 @@ function JoinGate({
       <div className="mb-5 flex items-center gap-2.5">
         <DinoMark className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-[22px] font-black leading-[1.1] tracking-[-0.02em] text-text-bright">
-            {lost ? "Back in you go" : "You are invited"}
+          <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
+            Room <span className="font-mono tracking-widest">{code}</span>
           </h1>
-          <p className="text-[13px] text-text-muted">
-            Room <span className="font-mono tracking-widest text-text-bright">{code}</span>.{" "}
-            {lost
-              ? "Your spot in this room expired. Rejoin with a name."
-              : "Pick a name and jump in."}
+          <p className="mt-1.5 text-[13px] text-text-muted">
+            {lost ? "Your spot in this room expired. Rejoin with a name." : "Pick a name to join."}
           </p>
         </div>
       </div>
@@ -352,14 +349,14 @@ function JoinGate({
         onChange={(e) => setName(e.target.value)}
         placeholder="Anonymous Raptor"
         maxLength={24}
-        className="w-full rounded-[5px] border border-border bg-panel px-3 py-2 text-[14px] text-text-bright placeholder:text-text-dim focus:border-primary focus:outline-none"
+        className="w-full rounded-xl border border-border-strong bg-background px-3.5 py-2.5 text-[15px] text-text-bright placeholder:text-text-dim focus:border-text-bright focus:outline-none"
       />
       {error && <p className="mt-2 text-[13px] text-status-disliked">{error}</p>}
       <button
         type="button"
         disabled={busy}
         onClick={() => void join()}
-        className="mt-3 w-full cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-2.5 text-[15px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+        className="mt-3 w-full cursor-pointer rounded-full bg-text-bright px-3 py-2.5 text-[15px] font-bold tracking-[-0.01em] text-background hover:opacity-90 disabled:opacity-60"
       >
         {busy ? "One moment" : "Join the room"}
       </button>
@@ -400,11 +397,11 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
   };
 
   return (
-    <div className="mb-4 rounded-[6px] border border-border bg-panel p-3">
+    <div className="mb-4 rounded-2xl bg-panel p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <DinoMark className="h-5 w-5 text-primary" />
-          <h1 className="text-[15px] font-black tracking-[-0.02em] text-text-bright">
+          <h1 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
             {room.mode === "solo" ? "Solo pick" : "Movie night"}
           </h1>
           {room.mode === "group" && (
@@ -412,7 +409,7 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
               type="button"
               onClick={() => void copyCode()}
               title="Copy the room code"
-              className="cursor-pointer rounded-[4px] border border-border-strong bg-background px-2 py-0.5 font-mono text-[13px] tracking-[0.3em] text-text-bright hover:border-primary"
+              className="cursor-pointer rounded-full border border-border-strong bg-background px-2.5 py-0.5 font-mono text-[13px] tracking-[0.3em] text-text-bright hover:border-text-bright"
             >
               {room.code}
               <Copy className="ml-1.5 inline h-3 w-3 text-text-dim" />
@@ -423,7 +420,7 @@ function RoomHeader({ state, online }: { state: NightState; online: string[] }) 
           <button
             type="button"
             onClick={() => void share()}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-border-strong bg-background px-2.5 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border-strong bg-background px-3 py-1 text-[13px] font-bold text-text-bright hover:border-text-bright"
           >
             <Share2 className="h-3.5 w-3.5" />
             Invite
@@ -524,7 +521,7 @@ function Lobby({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-[6px] border border-border bg-panel p-3.5">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-panel p-3.5">
         <div className="min-w-0">
           <p className="text-[14px] text-text-bright">
             {members.length === 1
@@ -540,10 +537,10 @@ function Lobby({
             <button
               type="button"
               onClick={() => void write(() => saveNightPrefs(token, { ready: !you.ready }))}
-              className={`cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
+              className={`cursor-pointer rounded-full border px-3.5 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
                 you.ready
                   ? "border-rating bg-rating/10 text-rating"
-                  : "border-border-strong bg-background text-text-bright hover:border-primary"
+                  : "border-border-strong bg-background text-text-bright hover:border-text-bright"
               }`}
             >
               {you.ready ? "Ready" : "I am ready"}
@@ -554,7 +551,7 @@ function Lobby({
               type="button"
               disabled={starting}
               onClick={() => void start()}
-              className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              className="cursor-pointer rounded-full bg-text-bright px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-background hover:opacity-90 disabled:opacity-60"
             >
               {starting ? "Starting" : "Start the questions"}
             </button>
@@ -567,11 +564,7 @@ function Lobby({
           Seen one? Mark it while you wait. Anything the room has seen drops out of tonight&apos;s
           picks.
         </p>
-        <Suspense
-          fallback={
-            <div className="h-64 animate-pulse rounded-[6px] border border-border bg-panel" />
-          }
-        >
+        <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-panel" />}>
           <LobbyDeck mediaType={room.media_type} statuses={statuses} onAction={onAction} />
         </Suspense>
       </div>
@@ -716,7 +709,7 @@ function Wizard({
           setStepIdx(0);
           setOpen(true);
         }}
-        className="mb-4 w-full cursor-pointer rounded-[6px] border border-border bg-panel px-3 py-2.5 text-left text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
+        className="mb-4 w-full cursor-pointer rounded-2xl bg-panel px-3 py-2.5 text-left text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright"
       >
         Adjust answers, then deal again
       </button>
@@ -724,7 +717,7 @@ function Wizard({
   }
 
   const chipBase =
-    "relative cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-semibold tracking-[-0.01em] transition-colors";
+    "relative cursor-pointer rounded-full border px-3.5 py-2 text-[13px] font-semibold tracking-[-0.01em] transition-colors";
 
   const optionChip = (props: {
     id: string;
@@ -740,7 +733,7 @@ function Wizard({
       onClick={props.onClick}
       className={`${chipBase} ${
         props.mine
-          ? "border-primary bg-primary/15 text-primary"
+          ? "border-text-bright bg-text-bright text-background"
           : "border-border bg-background text-text-bright hover:border-border-strong"
       }`}
     >
@@ -805,7 +798,7 @@ function Wizard({
   ];
 
   return (
-    <div className="space-y-4 rounded-[6px] border border-border bg-panel p-4">
+    <div className="space-y-4 rounded-2xl bg-panel p-4">
       <div className="flex items-baseline justify-between">
         <span className="font-mono text-[12px] tabular-nums text-text-dim">
           {stepIdx + 1} of {steps.length}
@@ -822,7 +815,7 @@ function Wizard({
       </div>
 
       <div>
-        <h2 className="text-[20px] font-black leading-[1.15] tracking-[-0.02em] text-text-bright">
+        <h2 className="font-display text-3xl font-extrabold leading-none tracking-tight text-text-bright">
           {step.q}
         </h2>
         {step.hint && <p className="mt-1 text-[12.5px] text-text-dim">{step.hint}</p>}
@@ -854,7 +847,7 @@ function Wizard({
               {yourAnswers.map((a) => (
                 <span
                   key={a}
-                  className="rounded-[4px] border border-primary/40 bg-primary/10 px-2 py-1 text-[12px] font-semibold text-primary"
+                  className="rounded-full bg-text-bright px-2.5 py-1 text-[12px] font-bold text-background"
                 >
                   {a}
                 </span>
@@ -871,10 +864,10 @@ function Wizard({
               <button
                 type="button"
                 onClick={() => setReady(!you.ready)}
-                className={`cursor-pointer rounded-[5px] border px-3 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
+                className={`cursor-pointer rounded-full border px-3.5 py-2 text-[13px] font-bold tracking-[-0.01em] transition-colors ${
                   you.ready
                     ? "border-rating bg-rating/10 text-rating"
-                    : "border-border-strong bg-background text-text-bright hover:border-primary"
+                    : "border-border-strong bg-background text-text-bright hover:border-text-bright"
                 }`}
               >
                 {you.ready ? "Ready" : "I am ready"}
@@ -899,7 +892,7 @@ function Wizard({
         <button
           type="button"
           onClick={() => setStepIdx((i) => Math.min(steps.length - 1, i + 1))}
-          className="w-full cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2.5 text-center text-[13px] font-medium text-primary-foreground hover:bg-primary/90"
+          className="w-full cursor-pointer rounded-full bg-text-bright px-4 py-2.5 text-center text-[13px] font-medium text-background hover:opacity-90"
         >
           {stepAnswered ? "Next" : "Skip"}
         </button>
@@ -935,9 +928,9 @@ function HostControls({
 }) {
   const { room } = state;
   const chip = (active: boolean) =>
-    `cursor-pointer rounded-[5px] border px-2.5 py-1 text-[12px] font-semibold tracking-[-0.01em] transition-colors ${
+    `cursor-pointer rounded-full border px-3 py-1 text-[12px] font-semibold tracking-[-0.01em] transition-colors ${
       active
-        ? "border-primary bg-primary/15 text-primary"
+        ? "border-text-bright bg-text-bright text-background"
         : "border-border bg-background text-text-muted hover:border-border-strong"
     }`;
   return (
@@ -1046,7 +1039,7 @@ function RollButton({
       type="button"
       disabled={busy}
       onClick={() => void roll()}
-      className="cursor-pointer rounded-[5px] border border-primary bg-primary px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+      className="cursor-pointer rounded-full bg-text-bright px-4 py-2 text-[15px] font-bold tracking-[-0.01em] text-background hover:opacity-90 disabled:opacity-60"
     >
       {room.roll_seq > 0
         ? "Deal again"
@@ -1096,7 +1089,7 @@ function Calculating({ state, onDone }: { state: NightState; onDone: () => void 
   }, [state.room.reveal_at, onDone]);
 
   return (
-    <div className="mb-4 rounded-[6px] border border-border bg-panel px-4 py-12 text-center">
+    <div className="mb-4 rounded-2xl bg-panel px-4 py-12 text-center">
       <DinoMark className="mx-auto h-10 w-10 animate-pulse text-primary" />
       <p role="status" className="mt-4 text-[14px] text-text-muted">
         {CALC_LINES[line]}
@@ -1164,7 +1157,7 @@ function Results({
   return (
     <div className="mb-4 space-y-3">
       {winner && (
-        <div className="rounded-[6px] border border-rating/60 bg-rating/10 px-4 py-3">
+        <div className="rounded-2xl border border-rating/60 bg-rating/10 px-4 py-3">
           <p className="text-[13.5px] text-text-bright">
             Tonight: <span className="font-semibold">{winner.title}</span>
             {/* Naming the picker only means something when there is more than
@@ -1178,7 +1171,7 @@ function Results({
           list plus a media type plus everything already rolled. Without this
           the reveal lands on a blank gap. */}
       {items.length === 0 && (
-        <div className="rounded-[6px] border border-border bg-panel px-4 py-6 text-center">
+        <div className="rounded-2xl bg-panel px-4 py-6 text-center">
           <p className="text-[13px] text-text-bright">Nothing left that fits.</p>
           <p className="mt-1 text-[13px] text-text-muted">
             {room.services.length > 0
@@ -1201,14 +1194,14 @@ function Results({
       ))}
 
       {!isSignedIn && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-border bg-panel px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-panel px-4 py-3">
           <p className="text-[13px] text-text-muted">
             Keep tonight's pick and everything you marked.
           </p>
           <button
             type="button"
             onClick={() => setAuthOpen(true)}
-            className="cursor-pointer rounded-[5px] border border-primary bg-primary px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-primary-foreground hover:bg-primary/90"
+            className="cursor-pointer rounded-full bg-text-bright px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-background hover:opacity-90"
           >
             Create an account
           </button>
@@ -1269,7 +1262,7 @@ function ResultCard({
 
   return (
     <div
-      className={`flex gap-3 rounded-[6px] border bg-panel p-3 ${
+      className={`flex gap-3 rounded-2xl border bg-panel p-3 ${
         isWinner ? "border-rating/60" : "border-border"
       }`}
     >
@@ -1281,10 +1274,10 @@ function ResultCard({
             width={92}
             height={138}
             loading="lazy"
-            className="h-[138px] w-[92px] rounded-[4px] object-cover"
+            className="h-[138px] w-[92px] rounded-lg object-cover"
           />
         ) : (
-          <div className="flex h-[138px] w-[92px] items-center justify-center rounded-[4px] bg-background text-[12px] font-semibold text-text-dim">
+          <div className="flex h-[138px] w-[92px] items-center justify-center rounded-lg bg-background text-[12px] font-semibold text-text-dim">
             No art
           </div>
         )}
@@ -1308,7 +1301,7 @@ function ResultCard({
           {chips.map((c, i) => (
             <span
               key={i}
-              className={`rounded-[4px] border px-1.5 py-0.5 text-[12px] ${
+              className={`rounded-full border px-2 py-0.5 text-[12px] ${
                 c.tone === "want"
                   ? "border-rating/50 text-rating"
                   : c.tone === "held"
@@ -1320,7 +1313,7 @@ function ResultCard({
             </span>
           ))}
           {item.streaming.length > 0 && (
-            <span className="rounded-[4px] border border-border px-1.5 py-0.5 text-[12px] text-text-muted">
+            <span className="rounded-full border border-border px-2 py-0.5 text-[12px] text-text-muted">
               On {item.streaming.slice(0, 3).join(", ")}
             </span>
           )}
@@ -1331,7 +1324,7 @@ function ResultCard({
             type="button"
             onClick={onPick}
             disabled={isWinner}
-            className="cursor-pointer rounded-[4px] border border-primary/70 px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-primary hover:bg-primary/10 disabled:cursor-default disabled:opacity-50"
+            className="cursor-pointer rounded-full bg-text-bright px-3 py-1 text-[13px] font-bold text-background hover:opacity-90 disabled:cursor-default disabled:opacity-50"
           >
             {isWinner ? "Tonight's pick" : "Pick this"}
           </button>
@@ -1339,7 +1332,7 @@ function ResultCard({
             type="button"
             onClick={onSeen}
             disabled={seen}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-[4px] border border-border px-2 py-1 text-[13px] font-bold tracking-[-0.01em] text-text-muted hover:border-border-strong hover:text-text-bright disabled:cursor-default disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border-strong px-3 py-1 text-[13px] font-bold text-text-bright hover:border-border-strong hover:text-text-bright disabled:cursor-default disabled:opacity-50"
           >
             <RotateCcw className="h-3 w-3" />
             {seen ? "Marked seen" : "Seen it"}

@@ -9,6 +9,8 @@ import {
   usernameBaseFromSeed,
   validateUsername,
 } from "@/lib/username";
+import { loadPosterColorsMany } from "@/lib/media.server";
+import type { SwatchKey } from "@/lib/posterSwatch";
 
 // Profile = the PUBLIC identity. These server fns are the only writers, and all of
 // them derive the user id from the verified auth context — never from client input.
@@ -178,6 +180,8 @@ export interface PublicMediaItem {
   title: string;
   posterUrl: string | null;
   year: string | null;
+  /** The poster's tile swatch (media.swatch), null when it has none yet. */
+  swatch: SwatchKey | null;
 }
 
 export interface PublicArcadeBest {
@@ -292,16 +296,25 @@ export const getPublicProfile = createServerFn({ method: "GET" })
       intent: string | null;
     };
     const all = (rows ?? []) as StatusRow[];
+    const watched = all.filter((r) => r.status === "seen");
+    const liked = all.filter((r) => r.sentiment === "liked");
+    const want = all.filter((r) => r.intent === "want");
+    const shownWatched = watched.slice(0, 60);
+    const shownLiked = liked.slice(0, 60);
+    // The cards are painted in each poster's swatch. The status rows carry a
+    // snapshot without one, so the shown titles are looked up in one read; a
+    // failed read leaves them on the neutral tile.
+    const paint = await loadPosterColorsMany([
+      ...new Set([...shownWatched, ...shownLiked].map((r) => r.media_id)),
+    ]).catch(() => new Map<string, { swatch: SwatchKey | null }>());
     const toItem = (r: StatusRow): PublicMediaItem => ({
       mediaId: r.media_id,
       mediaType: r.media_type,
       title: r.title,
       posterUrl: r.poster_url,
       year: r.year,
+      swatch: paint.get(r.media_id)?.swatch ?? null,
     });
-    const watched = all.filter((r) => r.status === "seen");
-    const liked = all.filter((r) => r.sentiment === "liked");
-    const want = all.filter((r) => r.intent === "want");
 
     return {
       found: true,
@@ -314,8 +327,8 @@ export const getPublicProfile = createServerFn({ method: "GET" })
         createdAt: p.created_at,
       },
       stats: { watched: watched.length, liked: liked.length, want: want.length },
-      watched: watched.slice(0, 60).map(toItem),
-      liked: liked.slice(0, 60).map(toItem),
+      watched: shownWatched.map(toItem),
+      liked: shownLiked.map(toItem),
       comets: arcade.comets,
       bests: arcade.bests,
     };

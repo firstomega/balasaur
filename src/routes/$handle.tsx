@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useParams } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import {
   getPublicProfile,
@@ -8,14 +8,15 @@ import {
 } from "@/lib/profile.functions";
 import { Avatar } from "@/components/balasaur/Avatar";
 import { EmptyState, EMPTY_ACTION_CLASS } from "@/components/balasaur/EmptyState";
+import { MediaCard } from "@/components/balasaur/MediaCard";
+import { NotFoundPage } from "@/components/balasaur/NotFoundPage";
 import { CometMark } from "@/components/arcade/CometChip";
 import { GAMES, HUB_ORDER } from "@/lib/arcade/games";
 import type { GameSlug } from "@/lib/arcade/types";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { SITE_ORIGIN, buildMeta, canonicalLink, clampDescription } from "@/lib/seo";
-import { mediaSlug } from "@/lib/slug";
-import { tmdbImage, tmdbSrcSet } from "@/lib/tmdbImage";
+import type { MediaItem, MediaType } from "@/types/media";
 
 // Public profile page at /@username. Because TanStack's runtime matcher doesn't
 // support a literal prefix glued to a param (and typed params would percent-encode
@@ -58,88 +59,48 @@ export const Route = createFileRoute("/$handle")({
   component: ProfilePage,
 });
 
+/** The display heading, the same cut and size as the other personal pages. */
+const H1 =
+  "font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[56px]";
+
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main id="main" className="mx-auto max-w-content px-5 py-8">
+    <div className="bg-background text-foreground">
+      <main id="main" className="mx-auto max-w-grid px-4 pb-12 pt-6 md:pt-9">
         {children}
       </main>
     </div>
   );
 }
 
-function Centered({ title, sub }: { title: string; sub?: string }) {
-  return (
-    <Shell>
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <h1 className="text-[24px] font-black tracking-[-0.02em] text-text-bright">{title}</h1>
-        {sub && <p className="mt-2 text-[14px] leading-relaxed text-text-muted">{sub}</p>}
-        <Link
-          to="/"
-          className="mt-5 inline-block rounded-[5px] border border-border px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-border-strong"
-        >
-          Back to Balasaur
-        </Link>
-      </div>
-    </Shell>
-  );
+/** A status row as the card expects it. The card links by id and title, the
+ *  same /movie or /tv address the old poster tile built. */
+function toMediaItem(it: PublicMediaItem): MediaItem {
+  return {
+    id: it.mediaId,
+    mediaType: (it.mediaType as MediaType) ?? "movie",
+    title: it.title,
+    year: it.year ?? "",
+    overview: "",
+    posterUrl: it.posterUrl ?? "",
+    ratings: {},
+    genres: [],
+    streaming: [],
+    lengthLabel: "",
+    people: [],
+    swatch: it.swatch ?? null,
+  };
 }
 
-function PosterTile({ item, mine }: { item: PublicMediaItem; mine?: boolean }) {
-  const seg = item.mediaType === "tv" ? "tv" : item.mediaType === "movie" ? "movie" : null;
-  const rawId = item.mediaId.replace(/^(movie|tv)-/, "");
-  const slug = mediaSlug(rawId, item.title);
-  const inner = (
-    <>
-      <div
-        className={`relative aspect-[2/3] overflow-hidden rounded-[5px] border bg-panel ${
-          mine ? "border-rating/60" : "border-border"
-        }`}
-      >
-        {mine && (
-          <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-[5px] border border-rating/60 bg-rating/25 px-1.5 py-0.5 text-[11px] font-bold tracking-[-0.01em] text-rating">
-            <Check className="h-3 w-3" aria-hidden="true" />
-            You too
-          </span>
-        )}
-        {item.posterUrl ? (
-          <img
-            src={tmdbImage(item.posterUrl, "w342")}
-            srcSet={tmdbSrcSet(item.posterUrl, [
-              { w: 185, size: "w185" },
-              { w: 342, size: "w342" },
-            ])}
-            sizes="(max-width: 640px) 33vw, 180px"
-            alt={item.title}
-            width={342}
-            height={513}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center p-2 text-center text-[12px] font-semibold text-text-dim">
-            {item.title}
-          </div>
-        )}
-      </div>
-      <p className="mt-1.5 line-clamp-1 text-[12px] font-semibold text-text-bright">{item.title}</p>
-      {item.year && <p className="font-mono text-[12px] tabular-nums text-text-dim">{item.year}</p>}
-    </>
+/** Marks a title the visitor has filed too, in the place the card's own
+ *  Seen tag sits, so the count above the grid can be checked card by card. */
+function YouToo() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-text-bright py-0.5 pl-1 pr-2 text-xs font-bold text-background">
+      <Check className="h-3 w-3" aria-hidden="true" />
+      You too
+    </span>
   );
-  if (seg === "movie")
-    return (
-      <Link to="/movie/$id" params={{ id: slug }} className="group block">
-        {inner}
-      </Link>
-    );
-  if (seg === "tv")
-    return (
-      <Link to="/tv/$id" params={{ id: slug }} className="group block">
-        {inner}
-      </Link>
-    );
-  return <div>{inner}</div>;
 }
 
 function PosterGrid({
@@ -155,9 +116,13 @@ function PosterGrid({
     return <>{empty}</>;
   }
   return (
-    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+    <div className="grid grid-cols-2 gap-x-3.5 gap-y-6 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
       {items.map((it) => (
-        <PosterTile key={it.mediaId} item={it} mine={mineIds.has(it.mediaId)} />
+        <MediaCard
+          key={it.mediaId}
+          item={toMediaItem(it)}
+          posterOverlay={mineIds.has(it.mediaId) ? <YouToo /> : undefined}
+        />
       ))}
     </div>
   );
@@ -175,15 +140,15 @@ function PosterGrid({
 function CompareLine({ shared, tab }: { shared: number; tab: "watched" | "liked" }) {
   if (shared === 0) return null;
   return (
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-[5px] border border-border bg-panel/40 px-3.5 py-2.5">
-      <p className="text-[14px] font-semibold text-text-bright">
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-panel px-4 py-3">
+      <p className="text-lg font-bold text-text-bright">
         {tab === "liked"
           ? `You Loved ${shared} of these too.`
           : `You have watched ${shared} of these too.`}
       </p>
       <Link
         to="/taste"
-        className="text-[13px] font-bold tracking-[-0.01em] text-primary hover:underline"
+        className="rounded-full bg-text-bright px-3.5 py-1.5 text-base font-bold text-background hover:opacity-90"
       >
         Your Taste Card
       </Link>
@@ -193,13 +158,11 @@ function CompareLine({ shared, tab }: { shared: number; tab: "watched" | "liked"
 
 function Stat({ n, label }: { n: number; label: string }) {
   return (
-    <div className="text-center">
-      <div className="text-[24px] font-black tabular-nums leading-none tracking-[-0.02em] text-text-bright">
+    <div>
+      <div className="font-display text-3xl font-extrabold tabular-nums leading-none text-text-bright">
         {n}
       </div>
-      <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-text-dim">
-        {label}
-      </div>
+      <div className="mt-1 text-sm font-bold text-text-muted">{label}</div>
     </div>
   );
 }
@@ -212,20 +175,22 @@ function ArcadeSection({ comets, bests }: { comets: number; bests: PublicArcadeB
     bests.find((b) => b.game === slug && b.bestScore > 0),
   ).filter((b): b is PublicArcadeBest => !!b);
   return (
-    <section className="mt-6 rounded-[6px] border border-border bg-panel/40 p-4">
+    <section className="mt-6 rounded-2xl bg-panel p-4 md:p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-[17px] font-black tracking-[-0.02em] text-text-bright">Arcade</h2>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[13px] tabular-nums text-text-bright">
-          <CometMark className="h-4 w-4 text-primary" />
-          <span className="tabular-nums">{comets}</span> comets
+        <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
+          Arcade
+        </h2>
+        <span className="inline-flex items-center gap-1.5 text-base font-bold text-text-bright">
+          <CometMark className="h-4 w-4" />
+          <span className="font-mono tabular-nums">{comets}</span> comets
         </span>
       </div>
       {ordered.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {ordered.map((b) => (
             <span
               key={b.game}
-              className="rounded-[5px] border border-border bg-panel px-2.5 py-1 text-[12px] text-text-muted"
+              className="rounded-full bg-background px-3 py-1 text-sm font-bold text-text-muted"
             >
               {GAMES[b.game as GameSlug]?.name ?? b.game}{" "}
               <span className="font-mono tabular-nums text-text-bright">best {b.bestScore}</span>
@@ -237,13 +202,16 @@ function ArcadeSection({ comets, bests }: { comets: number; bests: PublicArcadeB
   );
 }
 
+/**
+ * Every unknown one-segment address lands here, not only mistyped handles, so
+ * only an "@" address is called a profile.
+ */
 function HandleNotFound() {
-  return (
-    <Centered
-      title="Profile not found"
-      sub="This handle doesn't exist (yet). Check the spelling?"
-    />
-  );
+  const { handle } = useParams({ strict: false }) as { handle?: string };
+  if (handle?.startsWith("@") && handle.length > 1) {
+    return <NotFoundPage title="Profile not found" line={`No profile has the handle ${handle}.`} />;
+  }
+  return <NotFoundPage title="Page not found" />;
 }
 
 function ProfilePage() {
@@ -274,12 +242,7 @@ function ProfilePage() {
   }, [items, statuses, tab]);
 
   if (data.isPrivate) {
-    return (
-      <Centered
-        title={`@${p.username} is private`}
-        sub="This profile isn't public. Only the owner can see what's inside."
-      />
-    );
+    return <NotFoundPage title={`@${p.username} is private`} />;
   }
 
   const joined = new Date(p.createdAt).toLocaleDateString(undefined, {
@@ -288,22 +251,19 @@ function ProfilePage() {
   });
   return (
     <Shell>
-      {/* Header */}
-      <header className="flex flex-col gap-5 border-b border-border pb-6 sm:flex-row sm:items-start">
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-start">
         <Avatar
           username={p.username}
           displayName={p.displayName}
           preset={p.avatarPreset}
           size={88}
-          className="text-[34px]"
+          className="text-3xl"
         />
         <div className="min-w-0 flex-1">
-          <h1 className="text-[28px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
-            {p.displayName || `@${p.username}`}
-          </h1>
-          <p className="mt-0.5 font-mono text-[13px] text-primary">@{p.username}</p>
+          <h1 className={H1}>{p.displayName || `@${p.username}`}</h1>
+          <p className="mt-1.5 font-mono text-base text-text-muted">@{p.username}</p>
           {p.bio && (
-            <p className="mt-3 max-w-prose whitespace-pre-line font-sans text-[14px] leading-relaxed text-text-muted">
+            <p className="mt-3 max-w-prose whitespace-pre-line text-lg leading-relaxed text-foreground">
               {p.bio}
             </p>
           )}
@@ -312,17 +272,17 @@ function ProfilePage() {
               {p.favoriteGenres.map((g: string) => (
                 <span
                   key={g}
-                  className="rounded-full border border-border bg-panel px-2 py-0.5 text-[12px] font-semibold text-text-muted"
+                  className="rounded-full border border-border-strong px-2.5 py-0.5 text-sm font-bold text-text-bright"
                 >
                   {g}
                 </span>
               ))}
             </div>
           )}
-          <p className="mt-3 font-mono text-[12px] tabular-nums text-text-dim">Joined {joined}</p>
+          <p className="mt-3 text-sm text-text-dim">Joined {joined}</p>
         </div>
-        <div className="flex items-center gap-5 sm:flex-col sm:items-end sm:gap-3">
-          <div className="flex gap-5">
+        <div className="flex flex-wrap items-center gap-6 sm:flex-col sm:items-end sm:gap-4">
+          <div className="flex gap-6">
             <Stat n={data.stats?.watched ?? 0} label="Watched" />
             <Stat n={data.stats?.liked ?? 0} label="Liked" />
             <Stat n={data.stats?.want ?? 0} label="Watchlist" />
@@ -330,7 +290,7 @@ function ProfilePage() {
           {isOwner && (
             <Link
               to="/profile"
-              className="rounded-[5px] border border-border bg-panel px-3 py-1.5 text-[13px] font-bold tracking-[-0.01em] text-text-bright hover:border-primary hover:text-primary"
+              className="rounded-full border border-border-strong px-3.5 py-1.5 text-base font-bold text-text-bright hover:border-text-bright"
             >
               Edit profile
             </Link>
@@ -340,18 +300,21 @@ function ProfilePage() {
 
       <ArcadeSection comets={data.comets ?? 0} bests={data.bests ?? []} />
 
-      {/* Tabs */}
-      <nav className="mt-6 flex gap-1 border-b border-border">
+      {/* Tabs as pills, the current one in ink like the current section in
+          the header. */}
+      <nav aria-label="Lists" className="mb-5 mt-8 flex gap-1.5">
         {(["watched", "liked"] as const).map((t) => (
           <button
             key={t}
             type="button"
+            aria-pressed={tab === t}
             onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-3 py-2 text-[14px] font-bold tracking-[-0.01em] ${
-              tab === t
-                ? "border-primary text-text-bright"
-                : "border-transparent text-text-dim hover:text-text-muted"
-            }`}
+            className={
+              "cursor-pointer rounded-full px-3.5 py-2 text-lg font-bold leading-none transition-colors " +
+              (tab === t
+                ? "bg-text-bright text-background"
+                : "bg-panel text-text-bright hover:bg-border")
+            }
           >
             {t === "watched" ? "Watched" : "Liked"}
           </button>
@@ -360,49 +323,47 @@ function ProfilePage() {
 
       <CompareLine shared={mineIds.size} tab={tab} />
 
-      <div className="mt-5">
-        <PosterGrid
-          mineIds={mineIds}
-          items={items}
-          empty={
-            isOwner ? (
-              <EmptyState
-                variant="inline"
-                line={
-                  tab === "watched"
-                    ? "You have not marked anything watched."
-                    : "You have not marked anything Loved."
-                }
-                hint={
-                  tab === "watched"
-                    ? "Swipe right in the deck on what you have seen. It shows up here."
-                    : "Swipe up in the deck on the ones you loved. They show up here."
-                }
-                action={
-                  <Link to="/watched" className={EMPTY_ACTION_CLASS}>
-                    Rate titles
-                  </Link>
-                }
-              />
-            ) : (
-              <EmptyState
-                variant="inline"
-                line={
-                  tab === "watched"
-                    ? "This profile has nothing marked watched."
-                    : "This profile has nothing marked Loved."
-                }
-                hint="Rate a few titles and yours fills in."
-                action={
-                  <Link to="/watched" className={EMPTY_ACTION_CLASS}>
-                    Build your own
-                  </Link>
-                }
-              />
-            )
-          }
-        />
-      </div>
+      <PosterGrid
+        mineIds={mineIds}
+        items={items}
+        empty={
+          isOwner ? (
+            <EmptyState
+              variant="inline"
+              line={
+                tab === "watched"
+                  ? "You have not marked anything watched."
+                  : "You have not marked anything Loved."
+              }
+              hint={
+                tab === "watched"
+                  ? "Swipe right in the deck on what you have seen. It shows up here."
+                  : "Swipe up in the deck on the ones you loved. They show up here."
+              }
+              action={
+                <Link to="/watched" className={EMPTY_ACTION_CLASS}>
+                  Rate titles
+                </Link>
+              }
+            />
+          ) : (
+            <EmptyState
+              variant="inline"
+              line={
+                tab === "watched"
+                  ? "This profile has nothing marked watched."
+                  : "This profile has nothing marked Loved."
+              }
+              hint="Rate a few titles and yours fills in."
+              action={
+                <Link to="/watched" className={EMPTY_ACTION_CLASS}>
+                  Build your own
+                </Link>
+              }
+            />
+          )
+        }
+      />
     </Shell>
   );
 }

@@ -1,3 +1,4 @@
+import { asSwatchKey } from "@/lib/posterSwatch";
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { trustedScore } from "@/lib/trust";
@@ -18,7 +19,7 @@ import { MAX_FACT_IDS, type TitleFact } from "@/lib/taste";
 const CHUNK = 200;
 
 const COLS =
-  "media_id, media_type, title, year, poster_url, color_a, color_b, genres, origins, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count";
+  "media_id, media_type, title, year, poster_url, swatch, genres, origins, rating_imdb, rating_rotten_tomatoes, rating_metacritic, rating_tmdb, vote_count";
 
 export interface FactRow {
   media_id: string;
@@ -26,8 +27,7 @@ export interface FactRow {
   title: string;
   year: string | null;
   poster_url: string | null;
-  color_a: string | null;
-  color_b: string | null;
+  swatch: string | null;
   genres: string[] | null;
   origins: string[] | null;
   rating_imdb: number | null;
@@ -46,8 +46,7 @@ export function toFact(r: FactRow): TitleFact {
     genres: r.genres ?? [],
     origins: r.origins ?? [],
     posterUrl: r.poster_url ?? undefined,
-    colorA: r.color_a ?? undefined,
-    colorB: r.color_b ?? undefined,
+    swatch: asSwatchKey(r.swatch) ?? undefined,
     // The card prints this on a poster, so it follows the badge rule: no
     // score from one source or a handful of votes.
     score: trustedScore({

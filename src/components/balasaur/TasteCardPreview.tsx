@@ -39,9 +39,9 @@ export interface TasteCardPreviewProps {
 }
 
 const SHARE_BTN =
-  "inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-[14px] font-black tracking-[-0.01em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60";
+  "inline-flex cursor-pointer items-center gap-2 rounded-full bg-text-bright px-5 py-2.5 text-lg font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-60";
 const SAVE_BTN =
-  "inline-flex cursor-pointer items-center gap-2 rounded-full border border-border-strong bg-background px-4 py-2.5 text-[14px] font-semibold text-text-bright transition-colors hover:border-primary hover:text-primary disabled:opacity-60";
+  "inline-flex cursor-pointer items-center gap-2 rounded-full border border-border-strong bg-background px-4 py-2.5 text-lg font-bold text-text-bright transition-colors hover:border-text-bright disabled:opacity-60";
 
 function outcomeLine(o: TasteCardOutcome | null): string | null {
   if (o === "blocked") return "Allow pop-ups to open the image.";
@@ -106,21 +106,21 @@ export function TasteCardPreview({
   return (
     <div className={className}>
       <div
-        className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[10px] border border-border bg-panel"
+        className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-2xl border border-border bg-panel"
         style={{ aspectRatio: `${TASTE_CARD_W} / ${TASTE_CARD_H}` }}
       >
         {src ? (
           <img src={src} alt={alt} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-            <DinoMark size={40} mood={drawFailed ? "sleep" : "calm"} className="text-primary/70" />
+            <DinoMark size={40} mood={drawFailed ? "sleep" : "calm"} className="text-text-dim" />
             <p className="text-[13px] text-text-muted">
               {drawFailed ? "This browser did not draw the card." : "Drawing the card."}
             </p>
           </div>
         )}
         {example && (
-          <span className="absolute right-3 top-3 rounded-full bg-background/85 px-3 py-1 text-[11.5px] font-black tracking-[-0.01em] text-text-muted">
+          <span className="absolute right-3 top-3 rounded-full border-2 border-text-bright bg-background px-3 py-0.5 text-sm font-bold text-text-bright">
             Example
           </span>
         )}

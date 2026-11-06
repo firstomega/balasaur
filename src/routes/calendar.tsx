@@ -87,64 +87,72 @@ function CalendarPage() {
   const next = nextMonth(m, 1);
   const nextAllowed = next <= calendarMaxMonth();
 
+  const navPill =
+    "inline-flex h-9 items-center gap-1 rounded-full border border-border-strong px-3 text-base font-bold text-text-bright transition-colors hover:border-text-bright";
+
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <main id="main" className="mx-auto w-full max-w-grid flex-1 px-5 py-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="bg-background text-foreground">
+      <main id="main" className="mx-auto w-full max-w-grid px-4 pb-12 pt-6 md:pt-9">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-[30px] font-black leading-[1.05] tracking-[-0.02em] text-text-bright">
+            <h1 className="font-display text-4xl font-extrabold leading-[0.95] tracking-tight text-text-bright md:text-[64px]">
               Release calendar
             </h1>
-            <p className="mt-1 text-[14px] text-text-muted">
+            <p className="mt-2 text-lg text-text-muted">
               {data.total} {data.total === 1 ? "premiere" : "premieres"} in {monthLabel(m)}.
             </p>
           </div>
           <nav aria-label="Month" className="flex items-center gap-1.5">
             {prev >= CALENDAR_MIN_MONTH ? (
-              <Link
-                to="/calendar"
-                search={{ m: prev }}
-                className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[12px] tracking-wider text-text-muted hover:border-primary hover:text-primary"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              <Link to="/calendar" search={{ m: prev }} className={navPill}>
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 {monthLabel(prev)}
               </Link>
             ) : null}
             {nextAllowed ? (
-              <Link
-                to="/calendar"
-                search={{ m: next }}
-                className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-border bg-panel px-2.5 font-mono text-[12px] tracking-wider text-text-muted hover:border-primary hover:text-primary"
-              >
+              <Link to="/calendar" search={{ m: next }} className={navPill}>
                 {monthLabel(next)}
-                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             ) : null}
           </nav>
         </div>
 
         {data.days.length === 0 ? (
-          <p className="mt-10 text-[14px] text-text-muted">
+          <p className="mt-10 text-lg text-text-muted">
             No catalogued premieres in {monthLabel(m)} yet.
           </p>
         ) : (
-          <div className="mt-8 space-y-8">
+          // A sequence of days is a timeline: on desktop the date holds a
+          // column of its own and stays in view beside its premieres, so a day
+          // with one title costs one card's height rather than a heading row
+          // and a mostly empty grid row.
+          <div className="mt-8 md:mt-10">
             {data.days.map((day) => (
-              <section key={day.date} aria-label={dayLabel(day.date)}>
-                <h2 className="mb-2.5 flex items-baseline gap-2 border-b border-border pb-1.5">
-                  <span className="text-[17px] font-black tracking-[-0.02em] text-text-bright">
-                    {dayLabel(day.date)}
-                  </span>
-                  {day.date === today && (
-                    <span className="rounded-[3px] bg-primary/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">
-                      Today
+              <section
+                key={day.date}
+                aria-label={dayLabel(day.date)}
+                className="border-t border-border py-5 md:grid md:grid-cols-[200px_1fr] md:gap-6 md:py-6"
+              >
+                <div className="mb-3 md:mb-0">
+                  <h2 className="flex flex-wrap items-baseline gap-x-2 gap-y-1 md:sticky md:top-20 md:flex-col md:items-start">
+                    <span className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
+                      {dayLabel(day.date)}
                     </span>
-                  )}
-                  <span className="font-mono text-[12px] tabular-nums text-text-dim">
-                    {day.items.length}
-                  </span>
-                </h2>
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                    <span className="flex items-center gap-2">
+                      {day.date === today && (
+                        <span className="rounded-full bg-text-bright px-2 py-0.5 text-xs font-bold text-background">
+                          Today
+                        </span>
+                      )}
+                      <span className="text-sm font-bold text-text-muted">
+                        <span className="font-mono tabular-nums">{day.items.length}</span>{" "}
+                        {day.items.length === 1 ? "premiere" : "premieres"}
+                      </span>
+                    </span>
+                  </h2>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 md:gap-3.5 lg:grid-cols-6 xl:grid-cols-7">
                   {day.items.map((item) => (
                     <MediaCard key={item.id} item={item} />
                   ))}

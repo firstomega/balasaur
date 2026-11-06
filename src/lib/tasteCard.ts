@@ -4,37 +4,28 @@
 // HOW IT IS COMPOSED. A card is looked at first as a thumbnail in somebody
 // else's feed, at maybe 200 pixels wide, for under a second. So the name and
 // the sentence that proves it own the top half at a size that survives that,
-// and the posters, the scores and the counts fill the bottom half. The first
-// version stacked everything into the last third and left the top forty per
-// cent empty, which in a feed is a black rectangle.
+// and the posters, the scores and the counts fill the bottom half.
 //
-// HOW IT IS COLOURED. The ground is lit by the colours of the titles printed
-// on the card, taken from `media.color_a` where the catalog has it and read
-// off the poster pixels where it does not. Two people's cards do not match.
-// `tintAlpha` caps how strong each lamp may burn so white type keeps its
-// contrast whatever the posters happened to be.
+// HOW IT IS COLOURED. The site's Colour Shelf look: a white ground, and the top
+// half painted flat in one of the 14 tile swatches with that swatch's own ink,
+// the swatch of the highest-scoring poster on the card (`cardSwatch`). A poster
+// the catalog has not read yet supplies its swatch from its own pixels, through
+// the same rule the nightly sync uses. No poster with a swatch: the paper wash.
+// Scores sit on the posters as the site's sticker: white, a black edge, a black
+// number.
 //
-// Nothing here blocks on a network. Every tile is painted in its own title's
-// colour before its poster is drawn over it, so an image that is slow, blocked
-// or missing costs the artwork and never leaves a hole: the tile keeps its
-// colour and prints the title instead.
+// Nothing here blocks on a network. A tile whose image is slow, blocked or
+// missing is painted in its swatch and prints the title instead, so it never
+// leaves a hole.
 //
 // The wrap and share helpers come from the arcade's share card so the two
 // images behave identically in the share sheet.
 
 import { dinoPaths, dinoWeight, DINO_MARK_ORIGIN_Y } from "@/components/balasaur/DinoMark";
 import { canShareFiles, wrapLines } from "@/lib/arcade/shareImage";
-import { posterColorsFromPixels } from "@/lib/posterColor";
+import { SWATCHES, posterSwatchFromPixels, type SwatchKey } from "@/lib/posterSwatch";
 import { tmdbImage } from "@/lib/tmdbImage";
-import {
-  CARD_GROUND,
-  cardTint,
-  luminance,
-  parseHex,
-  tintAlpha,
-  type CardPoster,
-  type CardTint,
-} from "@/lib/taste";
+import { cardSwatch, type CardPoster } from "@/lib/taste";
 
 export const TASTE_CARD_W = 1080;
 export const TASTE_CARD_H = 1920;
@@ -44,27 +35,19 @@ export const TASTE_CARD_H = 1920;
 export const POSTER_SIZE = "w342";
 
 // House palette, mirrored from styles.css because a canvas cannot read CSS
-// variables. Keep in step with `:root` there.
-const GROUND = "#08090b";
-const BRIGHT = "#ffffff";
-/** The proof sentence sits on the lit half, so it is brighter than body copy
- *  elsewhere on the site: it clears 4.5:1 over any tint `tintAlpha` allows. */
-const SENTENCE = "#dfe1dd";
-const DIM = "#8a887f";
+// variables. Keep in step with `:root` there (--paper, --wash, --ink,
+// --ink-muted). The swatch fills and inks come from posterSwatch.ts, which
+// palette.test.ts already holds to 4.5:1.
+const PAPER = "#ffffff";
+const WASH = "#f4f4f6";
+const INK = "#111114";
+const INK_MUTED = "#55555e";
 
 const SANS = "Archivo, system-ui, sans-serif";
-const MONO = "'JetBrains Mono', ui-monospace, monospace";
+const DISPLAY = "'Archivo Condensed', 'Arial Narrow', sans-serif";
 
 const PAD = 80;
 const INNER = TASTE_CARD_W - PAD * 2;
-
-/** Score colors, matching ScoreBadge's tiers so a score reads the same here. */
-function scoreColor(score: number): string {
-  if (score >= 85) return "#6ee7b7";
-  if (score >= 70) return "#d9f99d";
-  if (score >= 60) return "#fde68a";
-  return "#fdba74";
-}
 
 export interface TasteCardOptions {
   /** The archetype name, and the one sentence that proves it. */
@@ -164,13 +147,26 @@ function loadPoster(url: string, timeoutMs = 2500): Promise<HTMLImageElement | n
 async function ensureFonts() {
   try {
     await Promise.all([
-      document.fonts.load("900 120px Archivo"),
+      document.fonts.load(`800 160px ${DISPLAY}`),
       document.fonts.load("500 46px Archivo"),
-      document.fonts.load("600 78px 'JetBrains Mono'"),
+      document.fonts.load("700 34px Archivo"),
     ]);
   } catch {
     // The system stack draws instead. Layout is measured, not assumed.
   }
+}
+
+/** The condensed cut sets words close, as it does on the site, where
+ *  `.font-display` adds a little word spacing. Same here where the canvas
+ *  supports it. */
+function setFont(ctx: CanvasRenderingContext2D, font: string, wordSpacing = "0px") {
+  ctx.font = font;
+  const c = ctx as CanvasRenderingContext2D & { wordSpacing?: string };
+  if ("wordSpacing" in c) c.wordSpacing = wordSpacing;
+}
+
+function displayFont(ctx: CanvasRenderingContext2D, size: number) {
+  setFont(ctx, `800 ${size}px ${DISPLAY}`, `${Math.round(size * 0.06)}px`);
 }
 
 /** Cover-fit an image into a box, cropping the overflow. */
@@ -191,11 +187,11 @@ function drawCover(
 }
 
 /**
- * The biggest size at which the whole headline still fits in `maxLines`.
- * Nothing is ever dropped: a size that would truncate the name is rejected
- * rather than printed short.
+ * The biggest display size at which the whole text still fits in `maxLines`.
+ * Nothing is ever dropped: a size that would truncate it is rejected rather
+ * than printed short.
  */
-function fitHeadline(
+function fitDisplay(
   ctx: CanvasRenderingContext2D,
   text: string,
   maxWidth: number,
@@ -205,7 +201,7 @@ function fitHeadline(
   const whole = text.split(/\s+/).filter(Boolean).join(" ");
   let last = { size: sizes[sizes.length - 1], lines: [text] };
   for (const size of sizes) {
-    ctx.font = `900 ${size}px ${SANS}`;
+    displayFont(ctx, size);
     const measure = (s: string) => ctx.measureText(s).width;
     const lines = wrapLines(measure, text, maxWidth, maxLines);
     last = { size, lines };
@@ -216,26 +212,15 @@ function fitHeadline(
   return last;
 }
 
-// ---------------------------------------------------------------------------
-// The ground
-// ---------------------------------------------------------------------------
-
-function rgba(hex: string, alpha: number): string {
-  const c = parseHex(hex);
-  if (!c) return "rgba(0,0,0,0)";
-  return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
-}
-
 /**
- * Read a loaded poster's two colours off its own pixels, through the same
- * quantizer the nightly sync uses on the server. Downscaling to a 16x24 grid
- * in the browser gives the block averages that function expects, and costs one
- * tiny canvas per poster. Null whenever the pixels cannot be read.
+ * A loaded poster's swatch, read off its own pixels through the same rule the
+ * nightly sync uses on the server: the poster scaled to a 12 by 18 grid of
+ * block averages. Null whenever the pixels cannot be read.
  */
-function colorsFromImage(img: HTMLImageElement): { colorA: string; colorB: string } | null {
+function swatchFromImage(img: HTMLImageElement): SwatchKey | null {
   try {
-    const w = 16;
-    const h = 24;
+    const w = 12;
+    const h = 18;
     const c = document.createElement("canvas");
     c.width = w;
     c.height = h;
@@ -249,118 +234,48 @@ function colorsFromImage(img: HTMLImageElement): { colorA: string; colorB: strin
       rgb[i * 3 + 1] = data[i * 4 + 1];
       rgb[i * 3 + 2] = data[i * 4 + 2];
     }
-    return posterColorsFromPixels(rgb, w, h);
+    return posterSwatchFromPixels(rgb, w, h)?.swatch ?? null;
   } catch {
     return null;
   }
 }
 
-/** Stored colours win; a poster without them supplies its own from its pixels. */
-function withColors(posters: CardPoster[], images: (HTMLImageElement | null)[]): CardPoster[] {
+/** Stored swatches win; a poster without one supplies its own from its pixels. */
+function withSwatches(posters: CardPoster[], images: (HTMLImageElement | null)[]): CardPoster[] {
   return posters.map((p, i) => {
-    if (parseHex(p.colorA)) return p;
+    if (p.swatch) return p;
     const img = images[i];
-    if (!img) return p;
-    const found = colorsFromImage(img);
-    return found ? { ...p, colorA: found.colorA, colorB: found.colorB } : p;
+    const found = img ? swatchFromImage(img) : null;
+    return found ? { ...p, swatch: found } : p;
   });
 }
 
-type Rgb = [number, number, number];
-type RgbIn = readonly [number, number, number];
-
-function css([r, g, b]: RgbIn): string {
-  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+/** A surface's fill and the ink that reads on it. */
+function surface(key: SwatchKey | null | undefined): { fill: string; ink: string } {
+  return key ? { fill: SWATCHES[key].fill, ink: SWATCHES[key].ink } : { fill: WASH, ink: INK };
 }
 
-function mixRgb(a: RgbIn, b: RgbIn, t: number): Rgb {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-}
-
-/** A tile is dark enough for white type over it when its luminance is here or
- *  under, which is 4.5:1 with room to spare. */
-const TILE_MAX_LUMINANCE = 0.12;
-
-/**
- * The colour a tile is painted under its poster. A stored colour is used as it
- * is until it would be too bright to print a title on, and then scaled down
- * until it is not, so a poster whose colour is a bright yellow still gives a
- * yellow tile rather than a white one.
- */
-function tileRgb(hex: string | undefined, fallback: Rgb): Rgb {
-  const rgb = (parseHex(hex) as Rgb | null) ?? fallback;
-  let f = 1;
-  while (f > 0.24 && luminance([rgb[0] * f, rgb[1] * f, rgb[2] * f]) > TILE_MAX_LUMINANCE) {
-    f -= 0.04;
-  }
-  return [rgb[0] * f, rgb[1] * f, rgb[2] * f];
-}
-
-/**
- * The biggest size at which a title fits a tile whole. Nothing is dropped: a
- * size that would lose a word is rejected rather than printed short.
- */
-function fitTitle(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-  maxLines = 4,
-): { size: number; lines: string[] } {
-  const whole = text.split(/\s+/).filter(Boolean).join(" ");
-  const sizes = [46, 40, 35, 31, 27, 23, 19];
-  let last = { size: sizes[sizes.length - 1], lines: [text] };
-  for (const size of sizes) {
-    ctx.font = `900 ${size}px ${SANS}`;
-    const measure = (s: string) => ctx.measureText(s).width;
-    const lines = wrapLines(measure, text, maxWidth, maxLines);
-    last = { size, lines };
-    if (lines.join(" ") === whole && lines.every((l) => measure(l) <= maxWidth)) {
-      return { size, lines };
-    }
-  }
-  return last;
-}
-
-/**
- * Two lamps in the visitor's own colours over the top half, falling to the flat
- * ground before the posters start so the bottom half keeps its contrast. Each
- * lamp burns at the strongest alpha `tintAlpha` allows for that colour.
- */
-function paintGround(ctx: CanvasRenderingContext2D, tint: CardTint) {
-  ctx.fillStyle = GROUND;
-  ctx.fillRect(0, 0, TASTE_CARD_W, TASTE_CARD_H);
-
-  const lamp = (hex: string, cx: number, cy: number, r: number, strength: number) => {
-    const alpha = tintAlpha(hex) * strength;
-    if (alpha <= 0) return;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    g.addColorStop(0, rgba(hex, alpha));
-    g.addColorStop(0.34, rgba(hex, alpha * 0.42));
-    g.addColorStop(0.64, rgba(hex, alpha * 0.12));
-    g.addColorStop(1, rgba(hex, 0));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, TASTE_CARD_W, TASTE_CARD_H);
-  };
-  lamp(tint.a, 210, 150, 1080, 1);
-  lamp(tint.b, 980, 620, 900, 0.82);
-
-  // The floor. Without it a bright poster colour would still be washing over
-  // the score chips and the footer a thousand pixels lower down.
-  const floor = ctx.createLinearGradient(0, 560, 0, 1240);
-  floor.addColorStop(0, "rgba(8,9,11,0)");
-  floor.addColorStop(1, "rgba(8,9,11,1)");
-  ctx.fillStyle = floor;
-  ctx.fillRect(0, 560, TASTE_CARD_W, TASTE_CARD_H - 560);
-
-  // A faint dot texture so a large flat gradient does not band on an OLED.
-  ctx.fillStyle = "rgba(255,255,255,0.03)";
-  for (let y = 24; y < TASTE_CARD_H; y += 36) {
-    for (let x = 24; x < TASTE_CARD_W; x += 36) {
-      ctx.beginPath();
-      ctx.arc(x, y, 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
+/** The score sticker, as ScoreBadge draws it: white, a black edge, a black
+ *  number in the display face, tilted on the poster's corner. */
+function drawSticker(ctx: CanvasRenderingContext2D, x: number, y: number, score: number) {
+  const label = String(score);
+  displayFont(ctx, 58);
+  const w = ctx.measureText(label).width + 34;
+  const h = 72;
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate((-6 * Math.PI) / 180);
+  roundRect(ctx, -w / 2, -h / 2, w, h, 12);
+  ctx.fillStyle = PAPER;
+  ctx.fill();
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.fillStyle = INK;
+  ctx.textAlign = "center";
+  ctx.fillText(label, 0, 21);
+  ctx.restore();
+  ctx.textAlign = "left";
 }
 
 // ---------------------------------------------------------------------------
@@ -381,48 +296,52 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
     ensureFonts(),
   ]);
 
-  const coloured = withColors(posters, images);
-  const tint = cardTint(coloured);
-  paintGround(ctx, tint);
+  const painted = withSwatches(posters, images);
+  const top = surface(cardSwatch(painted));
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
   const measure = (s: string) => ctx.measureText(s).width;
 
-  // --- The top half: who this is, and why. ---------------------------------
+  // --- The top half, laid out first so the painted block can be sized to it.
 
-  drawDino(ctx, PAD, 62, 74, BRIGHT);
-  ctx.font = `600 32px ${MONO}`;
-  ctx.fillStyle = BRIGHT;
-  ctx.fillText("BALASAUR", PAD + 96, 118);
+  const head = fitDisplay(ctx, o.name, INNER, 2, [196, 176, 160, 144, 128, 112, 100]);
+  const headStep = Math.round(head.size * 0.94);
+  const headFirst = 236 + Math.round(head.size * 0.78);
+  const headLast = headFirst + headStep * (head.lines.length - 1);
 
-  const head = fitHeadline(ctx, o.name, INNER, 2, [136, 124, 112, 100, 88, 78]);
-  ctx.font = `900 ${head.size}px ${SANS}`;
-  ctx.fillStyle = BRIGHT;
-  let y = 330;
-  const step = Math.round(head.size * 1.02);
-  for (const line of head.lines) {
-    ctx.fillText(line, PAD, y);
-    y += step;
-  }
-  y -= step;
-
-  ctx.font = `500 46px ${SANS}`;
-  ctx.fillStyle = SENTENCE;
-  y += 92;
-  for (const line of wrapLines(measure, o.evidence, INNER, 3)) {
-    ctx.fillText(line, PAD, y);
-    y += 62;
-  }
-  y -= 62;
+  setFont(ctx, `500 46px ${SANS}`);
+  const sentence = wrapLines(measure, o.evidence, INNER, 3);
+  const sentenceFirst = headLast + 96;
+  const sentenceLast = sentenceFirst + 62 * (sentence.length - 1);
 
   // The counts, directly under the sentence that divides by them: "70% of what
   // you Loved" is checkable against "10 LOVED" without moving your eye.
-  const dividerY = y + 96;
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
-  ctx.fillRect(PAD, dividerY, INNER, 1);
+  const dividerY = sentenceLast + 70;
+  const numberBaseline = dividerY + 118;
+  const labelBaseline = numberBaseline + 46;
+  const blockBottom = labelBaseline + 72;
 
-  const numberBaseline = dividerY + 104;
-  const labelBaseline = numberBaseline + 40;
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, TASTE_CARD_W, TASTE_CARD_H);
+  ctx.fillStyle = top.fill;
+  ctx.fillRect(0, 0, TASTE_CARD_W, blockBottom);
+
+  drawDino(ctx, PAD, 62, 74, top.ink);
+  displayFont(ctx, 48);
+  ctx.fillStyle = top.ink;
+  ctx.fillText("balasaur", PAD + 96, 122);
+
+  displayFont(ctx, head.size);
+  ctx.fillStyle = top.ink;
+  head.lines.forEach((line, i) => ctx.fillText(line, PAD, headFirst + headStep * i));
+
+  setFont(ctx, `500 46px ${SANS}`);
+  sentence.forEach((line, i) => ctx.fillText(line, PAD, sentenceFirst + 62 * i));
+
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(PAD, dividerY, INNER, 3);
+  ctx.globalAlpha = 1;
+
   const stats: [number, string][] = [
     [o.counts.liked, "LOVED"],
     [o.counts.watched, "WATCHED"],
@@ -432,89 +351,68 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
   const col = INNER / 4;
   stats.forEach(([n, label], i) => {
     const cx = PAD + col * i;
-    ctx.font = `600 78px ${MONO}`;
-    ctx.fillStyle = BRIGHT;
+    displayFont(ctx, 110);
     ctx.fillText(String(n), cx, numberBaseline);
-    ctx.font = `500 24px ${MONO}`;
-    ctx.fillStyle = DIM;
+    setFont(ctx, `700 25px ${SANS}`);
     ctx.fillText(label, cx, labelBaseline);
   });
 
   // --- The bottom, laid out upwards from the footer. ------------------------
 
   const footerY = TASTE_CARD_H - PAD;
-  ctx.font = `600 34px ${MONO}`;
-  ctx.fillStyle = BRIGHT;
-  ctx.fillText(o.url ?? "balasaur.com/taste", PAD, footerY - 40);
-  ctx.font = `500 24px ${SANS}`;
-  ctx.fillStyle = DIM;
+  setFont(ctx, `700 36px ${SANS}`);
+  ctx.fillStyle = INK;
+  ctx.fillText(o.url ?? "balasaur.com/taste", PAD, footerY - 42);
+  setFont(ctx, `500 25px ${SANS}`);
+  ctx.fillStyle = INK_MUTED;
   ctx.fillText("Title data from TMDB and OMDb", PAD, footerY);
 
-  const bandBottomLimit = footerY - 150;
-
-  // The posters, edge to edge: the widest tiles the canvas can give them. The
-  // band stops at its ceiling on every card (the longest name and sentence
-  // still leave 669px for it), so it sits centred in that room and the slack
-  // from a one-line versus two-line name splits evenly above and below it.
-  const bandTopLimit = labelBaseline + 96;
+  // The posters in a row on the white ground, each with its sticker. The row
+  // is as tall as the room allows up to 1.75 times its width, where the crop
+  // is still under a sixth of the artwork's width, and sits centred in that
+  // room so the slack from a one-line versus two-line name splits evenly.
+  const rowTopLimit = blockBottom + 64;
+  const rowBottomLimit = footerY - 140;
   const n = Math.max(posters.length, 1);
-  const gap = 4;
-  const tileW = Math.floor((TASTE_CARD_W - gap * (n - 1)) / n);
-  // A tile taller than 1.5:1 crops the poster sideways, so the ceiling is set
-  // where the crop is still under a fifth of the artwork's width.
-  const available = Math.max(bandBottomLimit - bandTopLimit, 260);
-  const bandH = Math.max(280, Math.min(available, Math.round(tileW * 2), 580));
-  const bandTop = Math.round(bandTopLimit + (available - bandH) / 2);
-
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  ctx.fillRect(0, bandTop - 1, TASTE_CARD_W, 1);
-  ctx.fillRect(0, bandTop + bandH, TASTE_CARD_W, 1);
-
-  // A title with no stored colour and no readable poster takes the card's own
-  // light, stepped across the band, so four unknown titles are still four
-  // different tiles rather than four holes.
-  const lampA = (parseHex(tint.a) as Rgb | null) ?? [59, 130, 246];
-  const lampB = (parseHex(tint.b) as Rgb | null) ?? [159, 230, 160];
-  // Walked from one lamp to the other and sunk toward the ground, so a card of
-  // borrowed light stays quieter than a card lit by four real posters.
-  const rampAt = (i: number): Rgb =>
-    mixRgb(mixRgb(lampA, lampB, n > 1 ? i / (n - 1) : 0), CARD_GROUND, 0.42);
+  const side = 48;
+  const gap = 16;
+  const tileW = Math.floor((TASTE_CARD_W - side * 2 - gap * (n - 1)) / n);
+  const available = Math.max(rowBottomLimit - rowTopLimit, 260);
+  const tileH = Math.max(260, Math.min(available, Math.round(tileW * 1.75)));
+  const rowTop = Math.round(rowTopLimit + (available - tileH) / 2);
 
   // Every title standing in for a missing poster is set at one size: the
   // largest the longest of them can hold. Four tiles at four sizes read as an
   // accident.
   const unlit = posters.filter((_, i) => !images[i]);
   const titleSize = unlit.length
-    ? Math.min(...unlit.map((p) => fitTitle(ctx, p.title, tileW - 44).size))
+    ? Math.min(
+        ...unlit.map((p) => fitDisplay(ctx, p.title, tileW - 36, 5, [60, 52, 44, 38, 32]).size),
+      )
     : 0;
 
   posters.forEach((p, i) => {
-    const px = i * (tileW + gap);
-    const base = tileRgb(coloured[i]?.colorA, rampAt(i));
+    const px = side + i * (tileW + gap);
+    const tile = surface(painted[i]?.swatch);
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(px, bandTop, tileW, bandH);
+    roundRect(ctx, px, rowTop, tileW, tileH, 16);
     ctx.clip();
 
     // The colour goes down first, every time. The poster is drawn over it, so a
     // tile whose image never arrives is the same tile with its title showing.
-    const wash = ctx.createLinearGradient(px, bandTop, px, bandTop + bandH);
-    wash.addColorStop(0, css(base));
-    wash.addColorStop(1, css(mixRgb(base, CARD_GROUND, 0.68)));
-    ctx.fillStyle = wash;
-    ctx.fillRect(px, bandTop, tileW, bandH);
+    ctx.fillStyle = tile.fill;
+    ctx.fillRect(px, rowTop, tileW, tileH);
 
     const img = images[i];
     if (img) {
-      drawCover(ctx, img, px, bandTop, tileW, bandH);
+      drawCover(ctx, img, px, rowTop, tileW, tileH);
     } else {
-      // No artwork: the title is the tile.
-      const step = Math.round(titleSize * 1.1);
-      ctx.font = `900 ${titleSize}px ${SANS}`;
-      const lines = wrapLines(measure, p.title, tileW - 44, 4);
-      ctx.fillStyle = BRIGHT;
+      displayFont(ctx, titleSize);
+      const step = Math.round(titleSize * 1.02);
+      const lines = wrapLines(measure, p.title, tileW - 36, 5);
+      ctx.fillStyle = tile.ink;
       ctx.textAlign = "center";
-      let ty = bandTop + (bandH - lines.length * step) / 2 + titleSize * 0.82;
+      let ty = rowTop + (tileH - lines.length * step) / 2 + titleSize * 0.8;
       for (const line of lines) {
         ctx.fillText(line, px + tileW / 2, ty);
         ty += step;
@@ -523,20 +421,8 @@ export async function renderTasteCard(o: TasteCardOptions): Promise<Blob> {
     }
     ctx.restore();
 
-    if (p.score !== undefined) {
-      // The score chip is what makes the order on the card explain itself.
-      const label = String(p.score);
-      ctx.font = `600 32px ${MONO}`;
-      const chipW = measure(label) + 30;
-      const chipH = 48;
-      const chipX = px + 14;
-      const chipY = bandTop + bandH - 14 - chipH;
-      ctx.fillStyle = "rgba(8,9,11,0.88)";
-      roundRect(ctx, chipX, chipY, chipW, chipH, 8);
-      ctx.fill();
-      ctx.fillStyle = scoreColor(p.score);
-      ctx.fillText(label, chipX + 15, chipY + 34);
-    }
+    // The sticker is what makes the order on the card explain itself.
+    if (p.score !== undefined) drawSticker(ctx, px + 10, rowTop + 12, p.score);
   });
 
   return new Promise<Blob>((resolve, reject) => {

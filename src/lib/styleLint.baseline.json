@@ -1,10 +1,10 @@
 {
   "totals": {
-    "fontSize": 528,
-    "radius": 214,
+    "fontSize": 475,
+    "radius": 167,
     "duration": 4,
     "easing": 8,
-    "hex": 243,
+    "hex": 237,
     "containerWidth": 65
   },
   "files": {
@@ -170,8 +170,7 @@
       "radius": 1
     },
     "src/components/balasaur/TasteCardPreview.tsx": {
-      "fontSize": 6,
-      "radius": 1,
+      "fontSize": 3,
       "containerWidth": 2
     },
     "src/components/balasaur/TopBar.tsx": {
@@ -210,18 +209,14 @@
     "src/lib/posterSwatch.ts": {
       "hex": 19
     },
-    "src/lib/taste.ts": {
-      "hex": 2
-    },
     "src/lib/tasteCard.ts": {
-      "hex": 8
+      "hex": 4
     },
     "src/router.tsx": {
       "hex": 1
     },
     "src/routes/$handle.tsx": {
-      "fontSize": 22,
-      "radius": 7
+      "fontSize": 1
     },
     "src/routes/__root.tsx": {
       "fontSize": 10,
@@ -237,8 +232,7 @@
       "containerWidth": 3
     },
     "src/routes/calendar.tsx": {
-      "fontSize": 8,
-      "radius": 3
+      "fontSize": 1
     },
     "src/routes/collections.tsx": {
       "fontSize": 1
@@ -265,12 +259,10 @@
       "fontSize": 1
     },
     "src/routes/night.$code.tsx": {
-      "fontSize": 49,
-      "radius": 30
+      "fontSize": 45
     },
     "src/routes/night.index.tsx": {
-      "fontSize": 13,
-      "radius": 6,
+      "fontSize": 1,
       "containerWidth": 1
     },
     "src/routes/play.balasaurdle.tsx": {
@@ -334,7 +326,7 @@
       "radius": 5
     },
     "src/routes/taste.tsx": {
-      "fontSize": 7
+      "fontSize": 1
     }
   }
 }
