@@ -47,10 +47,10 @@ export function ListTile({
         className,
       )}
     >
-      <span className="relative z-10 max-w-[68%] text-balance font-display text-xl font-extrabold leading-none tracking-tight md:text-2xl">
+      <span className="relative z-10 max-w-[68%] md:max-w-3/5 text-balance font-display text-xl font-extrabold leading-none tracking-tight md:text-2xl">
         {title}
       </span>
-      <span className="relative z-10 mt-auto max-w-[68%] pt-2 text-sm font-semibold leading-tight">
+      <span className="relative z-10 mt-auto max-w-[68%] md:max-w-3/5 pt-2 text-sm font-semibold leading-tight">
         {lead && lead.first && lead.score !== null ? (
           lead.title.length <= SHORT_LEAD ? (
             // A short name and its score share a line where the tile has room.
@@ -79,7 +79,7 @@ export function ListTile({
           decoding="async"
           width={92}
           height={138}
-          className="absolute -bottom-4 -right-5 h-[81px] w-[54px] rotate-[24deg] rounded-md object-cover shadow-lg md:-bottom-4 md:-right-4 md:h-[138px] md:w-[92px]"
+          className="absolute -bottom-4 -right-5 h-21 w-14 rotate-[24deg] rounded-md object-cover shadow-lg md:-bottom-5 md:h-30 md:w-20"
         />
       )}
     </Link>

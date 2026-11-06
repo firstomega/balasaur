@@ -70,8 +70,10 @@ export function CookieBanner() {
           translucent bar was the last grey surface on the site, and headless
           capture drew it as an empty strip under the footer. */}
       <div className="mx-auto flex max-w-content flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2">
-        <p className="min-w-0 flex-1 text-base leading-snug text-text-bright">
-          Cookies keep you signed in. With consent they also count page visits.{" "}
+        {/* Full width on a phone, so the line is two rows rather than four
+            squeezed beside the buttons. */}
+        <p className="min-w-0 basis-full text-base leading-snug text-text-bright sm:basis-0 sm:flex-1">
+          Cookies keep you signed in, and count page visits if you accept them.{" "}
           <Link to="/privacy" className="font-semibold underline underline-offset-2">
             Privacy policy
           </Link>

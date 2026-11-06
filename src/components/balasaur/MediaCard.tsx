@@ -156,16 +156,14 @@ export function MediaCard({
         )}
         <MetaLine bits={meta} className="mt-0.5 font-mono text-sm" />
         {/* Why this card sits in a "like this" rail. The two strongest shared
-            facts print whole: a name cut mid-word explains nothing. */}
+            facts print whole and wrap: a name cut mid-word explains nothing.
+            Cards in a rail stretch to the tallest, so a third line costs no
+            ragged edge. */}
         {reasons.length > 0 && (
-          <MetaLine
-            bits={
-              reasons[0] === "Same series"
-                ? reasons.slice(0, 2)
-                : [`Shares: ${reasons[0]}`, ...reasons.slice(1, 2)]
-            }
-            className="mt-1.5 border-t border-current/30 pt-1.5 text-sm leading-tight break-words"
-          />
+          <p className="mt-1.5 break-words border-t border-current/30 pt-1.5 text-sm leading-tight">
+            {reasons[0] === "Same series" ? "" : "Shares: "}
+            {reasons.slice(0, 2).join(" · ")}
+          </p>
         )}
       </div>
     </article>
