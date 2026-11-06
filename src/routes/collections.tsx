@@ -146,7 +146,9 @@ function SectionHead({ title, count }: { title: string; count: number }) {
       <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
         {title}
       </h2>
-      <span className="font-mono text-sm tabular-nums text-text-dim">{count} lists</span>
+      <span className="font-mono text-sm tabular-nums text-text-dim">
+        {count === 1 ? "1 list" : `${count} lists`}
+      </span>
     </div>
   );
 }
@@ -261,13 +263,18 @@ function IndexMatrix({ label, cols, rows }: { label: string; cols: string[]; row
   );
 }
 
+/** The year a year list covers, from its slug ("best-movies-of-1994"). */
+function yearOf(c: CollectionSummary): string | undefined {
+  return c.slug.match(/-of-(\d{4})$/)?.[1];
+}
+
 // All year lists at once, grouped by decade. Since the v8 media-type split
 // each year comes as a movie list and a show list, so a chip is the year plus
 // a type dot in the site's media colors (same key as the origin matrix).
 function YearIndex({ years }: { years: CollectionSummary[] }) {
   if (years.length === 0) return null;
   const parsed = years
-    .map((c) => ({ c, year: c.slug.match(/-of-(\d{4})$/)?.[1] }))
+    .map((c) => ({ c, year: yearOf(c) }))
     .filter((p): p is { c: CollectionSummary; year: string } => !!p.year);
   const byDecade = new Map<string, typeof parsed>();
   for (const p of parsed) {
@@ -554,7 +561,7 @@ function CollectionsPending() {
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="min-h-28 animate-pulse rounded-xl bg-panel md:min-h-48 md:rounded-2xl"
+            className="min-h-28 animate-pulse rounded-xl bg-panel md:min-h-40 md:rounded-2xl lg:min-h-48"
           />
         ))}
       </div>
@@ -626,6 +633,11 @@ function CollectionsPage() {
   );
   const originPairs = originGenrePairs(byKind("origin-genre"));
   const originCols = [...new Set(originPairs.map((p) => p.col))].sort();
+  const serviceGenrePairs = genreServicePairs(byKind("genre-service"));
+  // The count beside "More lists" is the links under it: the two matrices'
+  // cells and the year chips, nothing else on the page.
+  const indexCount =
+    serviceGenrePairs.length + originPairs.length + years.filter((c) => yearOf(c)).length;
   // Every tier below is guarded on its own kind being non-empty, so a loader
   // that returns nothing used to render the page chrome over a blank viewport
   // with a lone "Every collection 0" in the middle of it. Nothing on the page
@@ -653,16 +665,7 @@ function CollectionsPage() {
 
         {matches && (
           <section className="mt-7">
-            {matches.length > 0 && (
-              <div className="flex items-baseline gap-3">
-                <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright">
-                  Matches
-                </h2>
-                <span className="font-mono text-sm tabular-nums text-text-dim">
-                  {matches.length}
-                </span>
-              </div>
-            )}
+            {matches.length > 0 && <SectionHead title="Matches" count={matches.length} />}
             {matches.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {matches.map((c: CollectionSummary) => (
@@ -697,7 +700,7 @@ function CollectionsPage() {
         <div className={matches || none ? "hidden" : undefined}>
           {/* Tier 1: featured */}
           <div className="mt-6 grid grid-cols-2 gap-2.5 md:gap-4 lg:grid-cols-4">
-            <ShelfTiles items={featured} className="md:min-h-48" />
+            <ShelfTiles items={featured} className="lg:min-h-48" />
           </div>
 
           {/* Tier 2: walls. Occasions lead: they answer "what should I put on
@@ -718,20 +721,13 @@ function CollectionsPage() {
 
           {/* Tier 3: the full index */}
           <section className="mt-12 border-t border-border pt-7 md:mt-16">
-            <div className="flex items-baseline gap-3">
-              <h2 className="font-display text-2xl font-extrabold leading-none tracking-tight text-text-bright md:text-3xl">
-                Every collection
-              </h2>
-              <span className="font-mono text-sm tabular-nums text-text-dim">
-                {collections.length}
-              </span>
-            </div>
+            <SectionHead title="More lists" count={indexCount} />
 
             <IndexMatrix
               label="Genre × service"
               cols={MATRIX_COLS.map((c) => c.short)}
               rows={buildMatrix(
-                genreServicePairs(byKind("genre-service")),
+                serviceGenrePairs,
                 MATRIX_COLS.map((c) => c.short),
               )}
             />
@@ -742,14 +738,13 @@ function CollectionsPage() {
             />
             <YearIndex years={years} />
 
-            <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-4 pb-2">
+            <div className="mt-9 border-t border-border pt-4 pb-2">
               <Link
                 to="/methodology"
                 className="text-base font-semibold text-text-bright underline underline-offset-2"
               >
                 Methodology
               </Link>
-              <span className="text-base text-text-dim">Data: TMDB &amp; OMDb</span>
             </div>
           </section>
         </div>
